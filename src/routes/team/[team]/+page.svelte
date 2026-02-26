@@ -2,11 +2,14 @@
     import { page } from '$app/stores';
     import { supabase } from '$lib/supabase.js';
     import { getActivePlayers } from '$lib/supabase.js';
-    import { exportCsvRows, formatMinutes, formatSignedMetric, teamPlayersCsvColumns, standingsCsvColumns } from '$lib/utils/csvPresets.js';
+    import WinDistChart from '$lib/components/WinDistChart.svelte';
+    import SeedChart from '$lib/components/SeedChart.svelte';
+    import { exportCsvRows, formatMinutes, formatSignedMetric, teamPlayersCsvColumns } from '$lib/utils/csvPresets.js';
 
     let team = $state('');
     let players = $state([]);
     let sim = $state(null);
+    let winDist = $state([]);
     let loading = $state(true);
     let simLoading = $state(true);
     let error = $state(null);
@@ -16,7 +19,7 @@
     }
 
     function fmt(val, d = 1) {
-        if (val === null || val === undefined) return '\u2014';
+        if (val === null || val === undefined) return '—';
         return parseFloat(val).toFixed(d);
     }
 
@@ -26,6 +29,12 @@
         if (n >= 40) return 'mid';
         if (n > 0) return 'low';
         return 'zero';
+    }
+
+    function currentWins(currentStr) {
+        if (!currentStr) return 0;
+        const parts = currentStr.split('-');
+        return parseInt(parts[0]) || 0;
     }
 
     function exportTeamCsv() {
@@ -45,6 +54,7 @@
         } catch (err) {
             error = 'Invalid team in URL';
             loading = false;
+            simLoading = false;
             return;
         }
 
@@ -53,31 +63,43 @@
         if (!decodedTeam) {
             error = 'Team not specified';
             loading = false;
+            simLoading = false;
             return;
         }
 
         error = null;
         loading = true;
         simLoading = true;
+        winDist = [];
 
-        getActivePlayers({ teamName: decodedTeam })
-            .then((data) => {
-                players = data;
+        Promise.all([
+            getActivePlayers({ teamName: decodedTeam }),
+            supabase.from('season_sim').select('*').eq('team_name', decodedTeam).limit(1),
+            supabase.from('win_distribution').select('*').eq('team_name', decodedTeam).order('wins', { ascending: true }),
+        ])
+            .then(([playerData, simRes, distRes]) => {
+                players = playerData || [];
+
+                if (simRes?.error) {
+                    error = simRes.error.message;
+                    sim = null;
+                } else if (simRes?.data && simRes.data.length > 0) {
+                    sim = simRes.data[0];
+                } else {
+                    sim = null;
+                }
+
+                if (distRes?.data) winDist = distRes.data;
+                simLoading = false;
                 loading = false;
             })
             .catch((err) => {
-                error = err.message;
-                loading = false;
-            });
-
-        supabase
-            .from('season_sim')
-            .select('*')
-            .eq('team_name', decodedTeam)
-            .limit(1)
-            .then(({ data, error: err }) => {
-                if (data && data.length > 0) sim = data[0];
+                error = err?.message || 'Failed to load team data';
+                players = [];
+                sim = null;
+                winDist = [];
                 simLoading = false;
+                loading = false;
             });
     });
 </script>
@@ -168,7 +190,7 @@
                             <td class="name">
                                 <a href={`/compare?ids=${player.nba_id}`}>{player.player_name}</a>
                             </td>
-                            <td class="position">{player.position || '\u2014'}</td>
+                            <td class="position">{player.position || '—'}</td>
                             <td class="num">{formatMinutes(player.tr_minutes)}</td>
                             <td class="num {dpmClass(player.dpm)}">{formatSignedMetric(player.dpm)}</td>
                             <td class="num {dpmClass(player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
@@ -181,13 +203,15 @@
         </div>
     {/if}
 
-    {#if !simLoading && sim}
-        <h2 class="section-title">Team Outlook</h2>
-        <div class="outlook-img">
-            <img
-                src="/team_outlooks/{sim.team_name.replace(/ /g, '_')}_outlook.png"
-                alt="{sim.team_name} outlook"
-            />
+    {#if !simLoading && sim && winDist.length > 0}
+        <h2 class="section-title">Win Distribution</h2>
+        <div class="chart-card">
+            <WinDistChart data={winDist} meanWins={parseFloat(sim.W)} currentWins={currentWins(sim.Current)} />
+        </div>
+
+        <h2 class="section-title">Seed Probabilities</h2>
+        <div class="chart-card">
+            <SeedChart {sim} />
         </div>
     {/if}
 </div>
@@ -324,19 +348,12 @@
         color: var(--negative);
     }
 
-    /* --- Outlook image --- */
-    .outlook-img {
+    .chart-card {
         background: var(--bg-surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        padding: 16px;
-        margin-bottom: 32px;
-    }
-
-    .outlook-img img {
-        width: 100%;
-        height: auto;
-        border-radius: var(--radius-sm);
+        padding: 20px;
+        margin-bottom: 8px;
     }
 
     @media (max-width: 768px) {
