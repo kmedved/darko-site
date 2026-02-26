@@ -1,22 +1,10 @@
 <script>
     import { getActivePlayers } from '$lib/supabase.js';
-    import { downloadCsv } from '$lib/utils/csv.js';
+    import { exportCsvRows, leaderboardCsvColumns, formatMinutes, formatSignedMetric } from '$lib/utils/csvPresets.js';
 
     let players = $state([]);
     let loading = $state(true);
     let error = $state(null);
-
-    const csvColumns = [
-        { header: '#', accessor: 'rank' },
-        { header: 'Player', accessor: 'player_name' },
-        { header: 'Team', accessor: 'team_name' },
-        { header: 'Pos', accessor: 'position', format: (value) => value || '—' },
-        { header: 'Min', accessor: 'tr_minutes', format: fmtMin },
-        { header: 'DPM', accessor: 'dpm', format: fmt },
-        { header: 'ODPM', accessor: 'o_dpm', format: fmt },
-        { header: 'DDPM', accessor: 'd_dpm', format: fmt },
-        { header: 'Box', accessor: 'box_dpm', format: fmt },
-    ];
 
     $effect(() => {
         getActivePlayers()
@@ -24,16 +12,8 @@
             .catch(err => { error = err.message; loading = false; });
     });
 
-    function fmt(val, decimals = 1) {
-        if (val === null || val === undefined) return '—';
-        const n = parseFloat(val);
-        const sign = n >= 0 ? '+' : '';
-        return `${sign}${n.toFixed(decimals)}`;
-    }
-
     function fmtMin(seconds) {
-        if (!seconds) return '—';
-        return (seconds / 60).toFixed(1);
+        return formatMinutes(seconds);
     }
 
     function dpmClass(val) {
@@ -42,9 +22,9 @@
 
     function exportPlayersCsv() {
         const rows = players.map((player, index) => ({ ...player, rank: index + 1 }));
-        downloadCsv({
+        exportCsvRows({
             rows,
-            columns: csvColumns,
+            columns: leaderboardCsvColumns,
             filename: 'darko-dpm-leaderboard.csv'
         });
     }
@@ -101,13 +81,19 @@
                             <td class="name">
                                 <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
                             </td>
-                            <td class="team">{player.team_name}</td>
+                            <td class="team">
+                                {#if player.team_name}
+                                    <a href="/team/{encodeURIComponent(player.team_name)}">{player.team_name}</a>
+                                {:else}
+                                    —
+                                {/if}
+                            </td>
                             <td class="pos">{player.position || '—'}</td>
                             <td class="num">{fmtMin(player.tr_minutes)}</td>
-                            <td class="num {dpmClass(player.dpm)}">{fmt(player.dpm)}</td>
-                            <td class="num {dpmClass(player.o_dpm)}">{fmt(player.o_dpm)}</td>
-                            <td class="num {dpmClass(player.d_dpm)}">{fmt(player.d_dpm)}</td>
-                            <td class="num {dpmClass(player.box_dpm)}">{fmt(player.box_dpm)}</td>
+                            <td class="num {dpmClass(player.dpm)}">{formatSignedMetric(player.dpm)}</td>
+                            <td class="num {dpmClass(player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
+                            <td class="num {dpmClass(player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
+                            <td class="num {dpmClass(player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
                         </tr>
                     {/each}
                 </tbody>
@@ -118,7 +104,6 @@
 
 <style>
     .table-wrapper {
-        overflow-x: auto;
         margin-bottom: 40px;
     }
 
@@ -130,7 +115,7 @@
 
     th {
         position: sticky;
-        top: 52px;
+        top: 210px;
         z-index: 20;
         background: var(--bg-surface);
         box-shadow: inset 0 -1px 0 var(--border);
@@ -169,6 +154,15 @@
     .team {
         color: var(--text-secondary);
         font-size: 12px;
+    }
+
+    .team a {
+        color: inherit;
+    }
+
+    .team a:hover {
+        color: var(--accent);
+        text-decoration: underline;
     }
 
     .pos {

@@ -95,7 +95,7 @@ nav {
 nav .container {
     display: flex;
     align-items: center;
-    height: 52px;
+    height: 210px;
     gap: 0;
 }
 
@@ -108,7 +108,7 @@ nav .logo {
 
 .logo-mark {
     display: none;
-    height: 30px;
+    height: 192px;
     width: auto;
 }
 
@@ -415,11 +415,50 @@ nav .links .theme-toggle[aria-pressed='true'] {
     letter-spacing: 0.06em;
 }
 
+/* ── Chart Wrapper / Toggles ─────────────────────────── */
+
+.chart-wrapper {
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.chart-toggles {
+    display: flex;
+    gap: 4px;
+    padding: 12px 20px 0;
+    flex-wrap: wrap;
+}
+
+.chart-toggle-btn {
+    appearance: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+
+.chart-toggle-btn:hover {
+    color: var(--text-secondary);
+    border-color: var(--text-muted);
+}
+
+.chart-toggle-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
 /* ── Sparkline / Chart ───────────────────────────────── */
 
 .chart-container {
-    padding: 12px 20px 16px;
-    border-bottom: 1px solid var(--border-subtle);
+    padding: 10px 20px 16px;
+    position: relative;
+    cursor: crosshair;
 }
 
 .chart-container svg {
@@ -443,6 +482,51 @@ nav .links .theme-toggle[aria-pressed='true'] {
     stroke-width: 0.5;
     stroke-dasharray: 3, 4;
     opacity: 0.5;
+}
+
+.chart-crosshair {
+    stroke: var(--text-muted);
+    stroke-width: 0.5;
+    stroke-dasharray: 3, 3;
+    opacity: 0.6;
+}
+
+.chart-hover-dot {
+    pointer-events: none;
+}
+
+/* ── Chart Tooltip ───────────────────────────────────── */
+
+.chart-tooltip {
+    position: absolute;
+    pointer-events: none;
+    transform: translate(-50%, -100%);
+    margin-top: -10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.chart-tooltip-value {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.chart-tooltip-value.pos { color: var(--positive); }
+.chart-tooltip-value.neg { color: var(--negative); }
+
+.chart-tooltip-date {
+    font-size: 10px;
+    color: var(--text-muted);
 }
 
 /* ── Compare Grid ────────────────────────────────────── */

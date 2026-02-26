@@ -8,19 +8,26 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /**
  * Get all active players — most recent row per player from the last 7 days.
  */
-export async function getActivePlayers() {
+export async function getActivePlayers(options = {}) {
+    const { teamName } = options;
     // Get date from 7 days ago
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const weekAgoStr = weekAgo.toISOString().slice(0, 10);
 
     // Fetch recent data for active players
-    const { data, error } = await supabase
+    let query = supabase
         .from('darko_shiny_history')
         .select('nba_id, player_name, team_name, dpm, o_dpm, d_dpm, box_dpm, box_odpm, box_ddpm, position, age, tr_minutes, tr_fg3_pct, tr_ft_pct, seconds_played, active_roster, date')
         .eq('active_roster', 1)
         .gte('date', weekAgoStr)
-        .order('date', { ascending: false })
+        .order('date', { ascending: false });
+
+    if (teamName) {
+        query = query.eq('team_name', teamName);
+    }
+
+    const { data, error } = await query
         .limit(10000);
 
     if (error) throw error;

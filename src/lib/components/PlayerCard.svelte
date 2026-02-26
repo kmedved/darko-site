@@ -64,6 +64,7 @@
         <DpmChart
             data={history}
             color={parseFloat(player.dpm) >= 0 ? 'var(--positive)' : 'var(--negative)'}
+            height={120}
         />
     {/if}
 
