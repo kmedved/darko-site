@@ -1,9 +1,22 @@
 <script>
     import { getActivePlayers } from '$lib/supabase.js';
+    import { downloadCsv } from '$lib/utils/csv.js';
 
     let players = $state([]);
     let loading = $state(true);
     let error = $state(null);
+
+    const csvColumns = [
+        { header: '#', accessor: 'rank' },
+        { header: 'Player', accessor: 'player_name' },
+        { header: 'Team', accessor: 'team_name' },
+        { header: 'Pos', accessor: 'position', format: (value) => value || '—' },
+        { header: 'Min', accessor: 'tr_minutes', format: fmtMin },
+        { header: 'DPM', accessor: 'dpm', format: fmt },
+        { header: 'ODPM', accessor: 'o_dpm', format: fmt },
+        { header: 'DDPM', accessor: 'd_dpm', format: fmt },
+        { header: 'Box', accessor: 'box_dpm', format: fmt },
+    ];
 
     $effect(() => {
         getActivePlayers()
@@ -26,6 +39,15 @@
     function dpmClass(val) {
         return parseFloat(val) >= 0 ? 'pos' : 'neg';
     }
+
+    function exportPlayersCsv() {
+        const rows = players.map((player, index) => ({ ...player, rank: index + 1 }));
+        downloadCsv({
+            rows,
+            columns: csvColumns,
+            filename: 'darko-dpm-leaderboard.csv'
+        });
+    }
 </script>
 
 <svelte:head>
@@ -34,8 +56,22 @@
 
 <div class="container">
     <div class="page-header">
-        <h1>DPM Leaderboard</h1>
-        <p>Daily Player Metrics for every NBA player, updated nightly.</p>
+        <div class="page-header-toolbar">
+            <div>
+                <h1>DPM Leaderboard</h1>
+                <p>Daily Player Metrics for every NBA player, updated nightly.</p>
+            </div>
+            <div class="page-header-actions">
+                <button
+                    class="page-action-btn"
+                    type="button"
+                    onclick={exportPlayersCsv}
+                    disabled={loading || !!error || players.length === 0}
+                >
+                    Download CSV
+                </button>
+            </div>
+        </div>
     </div>
 
     {#if loading}
@@ -92,14 +128,12 @@
         font-size: 13px;
     }
 
-    thead {
+    th {
         position: sticky;
         top: 52px;
-        z-index: 10;
-    }
-
-    th {
+        z-index: 20;
         background: var(--bg-surface);
+        box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
         padding: 8px 12px;
         text-align: left;
