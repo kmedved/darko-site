@@ -3,7 +3,7 @@
     import PlayerCard from '$lib/components/PlayerCard.svelte';
     import { getPlayerCurrent } from '$lib/supabase.js';
     import { page } from '$app/stores';
-    import { downloadCsv } from '$lib/utils/csv.js';
+    import { exportCsvRows, compareCsvColumns } from '$lib/utils/csvPresets.js';
 
     let selectedPlayers = $state([]);
     let loading = $state(false);
@@ -52,43 +52,10 @@
         '1fr 1fr 1fr 1fr'
     );
 
-    const csvColumns = [
-        { header: 'Player', accessor: 'player_name' },
-        { header: 'Team', accessor: 'team_name' },
-        { header: 'Pos', accessor: 'position', format: (value) => value || '—' },
-        { header: 'Age', accessor: 'age', format: (value) => value ?? '—' },
-        { header: 'Min', accessor: 'tr_minutes', format: fmtMin },
-        { header: 'Career Games', accessor: 'career_game_num', format: (value) => value ?? '—' },
-        { header: 'DPM', accessor: 'dpm', format: fmtDpm },
-        { header: 'ODPM', accessor: 'o_dpm', format: fmtDpm },
-        { header: 'DDPM', accessor: 'd_dpm', format: fmtDpm },
-        { header: 'Box', accessor: 'box_dpm', format: fmtDpm },
-        { header: 'Box Off', accessor: 'box_odpm', format: fmtDpm },
-        { header: 'Box Def', accessor: 'box_ddpm', format: fmtDpm },
-        { header: '3P% (trend)', accessor: 'tr_fg3_pct', format: fmtPct },
-        { header: 'FT% (trend)', accessor: 'tr_ft_pct', format: fmtPct },
-    ];
-
-    function fmtMin(seconds) {
-        if (!seconds) return '—';
-        return (seconds / 60).toFixed(1);
-    }
-
-    function fmtDpm(val) {
-        if (val === null || val === undefined) return '—';
-        const n = parseFloat(val);
-        return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
-    }
-
-    function fmtPct(val) {
-        if (val === null || val === undefined) return '—';
-        return (parseFloat(val) * 100).toFixed(1) + '%';
-    }
-
     function exportCompareCsv() {
-        downloadCsv({
+        exportCsvRows({
             rows: selectedPlayers,
-            columns: csvColumns,
+            columns: compareCsvColumns,
             filename: 'darko-compare.csv'
         });
     }

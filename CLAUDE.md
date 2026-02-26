@@ -52,6 +52,9 @@ src/
 - **CSS classes** — kebab-case (e.g., `.player-card`, `.search-input`)
 - **Color coding** — Positive stats green (`--positive`), negative red (`--negative`)
 - **DPM formatting** — Always show sign: `+X.X` / `-X.X`
+- **CSV export** — Any new data table page added to the site should include a “Download CSV” button using `downloadCsv` and a page-specific row/column schema.
+- **CSV conventions** — Shared CSV schemas and formatters live in `src/lib/utils/csvPresets.js`; prefer reusing those presets for consistent export behavior.
+- **Sticky nav & table headers** — The nav bar is `position: sticky` with `height: 210px` (defined in `app.css`). Any page with a sticky table header (`th { position: sticky }`) must set `top: 210px` to sit below the nav. Also, the table's parent wrapper must **not** have `overflow-x: auto` — that breaks sticky positioning on child elements. If the nav height changes, update the `th { top }` value on every page that uses sticky headers.
 - **No linter/formatter config** — No .eslintrc or .prettierrc present
 
 ## Database
