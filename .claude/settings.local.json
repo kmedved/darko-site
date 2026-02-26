@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "mcp__Claude_Preview__preview_start",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ]
   }
 }
