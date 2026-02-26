@@ -1,6 +1,6 @@
 <script>
     import { supabase } from '$lib/supabase.js';
-    import { exportCsvRows, standingsCsvColumns } from '$lib/utils/csvPresets.js';
+    import ConferenceChart from '$lib/components/ConferenceChart.svelte';
 
     let standings = $state([]);
     let conference = $state('East');
@@ -34,14 +34,6 @@
         if (n > 0) return 'low';
         return 'zero';
     }
-
-    function exportStandingsCsv() {
-        exportCsvRows({
-            rows: standings,
-            columns: standingsCsvColumns,
-            filename: `darko-standings-${conference.toLowerCase()}.csv`
-        });
-    }
 </script>
 
 <svelte:head>
@@ -50,22 +42,8 @@
 
 <div class="container">
     <div class="page-header">
-        <div class="page-header-toolbar">
-            <div>
-                <h1>Season Simulation</h1>
-                <p>Win projections, playoff odds, and championship probabilities from 10,000 simulations.</p>
-            </div>
-            <div class="page-header-actions">
-                <button
-                    class="page-action-btn"
-                    type="button"
-                    onclick={exportStandingsCsv}
-                    disabled={loading || !!error || standings.length === 0}
-                >
-                    Download CSV
-                </button>
-            </div>
-        </div>
+        <h1>Season Simulation</h1>
+        <p>Win projections, playoff odds, and championship probabilities from 10,000 simulations.</p>
     </div>
 
     <div class="conf-toggle">
@@ -100,7 +78,7 @@
                         <tr>
                             <td class="rk">{team.Rk}</td>
                             <td class="name">
-                                <a href="/team/{encodeURIComponent(team.team_name)}">{team.team_name}</a>
+                                <a href="/standings/{team.team_name.replace(/ /g, '_')}">{team.team_name}</a>
                             </td>
                             <td class="rec">{team.Current}</td>
                             <td class="num">{fmt(team.W)}</td>
@@ -117,9 +95,9 @@
             </table>
         </div>
 
-        <h2 class="section-title">Conference Overview</h2>
-        <div class="chart-img">
-            <img src="/conference_outlooks/{conference.toLowerCase()}.png" alt="{conference} standings" />
+        <h2 class="section-title">{conference}ern Conference Overview</h2>
+        <div class="chart-card">
+            <ConferenceChart {standings} {conference} />
         </div>
     {/if}
 </div>
@@ -156,11 +134,9 @@
         background: var(--bg-hover);
     }
 
-    .table-wrapper { margin-bottom: 32px; }
-
+    .table-wrapper { overflow-x: auto; margin-bottom: 32px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-
-    thead { position: sticky; top: 210px; z-index: 10; }
+    thead { position: sticky; top: 52px; z-index: 10; }
 
     th {
         background: var(--bg-surface);
@@ -182,23 +158,15 @@
     }
 
     tr:hover td { background: var(--bg-elevated); }
-
     .rk { width: 32px; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; }
     .name { font-weight: 500; }
     .name a { color: var(--text); }
     .name a:hover { color: var(--accent); }
     .rec { color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px; }
-
-    .num {
-        text-align: right;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        font-weight: 500;
-    }
+    .num { text-align: right; font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
     th.num, th.pct { text-align: right; }
     .pos { color: var(--positive); }
     .neg { color: var(--negative); }
-
     .pct.high { color: var(--positive); }
     .pct.mid { color: var(--accent); }
     .pct.low { color: var(--text-secondary); }
@@ -211,17 +179,12 @@
         letter-spacing: -0.01em;
     }
 
-    .chart-img {
+    .chart-card {
         background: var(--bg-surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        padding: 16px;
-        margin-bottom: 32px;
-    }
-    .chart-img img {
-        width: 100%;
-        height: auto;
-        border-radius: var(--radius-sm);
+        padding: 20px;
+        margin-bottom: 40px;
     }
 
     @media (max-width: 640px) {
