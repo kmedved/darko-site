@@ -1,5 +1,4 @@
 <script>
-    import { onMount } from 'svelte';
     import * as d3 from 'd3';
 
     let { team = {} } = $props();
@@ -32,10 +31,6 @@
         const maxP = Math.max(d3.max(seeds, d => d.prob), 1);
         const y = d3.scaleLinear().domain([0, maxP * 1.15]).range([h, 0]);
 
-        const colorScale = d3.scaleLinear()
-            .domain([0, maxP])
-            .range(['#232430', '#5b8def']);
-
         g.selectAll('rect')
             .data(seeds)
             .join('rect')
@@ -44,7 +39,11 @@
             .attr('width', x.bandwidth())
             .attr('height', d => h - y(d.prob))
             .attr('rx', 2)
-            .attr('fill', d => colorScale(d.prob));
+            .style('fill', d => {
+                if (d.prob >= 66) return 'var(--positive)';
+                if (d.prob >= 33) return 'var(--accent)';
+                return 'var(--negative)';
+            });
 
         // Labels on bars
         g.selectAll('.bar-label')
@@ -53,17 +52,17 @@
             .attr('x', d => x(d.seed) + x.bandwidth() / 2)
             .attr('y', d => y(d.prob) - 4)
             .attr('text-anchor', 'middle')
-            .attr('fill', '#8b8ca0')
+            .style('fill', 'var(--text-muted)')
             .attr('font-size', '10px')
-            .attr('font-family', "'DM Mono', monospace")
+            .attr('font-family', 'var(--font-mono)')
             .text(d => d.prob >= 1 ? d.prob.toFixed(0) + '%' : '<1%');
 
         g.append('g')
             .attr('transform', `translate(0,${h})`)
             .call(d3.axisBottom(x).tickFormat(d => '#' + d))
-            .call(g => g.select('.domain').attr('stroke', '#232430'))
+            .call(g => g.select('.domain').style('stroke', 'var(--border)'))
             .call(g => g.selectAll('.tick line').remove())
-            .call(g => g.selectAll('.tick text').attr('fill', '#8b8ca0').attr('font-size', '10px'));
+            .call(g => g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '10px'));
     }
 </script>
 

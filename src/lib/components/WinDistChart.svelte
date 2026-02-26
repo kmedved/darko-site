@@ -1,5 +1,4 @@
 <script>
-    import { onMount } from 'svelte';
     import * as d3 from 'd3';
 
     let { data = [], meanWins = 0, currentWins = 0 } = $props();
@@ -39,7 +38,7 @@
             .attr('width', x.bandwidth())
             .attr('height', d => h - y(d.prob * 100))
             .attr('rx', 1.5)
-            .attr('fill', '#5b8def')
+            .style('fill', 'var(--accent)')
             .attr('opacity', 0.7);
 
         // Mean wins line
@@ -49,16 +48,16 @@
                 .attr('x1', meanX + x.bandwidth() / 2)
                 .attr('x2', meanX + x.bandwidth() / 2)
                 .attr('y1', 0).attr('y2', h)
-                .attr('stroke', '#f87171')
+                .style('stroke', 'var(--negative)')
                 .attr('stroke-width', 2)
                 .attr('stroke-dasharray', '6,3');
 
             g.append('text')
                 .attr('x', meanX + x.bandwidth() / 2 + 6)
                 .attr('y', 10)
-                .attr('fill', '#f87171')
+                .style('fill', 'var(--negative)')
                 .attr('font-size', '11px')
-                .attr('font-family', "'DM Mono', monospace")
+                .attr('font-family', 'var(--font-mono)')
                 .text(`Proj: ${meanWins.toFixed(1)}`);
         }
 
@@ -66,21 +65,21 @@
         if (currentWins > 0) {
             const curX = x(currentWins);
             if (curX !== undefined) {
-                g.append('line')
-                    .attr('x1', curX + x.bandwidth() / 2)
-                    .attr('x2', curX + x.bandwidth() / 2)
-                    .attr('y1', 0).attr('y2', h)
-                    .attr('stroke', '#34d399')
-                    .attr('stroke-width', 2)
-                    .attr('stroke-dasharray', '6,3');
+            g.append('line')
+                .attr('x1', curX + x.bandwidth() / 2)
+                .attr('x2', curX + x.bandwidth() / 2)
+                .attr('y1', 0).attr('y2', h)
+                .style('stroke', 'var(--positive)')
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', '6,3');
 
                 g.append('text')
-                    .attr('x', curX + x.bandwidth() / 2 + 6)
-                    .attr('y', 24)
-                    .attr('fill', '#34d399')
-                    .attr('font-size', '11px')
-                    .attr('font-family', "'DM Mono', monospace")
-                    .text(`Now: ${currentWins}`);
+                .attr('x', curX + x.bandwidth() / 2 + 6)
+                .attr('y', 24)
+                .style('fill', 'var(--positive)')
+                .attr('font-size', '11px')
+                .attr('font-family', 'var(--font-mono)')
+                .text(`Now: ${currentWins}`);
             }
         }
 
@@ -89,16 +88,16 @@
         g.append('g')
             .attr('transform', `translate(0,${h})`)
             .call(d3.axisBottom(x).tickValues(data.filter((_, i) => i % tickEvery === 0).map(d => d.wins)))
-            .call(g => g.select('.domain').attr('stroke', '#232430'))
-            .call(g => g.selectAll('.tick line').attr('stroke', '#232430'))
-            .call(g => g.selectAll('.tick text').attr('fill', '#8b8ca0').attr('font-size', '10px'));
+            .call(g => g.select('.domain').style('stroke', 'var(--border)'))
+            .call(g => g.selectAll('.tick line').style('stroke', 'var(--border)'))
+            .call(g => g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '10px'));
 
         // Y axis
         g.append('g')
             .call(d3.axisLeft(y).ticks(4).tickFormat(d => d.toFixed(0) + '%'))
             .call(g => g.select('.domain').remove())
-            .call(g => g.selectAll('.tick line').attr('stroke', '#232430').attr('stroke-dasharray', '2,3').attr('x2', w))
-            .call(g => g.selectAll('.tick text').attr('fill', '#505168').attr('font-size', '10px'));
+            .call(g => g.selectAll('.tick line').style('stroke', 'var(--border)').attr('stroke-dasharray', '2,3').attr('x2', w))
+            .call(g => g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '10px'));
     }
 </script>
 

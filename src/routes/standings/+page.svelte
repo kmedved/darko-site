@@ -1,23 +1,104 @@
 <script>
     import { supabase } from '$lib/supabase.js';
     import ConferenceChart from '$lib/components/ConferenceChart.svelte';
+    import { getSortedRows } from '$lib/utils/sortableTable.js';
+    import { exportCsvRows, standingsCsvColumns } from '$lib/utils/csvPresets.js';
+    import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
 
     let standings = $state([]);
     let conference = $state('East');
+    let sortColumn = $state('Rk');
+    let sortDirection = $state('asc');
+    let chartMetric = $state('W');
     let loading = $state(true);
     let error = $state(null);
+    const standingsRequestSequencer = createRequestSequencer();
+
+    const standingsSortConfig = {
+        Rk: { type: 'number' },
+        team_name: { type: 'text' },
+        Current: { type: 'record' },
+        W: { type: 'number' },
+        L: { type: 'number' },
+        SRS: { type: 'number' },
+        Playoffs: { type: 'percent' },
+        'Win Conf': { type: 'percent' },
+        'Win Finals': { type: 'percent' },
+        'Lottery%': { type: 'percent' },
+        ExpPick: { type: 'number' }
+    };
+
+    const sortedStandings = $derived.by(() =>
+        getSortedRows(standings, {
+            sortColumn,
+            sortDirection,
+            sortConfigs: standingsSortConfig
+        })
+    );
+
+    const sortedForChart = $derived.by(() =>
+        getSortedRows(standings, {
+            sortColumn: chartMetric,
+            sortDirection: 'desc',
+            sortConfigs: standingsSortConfig
+        })
+    );
+
+    function sortGlyph(column) {
+        if (sortColumn !== column) return '↕';
+        return sortDirection === 'asc' ? '↑' : '↓';
+    }
+
+    function toggleSort(column) {
+        if (sortColumn === column) {
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            return;
+        }
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
+
+    const chartSortOptions = [
+        { label: 'Wins', value: 'W' },
+        { label: 'Playoff %', value: 'Playoffs' },
+        { label: 'Conference Win %', value: 'Win Conf' },
+        { label: 'Finals Win %', value: 'Win Finals' },
+        { label: 'Lottery %', value: 'Lottery%' },
+        { label: 'Expected Pick', value: 'ExpPick' },
+        { label: 'SRS', value: 'SRS' }
+    ];
 
     async function loadStandings() {
+        const requestId = standingsRequestSequencer.next();
         loading = true;
-        const { data, error: err } = await supabase
-            .from('season_sim')
-            .select('*')
-            .eq('conference', conference)
-            .order('Rk', { ascending: true });
+        error = null;
+        const currentConference = conference;
 
-        if (err) { error = err.message; loading = false; return; }
-        standings = data;
-        loading = false;
+        try {
+            const { data, error: err } = await supabase
+                .from('season_sim')
+                .select('*')
+                .eq('conference', currentConference)
+                .order('Rk', { ascending: true });
+
+            if (!standingsRequestSequencer.isCurrent(requestId)) return;
+
+            if (err) {
+                error = err.message;
+                standings = [];
+                return;
+            }
+
+            standings = data;
+        } catch (err) {
+            if (!standingsRequestSequencer.isCurrent(requestId)) return;
+            error = err?.message || 'Failed to load standings';
+            standings = [];
+        } finally {
+            if (standingsRequestSequencer.isCurrent(requestId)) {
+                loading = false;
+            }
+        }
     }
 
     $effect(() => { loadStandings(); });
@@ -34,6 +115,22 @@
         if (n > 0) return 'low';
         return 'zero';
     }
+
+    function exportConferenceCsv() {
+        exportCsvRows({
+            rows: sortedForChart,
+            columns: standingsCsvColumns,
+            filename: `${conference.toLowerCase()}-conference-overview.csv`
+        });
+    }
+
+    function exportStandingsCsv() {
+        exportCsvRows({
+            rows: sortedStandings,
+            columns: standingsCsvColumns,
+            filename: `${conference.toLowerCase()}-conference-standings.csv`
+        });
+    }
 </script>
 
 <svelte:head>
@@ -47,8 +144,8 @@
     </div>
 
     <div class="conf-toggle">
-        <button class:active={conference === 'East'} onclick={() => { conference = 'East'; loadStandings(); }}>Eastern</button>
-        <button class:active={conference === 'West'} onclick={() => { conference = 'West'; loadStandings(); }}>Western</button>
+        <button class:active={conference === 'East'} onclick={() => conference = 'East'}>Eastern</button>
+        <button class:active={conference === 'West'} onclick={() => conference = 'West'}>Western</button>
     </div>
 
     {#if loading}
@@ -56,29 +153,61 @@
     {:else if error}
         <div class="error-msg">{error}</div>
     {:else}
+        <div class="table-toolbar">
+            <button
+                class="page-action-btn"
+                type="button"
+                onclick={exportStandingsCsv}
+                disabled={sortedStandings.length === 0}
+            >
+                Download Table CSV
+            </button>
+        </div>
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th class="rk">#</th>
-                        <th class="name">Team</th>
-                        <th class="rec">Current</th>
-                        <th class="num">W</th>
-                        <th class="num">L</th>
-                        <th class="num">SRS</th>
-                        <th class="num pct">Playoff%</th>
-                        <th class="num pct">Conf</th>
-                        <th class="num pct">Finals</th>
-                        <th class="num pct">Lotto%</th>
-                        <th class="num">E[Pick]</th>
+                        <th class="rk sortable {sortColumn === 'Rk' ? 'active' : ''}" onclick={() => toggleSort('Rk')}>
+                            # <span class="sort-indicator">{sortGlyph('Rk')}</span>
+                        </th>
+                        <th class="name sortable {sortColumn === 'team_name' ? 'active' : ''}" onclick={() => toggleSort('team_name')}>
+                            Team <span class="sort-indicator">{sortGlyph('team_name')}</span>
+                        </th>
+                        <th class="rec sortable {sortColumn === 'Current' ? 'active' : ''}" onclick={() => toggleSort('Current')}>
+                            Current <span class="sort-indicator">{sortGlyph('Current')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'W' ? 'active' : ''}" onclick={() => toggleSort('W')}>
+                            W <span class="sort-indicator">{sortGlyph('W')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'L' ? 'active' : ''}" onclick={() => toggleSort('L')}>
+                            L <span class="sort-indicator">{sortGlyph('L')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'SRS' ? 'active' : ''}" onclick={() => toggleSort('SRS')}>
+                            SRS <span class="sort-indicator">{sortGlyph('SRS')}</span>
+                        </th>
+                        <th class="num pct sortable {sortColumn === 'Playoffs' ? 'active' : ''}" onclick={() => toggleSort('Playoffs')}>
+                            Playoff% <span class="sort-indicator">{sortGlyph('Playoffs')}</span>
+                        </th>
+                        <th class="num pct sortable {sortColumn === 'Win Conf' ? 'active' : ''}" onclick={() => toggleSort('Win Conf')}>
+                            Conf <span class="sort-indicator">{sortGlyph('Win Conf')}</span>
+                        </th>
+                        <th class="num pct sortable {sortColumn === 'Win Finals' ? 'active' : ''}" onclick={() => toggleSort('Win Finals')}>
+                            Finals <span class="sort-indicator">{sortGlyph('Win Finals')}</span>
+                        </th>
+                        <th class="num pct sortable {sortColumn === 'Lottery%' ? 'active' : ''}" onclick={() => toggleSort('Lottery%')}>
+                            Lotto% <span class="sort-indicator">{sortGlyph('Lottery%')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'ExpPick' ? 'active' : ''}" onclick={() => toggleSort('ExpPick')}>
+                            E[Pick] <span class="sort-indicator">{sortGlyph('ExpPick')}</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
-                    {#each standings as team}
+                    {#each sortedStandings as team}
                         <tr>
                             <td class="rk">{team.Rk}</td>
                             <td class="name">
-                                <a href="/standings/{team.team_name.replace(/ /g, '_')}">{team.team_name}</a>
+                                <a href="/team/{encodeURIComponent(team.team_name)}">{team.team_name}</a>
                             </td>
                             <td class="rec">{team.Current}</td>
                             <td class="num">{fmt(team.W)}</td>
@@ -96,8 +225,26 @@
         </div>
 
         <h2 class="section-title">{conference}ern Conference Overview</h2>
+        <div class="chart-toolbar">
+            <span class="chart-toolbar-label">Sort chart by:</span>
+            <div class="chart-radio-group">
+                {#each chartSortOptions as option}
+                    <label class="chart-radio">
+                        <input
+                            type="radio"
+                            name="chart-sort"
+                            value={option.value}
+                            checked={chartMetric === option.value}
+                            onchange={() => (chartMetric = option.value)}
+                        />
+                        {option.label}
+                    </label>
+                {/each}
+            </div>
+            <button class="page-action-btn" type="button" onclick={exportConferenceCsv}>Download CSV</button>
+        </div>
         <div class="chart-card">
-            <ConferenceChart {standings} {conference} />
+            <ConferenceChart standings={sortedForChart} {conference} sortMetric={chartMetric} />
         </div>
     {/if}
 </div>
@@ -134,11 +281,21 @@
         background: var(--bg-hover);
     }
 
-    .table-wrapper { overflow-x: auto; margin-bottom: 32px; }
+    .table-wrapper { margin-bottom: 32px; }
+    .table-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 12px;
+    }
+
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    thead { position: sticky; top: 52px; z-index: 10; }
 
     th {
+        position: sticky;
+        top: 210px;
+        z-index: 10;
+        cursor: pointer;
+        user-select: none;
         background: var(--bg-surface);
         border-bottom: 1px solid var(--border);
         padding: 8px 10px;
@@ -149,6 +306,25 @@
         letter-spacing: 0.08em;
         color: var(--text-muted);
         white-space: nowrap;
+    }
+
+    th:hover {
+        background: var(--bg-hover);
+    }
+
+    th.active {
+        color: var(--text);
+    }
+
+    .sort-indicator {
+        margin-left: 6px;
+        opacity: 0.6;
+        font-size: 10px;
+    }
+
+    th.active .sort-indicator {
+        color: var(--accent);
+        opacity: 1;
     }
 
     td {
@@ -174,9 +350,48 @@
 
     .section-title {
         font-size: 16px;
-        font-weight: 600;
+        font-weight: 700;
+        color: var(--text);
         margin: 32px 0 16px;
         letter-spacing: -0.01em;
+    }
+
+    .chart-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 4px 0 16px;
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+
+    .chart-toolbar-label {
+        font-weight: 500;
+    }
+
+    .chart-radio-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+    }
+
+    .chart-radio {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+
+    .chart-radio input[type='radio'] {
+        background: var(--bg-elevated);
+        color: var(--text);
+        border: 1px solid var(--border);
+        accent-color: var(--accent);
+    }
+
+    .chart-toolbar button.page-action-btn {
+        margin-left: auto;
     }
 
     .chart-card {

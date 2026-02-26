@@ -6,7 +6,8 @@
     import { exportCsvRows, compareCsvColumns } from '$lib/utils/csvPresets.js';
 
     let selectedPlayers = $state([]);
-    let loading = $state(false);
+    let pendingLoads = $state(0);
+    let loading = $derived(pendingLoads > 0);
     let error = $state(null);
 
     $effect(() => {
@@ -23,7 +24,7 @@
         if (selectedPlayers.some(p => p.nba_id === nbaId)) return;
         if (selectedPlayers.length >= 4) return;
 
-        loading = true;
+        pendingLoads += 1;
         error = null;
         try {
             const data = await getPlayerCurrent(nbaId);
@@ -31,7 +32,7 @@
         } catch (err) {
             error = err.message;
         } finally {
-            loading = false;
+            pendingLoads = Math.max(0, pendingLoads - 1);
         }
     }
 

@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { resolveSupabaseConfig } from '$lib/utils/supabaseConfig.js';
 
-const SUPABASE_URL = 'https://lomejyvfcwmchejdjqbj.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_uLi6DWIMye_QmWMuJ71hJA_TNW5uae-';
+const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
+    url: PUBLIC_SUPABASE_URL,
+    key: PUBLIC_SUPABASE_ANON_KEY
+});
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Get all active players — most recent row per player from the last 7 days.
