@@ -79,6 +79,27 @@ export const standingsCsvColumns = [
     { header: 'E[Pick]', accessor: 'ExpPick', format: (v) => formatFixed(v, 1) },
 ];
 
+export const longevityCsvColumns = [
+    { header: 'Player', accessor: 'player_name' },
+    { header: 'Rookie Season', accessor: 'rookie_season', format: (v) => formatNullable(v) },
+    { header: 'Career Games', accessor: 'career_games', format: (v) => formatNullable(v) },
+    { header: 'Age', accessor: 'age', format: (v) => formatFixed(v, 1) },
+    { header: 'Est. Retirement Age', accessor: 'est_retirement_age', format: (v) => formatFixed(v, 1) },
+    { header: 'Years Remaining', accessor: 'years_remaining', format: (v) => formatFixed(v, 1) },
+    { header: '+1', accessor: 'p1', format: (v) => formatFixed(v, 1) },
+    { header: '+2', accessor: 'p2', format: (v) => formatFixed(v, 1) },
+    { header: '+3', accessor: 'p3', format: (v) => formatFixed(v, 1) },
+    { header: '+4', accessor: 'p4', format: (v) => formatFixed(v, 1) },
+    { header: '+5', accessor: 'p5', format: (v) => formatFixed(v, 1) },
+    { header: '+6', accessor: 'p6', format: (v) => formatFixed(v, 1) },
+    { header: '+7', accessor: 'p7', format: (v) => formatFixed(v, 1) },
+    { header: '+8', accessor: 'p8', format: (v) => formatFixed(v, 1) },
+    { header: '+9', accessor: 'p9', format: (v) => formatFixed(v, 1) },
+    { header: '+10', accessor: 'p10', format: (v) => formatFixed(v, 1) },
+    { header: '+11', accessor: 'p11', format: (v) => formatFixed(v, 1) },
+    { header: '+12', accessor: 'p12', format: (v) => formatFixed(v, 1) }
+];
+
 export const teamPlayersCsvColumns = [
     { header: 'Player', accessor: 'player_name' },
     { header: 'Pos', accessor: 'position', format: formatOrDash },

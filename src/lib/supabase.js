@@ -67,6 +67,57 @@ export async function getPlayerHistory(nbaId, limit = 500) {
 }
 
 /**
+ * Search all players (including retired/inactive) by name.
+ * Returns up to 15 unique matches with most recent data.
+ */
+export async function searchAllPlayers(searchTerm) {
+    const { data, error } = await supabase
+        .from('darko_shiny_history')
+        .select('nba_id, player_name, team_name, position, dpm, date')
+        .ilike('player_name', `%${searchTerm}%`)
+        .order('date', { ascending: false })
+        .limit(200);
+
+    if (error) throw error;
+
+    const seen = new Set();
+    const unique = [];
+    for (const row of data) {
+        if (!seen.has(row.nba_id)) {
+            seen.add(row.nba_id);
+            unique.push(row);
+        }
+    }
+    return unique.slice(0, 15);
+}
+
+/**
+ * Get a player's complete career history (all rows, paginated).
+ * Returns rows in chronological order.
+ */
+export async function getFullPlayerHistory(nbaId) {
+    let allData = [];
+    let page = 0;
+    const pageSize = 1000;
+
+    while (true) {
+        const { data, error } = await supabase
+            .from('darko_shiny_history')
+            .select('nba_id, player_name, team_name, dpm, o_dpm, d_dpm, box_dpm, box_odpm, box_ddpm, age, career_game_num, date, tr_fg3_pct, tr_ft_pct, position')
+            .eq('nba_id', nbaId)
+            .order('date', { ascending: true })
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+        allData = allData.concat(data);
+        if (data.length < pageSize) break;
+        page++;
+    }
+
+    return allData;
+}
+
+/**
  * Get current snapshot for a specific player.
  */
 export async function getPlayerCurrent(nbaId) {

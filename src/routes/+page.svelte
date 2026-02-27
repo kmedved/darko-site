@@ -165,7 +165,7 @@
                         <tr>
                             <td class="rank">{i + 1}</td>
                             <td class="name">
-                                <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
+                                <a href="/player/{player.nba_id}">{player.player_name}</a>
                             </td>
                             <td class="team">
                                 {#if player.team_name}
