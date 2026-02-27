@@ -6,7 +6,9 @@ import assert from 'node:assert/strict';
 const TARGET_FILES = [
     'src/lib/components/WinDistChart.svelte',
     'src/lib/components/SeedChart.svelte',
-    'src/lib/components/ConferenceChart.svelte'
+    'src/lib/components/ConferenceChart.svelte',
+    'src/lib/components/LongevityRosterChart.svelte',
+    'src/lib/components/LongevityCareerLengthChart.svelte'
 ];
 
 const HEX_COLOR = /#(?:[0-9a-fA-F]{3}){1,2}\b/g;

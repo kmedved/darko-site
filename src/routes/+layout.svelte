@@ -81,8 +81,12 @@
             <img src="/logo-dark.png" alt="" class="logo-mark logo-mark--dark" aria-hidden="true" />
         </a>
         <div class="links">
+            <a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
             <a href="/standings" class:active={$page.url.pathname.startsWith('/standings')}>Standings</a>
             <a href="/compare" class:active={$page.url.pathname === '/compare'}>Compare</a>
+            <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Trajectories</a>
+            <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
+            <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
             <button
                 type="button"
                 class="theme-toggle"

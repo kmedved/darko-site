@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["node_modules/vite/bin/vite.js", "dev"],
+      "runtimeExecutable": "/Users/kmedved/.bun/bin/bunx",
+      "runtimeArgs": ["--bun", "vite", "dev", "--port", "5173", "--strictPort", "--host", "127.0.0.1"],
       "port": 5173
     }
   ]
