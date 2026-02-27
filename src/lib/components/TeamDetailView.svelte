@@ -1,7 +1,7 @@
 <script>
     import WinDistChart from './WinDistChart.svelte';
     import SeedChart from './SeedChart.svelte';
-    import { exportCsvRows, formatMinutes, formatSignedMetric, teamPlayersCsvColumns } from '$lib/utils/csvPresets.js';
+    import { exportCsvRows, formatMinutes, formatSignedMetric, formatFixed, formatOrDash } from '$lib/utils/csvPresets.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
 
     let {
@@ -20,16 +20,14 @@
     const teamWinDist = $derived(winDist || []);
 
     function dpmClass(val) {
-        return parseFloat(val) >= 0 ? 'pos' : 'neg';
-    }
-
-    function fmt(val, d = 1) {
-        if (val === null || val === undefined) return '—';
-        return parseFloat(val).toFixed(d);
+        const n = parseFloat(val);
+        if (!Number.isFinite(n)) return '';
+        return n >= 0 ? 'pos' : 'neg';
     }
 
     function pctClass(val) {
         const n = parseFloat(val);
+        if (!Number.isFinite(n)) return '';
         if (n >= 80) return 'high';
         if (n >= 40) return 'mid';
         if (n > 0) return 'low';
@@ -71,13 +69,22 @@
     function currentWins(currentStr) {
         if (!currentStr) return 0;
         const parts = currentStr.split('-');
-        return parseInt(parts[0]) || 0;
+        const parsed = parseFloat(parts[0]);
+        return Number.isFinite(parsed) ? parsed : 0;
     }
 
     function exportTeamCsv() {
         exportCsvRows({
             rows: sortedPlayers,
-            columns: teamPlayersCsvColumns,
+            columns: [
+                { header: 'Player', accessor: 'player_name', format: formatOrDash },
+                { header: 'Pos', accessor: 'position', format: formatOrDash },
+                { header: 'Min', accessor: 'tr_minutes', format: formatMinutes },
+                { header: 'DPM', accessor: 'dpm', format: formatSignedMetric },
+                { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
+                { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },
+                { header: 'Box', accessor: 'box_dpm', format: formatSignedMetric },
+            ],
             filename: `${teamName || 'team'}-players.csv`
         });
     }
@@ -91,7 +98,7 @@
             <div>
                 <h1>{teamName || 'Team'}</h1>
                 {#if sim}
-                    <p>{sim.conference}ern Conference · Current: {sim.Current} · Projected: {fmt(sim.W)}-{fmt(sim.L)}</p>
+                    <p>{sim.conference}ern Conference · Current: {sim.Current} · Projected: {formatFixed(sim.W)}-{formatFixed(sim.L)}</p>
                 {:else}
                     <p>Current ratings for all active players on the team.</p>
                 {/if}
@@ -113,27 +120,31 @@
         <div class="stats-grid">
             <div class="stat-box">
                 <div class="stat-label">Playoff%</div>
-                <div class="stat-value pct {pctClass(sim.Playoffs)}">{fmt(sim.Playoffs)}%</div>
+                <div class="stat-value pct {pctClass(sim.Playoffs)}">{formatFixed(sim.Playoffs)}%</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Win Conf</div>
-                <div class="stat-value pct {pctClass(sim['Win Conf'])}">{fmt(sim['Win Conf'])}%</div>
+                <div class="stat-value pct {pctClass(sim['Win Conf'])}">{formatFixed(sim['Win Conf'])}%</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Win Finals</div>
-                <div class="stat-value pct {pctClass(sim['Win Finals'])}">{fmt(sim['Win Finals'])}%</div>
+                <div class="stat-value pct {pctClass(sim['Win Finals'])}">{formatFixed(sim['Win Finals'])}%</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">SRS</div>
-                <div class="stat-value {parseFloat(sim.SRS) >= 0 ? 'srs-pos' : 'srs-neg'}">{fmt(sim.SRS, 2)}</div>
+                <div class="stat-value { (() => {
+                    const n = parseFloat(sim.SRS);
+                    if (!Number.isFinite(n)) return '';
+                    return n >= 0 ? 'srs-pos' : 'srs-neg';
+                })() }">{formatFixed(sim.SRS, 2)}</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Lottery%</div>
-                <div class="stat-value pct {pctClass(sim['Lottery%'])}">{fmt(sim['Lottery%'])}%</div>
+                <div class="stat-value pct {pctClass(sim['Lottery%'])}">{formatFixed(sim['Lottery%'])}%</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">E[Pick]</div>
-                <div class="stat-value">{fmt(sim.ExpPick)}</div>
+                <div class="stat-value">{formatFixed(sim.ExpPick)}</div>
             </div>
         </div>
     {/if}
@@ -278,91 +289,16 @@
         box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
         padding: 8px 12px;
-        text-align: left;
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
+    }
+
+    .empty-state {
         color: var(--text-muted);
-        white-space: nowrap;
+        margin: 16px 0;
     }
 
-    th:hover {
-        background: var(--bg-hover);
-    }
-
-    th.active {
-        color: var(--text);
-    }
-
-    .sort-indicator {
-        margin-left: 6px;
-        opacity: 0.6;
-        font-size: 10px;
-    }
-
-    th.active .sort-indicator {
-        color: var(--accent);
-        opacity: 1;
-    }
-
-    td {
-        padding: 7px 12px;
-        border-bottom: 1px solid var(--border-subtle);
-        white-space: nowrap;
-    }
-
-    tr:hover td {
-        background: var(--bg-elevated);
-    }
-
-    .name {
-        font-weight: 500;
-    }
-
-    .name a {
-        color: var(--text);
-    }
-
-    .name a:hover {
-        color: var(--accent);
-    }
-
-    .num {
-        text-align: right;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    th.num { text-align: right; }
-
-    .position {
-        color: var(--text-muted);
-        width: 46px;
-        font-size: 12px;
-    }
-
-    .pos { color: var(--positive); }
-    .neg { color: var(--negative); }
-
+    .srs-pos { color: var(--positive); }
+    .srs-neg { color: var(--negative); }
     .chart-card {
-        background: var(--bg-surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 20px;
-        margin-bottom: 8px;
-    }
-
-    @media (max-width: 768px) {
-        .stats-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-
-    @media (max-width: 480px) {
-        .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 640px) {
-        th, td { padding: 6px 8px; }
+        margin-bottom: 24px;
     }
 </style>

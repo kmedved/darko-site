@@ -1,6 +1,7 @@
 <script>
 	import * as d3 from 'd3';
 	import { loess } from '$lib/utils/loess.js';
+	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 
 	let {
 		rows = [],
@@ -47,10 +48,15 @@
 	}
 
 	$effect(() => {
-		if (!svgEl || rows.length === 0) return;
+		if (!svgEl || rows.length === 0) {
+			if (svgEl) d3.select(svgEl).selectAll('*').remove();
+			rowsForTooltip = null;
+			return;
+		}
 		void talentType;
 		void rows;
 		renderChart();
+		return withResizeObserver({ element: svgEl, onResize: renderChart });
 	});
 
 	function renderChart() {

@@ -1,10 +1,11 @@
 <script>
 	import { page } from '$app/stores';
-	import { getFullPlayerHistory, getPlayerCurrent, getActivePlayers } from '$lib/supabase.js';
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import TalentTrendChart from '$lib/components/TalentTrendChart.svelte';
 	import TalentPercentilesChart from '$lib/components/TalentPercentilesChart.svelte';
+	import { apiActivePlayers, apiPlayerHistory } from '$lib/api.js';
 	import { goto } from '$app/navigation';
+	import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
 
 	let nbaId = $derived($page.params.nbaId);
 
@@ -16,6 +17,7 @@
 
 	let talentType = $state('dpm');
 	let selectedPercentileMetrics = $state(['dpm', 'o_dpm', 'd_dpm', 'tr_fg3_pct', 'tr_ft_pct']);
+	const loadSeq = createRequestSequencer();
 
 	const TALENT_OPTIONS = [
 		{ value: 'dpm', label: 'DPM' },
@@ -73,22 +75,28 @@
 	});
 
 	async function loadPlayer(id) {
+		const reqId = loadSeq.next();
 		loading = true;
 		error = null;
 		try {
-			const [info, history, active] = await Promise.all([
-				getPlayerCurrent(id),
-				getFullPlayerHistory(id),
+			const [history, active] = await Promise.all([
+				apiPlayerHistory(id),
 				allActivePlayers.length > 0
 					? Promise.resolve(allActivePlayers)
-					: getActivePlayers()
+					: apiActivePlayers()
 			]);
+			const info = history.at(-1);
+
+			if (!loadSeq.isCurrent(reqId)) return;
+
 			playerInfo = info;
 			historyRows = history;
 			allActivePlayers = active;
 		} catch (err) {
+			if (!loadSeq.isCurrent(reqId)) return;
 			error = err.message;
 		} finally {
+			if (!loadSeq.isCurrent(reqId)) return;
 			loading = false;
 		}
 	}

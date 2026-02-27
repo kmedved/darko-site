@@ -1,5 +1,6 @@
 <script>
     import * as d3 from 'd3';
+	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 
     let { standings = [], sortMetric = 'W' } = $props();
     let svgEl = $state(null);
@@ -17,9 +18,9 @@
     }
 
     function getMetricLabel(value) {
-        if (value === null || value === undefined) return '\u2014';
+        if (value === null || value === undefined) return '—';
         const n = parseFloat(value);
-        if (!Number.isFinite(n)) return '\u2014';
+        if (!Number.isFinite(n)) return '—';
         if (sortMetric === 'W') return `${n.toFixed(0)}W`;
         if (sortMetric === 'SRS') return n.toFixed(2);
         if (sortMetric === 'ExpPick') return n.toFixed(1);
@@ -28,16 +29,20 @@
     }
 
     $effect(() => {
+        if (!svgEl) return;
+        if (!standings || standings.length === 0) {
+            d3.select(svgEl).selectAll('*').remove();
+            return;
+        }
+
         const _sortMetric = sortMetric;
         void _sortMetric;
-        if (svgEl && standings.length > 0) renderChart();
+        renderChart();
+        return withResizeObserver({ element: svgEl, onResize: renderChart });
     });
-
     function renderChart() {
-        const svg = d3.select(svgEl);
-        svg.selectAll('*').remove();
-
-        const sorted = [...standings].sort((a, b) => {
+		if (!svgEl) return;
+		const sorted = [...standings].sort((a, b) => {
             const aVal = getMetricValue(a);
             const bVal = getMetricValue(b);
             if (aVal === null && bVal === null) return 0;
@@ -49,10 +54,19 @@
         const metricValues = sorted
             .map(getMetricValue)
             .filter((value) => value !== null);
-        const metricMax = metricValues.length > 0 ? d3.max(metricValues) : 0;
-        const xMax = metricMax > 0 ? metricMax * 1.06 : 1;
+        const minVal = metricValues.length ? d3.min(metricValues) : 0;
+        const maxVal = metricValues.length ? d3.max(metricValues) : 0;
+        const pad = Math.max((maxVal - minVal) * 0.06, 1);
+        const domainMin = Math.min(0, minVal - pad);
+        const domainMax = Math.max(0, maxVal + pad);
+
+        const svg = d3.select(svgEl);
+        svg.selectAll('*').remove();
+
         const margin = { top: 16, right: 60, bottom: 24, left: 140 };
         const width = svgEl.clientWidth;
+        if (!width) return;
+
         const barHeight = 28;
         const gap = 4;
         const height = sorted.length * (barHeight + gap) + margin.top + margin.bottom;
@@ -62,18 +76,27 @@
         const w = width - margin.left - margin.right;
         const h = height - margin.top - margin.bottom;
 
-        const x = d3.scaleLinear().domain([0, xMax]).range([0, w]);
+        const x = d3.scaleLinear().domain([domainMin, domainMax]).range([0, w]).nice();
+        const x0 = x(0);
         const y = d3.scaleBand()
             .domain(sorted.map(d => d.team_name))
-            .range([h, 0])
+            .range([0, h])
             .padding(0.12);
 
         g.selectAll('rect')
             .data(sorted)
             .join('rect')
-            .attr('x', 0)
+            .attr('x', d => {
+                const metric = getMetricValue(d);
+                if (metric === null) return x0;
+                return Math.min(x0, x(metric));
+            })
             .attr('y', d => y(d.team_name))
-            .attr('width', d => x(getMetricValue(d) || 0))
+            .attr('width', d => {
+                const metric = getMetricValue(d);
+                if (metric === null) return 0;
+                return Math.abs(x(metric) - x0);
+            })
             .attr('height', y.bandwidth())
             .attr('rx', 3)
             .style('fill', d => {
@@ -103,12 +126,19 @@
             .data(sorted)
             .join('text')
             .attr('class', 'win-label')
-            .attr('x', d => x(getMetricValue(d) || 0) + 6)
+            .attr('x', d => {
+                const metric = getMetricValue(d) ?? 0;
+                return metric >= 0 ? x(metric) + 6 : x(metric) - 6;
+            })
             .attr('y', d => y(d.team_name) + y.bandwidth() / 2)
             .attr('dy', '0.35em')
             .style('fill', 'var(--text-muted)')
             .attr('font-size', '11px')
             .attr('font-family', 'var(--font-mono)')
+            .attr('text-anchor', d => {
+                const metric = getMetricValue(d) ?? 0;
+                return metric >= 0 ? 'start' : 'end';
+            })
             .text(d => `${getMetricLabel(getMetricValue(d))}`);
 
         // X axis

@@ -1,5 +1,6 @@
 <script>
 	import * as d3 from 'd3';
+	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 
 	let {
 		playerName = '',
@@ -35,6 +36,7 @@
 		void selectedMetrics;
 		void playerName;
 		renderChart();
+		return withResizeObserver({ element: svgEl, onResize: renderChart });
 	});
 
 	function renderChart() {

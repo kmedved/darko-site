@@ -1,7 +1,7 @@
 <script>
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import TrajectoryChart from '$lib/components/TrajectoryChart.svelte';
-	import { getFullPlayerHistory, getActivePlayers } from '$lib/supabase.js';
+	import { apiPlayerHistory, apiActivePlayers } from '$lib/api.js';
 	import { computeSeasonX } from '$lib/utils/seasonUtils.js';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -99,7 +99,7 @@
 		pendingLoads += 1;
 		error = null;
 		try {
-			const rows = await getFullPlayerHistory(nbaId);
+			const rows = await apiPlayerHistory(nbaId);
 			if (rows.length === 0) {
 				error = `No history found for player ${nbaId}`;
 				return;
@@ -127,7 +127,7 @@
 		pendingLoads += 1;
 		error = null;
 		try {
-			const players = await getActivePlayers();
+			const players = await apiActivePlayers();
 			if (players.length === 0) {
 				error = 'No players available for random selection.';
 				return;
@@ -143,7 +143,7 @@
 		}
 	}
 
-	function addPlayer(player) {
+	async function addPlayer(player) {
 		if (selectedPlayers.some((p) => p.nba_id === player.nba_id)) return;
 		if (selectedPlayers.length >= MAX_PLAYERS) return;
 
@@ -153,25 +153,27 @@
 		pendingLoads += 1;
 		error = null;
 
-		getFullPlayerHistory(player.nba_id)
-			.then((rows) => {
-				selectedPlayers = [
-					...selectedPlayers,
-					{
-						nba_id: player.nba_id,
-						player_name: player.player_name,
-						team_name: player.team_name,
-						color,
-						rows
-					}
-				];
-			})
-			.catch((err) => {
-				error = err.message;
-			})
-			.finally(() => {
-				pendingLoads = Math.max(0, pendingLoads - 1);
-			});
+		try {
+			const rows = await apiPlayerHistory(player.nba_id);
+			if (rows.length === 0) {
+				error = `No history found for player ${player.nba_id}`;
+				return;
+			}
+			selectedPlayers = [
+				...selectedPlayers,
+				{
+					nba_id: player.nba_id,
+					player_name: player.player_name,
+					team_name: player.team_name,
+					color,
+					rows
+				}
+			];
+		} catch (err) {
+			error = err.message;
+		} finally {
+			pendingLoads = Math.max(0, pendingLoads - 1);
+		}
 	}
 
 	function removePlayer(nbaId) {

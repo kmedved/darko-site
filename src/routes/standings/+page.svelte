@@ -1,7 +1,7 @@
 <script>
     import ConferenceChart from '$lib/components/ConferenceChart.svelte';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
-    import { exportCsvRows, standingsCsvColumns } from '$lib/utils/csvPresets.js';
+    import { exportCsvRows, standingsCsvColumns, formatFixed } from '$lib/utils/csvPresets.js';
 
     let { data } = $props();
 
@@ -20,7 +20,7 @@
         Playoffs: { type: 'percent' },
         'Win Conf': { type: 'percent' },
         'Win Finals': { type: 'percent' },
-        'Lottery%': { type: 'percent' },
+        Lottery%: { type: 'percent' },
         ExpPick: { type: 'number' }
     };
 
@@ -68,17 +68,19 @@
         { label: 'SRS', value: 'SRS' }
     ];
 
-    function fmt(val, d = 1) {
-        if (val === null || val === undefined) return '—';
-        return parseFloat(val).toFixed(d);
-    }
-
     function pctClass(val) {
-        const n = parseFloat(val);
+        const n = Number.parseFloat(val);
+        if (!Number.isFinite(n)) return '';
         if (n >= 80) return 'high';
         if (n >= 40) return 'mid';
         if (n > 0) return 'low';
         return 'zero';
+    }
+
+    function srsClass(val) {
+        const n = Number.parseFloat(val);
+        if (!Number.isFinite(n)) return '';
+        return n >= 0 ? 'pos' : 'neg';
     }
 
     function exportConferenceCsv() {
@@ -170,17 +172,17 @@
                         <tr>
                             <td class="rk">{team.Rk}</td>
                             <td class="name">
-                                <a href="/team/{encodeURIComponent(team.team_name)}">{team.team_name}</a>
+                                <a href={`/standings/{encodeURIComponent(team.team_name)}`}>{team.team_name}</a>
                             </td>
                             <td class="rec">{team.Current}</td>
-                            <td class="num">{fmt(team.W)}</td>
-                            <td class="num">{fmt(team.L)}</td>
-                            <td class="num {parseFloat(team.SRS) >= 0 ? 'pos' : 'neg'}">{fmt(team.SRS, 2)}</td>
-                            <td class="num pct {pctClass(team.Playoffs)}">{fmt(team.Playoffs)}</td>
-                            <td class="num pct {pctClass(team['Win Conf'])}">{fmt(team['Win Conf'])}</td>
-                            <td class="num pct {pctClass(team['Win Finals'])}">{fmt(team['Win Finals'])}</td>
-                            <td class="num pct {pctClass(team['Lottery%'])}">{fmt(team['Lottery%'])}</td>
-                            <td class="num">{fmt(team.ExpPick)}</td>
+                            <td class="num">{formatFixed(team.W)}</td>
+                            <td class="num">{formatFixed(team.L)}</td>
+                            <td class="num {srsClass(team.SRS)}">{formatFixed(team.SRS, 2)}</td>
+                            <td class="num pct {pctClass(team.Playoffs)}">{formatFixed(team.Playoffs)}%</td>
+                            <td class="num pct {pctClass(team['Win Conf'])}">{formatFixed(team['Win Conf'])}%</td>
+                            <td class="num pct {pctClass(team['Win Finals'])}">{formatFixed(team['Win Finals'])}%</td>
+                            <td class="num pct {pctClass(team['Lottery%'])}">{formatFixed(team['Lottery%'])}%</td>
+                            <td class="num">{formatFixed(team.ExpPick)}</td>
                         </tr>
                     {/each}
                 </tbody>
@@ -256,12 +258,13 @@
     th {
         position: sticky;
         top: 210px;
-        z-index: 10;
+        z-index: 20;
         cursor: pointer;
         user-select: none;
         background: var(--bg-surface);
+        box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
-        padding: 8px 10px;
+        padding: 8px 12px;
         text-align: left;
         font-size: 10px;
         font-weight: 600;
@@ -271,7 +274,12 @@
         white-space: nowrap;
     }
 
-    th:hover {
+    th.sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    th.sortable:hover {
         background: var(--bg-hover);
     }
 
@@ -279,93 +287,70 @@
         color: var(--text);
     }
 
+    .table-wrapper th, .table-wrapper td {
+        border-bottom: 1px solid var(--border-subtle);
+        white-space: nowrap;
+        padding: 7px 12px;
+    }
+
+    tr:hover td { background: var(--bg-elevated); }
+
+    .rk, .num, .rec { text-align: right; font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+    .name { font-weight: 500; text-align: left; }
+    .name a { color: var(--text); }
+    .name a:hover { color: var(--accent); }
     .sort-indicator {
         margin-left: 6px;
         opacity: 0.6;
         font-size: 10px;
     }
-
-    th.active .sort-indicator {
-        color: var(--accent);
-        opacity: 1;
-    }
-
-    td {
-        padding: 7px 10px;
-        border-bottom: 1px solid var(--border-subtle);
-        white-space: nowrap;
-    }
-
-    tr:hover td { background: var(--bg-elevated); }
-    .rk { width: 32px; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; }
-    .name { font-weight: 500; }
-    .name a { color: var(--text); }
-    .name a:hover { color: var(--accent); }
-    .rec { color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px; }
-    .num { text-align: right; font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
-    th.num, th.pct { text-align: right; }
-    .pos { color: var(--positive); }
-    .neg { color: var(--negative); }
-    .pct.high { color: var(--positive); }
-    .pct.mid { color: var(--accent); }
-    .pct.low { color: var(--text-secondary); }
-    .pct.zero { color: var(--text-muted); }
-
-    .section-title {
-        font-size: 16px;
-        font-weight: 700;
-        color: var(--text);
-        margin: 32px 0 16px;
-        letter-spacing: -0.01em;
-    }
+    th.active .sort-indicator { color: var(--accent); opacity: 1; }
 
     .chart-toolbar {
+        margin: 22px 0 12px;
         display: flex;
+        gap: 12px;
         align-items: center;
-        gap: 10px;
-        margin: 4px 0 16px;
-        color: var(--text-muted);
-        font-size: 13px;
+        flex-wrap: wrap;
     }
 
     .chart-toolbar-label {
-        font-weight: 500;
+        font-size: 12px;
+        color: var(--text-muted);
     }
 
     .chart-radio-group {
         display: flex;
+        gap: 10px;
         flex-wrap: wrap;
-        gap: 8px 12px;
     }
 
     .chart-radio {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        color: var(--text-secondary);
         font-size: 12px;
-    }
-
-    .chart-radio input[type='radio'] {
-        background: var(--bg-elevated);
         color: var(--text);
-        border: 1px solid var(--border);
-        accent-color: var(--accent);
     }
 
-    .chart-toolbar button.page-action-btn {
-        margin-left: auto;
+    .section-title {
+        margin: 8px 0 16px;
+        font-size: 16px;
+        font-weight: 600;
     }
 
     .chart-card {
         background: var(--bg-surface);
         border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 20px;
-        margin-bottom: 40px;
+        border-radius: var(--radius-sm);
+        padding: 16px;
     }
 
-    @media (max-width: 640px) {
-        th, td { padding: 6px 6px; }
-    }
+    .pos { color: var(--positive); }
+    .neg { color: var(--negative); }
+    .pct { font-family: var(--font-mono); }
+    .pct.high { color: var(--positive); }
+    .pct.mid { color: var(--accent); }
+    .pct.low { color: var(--text-secondary); }
+    .pct.zero { color: var(--text-muted); }
 </style>
