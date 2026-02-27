@@ -2,12 +2,18 @@
     import DpmChart from './DpmChart.svelte';
     import { getPlayerHistory } from '$lib/supabase.js';
 
-    let { player, onRemove } = $props();
+    let { player, onRemove, historyRows } = $props();
 
     let history = $state([]);
     let historyLoading = $state(true);
 
     $effect(() => {
+        if (historyRows !== undefined) {
+            history = Array.isArray(historyRows) ? historyRows : [];
+            historyLoading = false;
+            return;
+        }
+
         if (player?.nba_id) {
             getPlayerHistory(player.nba_id, 200)
                 .then(data => { history = data; historyLoading = false; })

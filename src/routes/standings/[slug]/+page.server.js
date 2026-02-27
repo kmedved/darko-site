@@ -4,7 +4,7 @@ import { normalizeTeamSlug } from '$lib/utils/teamRouteUtils.js';
 
 export async function load({ params, setHeaders }) {
     setHeaders({
-        'cache-control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=300'
+        'cache-control': 'public, s-maxage=3600, stale-while-revalidate=86400'
     });
 
     const teamName = normalizeTeamSlug(params.slug || '').trim();

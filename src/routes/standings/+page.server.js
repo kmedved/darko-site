@@ -2,7 +2,7 @@ import { getConferenceStandings } from '$lib/supabase.js';
 
 export async function load({ setHeaders }) {
     setHeaders({
-        'cache-control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=300'
+        'cache-control': 'public, s-maxage=3600, stale-while-revalidate=86400'
     });
 
     const [eastStandings, westStandings] = await Promise.all([
