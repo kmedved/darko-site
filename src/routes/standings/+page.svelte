@@ -1,18 +1,14 @@
 <script>
-    import { supabase } from '$lib/supabase.js';
     import ConferenceChart from '$lib/components/ConferenceChart.svelte';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { exportCsvRows, standingsCsvColumns } from '$lib/utils/csvPresets.js';
-    import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
 
-    let standings = $state([]);
+    let { data } = $props();
+
     let conference = $state('East');
     let sortColumn = $state('Rk');
     let sortDirection = $state('asc');
     let chartMetric = $state('W');
-    let loading = $state(true);
-    let error = $state(null);
-    const standingsRequestSequencer = createRequestSequencer();
 
     const standingsSortConfig = {
         Rk: { type: 'number' },
@@ -27,6 +23,10 @@
         'Lottery%': { type: 'percent' },
         ExpPick: { type: 'number' }
     };
+
+    const standings = $derived(
+        conference === 'East' ? (data.eastStandings || []) : (data.westStandings || [])
+    );
 
     const sortedStandings = $derived.by(() =>
         getSortedRows(standings, {
@@ -68,43 +68,8 @@
         { label: 'SRS', value: 'SRS' }
     ];
 
-    async function loadStandings() {
-        const requestId = standingsRequestSequencer.next();
-        loading = true;
-        error = null;
-        const currentConference = conference;
-
-        try {
-            const { data, error: err } = await supabase
-                .from('season_sim')
-                .select('*')
-                .eq('conference', currentConference)
-                .order('Rk', { ascending: true });
-
-            if (!standingsRequestSequencer.isCurrent(requestId)) return;
-
-            if (err) {
-                error = err.message;
-                standings = [];
-                return;
-            }
-
-            standings = data;
-        } catch (err) {
-            if (!standingsRequestSequencer.isCurrent(requestId)) return;
-            error = err?.message || 'Failed to load standings';
-            standings = [];
-        } finally {
-            if (standingsRequestSequencer.isCurrent(requestId)) {
-                loading = false;
-            }
-        }
-    }
-
-    $effect(() => { loadStandings(); });
-
     function fmt(val, d = 1) {
-        if (val === null || val === undefined) return '\u2014';
+        if (val === null || val === undefined) return '—';
         return parseFloat(val).toFixed(d);
     }
 
@@ -134,7 +99,7 @@
 </script>
 
 <svelte:head>
-    <title>Standings \u2014 DARKO DPM</title>
+    <title>Standings — DARKO DPM</title>
 </svelte:head>
 
 <div class="container">
@@ -144,14 +109,12 @@
     </div>
 
     <div class="conf-toggle">
-        <button class:active={conference === 'East'} onclick={() => conference = 'East'}>Eastern</button>
-        <button class:active={conference === 'West'} onclick={() => conference = 'West'}>Western</button>
+        <button class:active={conference === 'East'} onclick={() => (conference = 'East')}>Eastern</button>
+        <button class:active={conference === 'West'} onclick={() => (conference = 'West')}>Western</button>
     </div>
 
-    {#if loading}
-        <div class="loading">Loading standings...</div>
-    {:else if error}
-        <div class="error-msg">{error}</div>
+    {#if sortedStandings.length === 0}
+        <div class="empty-state">No standings data is currently available.</div>
     {:else}
         <div class="table-toolbar">
             <button
