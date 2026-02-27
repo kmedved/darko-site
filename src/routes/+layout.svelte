@@ -86,13 +86,15 @@
 				Switch to {theme === 'light' ? 'dark' : 'light'} theme
 			</span>
 		</button>
+		<div class="links">
+            <a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
+        </div>
         <a href="/" class="logo" aria-label="DARKO DPM">
             <span class="sr-only">DARKO DPM</span>
             <img src="/logo-light.png" alt="" class="logo-mark logo-mark--light" aria-hidden="true" />
             <img src="/logo-dark.png" alt="" class="logo-mark logo-mark--dark" aria-hidden="true" />
         </a>
         <div class="links">
-            <a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
             <a href="/standings" class:active={$page.url.pathname.startsWith('/standings')}>Standings</a>
             <a href="/compare" class:active={$page.url.pathname === '/compare'}>Compare</a>
             <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Player career trajectories</a>
