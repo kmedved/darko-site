@@ -1,5 +1,6 @@
 <script>
-    import { getActivePlayers } from '$lib/supabase.js';
+    import { apiActivePlayers } from '$lib/api.js';
+    import { formatSignedMetric } from '$lib/utils/csvPresets.js';
 
     let { onSelect, exclude = [] } = $props();
 
@@ -11,7 +12,7 @@
     let error = $state(null);
 
     $effect(() => {
-        getActivePlayers()
+        apiActivePlayers()
             .then(data => { allPlayers = data; loading = false; })
             .catch(err => { error = err.message; loading = false; });
     });
@@ -35,9 +36,10 @@
         showResults = false;
     }
 
-    function fmt(val) {
+    function dpmClass(val) {
         const n = parseFloat(val);
-        return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
+        if (!Number.isFinite(n)) return '';
+        return n >= 0 ? 'pos' : 'neg';
     }
 </script>
 
@@ -65,8 +67,8 @@
                             {player.player_name}
                             <span class="meta">{player.team_name} · {player.position || '?'}</span>
                         </span>
-                        <span class="dpm-val" style="color: {player.dpm >= 0 ? 'var(--positive)' : 'var(--negative)'}">
-                            {fmt(player.dpm)}
+                        <span class="dpm-val {dpmClass(player.dpm)}">
+                            {formatSignedMetric(player.dpm)}
                         </span>
                     </button>
                 {/each}

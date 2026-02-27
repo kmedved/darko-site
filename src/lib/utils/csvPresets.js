@@ -3,19 +3,24 @@ import { downloadCsv } from './csv.js';
 const DASH = '—';
 
 export function formatMinutes(seconds) {
-    if (!seconds) return DASH;
-    return (seconds / 60).toFixed(1);
+    if (seconds === null || seconds === undefined) return DASH;
+    const n = Number.parseFloat(seconds);
+    if (!Number.isFinite(n)) return DASH;
+    return (n / 60).toFixed(1);
 }
 
 export function formatSignedMetric(value, decimals = 1) {
     if (value === null || value === undefined) return DASH;
-    const n = parseFloat(value);
+    const n = Number.parseFloat(value);
+    if (!Number.isFinite(n)) return DASH;
     return `${n >= 0 ? '+' : ''}${n.toFixed(decimals)}`;
 }
 
 export function formatPercent(value) {
     if (value === null || value === undefined) return DASH;
-    return (parseFloat(value) * 100).toFixed(1) + '%';
+    const n = Number.parseFloat(value);
+    if (!Number.isFinite(n)) return DASH;
+    return (n * 100).toFixed(1) + '%';
 }
 
 export function formatOrDash(value) {
@@ -28,7 +33,9 @@ export function formatNullable(value, fallback = DASH) {
 
 export function formatFixed(value, decimals = 1) {
     if (value === null || value === undefined) return DASH;
-    return parseFloat(value).toFixed(decimals);
+    const n = Number.parseFloat(value);
+    if (!Number.isFinite(n)) return DASH;
+    return n.toFixed(decimals);
 }
 
 export function exportCsvRows({ rows = [], columns = [], filename }) {

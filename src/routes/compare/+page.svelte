@@ -1,26 +1,18 @@
 <script>
-    import PlayerSearch from '$lib/components/PlayerSearch.svelte';
-    import PlayerCard from '$lib/components/PlayerCard.svelte';
-    import { page } from '$app/stores';
-    import { exportCsvRows, compareCsvColumns } from '$lib/utils/csvPresets.js';
+	import PlayerSearch from '$lib/components/PlayerSearch.svelte';
+	import PlayerCard from '$lib/components/PlayerCard.svelte';
+	import { page } from '$app/stores';
+	import { apiPlayerHistory } from '$lib/api.js';
+	import { exportCsvRows, compareCsvColumns } from '$lib/utils/csvPresets.js';
+	import { buildComparePlayer, getComparePlayerColors } from '$lib/utils/compareUtils.js';
 
     let selectedPlayers = $state([]);
     let pendingLoads = $state(0);
     let loading = $derived(pendingLoads > 0);
     let error = $state(null);
+    const PLAYER_COLORS = getComparePlayerColors();
 
-    async function fetchPlayerHistory(nbaId) {
-        const response = await fetch(`/api/player/${nbaId}/history`);
-        if (!response.ok) {
-            const msg = await response.text().catch(() => '');
-            throw new Error(msg ? `Failed to load player ${nbaId}: ${msg}` : `Failed to load player ${nbaId}`);
-        }
-
-        const rows = await response.json();
-        return Array.isArray(rows) ? rows : [];
-    }
-
-    $effect(() => {
+	$effect(() => {
         const ids = $page.url.searchParams.get('ids');
         if (!ids || selectedPlayers.length > 0) return;
 
@@ -47,23 +39,21 @@
 
         pendingLoads += 1;
         error = null;
-        try {
-            const rows = await fetchPlayerHistory(id);
-            if (!rows.length) {
-                error = `No history found for player ${id}`;
-                return;
+		try {
+			const rows = await apiPlayerHistory(id, { limit: 300 });
+			if (!rows.length) {
+				error = `No history found for player ${id}`;
+				return;
             }
 
             const current = rows.at(-1);
             selectedPlayers = [
                 ...selectedPlayers,
-                {
-                    nba_id: id,
-                    player_name: current?.player_name || `Player ${id}`,
-                    team_name: current?.team_name || '',
+                buildComparePlayer({
+                    currentRow: current || {},
                     rows,
-                    color: '#1d4ed8'
-                }
+                    color: PLAYER_COLORS[selectedPlayers.length % PLAYER_COLORS.length]
+                })
             ];
         } catch (err) {
             error = err.message;

@@ -1,10 +1,10 @@
 <script>
     import * as d3 from 'd3';
+	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 
     let { data = [], color = 'var(--accent)', height = 120 } = $props();
 
     let svgEl = $state(null);
-    let containerEl = $state(null);
     let activeStat = $state('dpm');
     let tooltipData = $state(null);
 
@@ -37,6 +37,7 @@
         // Re-read activeStat to make this effect reactive to it
         const _stat = activeStat;
         renderChart();
+        return withResizeObserver({ element: svgEl, onResize: renderChart });
     });
 
     function renderChart() {
@@ -171,7 +172,6 @@
 
     <div
         class="chart-container"
-        bind:this={containerEl}
         onmousemove={handleMouseMove}
         onmouseleave={handleMouseLeave}
         role="img"

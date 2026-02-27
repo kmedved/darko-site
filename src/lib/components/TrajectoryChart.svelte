@@ -1,6 +1,7 @@
 <script>
 	import * as d3 from 'd3';
 	import { loess } from '$lib/utils/loess.js';
+	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 
 	let {
 		players = [],
@@ -10,9 +11,9 @@
 	} = $props();
 
 	let svgEl = $state(null);
-	let containerEl = $state(null);
 	let tooltipData = $state(null);
-	let scalesRef = $state({ x: null, y: null, margin: null });
+	let scalesRef = $state({ x: null, y: null, margin: null, w: 0, h: 0 });
+	let rowsForTooltip = $state([]);
 
 	const HEIGHT = 500;
 
@@ -32,36 +33,78 @@
 	};
 
 	function getX(row) {
-		if (timeScale === 'games') return row.career_game_num;
-		if (timeScale === 'age') return parseFloat(row.age);
-		if (timeScale === 'seasons') return row._seasonX;
-		return 0;
+		if (timeScale === 'games') {
+			const n = Number.parseFloat(row.career_game_num);
+			return Number.isFinite(n) ? n : null;
+		}
+		if (timeScale === 'age') {
+			const n = Number.parseFloat(row.age);
+			return Number.isFinite(n) ? n : null;
+		}
+		if (timeScale === 'seasons') {
+			const n = Number.parseFloat(row._seasonX);
+			return Number.isFinite(n) ? n : null;
+		}
+		return null;
 	}
 
 	function getY(row) {
-		return parseFloat(row[talentType]) || 0;
+		const n = Number.parseFloat(row[talentType]);
+		return Number.isFinite(n) ? n : null;
 	}
 
 	function fmtDpm(val) {
-		if (val === null || val === undefined) return '';
-		const n = parseFloat(val);
-		return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
+		if (val === null || val === undefined) return '—';
+		const n = Number.parseFloat(val);
+		return Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(1)}` : '—';
 	}
 
 	$effect(() => {
-		if (!svgEl || players.length === 0) return;
+		if (!svgEl || players.length === 0) {
+			if (svgEl) d3.select(svgEl).selectAll('*').remove();
+			rowsForTooltip = [];
+			return;
+		}
 		void timeScale;
 		void talentType;
 		void players;
 		renderChart();
+		return withResizeObserver({ element: svgEl, onResize: renderChart });
 	});
+
+	function prepareRows(rawRows) {
+		return (rawRows || [])
+			.map((row) => {
+				const x = getX(row);
+				const y = getY(row);
+				if (x == null || y === null) return null;
+				return { row, x, y };
+			})
+			.filter(Boolean)
+			.sort((a, b) => a.x - b.x);
+	}
 
 	function renderChart() {
 		const svg = d3.select(svgEl);
 		svg.selectAll('*').remove();
 
 		const width = svgEl.clientWidth;
-		if (width === 0) return;
+		if (!width) return;
+
+		const preparedPlayers = players
+			.map((player) => ({
+				player,
+				rows: prepareRows(player.rows)
+			}))
+			.filter((entry) => entry.rows.length > 0);
+
+		rowsForTooltip = preparedPlayers;
+		if (preparedPlayers.length === 0) {
+			return;
+		}
+
+		const allRows = preparedPlayers.flatMap((entry) => entry.rows);
+		if (allRows.length === 0) return;
 
 		const margin = { top: 50, right: 30, bottom: 65, left: 60 };
 		const w = width - margin.left - margin.right;
@@ -71,18 +114,9 @@
 			.append('g')
 			.attr('transform', `translate(${margin.left},${margin.top})`);
 
-		// Gather all valid rows across players
-		const allRows = players.flatMap((p) =>
-			p.rows.filter((r) => getX(r) != null && !isNaN(getY(r)))
-		);
-		if (allRows.length === 0) return;
-
-		const xExtent = d3.extent(allRows, getX);
-		const yExtent = d3.extent(allRows, getY);
-		const yPad = Math.max(
-			Math.abs(yExtent[1] - yExtent[0]) * 0.1,
-			0.5
-		);
+		const xExtent = d3.extent(allRows, (d) => d.x);
+		const yExtent = d3.extent(allRows, (d) => d.y);
+		const yPad = Math.max(Math.abs(yExtent[1] - yExtent[0]) * 0.1, 0.5);
 
 		const x = d3.scaleLinear().domain(xExtent).range([0, w]).nice();
 		const y = d3
@@ -103,11 +137,11 @@
 			)
 			.call((sel) => sel.select('.domain').remove())
 			.call((sel) =>
-				sel
-					.selectAll('.tick line')
-					.attr('stroke', 'var(--border-subtle, #333)')
-					.attr('stroke-dasharray', '2,3')
-			);
+					sel
+						.selectAll('.tick line')
+						.attr('stroke', 'var(--border-subtle, #333)')
+						.attr('stroke-dasharray', '2,3')
+				);
 
 		// Zero baseline
 		if (yExtent[0] - yPad <= 0 && yExtent[1] + yPad >= 0) {
@@ -123,35 +157,31 @@
 		}
 
 		// Per-player scatter + LOESS
-		for (const player of players) {
-			const pRows = player.rows
-				.filter((r) => getX(r) != null && !isNaN(getY(r)))
-				.sort((a, b) => getX(a) - getX(b));
+		for (const entry of preparedPlayers) {
+			const { player, rows } = entry;
+			if (rows.length < 1) continue;
 
-			if (pRows.length < 2) continue;
-
-			const xVals = pRows.map(getX);
-			const yVals = pRows.map(getY);
-
-			// Scatter dots
 			g.selectAll(null)
-				.data(pRows)
+				.data(rows)
 				.join('circle')
-				.attr('cx', (d) => x(getX(d)))
-				.attr('cy', (d) => y(getY(d)))
+				.attr('cx', (d) => x(d.x))
+				.attr('cy', (d) => y(d.y))
 				.attr('r', 2)
 				.attr('fill', player.color)
 				.attr('opacity', 0.3);
 
-			// LOESS curve
-			const bandwidth = pRows.length > 100 ? 0.25 : 0.35;
+			if (rows.length < 2) continue;
+
+			const xVals = rows.map((point) => point.x);
+			const yVals = rows.map((point) => point.y);
+			const bandwidth = rows.length > 100 ? 0.25 : 0.35;
 			const smoothedY = loess(xVals, yVals, bandwidth);
-			const loessData = xVals.map((xv, i) => [xv, smoothedY[i]]);
+			const loessData = xVals.map((xv, i) => ({ x: xv, y: smoothedY[i] }));
 
 			const line = d3
 				.line()
-				.x((d) => x(d[0]))
-				.y((d) => y(d[1]))
+				.x((d) => x(d.x))
+				.y((d) => y(d.y))
 				.curve(d3.curveMonotoneX);
 
 			g.append('path')
@@ -167,17 +197,13 @@
 		// X axis
 		let xAxisCall = d3.axisBottom(x);
 		if (timeScale === 'seasons') {
-			const maxSeason = d3.max(allRows, (r) => r._seasonIndex) || 1;
+			const maxSeason = d3.max(allRows, (r) => r.row._seasonIndex) || 1;
 			// Show every Nth season tick to avoid crowding
 			const step = maxSeason > 15 ? 5 : maxSeason > 8 ? 2 : 1;
 			const tickVals = d3.range(step, maxSeason + 1, step);
 			xAxisCall = xAxisCall.tickValues(tickVals).tickFormat((d) => d);
 		} else if (timeScale === 'age') {
-			xAxisCall = xAxisCall
-				.ticks(12)
-				.tickFormat((d) =>
-					Number.isInteger(d) ? d : ''
-				);
+			xAxisCall = xAxisCall.ticks(12).tickFormat((d) => (Number.isInteger(d) ? d : ''));
 		} else {
 			xAxisCall = xAxisCall.ticks(8);
 		}
@@ -249,10 +275,7 @@
 		// Legend
 		const legendG = svg
 			.append('g')
-			.attr(
-				'transform',
-				`translate(${width / 2}, 38)`
-			);
+			.attr('transform', `translate(${width / 2}, 38)`);
 
 		let legendX = 0;
 		const legendItems = [];
@@ -268,10 +291,7 @@
 			const item = legendItems[i];
 			const lg = legendG
 				.append('g')
-				.attr(
-					'transform',
-					`translate(${legendOffset + item.x}, 0)`
-				);
+				.attr('transform', `translate(${legendOffset + item.x}, 0)`);
 
 			// Color line
 			lg.append('line')
@@ -302,31 +322,40 @@
 	}
 
 	function handleMouseMove(e) {
-		if (!scalesRef.x || players.length === 0) return;
+		if (!scalesRef.x || rowsForTooltip.length === 0) return;
 		const { x: xScale, y: yScale, margin: m } = scalesRef;
 		const rect = svgEl.getBoundingClientRect();
 		const mouseX = e.clientX - rect.left - m.left;
 		const mouseY = e.clientY - rect.top - m.top;
 
 		const xVal = xScale.invert(mouseX);
+		const bisect = d3.bisector((d) => d.x).left;
 
 		// Find nearest point across all players
 		let nearest = null;
 		let minDist = Infinity;
 
-		for (const player of players) {
-			for (const row of player.rows) {
-				const rx = getX(row);
-				const ry = getY(row);
-				if (rx == null || isNaN(ry)) continue;
-				const px = xScale(rx);
-				const py = yScale(ry);
-				const dist = Math.sqrt(
-					(px - mouseX) ** 2 + (py - mouseY) ** 2
-				);
+		for (const entry of rowsForTooltip) {
+			const points = entry.rows;
+			const i = bisect(points, xVal, 1);
+
+			const candidates = [];
+			if (i > 0) candidates.push(points[i - 1]);
+			if (i < points.length) candidates.push(points[i]);
+
+			for (const point of candidates) {
+				if (!point) continue;
+				const px = xScale(point.x);
+				const py = yScale(point.y);
+				const dist = Math.sqrt((px - mouseX) ** 2 + (py - mouseY) ** 2);
 				if (dist < minDist) {
 					minDist = dist;
-					nearest = { row, player, px: px + m.left, py: py + m.top };
+					nearest = {
+						row: point.row,
+						player: entry.player,
+						px: px + m.left,
+						py: py + m.top
+					};
 				}
 			}
 		}
@@ -345,7 +374,6 @@
 
 <div
 	class="trajectory-chart-container"
-	bind:this={containerEl}
 	onmousemove={handleMouseMove}
 	onmouseleave={handleMouseLeave}
 	role="img"

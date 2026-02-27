@@ -49,7 +49,9 @@
     }
 
     function dpmClass(val) {
-        return parseFloat(val) >= 0 ? 'pos' : 'neg';
+        const n = Number.parseFloat(val);
+        if (!Number.isFinite(n)) return '';
+        return n >= 0 ? 'pos' : 'neg';
     }
 
     function exportPlayersCsv() {

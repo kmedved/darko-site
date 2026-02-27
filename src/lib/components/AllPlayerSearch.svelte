@@ -1,13 +1,29 @@
 <script>
-	import { searchAllPlayers } from '$lib/supabase.js';
+	import { apiPlayersIndex } from '$lib/api.js';
+	import { formatSignedMetric } from '$lib/utils/csvPresets.js';
 
 	let { onSelect, exclude = [] } = $props();
 
 	let query = $state('');
+	let allPlayers = $state([]);
 	let results = $state([]);
 	let showResults = $state(false);
 	let searching = $state(false);
+	let loading = $state(true);
+	let error = $state(null);
 	let debounceTimer = null;
+
+	$effect(() => {
+		apiPlayersIndex()
+			.then((data) => {
+				allPlayers = data;
+				loading = false;
+			})
+			.catch((err) => {
+				error = err.message;
+				loading = false;
+			});
+	});
 
 	function handleInput() {
 		clearTimeout(debounceTimer);
@@ -22,21 +38,14 @@
 		const currentQuery = query;
 		const excludeSet = new Set(exclude);
 
-		debounceTimer = setTimeout(async () => {
-			try {
-				const data = await searchAllPlayers(currentQuery);
-				// Only update if query hasn't changed
-				if (query === currentQuery) {
-					results = data.filter((p) => !excludeSet.has(p.nba_id));
-				}
-			} catch {
-				if (query === currentQuery) {
-					results = [];
-				}
-			} finally {
-				if (query === currentQuery) {
-					searching = false;
-				}
+		debounceTimer = setTimeout(() => {
+			if (query === currentQuery) {
+				const q = currentQuery.toLowerCase();
+				results = allPlayers
+					.filter((p) => !excludeSet.has(p.nba_id))
+					.filter((p) => p.player_name.toLowerCase().includes(q))
+					.slice(0, 8);
+				searching = false;
 			}
 		}, 300);
 	}
@@ -48,9 +57,10 @@
 		showResults = false;
 	}
 
-	function fmt(val) {
+	function dpmClass(val) {
 		const n = parseFloat(val);
-		return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
+		if (!Number.isFinite(n)) return '';
+		return n >= 0 ? 'pos' : 'neg';
 	}
 </script>
 
@@ -76,13 +86,8 @@
 							>{player.team_name} · {player.position || '?'}</span
 						>
 					</span>
-					<span
-						class="dpm-val"
-						style="color: {player.dpm >= 0
-							? 'var(--positive)'
-							: 'var(--negative)'}"
-					>
-						{fmt(player.dpm)}
+					<span class="dpm-val {dpmClass(player.dpm)}">
+						{formatSignedMetric(player.dpm)}
 					</span>
 				</button>
 			{/each}

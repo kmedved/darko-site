@@ -13,22 +13,21 @@ export function loess(xVals, yVals, bandwidth = 0.3) {
 	if (n === 1) return [...yVals];
 
 	const k = Math.max(2, Math.ceil(bandwidth * n));
+	const halfWindow = Math.floor((k - 1) / 2);
+	const maxWindowStart = Math.max(0, n - k);
 	const smoothed = new Array(n);
 
 	for (let i = 0; i < n; i++) {
 		const xi = xVals[i];
-
-		// Compute distances from xi to all points
-		const dists = new Array(n);
-		for (let j = 0; j < n; j++) {
-			dists[j] = { j, dist: Math.abs(xVals[j] - xi) };
+		let start = i - halfWindow;
+		if (start < 0) start = 0;
+		if (start > maxWindowStart) start = maxWindowStart;
+		let end = Math.min(n - 1, start + k - 1);
+		if (end - start + 1 < k && start > 0) {
+			start = Math.max(0, end - k + 1);
 		}
 
-		// Partial sort: find k nearest neighbors
-		dists.sort((a, b) => a.dist - b.dist);
-		const neighbors = dists.slice(0, k);
-
-		const maxDist = neighbors[neighbors.length - 1].dist || 1;
+		const maxDist = Math.max(Math.abs(xVals[start] - xi), Math.abs(xVals[end] - xi)) || 1;
 
 		// Tricube weights: w(u) = (1 - |u|^3)^3
 		let sumW = 0,
@@ -37,9 +36,8 @@ export function loess(xVals, yVals, bandwidth = 0.3) {
 			sumWxx = 0,
 			sumWxy = 0;
 
-		for (let ni = 0; ni < neighbors.length; ni++) {
-			const j = neighbors[ni].j;
-			const u = neighbors[ni].dist / (maxDist * 1.001);
+		for (let j = start; j <= end; j++) {
+			const u = Math.abs(xVals[j] - xi) / (maxDist * 1.001);
 			const w = u < 1 ? Math.pow(1 - Math.pow(u, 3), 3) : 0;
 			const x = xVals[j];
 			const y = yVals[j];
