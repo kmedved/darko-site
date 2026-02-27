@@ -1,7 +1,7 @@
 <script>
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import TrajectoryChart from '$lib/components/TrajectoryChart.svelte';
-	import { getFullPlayerHistory } from '$lib/supabase.js';
+	import { getFullPlayerHistory, getActivePlayers } from '$lib/supabase.js';
 	import { computeSeasonX } from '$lib/utils/seasonUtils.js';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -67,6 +67,8 @@
 			for (const id of idList) {
 				loadPlayerById(id);
 			}
+		} else {
+			loadRandomPlayer();
 		}
 		initialLoadDone = true;
 	});
@@ -119,6 +121,28 @@
 		}
 	}
 
+	async function loadRandomPlayer() {
+		if (selectedPlayers.length >= MAX_PLAYERS) return;
+
+		pendingLoads += 1;
+		error = null;
+		try {
+			const players = await getActivePlayers();
+			if (players.length === 0) {
+				error = 'No players available for random selection.';
+				return;
+			}
+
+			const randomIndex = Math.floor(Math.random() * players.length);
+			const randomPlayer = players[randomIndex];
+			await loadPlayerById(randomPlayer.nba_id);
+		} catch (err) {
+			error = err.message;
+		} finally {
+			pendingLoads = Math.max(0, pendingLoads - 1);
+		}
+	}
+
 	function addPlayer(player) {
 		if (selectedPlayers.some((p) => p.nba_id === player.nba_id)) return;
 		if (selectedPlayers.length >= MAX_PLAYERS) return;
@@ -161,12 +185,12 @@
 </script>
 
 <svelte:head>
-	<title>Career Trajectories — DARKO DPM</title>
+	<title>Player career trajectories — DARKO DPM</title>
 </svelte:head>
 
 <div class="container">
 	<div class="page-header">
-		<h1>Career Trajectories</h1>
+		<h1>Player career trajectories</h1>
 		<p>Compare career arcs for up to {MAX_PLAYERS} players.</p>
 	</div>
 

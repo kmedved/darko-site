@@ -19,7 +19,7 @@
 				return saved;
 			}
 		} catch (error) {
-			// localStorage can be unavailable in some privacy modes; fall back to system preference.
+			// localStorage can be unavailable in some privacy modes; fall back to default light theme.
 		}
 
 		return null;
@@ -39,11 +39,7 @@
 		if (isThemeValue(savedTheme)) {
 			return savedTheme;
 		}
-
-		const prefersDark =
-			window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-		return prefersDark ? 'dark' : 'light';
+		return 'light';
 	}
 
 	function setTheme(nextTheme) {
@@ -75,6 +71,21 @@
 
 <nav>
     <div class="container">
+		<button
+			type="button"
+			class="theme-toggle"
+			aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+			title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+			aria-pressed={theme === 'dark'}
+			onclick={toggleTheme}
+		>
+			<span class="theme-toggle__icon" aria-hidden="true">
+				{theme === 'light' ? '🌙' : '☀️'}
+			</span>
+			<span class="theme-toggle__label">
+				Switch to {theme === 'light' ? 'dark' : 'light'} theme
+			</span>
+		</button>
         <a href="/" class="logo" aria-label="DARKO DPM">
             <span class="sr-only">DARKO DPM</span>
             <img src="/logo-light.png" alt="" class="logo-mark logo-mark--light" aria-hidden="true" />
@@ -84,18 +95,9 @@
             <a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
             <a href="/standings" class:active={$page.url.pathname.startsWith('/standings')}>Standings</a>
             <a href="/compare" class:active={$page.url.pathname === '/compare'}>Compare</a>
-            <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Trajectories</a>
+            <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Player career trajectories</a>
             <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
             <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
-            <button
-                type="button"
-                class="theme-toggle"
-                aria-label="Toggle light/dark theme"
-                aria-pressed={theme === 'dark'}
-                onclick={toggleTheme}
-            >
-                {theme === 'light' ? 'Dark' : 'Light'}
-            </button>
         </div>
     </div>
 </nav>

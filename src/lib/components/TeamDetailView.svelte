@@ -1,22 +1,23 @@
 <script>
     import WinDistChart from './WinDistChart.svelte';
     import SeedChart from './SeedChart.svelte';
-    import { getActivePlayers, supabase } from '$lib/supabase.js';
     import { exportCsvRows, formatMinutes, formatSignedMetric, teamPlayersCsvColumns } from '$lib/utils/csvPresets.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
-    import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
 
-    let { teamName = '', backHref = '/', backLabel = '← Back' } = $props();
+    let {
+        teamName = '',
+        backHref = '/',
+        backLabel = '← Back',
+        players = [],
+        sim = null,
+        winDist = []
+    } = $props();
 
-    let players = $state([]);
     let sortColumn = $state('player_name');
     let sortDirection = $state('asc');
-    let sim = $state(null);
-    let winDist = $state([]);
-    let loading = $state(true);
-    let simLoading = $state(true);
-    let error = $state(null);
-    const loadRequestSequencer = createRequestSequencer();
+
+    const teamPlayers = $derived(players || []);
+    const teamWinDist = $derived(winDist || []);
 
     function dpmClass(val) {
         return parseFloat(val) >= 0 ? 'pos' : 'neg';
@@ -46,7 +47,7 @@
     };
 
     const sortedPlayers = $derived.by(() =>
-        getSortedRows(players, {
+        getSortedRows(teamPlayers, {
             sortColumn,
             sortDirection,
             sortConfigs: teamPlayersSortConfig
@@ -80,68 +81,6 @@
             filename: `${teamName || 'team'}-players.csv`
         });
     }
-
-    $effect(() => {
-        const normalizedTeam = (teamName || '').trim();
-        const requestId = loadRequestSequencer.next();
-
-        if (!normalizedTeam) {
-            error = 'Team not specified';
-            loading = false;
-            simLoading = false;
-            players = [];
-            winDist = [];
-            sim = null;
-            return;
-        }
-
-        error = null;
-        loading = true;
-        simLoading = true;
-        players = [];
-        winDist = [];
-        sim = null;
-
-        Promise.all([
-            getActivePlayers({ teamName: normalizedTeam }),
-            supabase.from('season_sim').select('*').eq('team_name', normalizedTeam).limit(1),
-            supabase.from('win_distribution').select('*').eq('team_name', normalizedTeam).order('wins', { ascending: true })
-        ])
-            .then(([playerData, simRes, distRes]) => {
-                if (!loadRequestSequencer.isCurrent(requestId)) return;
-
-                players = playerData || [];
-                if (simRes?.error) {
-                    error = simRes.error.message;
-                    sim = null;
-                } else if (simRes?.data && simRes.data.length > 0) {
-                    sim = simRes.data[0];
-                } else {
-                    sim = null;
-                }
-
-                if (distRes?.error) {
-                    if (!error) {
-                        error = distRes.error.message;
-                    }
-                    winDist = [];
-                } else if (distRes?.data) {
-                    winDist = distRes.data;
-                }
-
-                simLoading = false;
-                loading = false;
-            })
-            .catch((err) => {
-                if (!loadRequestSequencer.isCurrent(requestId)) return;
-                error = err?.message || 'Failed to load team data';
-                players = [];
-                sim = null;
-                winDist = [];
-                simLoading = false;
-                loading = false;
-            });
-    });
 </script>
 
 <div class="container">
@@ -162,7 +101,7 @@
                     class="page-action-btn"
                     type="button"
                     onclick={exportTeamCsv}
-                    disabled={loading || sortedPlayers.length === 0}
+                    disabled={sortedPlayers.length === 0}
                 >
                     Download Table CSV
                 </button>
@@ -170,7 +109,7 @@
         </div>
     </div>
 
-    {#if !simLoading && sim}
+    {#if sim}
         <div class="stats-grid">
             <div class="stat-box">
                 <div class="stat-label">Playoff%</div>
@@ -199,11 +138,7 @@
         </div>
     {/if}
 
-    {#if loading}
-        <div class="loading">Loading team roster...</div>
-    {:else if error}
-        <div class="error-msg">{error}</div>
-    {:else if players.length === 0}
+    {#if teamPlayers.length === 0}
         <div class="empty-state">No active players found for {teamName}.</div>
     {:else}
         <h2 class="section-title">Players</h2>
@@ -253,10 +188,10 @@
         </div>
     {/if}
 
-    {#if !simLoading && sim && winDist.length > 0}
+    {#if sim && teamWinDist.length > 0}
         <h2 class="section-title">Win Distribution</h2>
         <div class="chart-card">
-            <WinDistChart data={winDist} meanWins={parseFloat(sim.W)} currentWins={currentWins(sim.Current)} />
+            <WinDistChart data={teamWinDist} meanWins={parseFloat(sim.W)} currentWins={currentWins(sim.Current)} />
         </div>
 
         <h2 class="section-title">Seed Probabilities</h2>

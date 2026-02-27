@@ -1,14 +1,14 @@
 <script>
-    import { getActivePlayers } from '$lib/supabase.js';
     import { exportCsvRows, leaderboardCsvColumns, formatMinutes, formatSignedMetric } from '$lib/utils/csvPresets.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
 
-    let players = $state([]);
+    let { data } = $props();
+
     let sortColumn = $state('_rank');
     let sortDirection = $state('asc');
-    let loading = $state(true);
-    let error = $state(null);
+
+    const players = $derived(data.players || []);
 
     const playerSortConfig = {
         _rank: { type: 'number' },
@@ -44,15 +44,6 @@
         sortDirection = 'asc';
     }
 
-    $effect(() => {
-        getActivePlayers()
-            .then((data = []) => {
-                players = data.map((player, index) => ({ ...player, _rank: index + 1 }));
-                loading = false;
-            })
-            .catch(err => { error = err.message; loading = false; });
-    });
-
     function fmtMin(seconds) {
         return formatMinutes(seconds);
     }
@@ -87,7 +78,7 @@
                     class="page-action-btn"
                     type="button"
                     onclick={exportPlayersCsv}
-                    disabled={loading || !!error || players.length === 0}
+                    disabled={players.length === 0}
                 >
                     Download CSV
                 </button>
@@ -95,10 +86,8 @@
         </div>
     </div>
 
-    {#if loading}
-        <div class="loading">Loading players...</div>
-    {:else if error}
-        <div class="error-msg">{error}</div>
+    {#if players.length === 0}
+        <div class="empty-state">No players are currently available.</div>
     {:else}
         <div class="table-wrapper">
             <table>
