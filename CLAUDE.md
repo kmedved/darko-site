@@ -4,6 +4,7 @@ This file is intentionally minimal. See the dedicated references:
 
 - [`AGENTS.md`](AGENTS.md) for agent-facing implementation rules and conventions.
 - [`README_CONTEXT.md`](README_CONTEXT.md) for project context, stack, and layout.
+- [`SUPABASE_SCHEMA.md`](SUPABASE_SCHEMA.md) for Supabase table schemas, DB→frontend column mappings, and data pipeline debugging.
 
 ## Commands
 

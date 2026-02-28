@@ -321,10 +321,48 @@ export async function searchAllPlayers(searchTerm) {
 
     const key = cacheKey('searchPlayers', normalizedTerm);
     return runCached(key, CACHE_MS.searchPlayers, async () => {
-        const rows = await getPlayersIndex();
-        return rows
-            .filter((row) => String(row.player_name || '').toLowerCase().includes(normalizedTerm))
-            .slice(0, 15);
+        const [{ data: players, error }, activePlayers] = await Promise.all([
+            supabase
+                .from('players')
+                .select('*')
+                .ilike('player_name', `%${normalizedTerm}%`)
+                .order('player_name', { ascending: true })
+                .limit(15),
+            getActivePlayers()
+        ]);
+
+        if (error) throw error;
+
+        const activeById = new Map();
+        for (const row of activePlayers || []) {
+            activeById.set(row.nba_id, row);
+        }
+
+        return (players || [])
+            .filter((player) => Number.isInteger(player?.nba_id) && player.nba_id > 0)
+            .map((player) => {
+                const active = activeById.get(player.nba_id);
+                return {
+                    nba_id: player.nba_id,
+                    player_name: player.player_name,
+                    team_name: active?.team_name ?? player.current_team ?? null,
+                    position: active?.position ?? player.position ?? null,
+                    dpm: active?.dpm ?? null,
+                    o_dpm: active?.o_dpm ?? null,
+                    d_dpm: active?.d_dpm ?? null,
+                    box_dpm: active?.box_dpm ?? null,
+                    box_odpm: active?.box_odpm ?? null,
+                    box_ddpm: active?.box_ddpm ?? null,
+                    on_off_dpm: active?.on_off_dpm ?? null,
+                    bayes_rapm_total: active?.bayes_rapm_total ?? null,
+                    tr_fg3_pct: active?.tr_fg3_pct ?? null,
+                    tr_ft_pct: active?.tr_ft_pct ?? null,
+                    x_minutes: active?.x_minutes ?? null,
+                    x_pace: active?.x_pace ?? null,
+                    x_pts_100: active?.x_pts_100 ?? null,
+                    date: active?.date ?? null
+                };
+            });
     });
 }
 
@@ -384,23 +422,33 @@ export async function getPlayerCurrent(nbaId) {
 export async function getPlayersIndex() {
     const key = cacheKey('playersIndex', 'all');
     return runCached(key, CACHE_MS.playersIndex, async () => {
-        const [{ data: players, error }, activePlayers] = await Promise.all([
-            supabase
+        const activePlayersPromise = getActivePlayers();
+
+        let allPlayers = [];
+        let page = 0;
+        const pageSize = 1_000;
+
+        while (true) {
+            const { data, error } = await supabase
                 .from('players')
                 .select('*')
                 .order('player_name', { ascending: true })
-                .limit(10_000),
-            getActivePlayers()
-        ]);
+                .range(page * pageSize, (page + 1) * pageSize - 1);
 
-        if (error) throw error;
+            if (error) throw error;
+            allPlayers = allPlayers.concat(data || []);
+            if (!data || data.length < pageSize) break;
+            page += 1;
+        }
+
+        const activePlayers = await activePlayersPromise;
 
         const activeById = new Map();
         for (const row of activePlayers || []) {
             activeById.set(row.nba_id, row);
         }
 
-        const rows = (players || [])
+        const rows = allPlayers
             .filter((player) => Number.isInteger(player?.nba_id) && player.nba_id > 0)
             .map((player) => {
                 const active = activeById.get(player.nba_id);

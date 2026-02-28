@@ -17,6 +17,7 @@
 - Shared CSV utility + presets: `src/lib/utils/csvPresets.js`
 - Standings page implementation: `src/routes/standings/+page.svelte`
 - Conference chart component: `src/lib/components/ConferenceChart.svelte`
+- Supabase schema, column mappings, API data layer, and pipeline freshness: `SUPABASE_SCHEMA.md`
 
 ## Workflow Notes
 
