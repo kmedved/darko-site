@@ -108,7 +108,7 @@
 		pendingLoads += 1;
 		error = null;
 		try {
-			const rows = await apiPlayerHistory(nbaId, { limit: 1000 });
+			const rows = await apiPlayerHistory(nbaId, { full: true });
 			if (rows.length === 0) {
 				error = `No history found for player ${nbaId}`;
 				return;
@@ -163,7 +163,7 @@
 		error = null;
 
 		try {
-			const rows = await apiPlayerHistory(player.nba_id, { limit: 1000 });
+			const rows = await apiPlayerHistory(player.nba_id, { full: true });
 			if (rows.length === 0) {
 				error = `No history found for player ${player.nba_id}`;
 				return;

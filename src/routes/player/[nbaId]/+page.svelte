@@ -111,7 +111,7 @@
 		allActivePlayers = [];
 
 		try {
-			const history = await apiPlayerHistory(id, { limit: 1000 });
+			const history = await apiPlayerHistory(id, { full: true });
 			const info = history.at(-1);
 
 			if (!loadSeq.isCurrent(reqId)) return;

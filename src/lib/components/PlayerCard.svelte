@@ -26,8 +26,7 @@
         }
 
         historyLoading = true;
-        // Card view keeps a small cap for quick rendering of the sparkline.
-        apiPlayerHistory(player.nba_id, { limit: 200 })
+        apiPlayerHistory(player.nba_id, { full: true })
             .then((data) => {
                 if (!historySeq.isCurrent(reqId)) return;
                 history = Array.isArray(data) ? data : [];
