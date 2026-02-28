@@ -30,9 +30,9 @@
 		<div class="error-msg">{error}</div>
 	{:else if lineups.length === 0}
 		<div class="empty-state">
-			<p>Lineup data is not yet available.</p>
-			<p class="empty-detail">This feature is coming soon — the data pipeline is being set up.</p>
-		</div>
+				<p>Lineup data is not yet available.</p>
+				<p class="empty-detail">Data source is deferred until a lineup table is added to Supabase.</p>
+			</div>
 	{:else}
 		<div class="table-container">
 			<table>

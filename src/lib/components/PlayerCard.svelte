@@ -48,7 +48,7 @@
                 {player.team_name} · {player.position || '?'} · Age {formatFixed(player.age, 0)}
             </div>
         </div>
-        <button class="remove-btn" onclick={onRemove} title="Remove">✕</button>
+        <button type="button" class="remove-btn" onclick={onRemove} title="Remove">✕</button>
     </div>
 
     <!-- DPM Hero -->
@@ -89,6 +89,14 @@
             <span class="label">Box Def</span>
             <span class="value {cls(player.box_ddpm)}">{formatSignedMetric(player.box_ddpm)}</span>
         </div>
+        <div class="stat-row">
+            <span class="label">On/Off DPM</span>
+            <span class="value {cls(player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">RAPM</span>
+            <span class="value {cls(player.bayes_rapm_total)}">{formatSignedMetric(player.bayes_rapm_total)}</span>
+        </div>
     </div>
 
     <!-- Context -->
@@ -109,6 +117,26 @@
         <div class="stat-row">
             <span class="label">FT% (trend)</span>
             <span class="value">{formatPercent(player.tr_ft_pct)}</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">MPG</span>
+            <span class="value">{fmt(player.x_minutes, 1)}</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">Pace</span>
+            <span class="value">{fmt(player.x_pace, 1)}</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">Pts per 100</span>
+            <span class="value">{fmt(player.x_pts_100, 1)}</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">Ast per 100</span>
+            <span class="value">{fmt(player.x_ast_100, 1)}</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">FG%</span>
+            <span class="value">{formatPercent(player.x_fg_pct)}</span>
         </div>
     </div>
 </div>

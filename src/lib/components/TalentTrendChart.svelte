@@ -2,6 +2,7 @@
 	import * as d3 from 'd3';
 	import { loess } from '$lib/utils/loess.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
+	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 
 	let {
 		rows = [],
@@ -13,33 +14,47 @@
 	let svgEl = $state(null);
 	let tooltipData = $state(null);
 	let scalesRef = $state({ x: null, y: null, margin: null });
+	let chartPoints = $state([]);
+	const pointBisector = d3.bisector((point) => point.time).left;
 
 	const HEIGHT = 400;
 
-	const TALENT_LABELS = {
-		dpm: 'DPM',
-		o_dpm: 'O-DPM',
-		d_dpm: 'D-DPM',
-		box_dpm: 'Box DPM',
-		box_odpm: 'Box O-DPM',
-		box_ddpm: 'Box D-DPM'
-	};
+	const PERCENT_METRICS = new Set(['tr_fg3_pct', 'tr_ft_pct', 'x_fg_pct', 'x_fg3_pct', 'x_ft_pct']);
+	const SIGNED_METRICS = new Set([
+		'dpm',
+		'o_dpm',
+		'd_dpm',
+		'box_dpm',
+		'box_odpm',
+		'box_ddpm',
+		'on_off_dpm',
+		'on_off_odpm',
+		'on_off_ddpm',
+		'bayes_rapm_total',
+		'bayes_rapm_off',
+		'bayes_rapm_def'
+	]);
 
 	function getY(row) {
-		return parseFloat(row[talentType]) || 0;
+		const n = Number.parseFloat(row?.[talentType]);
+		return Number.isFinite(n) ? n : null;
 	}
 
 	function parseDate(row) {
 		const s = row.date;
 		if (!s) return null;
 		const dateOnly = s.includes('T') ? s.split('T')[0] : s;
-		return new Date(dateOnly + 'T12:00:00');
+		const parsed = new Date(dateOnly + 'T12:00:00');
+		return Number.isNaN(parsed.getTime()) ? null : parsed;
 	}
 
-	function fmtDpm(val) {
+	function fmtMetric(val) {
 		if (val === null || val === undefined) return '';
 		const n = parseFloat(val);
-		return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
+		if (!Number.isFinite(n)) return '';
+		if (PERCENT_METRICS.has(talentType)) return `${(n * 100).toFixed(1)}%`;
+		if (SIGNED_METRICS.has(talentType)) return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
+		return n.toFixed(1);
 	}
 
 	function fmtDate(d) {
@@ -50,7 +65,9 @@
 	$effect(() => {
 		if (!svgEl || rows.length === 0) {
 			if (svgEl) d3.select(svgEl).selectAll('*').remove();
-			rowsForTooltip = null;
+			tooltipData = null;
+			chartPoints = [];
+			scalesRef = { x: null, y: null, margin: null };
 			return;
 		}
 		void talentType;
@@ -75,13 +92,31 @@
 			.attr('transform', `translate(${margin.left},${margin.top})`);
 
 		const validRows = rows
-			.filter((r) => parseDate(r) != null && !isNaN(getY(r)))
-			.sort((a, b) => parseDate(a) - parseDate(b));
+			.map((row) => {
+				const date = parseDate(row);
+				const value = getY(row);
+				if (!date || value === null) return null;
+				return {
+					row,
+					date,
+					time: date.getTime(),
+					value
+				};
+			})
+			.filter((entry) => entry !== null)
+			.sort((a, b) => a.time - b.time);
 
-		if (validRows.length === 0) return;
+		if (validRows.length === 0) {
+			tooltipData = null;
+			chartPoints = [];
+			scalesRef = { x: null, y: null, margin: null };
+			return;
+		}
 
-		const dates = validRows.map(parseDate);
-		const yVals = validRows.map(getY);
+		chartPoints = validRows;
+
+		const dates = validRows.map((entry) => entry.date);
+		const yVals = validRows.map((entry) => entry.value);
 
 		const xExtent = d3.extent(dates);
 		const yExtent = d3.extent(yVals);
@@ -129,14 +164,14 @@
 		g.selectAll(null)
 			.data(validRows)
 			.join('circle')
-			.attr('cx', (d) => x(parseDate(d)))
-			.attr('cy', (d) => y(getY(d)))
+			.attr('cx', (d) => x(d.date))
+			.attr('cy', (d) => y(d.value))
 			.attr('r', 2)
 			.attr('fill', playerColor)
 			.attr('opacity', 0.3);
 
 		// LOESS curve
-		const xNumeric = dates.map((d) => d.getTime());
+		const xNumeric = validRows.map((entry) => entry.time);
 		const bandwidth = validRows.length > 100 ? 0.25 : 0.35;
 		const smoothedY = loess(xNumeric, yVals, bandwidth);
 		const loessData = xNumeric.map((xv, i) => [new Date(xv), smoothedY[i]]);
@@ -196,52 +231,53 @@
 			.attr('x', -h / 2)
 			.attr('y', -45)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '13px')
-			.attr('font-weight', '600')
-			.style('fill', 'var(--text)')
-			.text(`DARKO ${TALENT_LABELS[talentType] || 'DPM'}`);
+				.attr('font-size', '13px')
+				.attr('font-weight', '600')
+				.style('fill', 'var(--text)')
+				.text(`DARKO ${getMetricDisplayLabel(talentType)}`);
 
 		// Chart title
 		svg.append('text')
 			.attr('x', width / 2)
 			.attr('y', 20)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '16px')
-			.attr('font-weight', '700')
-			.style('fill', 'var(--text)')
-			.text(`${playerName} — ${TALENT_LABELS[talentType] || 'DPM'} Trend`);
+				.attr('font-size', '16px')
+				.attr('font-weight', '700')
+				.style('fill', 'var(--text)')
+				.text(`${playerName} — ${getMetricDisplayLabel(talentType)} Trend`);
 	}
 
 	function handleMouseMove(e) {
-		if (!scalesRef.x || rows.length === 0) return;
+		if (!scalesRef.x || chartPoints.length === 0) return;
 		const { x: xScale, y: yScale, margin: m } = scalesRef;
 		const rect = svgEl.getBoundingClientRect();
 		const mouseX = e.clientX - rect.left - m.left;
 		const mouseY = e.clientY - rect.top - m.top;
 
-		const validRows = rows
-			.filter((r) => parseDate(r) != null && !isNaN(getY(r)));
+		const hoveredTime = xScale.invert(mouseX).getTime();
+		const insertion = pointBisector(chartPoints, hoveredTime);
+		const prev = chartPoints[Math.max(0, insertion - 1)];
+		const next = chartPoints[Math.min(chartPoints.length - 1, insertion)];
+		const candidates = [prev, next].filter(Boolean);
 
 		let nearest = null;
 		let minDist = Infinity;
-
-		for (const row of validRows) {
-			const d = parseDate(row);
-			const ry = getY(row);
-			const px = xScale(d);
-			const py = yScale(ry);
+		for (const point of candidates) {
+			const px = xScale(point.date);
+			const py = yScale(point.value);
 			const dist = Math.sqrt((px - mouseX) ** 2 + (py - mouseY) ** 2);
 			if (dist < minDist) {
 				minDist = dist;
-				nearest = { row, px: px + m.left, py: py + m.top, date: d };
+				nearest = {
+					row: point.row,
+					date: point.date,
+					px: px + m.left,
+					py: py + m.top
+				};
 			}
 		}
 
-		if (nearest && minDist < 30) {
-			tooltipData = nearest;
-		} else {
-			tooltipData = null;
-		}
+		tooltipData = nearest && minDist < 30 ? nearest : null;
 	}
 
 	function handleMouseLeave() {
@@ -254,7 +290,7 @@
 	onmousemove={handleMouseMove}
 	onmouseleave={handleMouseLeave}
 	role="img"
-	aria-label="{playerName} {TALENT_LABELS[talentType] || 'DPM'} trend"
+	aria-label="{playerName} {getMetricDisplayLabel(talentType)} trend"
 >
 	<svg bind:this={svgEl} width="100%" height={HEIGHT}></svg>
 
@@ -263,7 +299,7 @@
 			class="chart-tooltip trend-tooltip"
 			style="left: {tooltipData.px}px; top: {tooltipData.py - 10}px;"
 		>
-			<span class="chart-tooltip-value">{fmtDpm(getY(tooltipData.row))}</span>
+				<span class="chart-tooltip-value">{fmtMetric(getY(tooltipData.row))}</span>
 			<span class="chart-tooltip-date">{fmtDate(tooltipData.date)}</span>
 		</div>
 	{/if}

@@ -1,5 +1,6 @@
 import { error, json } from '@sveltejs/kit';
-import { getPlayersIndex } from '$lib/server/supabase.js';
+
+import { getLongevityRows } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
@@ -9,15 +10,16 @@ export const config = {
 
 export async function GET({ setHeaders }) {
     setEdgeCache(setHeaders, {
-        edgeSMaxAge: 86400,
+        edgeSMaxAge: 3600,
         swr: 86400,
         sie: 86400
     });
 
     try {
-        const rows = await getPlayersIndex();
+        const rows = await getLongevityRows({ activeOnly: true });
         return json(rows);
     } catch (e) {
-        throw error(500, e?.message || 'Failed to load players index');
+        throw error(500, e?.message || 'Failed to load longevity data');
     }
 }
+

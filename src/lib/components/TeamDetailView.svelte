@@ -1,7 +1,14 @@
 <script>
     import WinDistChart from './WinDistChart.svelte';
     import SeedChart from './SeedChart.svelte';
-    import { exportCsvRows, formatMinutes, formatSignedMetric, formatFixed, formatOrDash } from '$lib/utils/csvPresets.js';
+    import {
+        exportCsvRows,
+        formatMinutes,
+        formatSignedMetric,
+        formatFixed,
+        formatOrDash,
+        formatPercent
+    } from '$lib/utils/csvPresets.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
 
     let {
@@ -41,7 +48,16 @@
         dpm: { type: 'number' },
         o_dpm: { type: 'number' },
         d_dpm: { type: 'number' },
-        box_dpm: { type: 'number' }
+        box_dpm: { type: 'number' },
+        on_off_dpm: { type: 'number' },
+        bayes_rapm_total: { type: 'number' },
+        x_minutes: { type: 'number' },
+        x_pace: { type: 'number' },
+        x_pts_100: { type: 'number' },
+        x_ast_100: { type: 'number' },
+        x_fg_pct: { type: 'number' },
+        x_fg3_pct: { type: 'number' },
+        x_ft_pct: { type: 'number' }
     };
 
     const sortedPlayers = $derived.by(() =>
@@ -84,6 +100,15 @@
                 { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
                 { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },
                 { header: 'Box', accessor: 'box_dpm', format: formatSignedMetric },
+                { header: 'On/Off DPM', accessor: 'on_off_dpm', format: formatSignedMetric },
+                { header: 'RAPM', accessor: 'bayes_rapm_total', format: formatSignedMetric },
+                { header: 'MPG', accessor: 'x_minutes', format: (v) => formatFixed(v, 1) },
+                { header: 'Pace', accessor: 'x_pace', format: (v) => formatFixed(v, 1) },
+                { header: 'Pts per 100', accessor: 'x_pts_100', format: (v) => formatFixed(v, 1) },
+                { header: 'Ast per 100', accessor: 'x_ast_100', format: (v) => formatFixed(v, 1) },
+                { header: 'FG%', accessor: 'x_fg_pct', format: formatPercent },
+                { header: '3P%', accessor: 'x_fg3_pct', format: formatPercent },
+                { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent }
             ],
             filename: `${teamName || 'team'}-players.csv`
         });
@@ -178,13 +203,40 @@
                         <th class="num sortable {sortColumn === 'box_dpm' ? 'active' : ''}" onclick={() => toggleSort('box_dpm')}>
                             Box <span class="sort-indicator">{sortGlyph('box_dpm')}</span>
                         </th>
+                        <th class="num sortable {sortColumn === 'on_off_dpm' ? 'active' : ''}" onclick={() => toggleSort('on_off_dpm')}>
+                            On/Off <span class="sort-indicator">{sortGlyph('on_off_dpm')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'bayes_rapm_total' ? 'active' : ''}" onclick={() => toggleSort('bayes_rapm_total')}>
+                            RAPM <span class="sort-indicator">{sortGlyph('bayes_rapm_total')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'x_minutes' ? 'active' : ''}" onclick={() => toggleSort('x_minutes')}>
+                            MPG <span class="sort-indicator">{sortGlyph('x_minutes')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'x_pace' ? 'active' : ''}" onclick={() => toggleSort('x_pace')}>
+                            Pace <span class="sort-indicator">{sortGlyph('x_pace')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'x_pts_100' ? 'active' : ''}" onclick={() => toggleSort('x_pts_100')}>
+                            Pts/100 <span class="sort-indicator">{sortGlyph('x_pts_100')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'x_ast_100' ? 'active' : ''}" onclick={() => toggleSort('x_ast_100')}>
+                            Ast/100 <span class="sort-indicator">{sortGlyph('x_ast_100')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'x_fg_pct' ? 'active' : ''}" onclick={() => toggleSort('x_fg_pct')}>
+                            FG% <span class="sort-indicator">{sortGlyph('x_fg_pct')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'x_fg3_pct' ? 'active' : ''}" onclick={() => toggleSort('x_fg3_pct')}>
+                            3P% <span class="sort-indicator">{sortGlyph('x_fg3_pct')}</span>
+                        </th>
+                        <th class="num sortable {sortColumn === 'x_ft_pct' ? 'active' : ''}" onclick={() => toggleSort('x_ft_pct')}>
+                            FT% <span class="sort-indicator">{sortGlyph('x_ft_pct')}</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
                     {#each sortedPlayers as player}
                         <tr>
                             <td class="name">
-                                <a href={`/compare?ids=${player.nba_id}`}>{player.player_name}</a>
+                                <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
                             </td>
                             <td class="position">{player.position || '—'}</td>
                             <td class="num">{formatMinutes(player.tr_minutes)}</td>
@@ -192,6 +244,15 @@
                             <td class="num {dpmClass(player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
                             <td class="num {dpmClass(player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
                             <td class="num {dpmClass(player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
+                            <td class="num {dpmClass(player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
+                            <td class="num {dpmClass(player.bayes_rapm_total)}">{formatSignedMetric(player.bayes_rapm_total)}</td>
+                            <td class="num">{formatFixed(player.x_minutes, 1)}</td>
+                            <td class="num">{formatFixed(player.x_pace, 1)}</td>
+                            <td class="num">{formatFixed(player.x_pts_100, 1)}</td>
+                            <td class="num">{formatFixed(player.x_ast_100, 1)}</td>
+                            <td class="num">{formatPercent(player.x_fg_pct)}</td>
+                            <td class="num">{formatPercent(player.x_fg3_pct)}</td>
+                            <td class="num">{formatPercent(player.x_ft_pct)}</td>
                         </tr>
                     {/each}
                 </tbody>

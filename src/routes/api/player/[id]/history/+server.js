@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 
-import { supabase } from '$lib/server/supabase.js';
+import { getFullPlayerHistory, getPlayerHistory } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
@@ -20,53 +20,18 @@ export async function GET({ params, url, setHeaders }) {
         throw error(400, 'Invalid nba_id');
     }
 
+    const full = url.searchParams.get('full') === '1';
     const limitParam = url.searchParams.get('limit');
-    const limit = limitParam ? Number.parseInt(limitParam, 10) : null;
+    const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : 1000;
+    const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? parsedLimit : 1000;
+    const boundedLimit = Math.max(1, Math.min(2000, limit));
 
-    if (Number.isInteger(limit) && limit > 0) {
-        const boundedLimit = Math.max(1, Math.min(2000, limit));
-
-        const { data, error: qerr } = await supabase
-            .from('darko_shiny_history')
-            .select('*')
-            .eq('nba_id', nbaId)
-            .order('date', { ascending: false })
-            .limit(boundedLimit);
-
-        if (qerr) {
-            throw error(500, qerr.message || 'Failed to load player history');
-        }
-
-        return json((data || []).slice().reverse());
+    try {
+        const rows = full
+            ? await getFullPlayerHistory(nbaId)
+            : await getPlayerHistory(nbaId, boundedLimit);
+        return json(rows);
+    } catch (e) {
+        throw error(500, e?.message || 'Failed to load player history');
     }
-
-    const pageSize = 1000;
-    let page = 0;
-    const allRows = [];
-
-    while (true) {
-        const from = page * pageSize;
-        const to = from + pageSize - 1;
-
-        const { data, error: qerr } = await supabase
-            .from('darko_shiny_history')
-            .select('*')
-            .eq('nba_id', nbaId)
-            .order('date', { ascending: true })
-            .range(from, to);
-
-        if (qerr) {
-            throw error(500, qerr.message || 'Failed to load player history');
-        }
-
-        allRows.push(...(data || []));
-
-        if (!data || data.length < pageSize) {
-            break;
-        }
-
-        page += 1;
-    }
-
-    return json(allRows);
 }

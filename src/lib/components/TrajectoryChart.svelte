@@ -2,6 +2,7 @@
 	import * as d3 from 'd3';
 	import { loess } from '$lib/utils/loess.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
+	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 
 	let {
 		players = [],
@@ -17,14 +18,21 @@
 
 	const HEIGHT = 500;
 
-	const TALENT_LABELS = {
-		dpm: 'DPM',
-		o_dpm: 'O-DPM',
-		d_dpm: 'D-DPM',
-		box_dpm: 'Box DPM',
-		box_odpm: 'Box O-DPM',
-		box_ddpm: 'Box D-DPM'
-	};
+	const PERCENT_METRICS = new Set(['tr_fg3_pct', 'tr_ft_pct', 'x_fg_pct', 'x_fg3_pct', 'x_ft_pct']);
+	const SIGNED_METRICS = new Set([
+		'dpm',
+		'o_dpm',
+		'd_dpm',
+		'box_dpm',
+		'box_odpm',
+		'box_ddpm',
+		'on_off_dpm',
+		'on_off_odpm',
+		'on_off_ddpm',
+		'bayes_rapm_total',
+		'bayes_rapm_off',
+		'bayes_rapm_def'
+	]);
 
 	const TIME_LABELS = {
 		games: 'Career Game Number',
@@ -53,10 +61,13 @@
 		return Number.isFinite(n) ? n : null;
 	}
 
-	function fmtDpm(val) {
+	function fmtMetric(val) {
 		if (val === null || val === undefined) return '—';
 		const n = Number.parseFloat(val);
-		return Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(1)}` : '—';
+		if (!Number.isFinite(n)) return '—';
+		if (PERCENT_METRICS.has(talentType)) return `${(n * 100).toFixed(1)}%`;
+		if (SIGNED_METRICS.has(talentType)) return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
+		return n.toFixed(1);
 	}
 
 	$effect(() => {
@@ -252,15 +263,15 @@
 			.attr('stroke', 'var(--border, #555)');
 
 		// Y axis label
-		g.append('text')
-			.attr('transform', 'rotate(-90)')
-			.attr('x', -h / 2)
-			.attr('y', -45)
-			.attr('text-anchor', 'middle')
-			.attr('font-size', '13px')
-			.attr('font-weight', '600')
-			.style('fill', 'var(--text)')
-			.text(`DARKO ${TALENT_LABELS[talentType] || 'DPM'}`);
+			g.append('text')
+				.attr('transform', 'rotate(-90)')
+				.attr('x', -h / 2)
+				.attr('y', -45)
+				.attr('text-anchor', 'middle')
+				.attr('font-size', '13px')
+				.attr('font-weight', '600')
+				.style('fill', 'var(--text)')
+				.text(`DARKO ${getMetricDisplayLabel(talentType)}`);
 
 		// Chart title
 		svg.append('text')
@@ -391,9 +402,9 @@
 				style="color: {tooltipData.player.color}"
 				>{tooltipData.player.player_name}</span
 			>
-			<span class="chart-tooltip-value"
-				>{fmtDpm(getY(tooltipData.row))}</span
-			>
+				<span class="chart-tooltip-value"
+					>{fmtMetric(getY(tooltipData.row))}</span
+				>
 			<span class="chart-tooltip-date">{tooltipData.row.date}</span>
 		</div>
 	{/if}
