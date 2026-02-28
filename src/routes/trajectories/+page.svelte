@@ -94,7 +94,7 @@
 			} else {
 				url.searchParams.delete('ids');
 			}
-			goto(url.toString(), { replaceState: true, keepFocus: true });
+			goto(`${url.pathname}${url.search}`, { replaceState: true, keepFocus: true });
 		}
 	});
 
@@ -252,7 +252,7 @@
 								type="button"
 								class="chip-remove"
 								onclick={() => removePlayer(p.nba_id)}
-								aria-label="Remove {p.player_name}"
+								aria-label={`Remove ${p.player_name}`}
 							>
 								&times;
 							</button>

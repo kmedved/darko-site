@@ -157,6 +157,16 @@ const RATING_COLUMNS = [
     's15'
 ].join(', ');
 
+const PLAYERS_DIM_COLUMNS = [
+    'nba_id',
+    'player_name',
+    'current_team',
+    'position',
+    'rookie_season'
+].join(', ');
+
+export const MAX_FULL_HISTORY_ROWS = 5_000;
+
 function sortByDpmDesc(rows = []) {
     return rows
         .slice()
@@ -207,7 +217,7 @@ async function getPlayersMapByIds(ids = []) {
 
     const { data, error } = await supabase
         .from('players')
-        .select('*')
+        .select(PLAYERS_DIM_COLUMNS)
         .in('nba_id', filteredIds);
 
     if (error) throw error;
@@ -324,7 +334,7 @@ export async function searchAllPlayers(searchTerm) {
         const [{ data: players, error }, activePlayers] = await Promise.all([
             supabase
                 .from('players')
-                .select('*')
+                .select(PLAYERS_DIM_COLUMNS)
                 .ilike('player_name', `%${normalizedTerm}%`)
                 .order('player_name', { ascending: true })
                 .limit(15),
@@ -370,14 +380,19 @@ export async function searchAllPlayers(searchTerm) {
  * Get a player's complete career history (all rows, paginated).
  * Returns rows in chronological order.
  */
-export async function getFullPlayerHistory(nbaId) {
-    const key = cacheKey('fullPlayerHistory', nbaId);
+export async function getFullPlayerHistory(nbaId, options = {}) {
+    const maxRows = Number.isInteger(options.maxRows) && options.maxRows > 0
+        ? options.maxRows
+        : MAX_FULL_HISTORY_ROWS;
+    const key = cacheKey('fullPlayerHistory', `${nbaId}:${maxRows}`);
     return runCached(key, CACHE_MS.fullPlayerHistory, async () => {
         let allData = [];
         let page = 0;
         const pageSize = 1_000;
+        let truncated = false;
+        let lastPageSize = 0;
 
-        while (true) {
+        while (allData.length < maxRows) {
             const { data, error } = await supabase
                 .from('player_ratings')
                 .select(RATING_COLUMNS)
@@ -386,15 +401,41 @@ export async function getFullPlayerHistory(nbaId) {
                 .range(page * pageSize, (page + 1) * pageSize - 1);
 
             if (error) throw error;
+            const rows = data || [];
+            lastPageSize = rows.length;
 
-            allData = allData.concat(data || []);
-            if (!data || data.length < pageSize) break;
+            const remaining = maxRows - allData.length;
+            if (rows.length > remaining) {
+                allData = allData.concat(rows.slice(0, remaining));
+                truncated = true;
+                break;
+            }
+
+            allData = allData.concat(rows);
+            if (rows.length < pageSize) break;
             page += 1;
+        }
+
+        if (!truncated && allData.length === maxRows && lastPageSize === pageSize) {
+            const nextOffset = page * pageSize;
+            const { data: extraRows, error: extraError } = await supabase
+                .from('player_ratings')
+                .select('nba_id')
+                .eq('nba_id', nbaId)
+                .order('date', { ascending: true })
+                .range(nextOffset, nextOffset);
+
+            if (extraError) throw extraError;
+            truncated = (extraRows || []).length > 0;
         }
 
         const playersMap = await getPlayersMapByIds([nbaId]);
         const playerDim = playersMap.get(nbaId);
-        return allData.map((row) => mergeWithPlayerDim(row, playerDim));
+        return {
+            rows: allData.map((row) => mergeWithPlayerDim(row, playerDim)),
+            truncated,
+            maxRows
+        };
     });
 }
 
@@ -431,7 +472,7 @@ export async function getPlayersIndex() {
         while (true) {
             const { data, error } = await supabase
                 .from('players')
-                .select('*')
+                .select(PLAYERS_DIM_COLUMNS)
                 .order('player_name', { ascending: true })
                 .range(page * pageSize, (page + 1) * pageSize - 1);
 
@@ -609,10 +650,10 @@ export async function getTeamSimulation(teamName) {
             .from('season_sim')
             .select('*')
             .eq('team_name', normalizedTeam)
-            .limit(1);
+            .maybeSingle();
 
         if (error) throw error;
-        return data && data.length > 0 ? data[0] : null;
+        return data || null;
     });
 }
 

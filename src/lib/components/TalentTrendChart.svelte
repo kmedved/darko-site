@@ -11,6 +11,7 @@
 		playerColor = '#5b8def'
 	} = $props();
 
+	let containerEl = $state(null);
 	let svgEl = $state(null);
 	let tooltipData = $state(null);
 	let scalesRef = $state({ x: null, y: null, margin: null });
@@ -60,6 +61,27 @@
 	function fmtDate(d) {
 		if (!d) return '';
 		return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	}
+
+	function clamp(value, min, max) {
+		if (!Number.isFinite(value)) return min;
+		return Math.min(Math.max(value, min), max);
+	}
+
+	function toContainerPoint(px, py) {
+		if (!svgEl || !containerEl) {
+			return { px, py };
+		}
+
+		const svgRect = svgEl.getBoundingClientRect();
+		const containerRect = containerEl.getBoundingClientRect();
+		const rawX = svgRect.left - containerRect.left + px;
+		const rawY = svgRect.top - containerRect.top + py;
+
+		return {
+			px: clamp(rawX, 16, Math.max(16, containerRect.width - 16)),
+			py: clamp(rawY, 16, Math.max(16, containerRect.height - 8))
+		};
 	}
 
 	$effect(() => {
@@ -248,11 +270,11 @@
 	}
 
 	function handleMouseMove(e) {
-		if (!scalesRef.x || chartPoints.length === 0) return;
+		if (!scalesRef.x || chartPoints.length === 0 || !svgEl) return;
 		const { x: xScale, y: yScale, margin: m } = scalesRef;
-		const rect = svgEl.getBoundingClientRect();
-		const mouseX = e.clientX - rect.left - m.left;
-		const mouseY = e.clientY - rect.top - m.top;
+		const svgRect = svgEl.getBoundingClientRect();
+		const mouseX = e.clientX - svgRect.left - m.left;
+		const mouseY = e.clientY - svgRect.top - m.top;
 
 		const hoveredTime = xScale.invert(mouseX).getTime();
 		const insertion = pointBisector(chartPoints, hoveredTime);
@@ -267,12 +289,13 @@
 			const py = yScale(point.value);
 			const dist = Math.sqrt((px - mouseX) ** 2 + (py - mouseY) ** 2);
 			if (dist < minDist) {
+				const tooltipPoint = toContainerPoint(px + m.left, py + m.top);
 				minDist = dist;
 				nearest = {
 					row: point.row,
 					date: point.date,
-					px: px + m.left,
-					py: py + m.top
+					px: tooltipPoint.px,
+					py: tooltipPoint.py
 				};
 			}
 		}
@@ -286,11 +309,16 @@
 </script>
 
 <div
+	bind:this={containerEl}
 	class="trend-chart-container"
 	onmousemove={handleMouseMove}
 	onmouseleave={handleMouseLeave}
 	role="img"
-	aria-label="{playerName} {getMetricDisplayLabel(talentType)} trend"
+	aria-label={
+		playerName
+			? `${playerName} ${getMetricDisplayLabel(talentType)} trend`
+			: `${getMetricDisplayLabel(talentType)} trend`
+	}
 >
 	<svg bind:this={svgEl} width="100%" height={HEIGHT}></svg>
 

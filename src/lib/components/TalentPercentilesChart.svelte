@@ -184,7 +184,11 @@
 	}
 </script>
 
-<div class="percentiles-chart-container" role="img" aria-label="{playerName} talent percentiles">
+<div
+	class="percentiles-chart-container"
+	role="img"
+	aria-label={playerName ? `${playerName} talent percentiles` : 'Talent percentiles'}
+>
 	<svg bind:this={svgEl} width="100%" height={HEIGHT}></svg>
 </div>
 

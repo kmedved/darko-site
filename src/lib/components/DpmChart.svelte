@@ -3,13 +3,14 @@
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
     import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 
-    let { data = [], color = 'var(--accent)', height = 120 } = $props();
+	let { data = [], color = 'var(--accent)', height = 120 } = $props();
 
-    let svgEl = $state(null);
-    let activeStat = $state('dpm');
-    let tooltipData = $state(null);
-    let chartPoints = $state([]);
-    const indexBisector = d3.bisector((point) => point.index).left;
+	let containerEl = $state(null);
+	let svgEl = $state(null);
+	let activeStat = $state('dpm');
+	let tooltipData = $state(null);
+	let chartPoints = $state([]);
+	const indexBisector = d3.bisector((point) => point.index).left;
 
     const stats = [
         { key: 'dpm', label: getMetricDisplayLabel('dpm') },
@@ -59,10 +60,15 @@
     // Stored scales so mousemove can use them without re-rendering
     let scalesRef = $state({ x: null, y: null, margin: null });
 
-    function getMetricValue(row) {
-        const n = Number.parseFloat(row?.[activeStat]);
-        return Number.isFinite(n) ? n : null;
-    }
+	function getMetricValue(row) {
+		const n = Number.parseFloat(row?.[activeStat]);
+		return Number.isFinite(n) ? n : null;
+	}
+
+	function clamp(value, min, max) {
+		if (!Number.isFinite(value)) return min;
+		return Math.min(Math.max(value, min), max);
+	}
 
     $effect(() => {
         if (!svgEl || data.length === 0) {
@@ -172,27 +178,33 @@
             .style('display', 'none');
     }
 
-    function handleMouseMove(e) {
-        if (!scalesRef.x || chartPoints.length === 0) return;
-        const { x, y, margin } = scalesRef;
-        const rect = svgEl.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left - margin.left;
+	function handleMouseMove(e) {
+		if (!scalesRef.x || chartPoints.length === 0 || !svgEl || !containerEl) return;
+		const { x, y, margin } = scalesRef;
+		const svgRect = svgEl.getBoundingClientRect();
+		const containerRect = containerEl.getBoundingClientRect();
+		const mouseX = e.clientX - svgRect.left - margin.left;
 
-        const hoveredIndex = x.invert(mouseX);
+		const hoveredIndex = x.invert(mouseX);
         const insertion = indexBisector(chartPoints, hoveredIndex);
         const prev = chartPoints[Math.max(0, insertion - 1)];
         const next = chartPoints[Math.min(chartPoints.length - 1, insertion)];
         const point = !prev ? next
             : !next ? prev
             : Math.abs(prev.index - hoveredIndex) <= Math.abs(next.index - hoveredIndex) ? prev : next;
-        if (!point) return;
+		if (!point) return;
 
-        tooltipData = {
-            date: point.row.date,
-            value: point.value,
-            px: svgEl.offsetLeft + x(point.index) + margin.left,
-            py: svgEl.offsetTop + y(point.value) + margin.top
-        };
+		const rawX = svgRect.left - containerRect.left + x(point.index) + margin.left;
+		const rawY = svgRect.top - containerRect.top + y(point.value) + margin.top;
+		const tooltipX = clamp(rawX, 16, Math.max(16, containerRect.width - 16));
+		const tooltipY = clamp(rawY, 16, Math.max(16, containerRect.height - 8));
+
+		tooltipData = {
+			date: point.row.date,
+			value: point.value,
+			px: tooltipX,
+			py: tooltipY
+		};
 
         // Update crosshair and hover dot
         const svg = d3.select(svgEl);
@@ -227,10 +239,11 @@
         {/each}
     </div>
 
-    <div
-        class="chart-container"
-        onmousemove={handleMouseMove}
-        onmouseleave={handleMouseLeave}
+	<div
+		bind:this={containerEl}
+		class="chart-container"
+		onmousemove={handleMouseMove}
+		onmouseleave={handleMouseLeave}
         role="img"
         aria-label="DPM trend chart"
     >

@@ -1,25 +1,47 @@
 <script>
     import DpmChart from './DpmChart.svelte';
     import { apiPlayerHistory } from '$lib/api.js';
+    import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
     import { formatMinutes, formatSignedMetric, formatPercent, formatFixed } from '$lib/utils/csvPresets.js';
 
     let { player, onRemove, historyRows } = $props();
 
     let history = $state([]);
     let historyLoading = $state(true);
+    const historySeq = createRequestSequencer();
 
     $effect(() => {
+        const reqId = historySeq.next();
+
         if (historyRows !== undefined) {
             history = Array.isArray(historyRows) ? historyRows : [];
             historyLoading = false;
             return;
         }
 
-        if (player?.nba_id) {
-            apiPlayerHistory(player.nba_id, { limit: 200 })
-                .then(data => { history = data; historyLoading = false; })
-                .catch(() => { historyLoading = false; });
+        if (!player?.nba_id) {
+            history = [];
+            historyLoading = false;
+            return;
         }
+
+        historyLoading = true;
+        // Card view keeps a small cap for quick rendering of the sparkline.
+        apiPlayerHistory(player.nba_id, { limit: 200 })
+            .then((data) => {
+                if (!historySeq.isCurrent(reqId)) return;
+                history = Array.isArray(data) ? data : [];
+                historyLoading = false;
+            })
+            .catch(() => {
+                if (!historySeq.isCurrent(reqId)) return;
+                history = [];
+                historyLoading = false;
+            });
+
+        return () => {
+            historySeq.next();
+        };
     });
 
     function fmt(val, decimals = 1) {

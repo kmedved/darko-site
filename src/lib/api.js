@@ -10,7 +10,7 @@ async function fetchJson(path) {
 
 const activePlayersPromiseCache = new Map();
 
-export function apiPlayerHistory(nbaId, { limit, full = false } = {}) {
+export async function apiPlayerHistory(nbaId, { limit, full = false, includeMetadata = false } = {}) {
     const id = Number.parseInt(nbaId, 10);
     if (!Number.isInteger(id) || id <= 0) {
         throw new Error(`Invalid nba_id: ${nbaId}`);
@@ -24,7 +24,35 @@ export function apiPlayerHistory(nbaId, { limit, full = false } = {}) {
     }
 
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
-    return fetchJson(`/api/player/${id}/history${suffix}`);
+    const payload = await fetchJson(`/api/player/${id}/history${suffix}`);
+
+    if (!full) {
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.rows)) return payload.rows;
+        return [];
+    }
+
+    if (includeMetadata) {
+        if (Array.isArray(payload)) {
+            return {
+                rows: payload,
+                truncated: false,
+                maxRows: null
+            };
+        }
+        if (payload && typeof payload === 'object') {
+            return payload;
+        }
+        return {
+            rows: [],
+            truncated: false,
+            maxRows: null
+        };
+    }
+
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.rows)) return payload.rows;
+    return [];
 }
 
 export function apiActivePlayers({ team } = {}) {

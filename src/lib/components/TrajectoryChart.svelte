@@ -11,6 +11,7 @@
 		title = ''
 	} = $props();
 
+	let containerEl = $state(null);
 	let svgEl = $state(null);
 	let tooltipData = $state(null);
 	let scalesRef = $state({ x: null, y: null, margin: null, w: 0, h: 0 });
@@ -68,6 +69,27 @@
 		if (PERCENT_METRICS.has(talentType)) return `${(n * 100).toFixed(1)}%`;
 		if (SIGNED_METRICS.has(talentType)) return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
 		return n.toFixed(1);
+	}
+
+	function clamp(value, min, max) {
+		if (!Number.isFinite(value)) return min;
+		return Math.min(Math.max(value, min), max);
+	}
+
+	function toContainerPoint(px, py) {
+		if (!svgEl || !containerEl) {
+			return { px, py };
+		}
+
+		const svgRect = svgEl.getBoundingClientRect();
+		const containerRect = containerEl.getBoundingClientRect();
+		const rawX = svgRect.left - containerRect.left + px;
+		const rawY = svgRect.top - containerRect.top + py;
+
+		return {
+			px: clamp(rawX, 16, Math.max(16, containerRect.width - 16)),
+			py: clamp(rawY, 16, Math.max(16, containerRect.height - 8))
+		};
 	}
 
 	$effect(() => {
@@ -333,11 +355,11 @@
 	}
 
 	function handleMouseMove(e) {
-		if (!scalesRef.x || rowsForTooltip.length === 0) return;
+		if (!scalesRef.x || rowsForTooltip.length === 0 || !svgEl) return;
 		const { x: xScale, y: yScale, margin: m } = scalesRef;
-		const rect = svgEl.getBoundingClientRect();
-		const mouseX = e.clientX - rect.left - m.left;
-		const mouseY = e.clientY - rect.top - m.top;
+		const svgRect = svgEl.getBoundingClientRect();
+		const mouseX = e.clientX - svgRect.left - m.left;
+		const mouseY = e.clientY - svgRect.top - m.top;
 
 		const xVal = xScale.invert(mouseX);
 		const bisect = d3.bisector((d) => d.x).left;
@@ -358,18 +380,19 @@
 				if (!point) continue;
 				const px = xScale(point.x);
 				const py = yScale(point.y);
-				const dist = Math.sqrt((px - mouseX) ** 2 + (py - mouseY) ** 2);
-				if (dist < minDist) {
-					minDist = dist;
-					nearest = {
-						row: point.row,
-						player: entry.player,
-						px: px + m.left,
-						py: py + m.top
-					};
+					const dist = Math.sqrt((px - mouseX) ** 2 + (py - mouseY) ** 2);
+					if (dist < minDist) {
+						const tooltipPoint = toContainerPoint(px + m.left, py + m.top);
+						minDist = dist;
+						nearest = {
+							row: point.row,
+							player: entry.player,
+							px: tooltipPoint.px,
+							py: tooltipPoint.py
+						};
+					}
 				}
 			}
-		}
 
 		if (nearest && minDist < 30) {
 			tooltipData = nearest;
@@ -384,6 +407,7 @@
 </script>
 
 <div
+	bind:this={containerEl}
 	class="trajectory-chart-container"
 	onmousemove={handleMouseMove}
 	onmouseleave={handleMouseLeave}
