@@ -3,3 +3,9 @@ node_modules
 .vercel
 build
 .env
+.playwright-browsers/
+.venv-screenshot/
+.claude/
+1_main.ipynb
+1_main - Copy.ipynb
+.codex-screenshots/
