@@ -20,7 +20,7 @@
         Playoffs: { type: 'percent' },
         'Win Conf': { type: 'percent' },
         'Win Finals': { type: 'percent' },
-        Lottery%: { type: 'percent' },
+        'Lottery%': { type: 'percent' },
         ExpPick: { type: 'number' }
     };
 
@@ -111,8 +111,8 @@
     </div>
 
     <div class="conf-toggle">
-        <button class:active={conference === 'East'} onclick={() => (conference = 'East')}>Eastern</button>
-        <button class:active={conference === 'West'} onclick={() => (conference = 'West')}>Western</button>
+        <button type="button" class:active={conference === 'East'} onclick={() => (conference = 'East')}>Eastern</button>
+        <button type="button" class:active={conference === 'West'} onclick={() => (conference = 'West')}>Western</button>
     </div>
 
     {#if sortedStandings.length === 0}
@@ -172,7 +172,7 @@
                         <tr>
                             <td class="rk">{team.Rk}</td>
                             <td class="name">
-                                <a href={`/standings/{encodeURIComponent(team.team_name)}`}>{team.team_name}</a>
+                                <a href="/standings/{encodeURIComponent(team.team_name)}">{team.team_name}</a>
                             </td>
                             <td class="rec">{team.Current}</td>
                             <td class="num">{formatFixed(team.W)}</td>

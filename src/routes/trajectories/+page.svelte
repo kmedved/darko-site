@@ -30,7 +30,16 @@
 		{ key: 'd_dpm', label: 'D-DPM' },
 		{ key: 'box_dpm', label: 'Box DPM' },
 		{ key: 'box_odpm', label: 'Box O-DPM' },
-		{ key: 'box_ddpm', label: 'Box D-DPM' }
+		{ key: 'box_ddpm', label: 'Box D-DPM' },
+		{ key: 'on_off_dpm', label: 'On/Off DPM' },
+		{ key: 'bayes_rapm_total', label: 'RAPM' },
+		{ key: 'x_pts_100', label: 'Pts per 100' },
+		{ key: 'x_ast_100', label: 'Ast per 100' },
+		{ key: 'x_fg_pct', label: 'FG%' },
+		{ key: 'x_fg3_pct', label: '3P%' },
+		{ key: 'x_ft_pct', label: 'FT%' },
+		{ key: 'x_minutes', label: 'MPG' },
+		{ key: 'x_pace', label: 'Pace' }
 	];
 
 	const timeScaleOptions = [
@@ -99,7 +108,7 @@
 		pendingLoads += 1;
 		error = null;
 		try {
-			const rows = await apiPlayerHistory(nbaId);
+			const rows = await apiPlayerHistory(nbaId, { limit: 1000 });
 			if (rows.length === 0) {
 				error = `No history found for player ${nbaId}`;
 				return;
@@ -154,7 +163,7 @@
 		error = null;
 
 		try {
-			const rows = await apiPlayerHistory(player.nba_id);
+			const rows = await apiPlayerHistory(player.nba_id, { limit: 1000 });
 			if (rows.length === 0) {
 				error = `No history found for player ${player.nba_id}`;
 				return;
@@ -240,6 +249,7 @@
 						>
 							{p.player_name}: {p.nba_id}
 							<button
+								type="button"
 								class="chip-remove"
 								onclick={() => removePlayer(p.nba_id)}
 								aria-label="Remove {p.player_name}"

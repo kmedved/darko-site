@@ -60,6 +60,7 @@
             <div class="search-results">
                 {#each results as player}
                     <button
+                        type="button"
                         class="search-result-item"
                         onmousedown={() => selectPlayer(player)}
                     >

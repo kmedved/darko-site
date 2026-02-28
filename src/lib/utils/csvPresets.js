@@ -42,6 +42,48 @@ export function exportCsvRows({ rows = [], columns = [], filename }) {
     downloadCsv({ rows, columns, filename });
 }
 
+export const metricDisplayLabels = Object.freeze({
+    dpm: 'DPM',
+    o_dpm: 'ODPM',
+    d_dpm: 'DDPM',
+    box_dpm: 'Box DPM',
+    box_odpm: 'Box Off',
+    box_ddpm: 'Box Def',
+    on_off_dpm: 'On/Off DPM',
+    on_off_odpm: 'On/Off Off',
+    on_off_ddpm: 'On/Off Def',
+    bayes_rapm_total: 'RAPM',
+    bayes_rapm_off: 'RAPM Off',
+    bayes_rapm_def: 'RAPM Def',
+    rapm_exposure: 'RAPM Exposure',
+    tr_minutes: 'Min',
+    x_minutes: 'MPG',
+    x_pace: 'Pace',
+    x_pts_100: 'Pts per 100',
+    x_ast_100: 'Ast per 100',
+    x_orb_100: 'ORB per 100',
+    x_drb_100: 'DRB per 100',
+    x_stl_100: 'Stl per 100',
+    x_blk_100: 'Blk per 100',
+    x_tov_100: 'TOV per 100',
+    x_fga_100: 'FGA per 100',
+    x_fg3a_100: '3PA per 100',
+    x_fta_100: 'FTA per 100',
+    x_fg_pct: 'FG%',
+    x_fg3_pct: '3P%',
+    x_ft_pct: 'FT%',
+    tr_fg3_pct: '3P% (trend)',
+    tr_ft_pct: 'FT% (trend)',
+    projected_years_remaining: 'Years remaining',
+    projected_years_remaining_cal: 'Years remaining (cal)',
+    x_retirement_age: 'Retirement age',
+    x_retirement_age_cal: 'Retirement age (cal)'
+});
+
+export function getMetricDisplayLabel(metric) {
+    return metricDisplayLabels[metric] || metric;
+}
+
 export const leaderboardCsvColumns = [
     { header: '#', accessor: 'rank' },
     { header: 'Player', accessor: 'player_name' },
@@ -52,6 +94,15 @@ export const leaderboardCsvColumns = [
     { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
     { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },
     { header: 'Box', accessor: 'box_dpm', format: formatSignedMetric },
+    { header: 'On/Off DPM', accessor: 'on_off_dpm', format: formatSignedMetric },
+    { header: 'RAPM', accessor: 'bayes_rapm_total', format: formatSignedMetric },
+    { header: 'MPG', accessor: 'x_minutes', format: (v) => formatFixed(v, 1) },
+    { header: 'Pace', accessor: 'x_pace', format: (v) => formatFixed(v, 1) },
+    { header: 'Pts per 100', accessor: 'x_pts_100', format: (v) => formatFixed(v, 1) },
+    { header: 'Ast per 100', accessor: 'x_ast_100', format: (v) => formatFixed(v, 1) },
+    { header: 'FG%', accessor: 'x_fg_pct', format: formatPercent },
+    { header: '3P%', accessor: 'x_fg3_pct', format: formatPercent },
+    { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent }
 ];
 
 export const compareCsvColumns = [
@@ -67,6 +118,15 @@ export const compareCsvColumns = [
     { header: 'Box', accessor: 'box_dpm', format: formatSignedMetric },
     { header: 'Box Off', accessor: 'box_odpm', format: formatSignedMetric },
     { header: 'Box Def', accessor: 'box_ddpm', format: formatSignedMetric },
+    { header: 'On/Off DPM', accessor: 'on_off_dpm', format: formatSignedMetric },
+    { header: 'RAPM', accessor: 'bayes_rapm_total', format: formatSignedMetric },
+    { header: 'MPG', accessor: 'x_minutes', format: (v) => formatFixed(v, 1) },
+    { header: 'Pace', accessor: 'x_pace', format: (v) => formatFixed(v, 1) },
+    { header: 'Pts per 100', accessor: 'x_pts_100', format: (v) => formatFixed(v, 1) },
+    { header: 'Ast per 100', accessor: 'x_ast_100', format: (v) => formatFixed(v, 1) },
+    { header: 'FG%', accessor: 'x_fg_pct', format: formatPercent },
+    { header: '3P%', accessor: 'x_fg3_pct', format: formatPercent },
+    { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent },
     { header: '3P% (trend)', accessor: 'tr_fg3_pct', format: formatPercent },
     { header: 'FT% (trend)', accessor: 'tr_ft_pct', format: formatPercent },
 ];
@@ -115,4 +175,13 @@ export const teamPlayersCsvColumns = [
     { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
     { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },
     { header: 'Box', accessor: 'box_dpm', format: formatSignedMetric },
+    { header: 'On/Off DPM', accessor: 'on_off_dpm', format: formatSignedMetric },
+    { header: 'RAPM', accessor: 'bayes_rapm_total', format: formatSignedMetric },
+    { header: 'MPG', accessor: 'x_minutes', format: (v) => formatFixed(v, 1) },
+    { header: 'Pace', accessor: 'x_pace', format: (v) => formatFixed(v, 1) },
+    { header: 'Pts per 100', accessor: 'x_pts_100', format: (v) => formatFixed(v, 1) },
+    { header: 'Ast per 100', accessor: 'x_ast_100', format: (v) => formatFixed(v, 1) },
+    { header: 'FG%', accessor: 'x_fg_pct', format: formatPercent },
+    { header: '3P%', accessor: 'x_fg3_pct', format: formatPercent },
+    { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent }
 ];

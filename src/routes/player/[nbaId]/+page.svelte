@@ -16,25 +16,41 @@
 	let error = $state(null);
 
 	let talentType = $state('dpm');
-	let selectedPercentileMetrics = $state(['dpm', 'o_dpm', 'd_dpm', 'tr_fg3_pct', 'tr_ft_pct']);
+	let selectedPercentileMetrics = $state(['dpm', 'o_dpm', 'd_dpm', 'x_pts_100', 'x_fg3_pct']);
 	const loadSeq = createRequestSequencer();
 
-	const TALENT_OPTIONS = [
-		{ value: 'dpm', label: 'DPM' },
-		{ value: 'o_dpm', label: 'O-DPM' },
-		{ value: 'd_dpm', label: 'D-DPM' },
-		{ value: 'box_dpm', label: 'Box DPM' },
-		{ value: 'box_odpm', label: 'Box O-DPM' },
-		{ value: 'box_ddpm', label: 'Box D-DPM' }
-	];
+		const TALENT_OPTIONS = [
+			{ value: 'dpm', label: 'DPM' },
+			{ value: 'o_dpm', label: 'O-DPM' },
+			{ value: 'd_dpm', label: 'D-DPM' },
+			{ value: 'box_dpm', label: 'Box DPM' },
+			{ value: 'box_odpm', label: 'Box O-DPM' },
+			{ value: 'box_ddpm', label: 'Box D-DPM' },
+			{ value: 'on_off_dpm', label: 'On/Off DPM' },
+			{ value: 'bayes_rapm_total', label: 'RAPM' },
+			{ value: 'x_pts_100', label: 'Pts per 100' },
+			{ value: 'x_ast_100', label: 'Ast per 100' },
+			{ value: 'x_minutes', label: 'MPG' },
+			{ value: 'x_pace', label: 'Pace' },
+			{ value: 'x_fg_pct', label: 'FG%' },
+			{ value: 'x_fg3_pct', label: '3P%' },
+			{ value: 'x_ft_pct', label: 'FT%' }
+		];
 
-	const PERCENTILE_OPTIONS = [
-		{ value: 'dpm', label: 'DPM' },
-		{ value: 'o_dpm', label: 'O-DPM' },
-		{ value: 'd_dpm', label: 'D-DPM' },
-		{ value: 'tr_fg3_pct', label: 'FG3%' },
-		{ value: 'tr_ft_pct', label: 'FTARate%' }
-	];
+		const PERCENTILE_OPTIONS = [
+			{ value: 'dpm', label: 'DPM' },
+			{ value: 'o_dpm', label: 'O-DPM' },
+			{ value: 'd_dpm', label: 'D-DPM' },
+			{ value: 'on_off_dpm', label: 'On/Off DPM' },
+			{ value: 'bayes_rapm_total', label: 'RAPM' },
+			{ value: 'x_pts_100', label: 'Pts per 100' },
+			{ value: 'x_ast_100', label: 'Ast per 100' },
+			{ value: 'x_fg_pct', label: 'FG%' },
+			{ value: 'x_fg3_pct', label: '3P%' },
+			{ value: 'x_ft_pct', label: 'FT%' },
+			{ value: 'tr_fg3_pct', label: '3P% (trend)' },
+			{ value: 'tr_ft_pct', label: 'FT% (trend)' }
+		];
 
 	const percentiles = $derived.by(() => {
 		if (!playerInfo || allActivePlayers.length === 0) return [];
@@ -80,7 +96,7 @@
 		error = null;
 		try {
 			const [history, active] = await Promise.all([
-				apiPlayerHistory(id),
+				apiPlayerHistory(id, { limit: 1000 }),
 				allActivePlayers.length > 0
 					? Promise.resolve(allActivePlayers)
 					: apiActivePlayers()

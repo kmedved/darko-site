@@ -1,6 +1,7 @@
 <script>
 	import * as d3 from 'd3';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
+	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 
 	let {
 		playerName = '',
@@ -19,15 +20,14 @@
 		o_dpm: '#3b82f6',
 		d_dpm: '#22c55e',
 		tr_fg3_pct: '#a855f7',
-		tr_ft_pct: '#f97316'
-	};
-
-	const METRIC_LABELS = {
-		dpm: 'DPM',
-		o_dpm: 'O-DPM',
-		d_dpm: 'D-DPM',
-		tr_fg3_pct: 'FG3%',
-		tr_ft_pct: 'FTARate%'
+		tr_ft_pct: '#f97316',
+		on_off_dpm: '#14b8a6',
+		bayes_rapm_total: '#f59e0b',
+		x_pts_100: '#38bdf8',
+		x_ast_100: '#60a5fa',
+		x_fg_pct: '#34d399',
+		x_fg3_pct: '#a78bfa',
+		x_ft_pct: '#fb7185'
 	};
 
 	$effect(() => {
@@ -127,10 +127,10 @@
 			.text('Percentile');
 
 		// X axis
-		const xAxisG = g
-			.append('g')
-			.attr('transform', `translate(0,${h})`)
-			.call(d3.axisBottom(x).tickFormat((d) => METRIC_LABELS[d] || d));
+			const xAxisG = g
+				.append('g')
+				.attr('transform', `translate(0,${h})`)
+				.call(d3.axisBottom(x).tickFormat((d) => getMetricDisplayLabel(d)));
 		xAxisG.select('.domain').attr('stroke', 'var(--border, #555)');
 		xAxisG
 			.selectAll('.tick text')

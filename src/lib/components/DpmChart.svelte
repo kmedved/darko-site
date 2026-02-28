@@ -1,26 +1,53 @@
 <script>
     import * as d3 from 'd3';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
+    import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 
     let { data = [], color = 'var(--accent)', height = 120 } = $props();
 
     let svgEl = $state(null);
     let activeStat = $state('dpm');
     let tooltipData = $state(null);
+    let chartPoints = $state([]);
+    const indexBisector = d3.bisector((point) => point.index).left;
 
     const stats = [
-        { key: 'dpm', label: 'DPM' },
-        { key: 'o_dpm', label: 'O-DPM' },
-        { key: 'd_dpm', label: 'D-DPM' },
-        { key: 'box_dpm', label: 'Box' },
-        { key: 'box_odpm', label: 'Box Off' },
-        { key: 'box_ddpm', label: 'Box Def' },
+        { key: 'dpm', label: getMetricDisplayLabel('dpm') },
+        { key: 'o_dpm', label: getMetricDisplayLabel('o_dpm') },
+        { key: 'd_dpm', label: getMetricDisplayLabel('d_dpm') },
+        { key: 'box_dpm', label: getMetricDisplayLabel('box_dpm') },
+        { key: 'box_odpm', label: getMetricDisplayLabel('box_odpm') },
+        { key: 'box_ddpm', label: getMetricDisplayLabel('box_ddpm') },
+        { key: 'on_off_dpm', label: getMetricDisplayLabel('on_off_dpm') },
+        { key: 'bayes_rapm_total', label: getMetricDisplayLabel('bayes_rapm_total') },
+        { key: 'x_pts_100', label: getMetricDisplayLabel('x_pts_100') },
+        { key: 'x_ast_100', label: getMetricDisplayLabel('x_ast_100') }
     ];
 
     function fmtDpm(val) {
         if (val === null || val === undefined) return '—';
         const n = parseFloat(val);
-        return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
+        if (!Number.isFinite(n)) return '—';
+        if (activeStat === 'x_fg_pct' || activeStat === 'x_fg3_pct' || activeStat === 'x_ft_pct') {
+            return `${(n * 100).toFixed(1)}%`;
+        }
+        if (
+            activeStat === 'dpm' ||
+            activeStat === 'o_dpm' ||
+            activeStat === 'd_dpm' ||
+            activeStat === 'box_dpm' ||
+            activeStat === 'box_odpm' ||
+            activeStat === 'box_ddpm' ||
+            activeStat === 'on_off_dpm' ||
+            activeStat === 'on_off_odpm' ||
+            activeStat === 'on_off_ddpm' ||
+            activeStat === 'bayes_rapm_total' ||
+            activeStat === 'bayes_rapm_off' ||
+            activeStat === 'bayes_rapm_def'
+        ) {
+            return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
+        }
+        return n.toFixed(1);
     }
 
     function fmtDate(dateStr) {
@@ -32,10 +59,22 @@
     // Stored scales so mousemove can use them without re-rendering
     let scalesRef = $state({ x: null, y: null, margin: null });
 
+    function getMetricValue(row) {
+        const n = Number.parseFloat(row?.[activeStat]);
+        return Number.isFinite(n) ? n : null;
+    }
+
     $effect(() => {
-        if (!svgEl || data.length === 0) return;
+        if (!svgEl || data.length === 0) {
+            if (svgEl) d3.select(svgEl).selectAll('*').remove();
+            tooltipData = null;
+            chartPoints = [];
+            scalesRef = { x: null, y: null, margin: null };
+            return;
+        }
         // Re-read activeStat to make this effect reactive to it
-        const _stat = activeStat;
+        void activeStat;
+        void data;
         renderChart();
         return withResizeObserver({ element: svgEl, onResize: renderChart });
     });
@@ -51,10 +90,25 @@
 
         const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-        const accessor = d => parseFloat(d[activeStat]) || 0;
+        const points = data
+            .map((row, index) => {
+                const value = getMetricValue(row);
+                if (value === null) return null;
+                return { row, index, value };
+            })
+            .filter((point) => point !== null);
 
-        const x = d3.scaleLinear().domain([0, data.length - 1]).range([0, w]);
-        const yExtent = d3.extent(data, accessor);
+        if (points.length === 0) {
+            tooltipData = null;
+            chartPoints = [];
+            scalesRef = { x: null, y: null, margin: null };
+            return;
+        }
+
+        chartPoints = points;
+
+        const x = d3.scaleLinear().domain([0, Math.max(data.length - 1, 0)]).range([0, w]);
+        const yExtent = d3.extent(points, (point) => point.value);
         const yPad = Math.max(Math.abs(yExtent[1] - yExtent[0]) * 0.15, 0.5);
         const y = d3.scaleLinear()
             .domain([yExtent[0] - yPad, yExtent[1] + yPad])
@@ -72,34 +126,34 @@
 
         // Area
         const area = d3.area()
-            .x((d, i) => x(i))
+            .x((point) => x(point.index))
             .y0(y(0))
-            .y1(d => y(accessor(d)))
+            .y1((point) => y(point.value))
             .curve(d3.curveMonotoneX);
 
         g.append('path')
-            .datum(data)
+            .datum(points)
             .attr('class', 'chart-area')
             .attr('d', area)
             .attr('fill', color);
 
         // Line
         const line = d3.line()
-            .x((d, i) => x(i))
-            .y(d => y(accessor(d)))
+            .x((point) => x(point.index))
+            .y((point) => y(point.value))
             .curve(d3.curveMonotoneX);
 
         g.append('path')
-            .datum(data)
+            .datum(points)
             .attr('class', 'chart-line')
             .attr('d', line)
             .attr('stroke', color);
 
         // Endpoint dot
-        const last = data[data.length - 1];
+        const last = points[points.length - 1];
         g.append('circle')
-            .attr('cx', x(data.length - 1))
-            .attr('cy', y(accessor(last)))
+            .attr('cx', x(last.index))
+            .attr('cy', y(last.value))
             .attr('r', 3)
             .attr('fill', color);
 
@@ -119,32 +173,34 @@
     }
 
     function handleMouseMove(e) {
-        if (!scalesRef.x || data.length === 0) return;
+        if (!scalesRef.x || chartPoints.length === 0) return;
         const { x, y, margin } = scalesRef;
         const rect = svgEl.getBoundingClientRect();
         const mouseX = e.clientX - rect.left - margin.left;
 
-        const idx = Math.round(x.invert(mouseX));
-        const clamped = Math.max(0, Math.min(data.length - 1, idx));
-        const d = data[clamped];
-
-        const accessor = v => parseFloat(v[activeStat]) || 0;
-        const val = accessor(d);
+        const hoveredIndex = x.invert(mouseX);
+        const insertion = indexBisector(chartPoints, hoveredIndex);
+        const prev = chartPoints[Math.max(0, insertion - 1)];
+        const next = chartPoints[Math.min(chartPoints.length - 1, insertion)];
+        const point = !prev ? next
+            : !next ? prev
+            : Math.abs(prev.index - hoveredIndex) <= Math.abs(next.index - hoveredIndex) ? prev : next;
+        if (!point) return;
 
         tooltipData = {
-            date: d.date,
-            value: val,
-            px: x(clamped) + margin.left,
-            py: y(val) + margin.top,
+            date: point.row.date,
+            value: point.value,
+            px: svgEl.offsetLeft + x(point.index) + margin.left,
+            py: svgEl.offsetTop + y(point.value) + margin.top
         };
 
         // Update crosshair and hover dot
         const svg = d3.select(svgEl);
         svg.select('.chart-crosshair')
-            .attr('x1', x(clamped)).attr('x2', x(clamped))
+            .attr('x1', x(point.index)).attr('x2', x(point.index))
             .style('display', null);
         svg.select('.chart-hover-dot')
-            .attr('cx', x(clamped)).attr('cy', y(val))
+            .attr('cx', x(point.index)).attr('cy', y(point.value))
             .style('display', null);
     }
 
@@ -161,6 +217,7 @@
     <div class="chart-toggles">
         {#each stats as s}
             <button
+                type="button"
                 class="chart-toggle-btn"
                 class:active={activeStat === s.key}
                 onclick={() => activeStat = s.key}

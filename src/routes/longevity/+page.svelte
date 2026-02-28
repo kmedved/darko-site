@@ -1,7 +1,7 @@
 <script>
     import LongevityRosterChart from '$lib/components/LongevityRosterChart.svelte';
     import LongevityCareerLengthChart from '$lib/components/LongevityCareerLengthChart.svelte';
-    import { getLongevityScaffoldData } from '$lib/data/longevityScaffold.js';
+    import { apiLongevity, apiPlayerLongevity } from '$lib/api.js';
     import { exportCsvRows, longevityCsvColumns } from '$lib/utils/csvPresets.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import {
@@ -47,6 +47,8 @@
     let pageSize = $state(20);
     let activePlayerId = $state(null);
     let columnFilters = $state(getDefaultColumnFilters());
+    let trajectoryByPlayer = $state({});
+    let loadingTrajectoryByPlayer = $state({});
 
     const filteredRows = $derived.by(() =>
         filterLongevityRows(rows, globalQuery, columnFilters)
@@ -74,19 +76,30 @@
         sortedRows.length === 0 ? 0 : Math.min(page * pageSize, sortedRows.length)
     );
 
-    const activePlayer = $derived.by(() =>
-        resolveActiveLongevityPlayer(sortedRows, activePlayerId)
-    );
+    const activePlayer = $derived.by(() => {
+        const selected = resolveActiveLongevityPlayer(sortedRows, activePlayerId);
+        if (!selected) return null;
+        const trajectory = trajectoryByPlayer[selected.nba_id];
+        if (!trajectory) return selected;
+        return {
+            ...selected,
+            trajectory
+        };
+    });
 
     $effect(() => {
-        getLongevityScaffoldData()
+        apiLongevity()
             .then((data = []) => {
                 rows = data;
+                trajectoryByPlayer = {};
+                loadingTrajectoryByPlayer = {};
                 loading = false;
             })
             .catch((err) => {
                 error = err?.message || 'Failed to load longevity projections';
                 rows = [];
+                trajectoryByPlayer = {};
+                loadingTrajectoryByPlayer = {};
                 loading = false;
             });
     });
@@ -104,6 +117,37 @@
         if (page > maxPage) {
             page = maxPage;
         }
+    });
+
+    $effect(() => {
+        const selected = resolveActiveLongevityPlayer(sortedRows, activePlayerId);
+        const nbaId = selected?.nba_id;
+        if (!nbaId) return;
+        if (trajectoryByPlayer[nbaId] || loadingTrajectoryByPlayer[nbaId]) return;
+
+        loadingTrajectoryByPlayer = {
+            ...loadingTrajectoryByPlayer,
+            [nbaId]: true
+        };
+
+        apiPlayerLongevity(nbaId)
+            .then((points = []) => {
+                trajectoryByPlayer = {
+                    ...trajectoryByPlayer,
+                    [nbaId]: points
+                };
+            })
+            .catch(() => {
+                trajectoryByPlayer = {
+                    ...trajectoryByPlayer,
+                    [nbaId]: []
+                };
+            })
+            .finally(() => {
+                const next = { ...loadingTrajectoryByPlayer };
+                delete next[nbaId];
+                loadingTrajectoryByPlayer = next;
+            });
     });
 
     function sortGlyph(column) {
@@ -199,7 +243,7 @@
         <div class="page-header-toolbar">
             <div>
                 <h1>Longevity Projections</h1>
-                <p>Scaffold UI with mock data for career-length outlooks and roster retention probabilities.</p>
+                <p>Active-player career-length outlooks and roster retention probabilities.</p>
             </div>
             <div class="page-header-actions">
                 <button

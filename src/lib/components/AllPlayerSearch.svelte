@@ -1,53 +1,51 @@
 <script>
-	import { apiPlayersIndex } from '$lib/api.js';
+	import { apiSearchPlayers } from '$lib/api.js';
+	import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
 	import { formatSignedMetric } from '$lib/utils/csvPresets.js';
 
 	let { onSelect, exclude = [] } = $props();
 
 	let query = $state('');
-	let allPlayers = $state([]);
 	let results = $state([]);
 	let showResults = $state(false);
 	let searching = $state(false);
-	let loading = $state(true);
 	let error = $state(null);
 	let debounceTimer = null;
-
-	$effect(() => {
-		apiPlayersIndex()
-			.then((data) => {
-				allPlayers = data;
-				loading = false;
-			})
-			.catch((err) => {
-				error = err.message;
-				loading = false;
-			});
-	});
+	const searchSequencer = createRequestSequencer();
 
 	function handleInput() {
 		clearTimeout(debounceTimer);
 
-		if (query.length < 2) {
+		if (query.trim().length < 2) {
 			results = [];
 			searching = false;
+			error = null;
 			return;
 		}
 
+		error = null;
 		searching = true;
+		const reqId = searchSequencer.next();
 		const currentQuery = query;
-		const excludeSet = new Set(exclude);
 
 		debounceTimer = setTimeout(() => {
-			if (query === currentQuery) {
-				const q = currentQuery.toLowerCase();
-				results = allPlayers
-					.filter((p) => !excludeSet.has(p.nba_id))
-					.filter((p) => p.player_name.toLowerCase().includes(q))
-					.slice(0, 8);
-				searching = false;
-			}
-		}, 300);
+			apiSearchPlayers(currentQuery)
+				.then((players) => {
+					if (!searchSequencer.isCurrent(reqId)) return;
+					const excludeSet = new Set(exclude);
+					results = (players || [])
+						.filter((p) => !excludeSet.has(p.nba_id))
+						.slice(0, 8);
+					searching = false;
+					error = null;
+				})
+				.catch((err) => {
+					if (!searchSequencer.isCurrent(reqId)) return;
+					results = [];
+					error = err.message || 'Failed to search players';
+					searching = false;
+				});
+		}, 250);
 	}
 
 	function selectPlayer(player) {
@@ -73,29 +71,32 @@
 		onfocus={() => (showResults = true)}
 		onblur={() => setTimeout(() => (showResults = false), 150)}
 	/>
-	{#if showResults && results.length > 0}
-		<div class="search-results">
-			{#each results as player}
-				<button
-					class="search-result-item"
-					onmousedown={() => selectPlayer(player)}
-				>
-					<span>
-						{player.player_name}
-						<span class="meta"
-							>{player.team_name} · {player.position || '?'}</span
+		{#if showResults && query.trim().length >= 2}
+			<div class="search-results">
+				{#if error}
+					<div class="search-loading">{error}</div>
+				{:else if searching}
+					<div class="search-loading">Searching...</div>
+				{:else if results.length > 0}
+					{#each results as player}
+						<button
+							type="button"
+							class="search-result-item"
+							onmousedown={() => selectPlayer(player)}
 						>
-					</span>
-					<span class="dpm-val {dpmClass(player.dpm)}">
-						{formatSignedMetric(player.dpm)}
-					</span>
-				</button>
-			{/each}
-		</div>
-	{:else if showResults && searching && query.length >= 2}
-		<div class="search-results">
-			<div class="search-loading">Searching...</div>
-		</div>
+							<span>
+								{player.player_name}
+								<span class="meta">{player.team_name} · {player.position || '?'}</span>
+							</span>
+							<span class="dpm-val {dpmClass(player.dpm)}">
+								{formatSignedMetric(player.dpm)}
+							</span>
+						</button>
+					{/each}
+				{:else}
+					<div class="search-loading">No matches</div>
+				{/if}
+			</div>
 	{/if}
 </div>
 
