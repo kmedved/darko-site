@@ -19,7 +19,7 @@
         { key: 'age', label: 'Age', align: 'right' },
         { key: 'est_retirement_age', label: 'Est. Retirement Age', align: 'right' },
         { key: 'years_remaining', label: 'Years Remaining', align: 'right' },
-        ...Array.from({ length: 12 }, (_, index) => ({
+        ...Array.from({ length: 15 }, (_, index) => ({
             key: `p${index + 1}`,
             label: `+${index + 1}`,
             align: 'right'
