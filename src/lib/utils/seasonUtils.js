@@ -5,11 +5,18 @@
  *       "2024-10-22" => 2024 (2024-25 season)
  */
 export function getSeasonStartYear(dateStr) {
+	if (typeof dateStr !== 'string') return null;
+	const normalized = dateStr.trim();
+	if (!normalized) return null;
+
 	// Handle both "YYYY-MM-DD" and "YYYY-MM-DDTHH:MM:SS" formats
-	const dateOnly = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+	const dateOnly = normalized.includes('T') ? normalized.split('T')[0] : normalized;
 	const parts = dateOnly.split('-');
 	const year = parseInt(parts[0], 10);
 	const month = parseInt(parts[1], 10); // 1-indexed
+	if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+		return null;
+	}
 	return month >= 7 ? year : year - 1;
 }
 
@@ -27,8 +34,9 @@ export function formatSeasonLabel(startYear) {
  */
 export function computeSeasonX(rows) {
 	const seasons = new Map();
-	for (const row of rows) {
-		const sy = getSeasonStartYear(row.date);
+	for (const row of rows || []) {
+		const sy = getSeasonStartYear(row?.date);
+		if (!Number.isInteger(sy)) continue;
 		if (!seasons.has(sy)) seasons.set(sy, []);
 		seasons.get(sy).push(row);
 	}

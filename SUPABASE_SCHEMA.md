@@ -263,6 +263,28 @@ All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. 
 | `/api/longevity` | `getLongevityRows({ activeOnly: true })` | Main longevity table |
 | `/api/player/[id]/longevity` | `getLongevityTrajectory(nbaId)` | Single player trajectory chart. Queries `player_ratings` for all rows for one player, keeps the **last** row per season (latest date), maps `x_retirement_age_cal` (fallback `x_retirement_age`) → `projected_retirement_age` (rounded to 1 decimal). Output: `[{ season_start, season_start_year, projected_retirement_age }]` |
 
+### Data limits and fetch policy
+
+| Area | Current behavior | Cap | Notes |
+|---|---|---:|---|
+| Player history API (`/api/player/[id]/history`) | `limit` defaults to `1000`; bounded to max `2000`; `full=1` enables full history path | 2000 (bounded) | Full history path is explicit and uses paginated fetch through `getFullPlayerHistory(...)`. |
+| Profile page (`/player/[nbaId]`) | Uses `apiPlayerHistory(..., { full: true })` | none (explicit opt-in path) | Profile now opts into full history by design. |
+| Compare page history (`/compare`) | Calls `apiPlayerHistory(..., { limit: 300 })` | 300 | Preview mode kept for responsiveness. |
+| Player card history (`PlayerCard`) | Calls `apiPlayerHistory(..., { limit: 200 })` | 200 | Small sparkline-focused view, intentionally bounded. |
+| Search endpoint (`/api/search-players`) | Returns 15 matches after name filter | 15 | Endpoint hard cap for payload size. |
+| Search UI suggestions | Player search lists show up to 8 entries | 8 | UX limit to keep dropdown concise. |
+| Compare players | UI max 4 players | 4 | Hard cap in selection guard and URL params. |
+| Career trajectory page (`/trajectories`) | `MAX_PLAYERS` constraint | 5 | Multi-player chart stays bounded for readability/perf. |
+
+Safe pattern now:
+- Default paths stay capped to avoid unbounded payloads and keep response/render budgets stable.
+- Explicit full-history usage is only enabled by `full=1` in the API client (`apiPlayerHistory(id, { full: true })`).
+
+Deferred shifts to evaluate:
+- Add cursor pagination for player history instead of all-or-bounded fetch.
+- Centralize history caps in one configuration constant to avoid duplicated magic numbers.
+- Move player-card and compare history caps behind explicit view modes (`preview` vs full-detail).
+
 ---
 
 ## Pipeline Freshness Requirements

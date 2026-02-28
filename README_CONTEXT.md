@@ -33,3 +33,10 @@ npm run preview
 - App is read-only (no mutations/auth flows).
 - The app includes responsive behavior for sub-768px layouts.
 - Compare supports up to four players via `?ids=...` query params.
+
+## Data retrieval limits (current behavior)
+
+- Most routes use capped dataset fetches for performance by default (search, compare, player cards).
+- Profile pages now request full history explicitly with `apiPlayerHistory(id, { full: true })`.
+- Full history remains an explicit opt-in path so default requests stay bounded.
+- For future expansion: prioritize full-history enablement for profile-like pages first, then paginate elsewhere.

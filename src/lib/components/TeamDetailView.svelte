@@ -342,7 +342,7 @@
 
     th {
         position: sticky;
-        top: 210px;
+        top: var(--nav-sticky-offset);
         z-index: 20;
         cursor: pointer;
         user-select: none;

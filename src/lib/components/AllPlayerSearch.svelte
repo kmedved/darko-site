@@ -11,12 +11,24 @@
 	let searching = $state(false);
 	let error = $state(null);
 	let debounceTimer = null;
+	let blurTimer = null;
 	const searchSequencer = createRequestSequencer();
+
+	function normalizeId(value) {
+		const parsed = Number.parseInt(String(value), 10);
+		return Number.isInteger(parsed) ? parsed : null;
+	}
+
+	function hideResultsSoon() {
+		clearTimeout(blurTimer);
+		blurTimer = setTimeout(() => (showResults = false), 150);
+	}
 
 	function handleInput() {
 		clearTimeout(debounceTimer);
+		const trimmedQuery = query.trim();
 
-		if (query.trim().length < 2) {
+		if (trimmedQuery.length < 2) {
 			results = [];
 			searching = false;
 			error = null;
@@ -26,15 +38,17 @@
 		error = null;
 		searching = true;
 		const reqId = searchSequencer.next();
-		const currentQuery = query;
+		const currentQuery = trimmedQuery;
 
 		debounceTimer = setTimeout(() => {
 			apiSearchPlayers(currentQuery)
 				.then((players) => {
 					if (!searchSequencer.isCurrent(reqId)) return;
-					const excludeSet = new Set(exclude);
+					const excludeSet = new Set(
+						(exclude || []).map(normalizeId).filter((id) => id !== null)
+					);
 					results = (players || [])
-						.filter((p) => !excludeSet.has(p.nba_id))
+						.filter((p) => !excludeSet.has(normalizeId(p.nba_id)))
 						.slice(0, 8);
 					searching = false;
 					error = null;
@@ -42,7 +56,7 @@
 				.catch((err) => {
 					if (!searchSequencer.isCurrent(reqId)) return;
 					results = [];
-					error = err.message || 'Failed to search players';
+					error = err?.message || 'Failed to search players';
 					searching = false;
 				});
 		}, 250);
@@ -60,6 +74,14 @@
 		if (!Number.isFinite(n)) return '';
 		return n >= 0 ? 'pos' : 'neg';
 	}
+
+	$effect(() => {
+		return () => {
+			clearTimeout(debounceTimer);
+			clearTimeout(blurTimer);
+			searchSequencer.next();
+		};
+	});
 </script>
 
 <div class="search-wrapper">
@@ -68,8 +90,11 @@
 		placeholder="Search any player (current or retired)..."
 		bind:value={query}
 		oninput={handleInput}
-		onfocus={() => (showResults = true)}
-		onblur={() => setTimeout(() => (showResults = false), 150)}
+		onfocus={() => {
+			clearTimeout(blurTimer);
+			showResults = true;
+		}}
+		onblur={hideResultsSoon}
 	/>
 		{#if showResults && query.trim().length >= 2}
 			<div class="search-results">

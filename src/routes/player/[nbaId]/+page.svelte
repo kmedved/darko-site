@@ -14,6 +14,8 @@
 	let allActivePlayers = $state([]);
 	let loading = $state(true);
 	let error = $state(null);
+	let percentilesLoading = $state(false);
+	let percentileNotice = $state(null);
 
 	let talentType = $state('dpm');
 	let selectedPercentileMetrics = $state(['dpm', 'o_dpm', 'd_dpm', 'x_pts_100', 'x_fg3_pct']);
@@ -90,30 +92,60 @@
 		loadPlayer(nbaId);
 	});
 
+	async function loadActivePlayersWithRetry() {
+		try {
+			return await apiActivePlayers();
+		} catch {
+			return await apiActivePlayers();
+		}
+	}
+
 	async function loadPlayer(id) {
 		const reqId = loadSeq.next();
 		loading = true;
+		percentilesLoading = false;
 		error = null;
+		percentileNotice = null;
+		playerInfo = null;
+		historyRows = [];
+		allActivePlayers = [];
+
 		try {
-			const [history, active] = await Promise.all([
-				apiPlayerHistory(id, { limit: 1000 }),
-				allActivePlayers.length > 0
-					? Promise.resolve(allActivePlayers)
-					: apiActivePlayers()
-			]);
+			const history = await apiPlayerHistory(id, { limit: 1000 });
 			const info = history.at(-1);
 
 			if (!loadSeq.isCurrent(reqId)) return;
+			if (!info) {
+				throw new Error(`No history found for player ${id}`);
+			}
 
 			playerInfo = info;
 			historyRows = history;
-			allActivePlayers = active;
+			loading = false;
+
+			percentilesLoading = true;
+			try {
+				const active = await loadActivePlayersWithRetry();
+				if (!loadSeq.isCurrent(reqId)) return;
+				allActivePlayers = Array.isArray(active) ? active : [];
+				percentileNotice =
+					allActivePlayers.length === 0
+						? 'Active-player percentile data is temporarily unavailable.'
+						: null;
+			} catch {
+				if (!loadSeq.isCurrent(reqId)) return;
+				allActivePlayers = [];
+				percentileNotice = 'Active-player percentile data is temporarily unavailable.';
+			} finally {
+				if (!loadSeq.isCurrent(reqId)) return;
+				percentilesLoading = false;
+			}
 		} catch (err) {
 			if (!loadSeq.isCurrent(reqId)) return;
-			error = err.message;
-		} finally {
-			if (!loadSeq.isCurrent(reqId)) return;
+			error = err?.message || 'Failed to load player data';
 			loading = false;
+			percentilesLoading = false;
+			percentileNotice = null;
 		}
 	}
 
@@ -187,27 +219,37 @@
 			{:else if error}
 				<div class="error-msg">{error}</div>
 			{:else if playerInfo}
-				<div class="chart-panel">
-					<TalentTrendChart
-						rows={historyRows}
-						{talentType}
-						playerName={playerInfo.player_name}
-					/>
-				</div>
+					<div class="chart-panel">
+						<TalentTrendChart
+							rows={historyRows}
+							{talentType}
+							playerName={playerInfo.player_name}
+						/>
+					</div>
 
-				<div class="chart-panel">
-					<TalentPercentilesChart
-						playerName={playerInfo.player_name}
-						position={playerInfo.position}
-						date={currentDate}
-						{percentiles}
-						selectedMetrics={selectedPercentileMetrics}
-					/>
-				</div>
-			{/if}
+					{#if percentilesLoading}
+						<div class="chart-panel">
+							<div class="loading">Loading percentile context...</div>
+						</div>
+					{:else if percentileNotice}
+						<div class="chart-panel">
+							<p class="percentile-notice">{percentileNotice}</p>
+						</div>
+					{:else if allActivePlayers.length > 0}
+						<div class="chart-panel">
+							<TalentPercentilesChart
+								playerName={playerInfo.player_name}
+								position={playerInfo.position}
+								date={currentDate}
+								{percentiles}
+								selectedMetrics={selectedPercentileMetrics}
+							/>
+						</div>
+					{/if}
+				{/if}
+			</div>
 		</div>
 	</div>
-</div>
 
 <style>
 	.profile-layout {
@@ -307,6 +349,11 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		padding: 16px;
+	}
+
+	.percentile-notice {
+		color: var(--text-muted);
+		font-size: 13px;
 	}
 
 	@media (max-width: 768px) {

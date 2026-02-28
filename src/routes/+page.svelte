@@ -271,7 +271,7 @@
 
     th {
         position: sticky;
-        top: 210px;
+        top: var(--nav-sticky-offset);
         z-index: 20;
         background: var(--bg-surface);
         box-shadow: inset 0 -1px 0 var(--border);

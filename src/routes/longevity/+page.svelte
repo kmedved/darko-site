@@ -479,7 +479,7 @@
 
     th {
         position: sticky;
-        top: 210px;
+        top: var(--nav-sticky-offset);
         z-index: 15;
         background: var(--bg-surface);
         border-bottom: 1px solid var(--border);
@@ -494,7 +494,7 @@
     }
 
     .filter-row th {
-        top: 242px;
+        top: calc(var(--nav-sticky-offset) + 32px);
         z-index: 14;
         padding: 7px 8px;
         background: var(--bg-elevated);

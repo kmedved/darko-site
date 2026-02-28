@@ -32,14 +32,16 @@
     });
 
     async function loadPlayer(nbaId) {
-        const id = Number.parseInt(nbaId, 10);
-        if (!Number.isInteger(id) || id <= 0) return;
-        if (selectedPlayers.some(p => p.nba_id === id)) return;
-        if (selectedPlayers.length >= 4) return;
+		const id = Number.parseInt(nbaId, 10);
+		if (!Number.isInteger(id) || id <= 0) return;
+		if (selectedPlayers.some(p => p.nba_id === id)) return;
+		// Performance-first preview mode: cap compare history to keep this route lightweight.
+		if (selectedPlayers.length >= 4) return;
 
         pendingLoads += 1;
-        error = null;
+		error = null;
 		try {
+			// Keep preview history capped here to keep compare UI fast and cheap.
 			const rows = await apiPlayerHistory(id, { limit: 300 });
 			if (!rows.length) {
 				error = `No history found for player ${id}`;
