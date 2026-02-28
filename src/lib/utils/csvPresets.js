@@ -164,7 +164,10 @@ export const longevityCsvColumns = [
     { header: '+9', accessor: 'p9', format: (v) => formatFixed(v, 1) },
     { header: '+10', accessor: 'p10', format: (v) => formatFixed(v, 1) },
     { header: '+11', accessor: 'p11', format: (v) => formatFixed(v, 1) },
-    { header: '+12', accessor: 'p12', format: (v) => formatFixed(v, 1) }
+    { header: '+12', accessor: 'p12', format: (v) => formatFixed(v, 1) },
+    { header: '+13', accessor: 'p13', format: (v) => formatFixed(v, 1) },
+    { header: '+14', accessor: 'p14', format: (v) => formatFixed(v, 1) },
+    { header: '+15', accessor: 'p15', format: (v) => formatFixed(v, 1) }
 ];
 
 export const teamPlayersCsvColumns = [

@@ -1,4 +1,4 @@
-const PROJECTION_COLUMNS = Array.from({ length: 12 }, (_, index) => `p${index + 1}`);
+const PROJECTION_COLUMNS = Array.from({ length: 15 }, (_, index) => `p${index + 1}`);
 
 export const LONGEVITY_COLUMNS = [
     'player_name',

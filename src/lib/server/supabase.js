@@ -472,7 +472,10 @@ export async function getLongevityRows(options = {}) {
                 p9: normalizeProbability(row.s9),
                 p10: normalizeProbability(row.s10),
                 p11: normalizeProbability(row.s11),
-                p12: normalizeProbability(row.s12)
+                p12: normalizeProbability(row.s12),
+                p13: normalizeProbability(row.s13),
+                p14: normalizeProbability(row.s14),
+                p15: normalizeProbability(row.s15)
             });
         }
 
