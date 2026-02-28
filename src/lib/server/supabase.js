@@ -235,7 +235,9 @@ async function getLatestActiveDate() {
 }
 
 /**
- * Get all active players from latest available active date.
+ * Get all active players — most recent row per player from the last 7 days.
+ * Uses a date range and deduplicates per nba_id to handle cases where
+ * the data pipeline updates teams at different times.
  */
 export async function getActivePlayers(options = {}) {
     const normalizedTeam = (options.teamName || '').trim();
@@ -246,21 +248,35 @@ export async function getActivePlayers(options = {}) {
             return [];
         }
 
-        let query = supabase
+        // Use a 7-day window back from the latest date to capture all players
+        const latest = new Date(latestDate);
+        const weekAgo = new Date(latest);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekAgoStr = weekAgo.toISOString().slice(0, 10);
+
+        const { data, error } = await supabase
             .from('player_ratings')
             .select(RATING_COLUMNS)
             .eq('active_roster', 1)
-            .eq('date', latestDate)
-            .order('dpm', { ascending: false });
-
-        const { data, error } = await query.limit(5_000);
+            .gte('date', weekAgoStr)
+            .order('date', { ascending: false })
+            .limit(10_000);
 
         if (error) throw error;
 
-        const rows = data || [];
-        const ids = rows.map((row) => row.nba_id);
+        // Keep only the most recent row per player
+        const seen = new Set();
+        const unique = [];
+        for (const row of data || []) {
+            if (!seen.has(row.nba_id)) {
+                seen.add(row.nba_id);
+                unique.push(row);
+            }
+        }
+
+        const ids = unique.map((row) => row.nba_id);
         const playersMap = await getPlayersMapByIds(ids);
-        let merged = rows.map((row) => mergeWithPlayerDim(row, playersMap.get(row.nba_id)));
+        let merged = unique.map((row) => mergeWithPlayerDim(row, playersMap.get(row.nba_id)));
 
         if (normalizedTeam) {
             merged = merged.filter((row) => {
