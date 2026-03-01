@@ -2,6 +2,7 @@
 	import * as d3 from 'd3';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
 	let {
 		playerName = '',
@@ -11,7 +12,9 @@
 		selectedMetrics = []
 	} = $props();
 
+	let chartRootEl = $state(null);
 	let svgEl = $state(null);
+	const exportFilenameBase = $derived(playerName ? `${playerName}-talent-percentiles` : 'talent-percentiles');
 
 	const HEIGHT = 420;
 
@@ -184,12 +187,21 @@
 	}
 </script>
 
-<div
-	class="percentiles-chart-container"
-	role="img"
-	aria-label={playerName ? `${playerName} talent percentiles` : 'Talent percentiles'}
->
-	<svg bind:this={svgEl} width="100%" height={HEIGHT}></svg>
+<div class="chart-download-shell" bind:this={chartRootEl}>
+	<div class="chart-download-toolbar">
+		<ChartDownloadMenu
+			{svgEl}
+			captureRootEl={chartRootEl}
+			filenameBase={exportFilenameBase}
+		/>
+	</div>
+	<div
+		class="percentiles-chart-container"
+		role="img"
+		aria-label={playerName ? `${playerName} talent percentiles` : 'Talent percentiles'}
+	>
+		<svg bind:this={svgEl} width="100%" height={HEIGHT}></svg>
+	</div>
 </div>
 
 <style>

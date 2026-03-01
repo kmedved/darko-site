@@ -1,9 +1,12 @@
 <script>
     import * as d3 from 'd3';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
+    import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
-    let { team = {} } = $props();
+    let { team = {}, teamName = '' } = $props();
+    let chartRootEl = $state(null);
     let svgEl = $state(null);
+    const exportFilenameBase = $derived(teamName ? `${teamName}-seed-probabilities` : 'team-seed-probabilities');
     
 
     function clearChart() {
@@ -91,6 +94,21 @@
 	}
 </script>
 
-<div style="width: 100%;">
-    <svg bind:this={svgEl} width="100%" height="160" style="overflow: visible;"></svg>
+<div class="chart-download-shell" bind:this={chartRootEl}>
+    <div class="chart-download-toolbar">
+        <ChartDownloadMenu
+            {svgEl}
+            captureRootEl={chartRootEl}
+            filenameBase={exportFilenameBase}
+        />
+    </div>
+    <div class="seed-chart-shell">
+        <svg bind:this={svgEl} width="100%" height="160" style="overflow: visible;"></svg>
+    </div>
 </div>
+
+<style>
+    .seed-chart-shell {
+        width: 100%;
+    }
+</style>

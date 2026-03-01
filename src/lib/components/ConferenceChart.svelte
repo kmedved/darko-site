@@ -1,9 +1,15 @@
 <script>
     import * as d3 from 'd3';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
+    import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
-    let { standings = [], sortMetric = 'W' } = $props();
+    let { standings = [], sortMetric = 'W', conference = '' } = $props();
+    let chartRootEl = $state(null);
     let svgEl = $state(null);
+    const exportFilenameBase = $derived.by(() => {
+        const prefix = conference ? `${conference}-conference-` : 'conference-';
+        return `${prefix}overview-${sortMetric}`;
+    });
 
     function getMetricValue(team) {
         const value = team?.[sortMetric];
@@ -151,6 +157,21 @@
     }
 </script>
 
-<div style="width: 100%;">
-    <svg bind:this={svgEl} width="100%" height="500" style="overflow: visible;"></svg>
+<div class="chart-download-shell" bind:this={chartRootEl}>
+    <div class="chart-download-toolbar">
+        <ChartDownloadMenu
+            {svgEl}
+            captureRootEl={chartRootEl}
+            filenameBase={exportFilenameBase}
+        />
+    </div>
+    <div class="conference-chart-shell">
+        <svg bind:this={svgEl} width="100%" height="500" style="overflow: visible;"></svg>
+    </div>
 </div>
+
+<style>
+    .conference-chart-shell {
+        width: 100%;
+    }
+</style>

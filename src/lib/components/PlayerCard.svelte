@@ -84,6 +84,7 @@
             data={history}
             color={dpmColor(player.dpm)}
             height={120}
+            playerName={player.player_name}
         />
     {/if}
 

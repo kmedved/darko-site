@@ -3,6 +3,7 @@
 	import { loess } from '$lib/utils/loess.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
 	let {
 		players = [],
@@ -16,6 +17,8 @@
 	let tooltipData = $state(null);
 	let scalesRef = $state({ x: null, y: null, margin: null, w: 0, h: 0 });
 	let rowsForTooltip = $state([]);
+
+	const exportFilenameBase = $derived(`career-trajectories-${talentType}-${timeScale}`);
 
 	const HEIGHT = 500;
 
@@ -406,32 +409,41 @@
 	}
 </script>
 
-<div
-	bind:this={containerEl}
-	class="trajectory-chart-container"
-	onmousemove={handleMouseMove}
-	onmouseleave={handleMouseLeave}
-	role="img"
-	aria-label={title}
->
-	<svg bind:this={svgEl} width="100%" height={HEIGHT}></svg>
+<div class="chart-download-shell">
+	<div class="chart-download-toolbar">
+		<ChartDownloadMenu
+			{svgEl}
+			captureRootEl={containerEl}
+			filenameBase={exportFilenameBase}
+		/>
+	</div>
+	<div
+		bind:this={containerEl}
+		class="trajectory-chart-container"
+		onmousemove={handleMouseMove}
+		onmouseleave={handleMouseLeave}
+		role="img"
+		aria-label={title}
+	>
+		<svg bind:this={svgEl} width="100%" height={HEIGHT}></svg>
 
-	{#if tooltipData}
-		<div
-			class="chart-tooltip trajectory-tooltip"
-			style="left: {tooltipData.px}px; top: {tooltipData.py - 10}px;"
-		>
-			<span
-				class="tooltip-player"
-				style="color: {tooltipData.player.color}"
-				>{tooltipData.player.player_name}</span
+		{#if tooltipData}
+			<div
+				class="chart-tooltip trajectory-tooltip"
+				style="left: {tooltipData.px}px; top: {tooltipData.py - 10}px;"
 			>
-				<span class="chart-tooltip-value"
-					>{fmtMetric(getY(tooltipData.row))}</span
+				<span
+					class="tooltip-player"
+					style="color: {tooltipData.player.color}"
+					>{tooltipData.player.player_name}</span
 				>
-			<span class="chart-tooltip-date">{tooltipData.row.date}</span>
-		</div>
-	{/if}
+					<span class="chart-tooltip-value"
+						>{fmtMetric(getY(tooltipData.row))}</span
+					>
+				<span class="chart-tooltip-date">{tooltipData.row.date}</span>
+			</div>
+		{/if}
+	</div>
 </div>
 
 <style>

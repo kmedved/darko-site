@@ -1,9 +1,12 @@
 <script>
     import * as d3 from 'd3';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
+    import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
-    let { data = [], meanWins = 0, currentWins = 0 } = $props();
+    let { data = [], meanWins = 0, currentWins = 0, teamName = '' } = $props();
+    let chartRootEl = $state(null);
     let svgEl = $state(null);
+    const exportFilenameBase = $derived(teamName ? `${teamName}-win-distribution` : 'team-win-distribution');
     
 
     function toChartData(rawRows) {
@@ -142,6 +145,21 @@
     }
 </script>
 
-<div style="width: 100%;">
-    <svg bind:this={svgEl} width="100%" height="200" style="overflow: visible;"></svg>
+<div class="chart-download-shell" bind:this={chartRootEl}>
+    <div class="chart-download-toolbar">
+        <ChartDownloadMenu
+            {svgEl}
+            captureRootEl={chartRootEl}
+            filenameBase={exportFilenameBase}
+        />
+    </div>
+    <div class="win-dist-chart-shell">
+        <svg bind:this={svgEl} width="100%" height="200" style="overflow: visible;"></svg>
+    </div>
 </div>
+
+<style>
+    .win-dist-chart-shell {
+        width: 100%;
+    }
+</style>

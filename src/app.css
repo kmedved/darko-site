@@ -462,6 +462,19 @@ nav .links a.active {
     border-bottom: 1px solid var(--border-subtle);
 }
 
+.chart-controls-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 20px 0;
+}
+
+.chart-controls-row .chart-toggles {
+    flex: 1;
+    padding: 0;
+}
+
 .chart-toggles {
     display: flex;
     gap: 4px;
@@ -492,6 +505,67 @@ nav .links a.active {
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
+}
+
+.chart-download-shell {
+    width: 100%;
+}
+
+.chart-download-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 15;
+}
+
+.chart-download-menu {
+    position: relative;
+    display: inline-flex;
+}
+
+.chart-download-trigger {
+    font-size: 11px;
+    padding: 6px 10px;
+}
+
+.chart-download-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 112px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    z-index: 45;
+}
+
+.chart-download-option {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    text-align: left;
+    padding: 8px 10px;
+    cursor: pointer;
+}
+
+.chart-download-option:hover:not(:disabled) {
+    background: var(--bg-hover);
+}
+
+.chart-download-option + .chart-download-option {
+    border-top: 1px solid var(--border-subtle);
+}
+
+.chart-download-option:disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
 }
 
 /* ── Sparkline / Chart ───────────────────────────────── */
@@ -617,6 +691,17 @@ nav .links a.active {
 /* ── Responsive ──────────────────────────────────────── */
 
 @media (max-width: 768px) {
+    .chart-controls-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .chart-download-popover {
+        left: 0;
+        right: auto;
+    }
+
     .compare-grid {
         grid-template-columns: 1fr !important;
     }

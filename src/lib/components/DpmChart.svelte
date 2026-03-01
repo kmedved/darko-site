@@ -2,15 +2,22 @@
     import * as d3 from 'd3';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
     import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+    import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
-	let { data = [], color = 'var(--accent)', height = 120 } = $props();
+	let { data = [], color = 'var(--accent)', height = 120, playerName = '' } = $props();
 
+	let chartRootEl = $state(null);
 	let containerEl = $state(null);
 	let svgEl = $state(null);
 	let activeStat = $state('dpm');
 	let tooltipData = $state(null);
 	let chartPoints = $state([]);
 	const indexBisector = d3.bisector((point) => point.index).left;
+
+	const exportFilenameBase = $derived.by(() => {
+		const prefix = playerName ? `${playerName}-` : '';
+		return `${prefix}dpm-trend-${activeStat}`;
+	});
 
     const stats = [
         { key: 'dpm', label: getMetricDisplayLabel('dpm') },
@@ -225,19 +232,26 @@
     }
 </script>
 
-<div class="chart-wrapper">
-    <div class="chart-toggles">
-        {#each stats as s}
-            <button
-                type="button"
-                class="chart-toggle-btn"
-                class:active={activeStat === s.key}
-                onclick={() => activeStat = s.key}
-            >
-                {s.label}
-            </button>
-        {/each}
-    </div>
+<div class="chart-wrapper" bind:this={chartRootEl}>
+	<div class="chart-controls-row">
+		<div class="chart-toggles">
+			{#each stats as s}
+				<button
+					type="button"
+					class="chart-toggle-btn"
+					class:active={activeStat === s.key}
+					onclick={() => activeStat = s.key}
+				>
+					{s.label}
+				</button>
+			{/each}
+		</div>
+		<ChartDownloadMenu
+			{svgEl}
+			captureRootEl={containerEl}
+			filenameBase={exportFilenameBase}
+		/>
+	</div>
 
 	<div
 		bind:this={containerEl}

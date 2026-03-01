@@ -38,6 +38,12 @@ export function formatFixed(value, decimals = 1) {
     return n.toFixed(decimals);
 }
 
+function formatConference(value) {
+    if (value === 'East') return 'Eastern Conference';
+    if (value === 'West') return 'Western Conference';
+    return value || DASH;
+}
+
 export function exportCsvRows({ rows = [], columns = [], filename }) {
     downloadCsv({ rows, columns, filename });
 }
@@ -144,6 +150,42 @@ export const standingsCsvColumns = [
     { header: 'Win Finals%', accessor: 'Win Finals', format: (v) => formatFixed(v, 1) },
     { header: 'Lottery%', accessor: 'Lottery%', format: (v) => formatFixed(v, 1) },
     { header: 'E[Pick]', accessor: 'ExpPick', format: (v) => formatFixed(v, 1) },
+];
+
+export const standingsExpandedCsvColumns = [
+    { header: '#', accessor: 'Rk' },
+    { header: 'Team', accessor: 'team_name' },
+    { header: 'Conference', accessor: 'conference', format: formatConference },
+    { header: 'Current', accessor: 'Current' },
+    { header: 'W', accessor: 'W', format: (v) => formatFixed(v, 1) },
+    { header: 'L', accessor: 'L', format: (v) => formatFixed(v, 1) },
+    { header: 'SRS', accessor: 'SRS', format: (v) => formatFixed(v, 2) },
+    { header: 'Playoff%', accessor: 'Playoffs', format: (v) => formatFixed(v, 1) },
+    { header: 'Win Conf%', accessor: 'Win Conf', format: (v) => formatFixed(v, 1) },
+    { header: 'Win Finals%', accessor: 'Win Finals', format: (v) => formatFixed(v, 1) },
+    { header: 'Lottery%', accessor: 'Lottery%', format: (v) => formatFixed(v, 1) },
+    { header: 'E[Pick]', accessor: 'ExpPick', format: (v) => formatFixed(v, 1) },
+    { header: 'W/L%', accessor: 'W/L%', format: (v) => formatFixed(v, 1) },
+    { header: 'Remain', accessor: 'Remain' },
+    { header: 'Best', accessor: 'Best' },
+    { header: 'Worst', accessor: 'Worst' },
+    { header: 'Division%', accessor: 'Division', format: (v) => formatFixed(v, 1) },
+    { header: '1', accessor: 'seed_1', format: (v) => formatFixed(v, 1) },
+    { header: '2', accessor: 'seed_2', format: (v) => formatFixed(v, 1) },
+    { header: '3', accessor: 'seed_3', format: (v) => formatFixed(v, 1) },
+    { header: '4', accessor: 'seed_4', format: (v) => formatFixed(v, 1) },
+    { header: '5', accessor: 'seed_5', format: (v) => formatFixed(v, 1) },
+    { header: '6', accessor: 'seed_6', format: (v) => formatFixed(v, 1) },
+    { header: '7', accessor: 'seed_7', format: (v) => formatFixed(v, 1) },
+    { header: '8', accessor: 'seed_8', format: (v) => formatFixed(v, 1) },
+    { header: '9', accessor: 'seed_9', format: (v) => formatFixed(v, 1) },
+    { header: '10', accessor: 'seed_10', format: (v) => formatFixed(v, 1) },
+    { header: '1-6', accessor: '1-6', format: (v) => formatFixed(v, 1) },
+    { header: '7', accessor: '7', format: (v) => formatFixed(v, 1) },
+    { header: '8', accessor: '8', format: (v) => formatFixed(v, 1) },
+    { header: '9', accessor: '9', format: (v) => formatFixed(v, 1) },
+    { header: '10', accessor: '10', format: (v) => formatFixed(v, 1) },
+    { header: 'Out', accessor: 'Out', format: (v) => formatFixed(v, 1) }
 ];
 
 export const longevityCsvColumns = [

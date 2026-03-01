@@ -1,7 +1,7 @@
 <script>
     import ConferenceChart from '$lib/components/ConferenceChart.svelte';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
-    import { exportCsvRows, standingsCsvColumns, formatFixed } from '$lib/utils/csvPresets.js';
+    import { exportCsvRows, standingsCsvColumns, standingsExpandedCsvColumns, formatFixed } from '$lib/utils/csvPresets.js';
 
     let { data } = $props();
 
@@ -9,6 +9,7 @@
     let sortColumn = $state('Rk');
     let sortDirection = $state('asc');
     let chartMetric = $state('W');
+    let showExpandedStandings = $state(false);
 
     const standingsSortConfig = {
         Rk: { type: 'number' },
@@ -18,11 +19,112 @@
         L: { type: 'number' },
         SRS: { type: 'number' },
         Playoffs: { type: 'percent' },
+        'W/L%': { type: 'percent' },
+        Remain: { type: 'record' },
+        Best: { type: 'record' },
+        Worst: { type: 'record' },
+        Division: { type: 'percent' },
+        seed_1: { type: 'percent' },
+        seed_2: { type: 'percent' },
+        seed_3: { type: 'percent' },
+        seed_4: { type: 'percent' },
+        seed_5: { type: 'percent' },
+        seed_6: { type: 'percent' },
+        seed_7: { type: 'percent' },
+        seed_8: { type: 'percent' },
+        seed_9: { type: 'percent' },
+        seed_10: { type: 'percent' },
+        '1-6': { type: 'percent' },
+        '7': { type: 'percent' },
+        '8': { type: 'percent' },
+        '9': { type: 'percent' },
+        '10': { type: 'percent' },
+        Out: { type: 'percent' },
         'Win Conf': { type: 'percent' },
         'Win Finals': { type: 'percent' },
         'Lottery%': { type: 'percent' },
-        ExpPick: { type: 'number' }
+        ExpPick: { type: 'number' },
+        conference: { type: 'text' }
     };
+
+    const baseStandingsColumns = [
+        { key: 'Rk', label: '#', alignClass: 'rk', dataType: 'number', format: 'integer' },
+        { key: 'team_name', label: 'Team', alignClass: 'name', dataType: 'text', isTeam: true },
+        { key: 'Current', label: 'Current', alignClass: 'rec', dataType: 'text' },
+        { key: 'W', label: 'W', alignClass: 'num', dataType: 'number', format: 'decimal' },
+        { key: 'L', label: 'L', alignClass: 'num', dataType: 'number', format: 'decimal' },
+        { key: 'SRS', label: 'SRS', alignClass: 'num', dataType: 'number', format: 'decimal', decimals: 2 },
+        { key: 'Playoffs', label: 'Playoff%', alignClass: 'num', dataType: 'percent' },
+        { key: 'Win Conf', label: 'Win Conf', alignClass: 'num', dataType: 'percent' },
+        { key: 'Win Finals', label: 'Win Finals', alignClass: 'num', dataType: 'percent' },
+        { key: 'Lottery%', label: 'Lotto%', alignClass: 'num', dataType: 'percent' },
+        { key: 'ExpPick', label: 'E[Pick]', alignClass: 'num', dataType: 'number', format: 'decimal' }
+    ];
+
+    const expandedStandingsColumns = [
+        { key: 'W/L%', label: 'W/L%', alignClass: 'num', dataType: 'percent' },
+        { key: 'Remain', label: 'Remain', alignClass: 'rec', dataType: 'text' },
+        { key: 'Best', label: 'Best', alignClass: 'rec', dataType: 'text' },
+        { key: 'Worst', label: 'Worst', alignClass: 'rec', dataType: 'text' },
+        { key: 'Division', label: 'Division', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_1', label: '1', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_2', label: '2', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_3', label: '3', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_4', label: '4', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_5', label: '5', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_6', label: '6', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_7', label: '7', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_8', label: '8', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_9', label: '9', alignClass: 'num', dataType: 'percent' },
+        { key: 'seed_10', label: '10', alignClass: 'num', dataType: 'percent' },
+        { key: '1-6', label: '1-6', alignClass: 'num', dataType: 'percent' },
+        { key: '7', label: '7', alignClass: 'num', dataType: 'percent' },
+        { key: '8', label: '8', alignClass: 'num', dataType: 'percent' },
+        { key: '9', label: '9', alignClass: 'num', dataType: 'percent' },
+        { key: '10', label: '10', alignClass: 'num', dataType: 'percent' },
+        { key: 'Out', label: 'Out', alignClass: 'num', dataType: 'percent' },
+        { key: 'conference', label: 'Conference', alignClass: 'name', dataType: 'conference' }
+    ];
+
+    const visibleStandingsColumns = $derived.by(() =>
+        showExpandedStandings ? [...baseStandingsColumns, ...expandedStandingsColumns] : [...baseStandingsColumns]
+    );
+
+    function getCellClass(column, value) {
+        const classes = [column.alignClass || 'num'];
+        if (column.dataType === 'percent') {
+            classes.push('pct', pctClass(value));
+        }
+        if (column.key === 'SRS') {
+            classes.push(srsClass(value));
+        }
+        return classes.join(' ');
+    }
+
+    function formatConference(value) {
+        if (value === 'East') return 'Eastern Conference';
+        if (value === 'West') return 'Western Conference';
+        return value || '—';
+    }
+
+    function formatCellValue(column, value) {
+        if (column.dataType === 'conference') {
+            return formatConference(value);
+        }
+        if (value === null || value === undefined || value === '') return '—';
+        if (column.dataType === 'percent') {
+            return `${formatFixed(value, 1)}%`;
+        }
+        if (column.format === 'integer') {
+            return formatFixed(value, 0);
+        }
+        if (column.format === 'decimal') {
+            return formatFixed(value, column.decimals ?? 1);
+        }
+        return String(value);
+    }
+
+    // Intentionally keep the current sort behavior: expanded columns sort immediately when visible.
 
     const standings = $derived(
         conference === 'East' ? (data.eastStandings || []) : (data.westStandings || [])
@@ -92,11 +194,16 @@
     }
 
     function exportStandingsCsv() {
+        const columns = showExpandedStandings ? standingsExpandedCsvColumns : standingsCsvColumns;
         exportCsvRows({
             rows: sortedStandings,
-            columns: standingsCsvColumns,
+            columns,
             filename: `${conference.toLowerCase()}-conference-standings.csv`
         });
+    }
+
+    function onExpandedToggle(event) {
+        showExpandedStandings = event.currentTarget.checked;
     }
 </script>
 
@@ -119,6 +226,10 @@
         <div class="empty-state">No standings data is currently available.</div>
     {:else}
         <div class="table-toolbar">
+            <label class="expanded-toggle">
+                <input type="checkbox" checked={showExpandedStandings} onchange={onExpandedToggle} />
+                <span>Expanded standings</span>
+            </label>
             <button
                 class="page-action-btn"
                 type="button"
@@ -128,61 +239,32 @@
                 Download Table CSV
             </button>
         </div>
-        <div class="table-wrapper">
+        <div class="table-wrapper {showExpandedStandings ? 'expanded' : ''}">
             <table>
                 <thead>
                     <tr>
-                        <th class="rk sortable {sortColumn === 'Rk' ? 'active' : ''}" onclick={() => toggleSort('Rk')}>
-                            # <span class="sort-indicator">{sortGlyph('Rk')}</span>
-                        </th>
-                        <th class="name sortable {sortColumn === 'team_name' ? 'active' : ''}" onclick={() => toggleSort('team_name')}>
-                            Team <span class="sort-indicator">{sortGlyph('team_name')}</span>
-                        </th>
-                        <th class="rec sortable {sortColumn === 'Current' ? 'active' : ''}" onclick={() => toggleSort('Current')}>
-                            Current <span class="sort-indicator">{sortGlyph('Current')}</span>
-                        </th>
-                        <th class="num sortable {sortColumn === 'W' ? 'active' : ''}" onclick={() => toggleSort('W')}>
-                            W <span class="sort-indicator">{sortGlyph('W')}</span>
-                        </th>
-                        <th class="num sortable {sortColumn === 'L' ? 'active' : ''}" onclick={() => toggleSort('L')}>
-                            L <span class="sort-indicator">{sortGlyph('L')}</span>
-                        </th>
-                        <th class="num sortable {sortColumn === 'SRS' ? 'active' : ''}" onclick={() => toggleSort('SRS')}>
-                            SRS <span class="sort-indicator">{sortGlyph('SRS')}</span>
-                        </th>
-                        <th class="num pct sortable {sortColumn === 'Playoffs' ? 'active' : ''}" onclick={() => toggleSort('Playoffs')}>
-                            Playoff% <span class="sort-indicator">{sortGlyph('Playoffs')}</span>
-                        </th>
-                        <th class="num pct sortable {sortColumn === 'Win Conf' ? 'active' : ''}" onclick={() => toggleSort('Win Conf')}>
-                            Conf <span class="sort-indicator">{sortGlyph('Win Conf')}</span>
-                        </th>
-                        <th class="num pct sortable {sortColumn === 'Win Finals' ? 'active' : ''}" onclick={() => toggleSort('Win Finals')}>
-                            Finals <span class="sort-indicator">{sortGlyph('Win Finals')}</span>
-                        </th>
-                        <th class="num pct sortable {sortColumn === 'Lottery%' ? 'active' : ''}" onclick={() => toggleSort('Lottery%')}>
-                            Lotto% <span class="sort-indicator">{sortGlyph('Lottery%')}</span>
-                        </th>
-                        <th class="num sortable {sortColumn === 'ExpPick' ? 'active' : ''}" onclick={() => toggleSort('ExpPick')}>
-                            E[Pick] <span class="sort-indicator">{sortGlyph('ExpPick')}</span>
-                        </th>
+                        {#each visibleStandingsColumns as column}
+                            <th
+                                class="{column.alignClass} {column.dataType === 'percent' ? 'pct' : ''} sortable {sortColumn === column.key ? 'active' : ''}"
+                                onclick={() => toggleSort(column.key)}
+                            >
+                                {column.label} <span class="sort-indicator">{sortGlyph(column.key)}</span>
+                            </th>
+                        {/each}
                     </tr>
                 </thead>
                 <tbody>
                     {#each sortedStandings as team}
                         <tr>
-                            <td class="rk">{team.Rk}</td>
-                            <td class="name">
-                                <a href="/standings/{encodeURIComponent(team.team_name)}">{team.team_name}</a>
-                            </td>
-                            <td class="rec">{team.Current}</td>
-                            <td class="num">{formatFixed(team.W)}</td>
-                            <td class="num">{formatFixed(team.L)}</td>
-                            <td class="num {srsClass(team.SRS)}">{formatFixed(team.SRS, 2)}</td>
-                            <td class="num pct {pctClass(team.Playoffs)}">{formatFixed(team.Playoffs)}%</td>
-                            <td class="num pct {pctClass(team['Win Conf'])}">{formatFixed(team['Win Conf'])}%</td>
-                            <td class="num pct {pctClass(team['Win Finals'])}">{formatFixed(team['Win Finals'])}%</td>
-                            <td class="num pct {pctClass(team['Lottery%'])}">{formatFixed(team['Lottery%'])}%</td>
-                            <td class="num">{formatFixed(team.ExpPick)}</td>
+                            {#each visibleStandingsColumns as column}
+                                <td class={getCellClass(column, team?.[column.key])}>
+                                    {#if column.isTeam}
+                                        <a href="/standings/{encodeURIComponent(team.team_name)}">{team.team_name}</a>
+                                    {:else}
+                                        {formatCellValue(column, team?.[column.key])}
+                                    {/if}
+                                </td>
+                            {/each}
                         </tr>
                     {/each}
                 </tbody>
@@ -249,8 +331,22 @@
     .table-wrapper { margin-bottom: 32px; }
     .table-toolbar {
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
         margin-bottom: 12px;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .expanded-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+
+    .expanded-toggle input {
+        accent-color: var(--accent);
     }
 
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -291,6 +387,11 @@
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
         padding: 7px 12px;
+    }
+
+    .table-wrapper.expanded th, .table-wrapper.expanded td {
+        padding: 6px 8px;
+        font-size: 12px;
     }
 
     tr:hover td { background: var(--bg-elevated); }

@@ -3,6 +3,7 @@
 	import { loess } from '$lib/utils/loess.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
 	let {
 		rows = [],
@@ -17,6 +18,11 @@
 	let scalesRef = $state({ x: null, y: null, margin: null });
 	let chartPoints = $state([]);
 	const pointBisector = d3.bisector((point) => point.time).left;
+
+	const exportFilenameBase = $derived.by(() => {
+		const prefix = playerName ? `${playerName}-` : '';
+		return `${prefix}talent-trend-${talentType}`;
+	});
 
 	const HEIGHT = 400;
 
@@ -308,29 +314,38 @@
 	}
 </script>
 
-<div
-	bind:this={containerEl}
-	class="trend-chart-container"
-	onmousemove={handleMouseMove}
-	onmouseleave={handleMouseLeave}
-	role="img"
-	aria-label={
-		playerName
-			? `${playerName} ${getMetricDisplayLabel(talentType)} trend`
-			: `${getMetricDisplayLabel(talentType)} trend`
-	}
->
-	<svg bind:this={svgEl} width="100%" height={HEIGHT}></svg>
+<div class="chart-download-shell">
+	<div class="chart-download-toolbar">
+		<ChartDownloadMenu
+			{svgEl}
+			captureRootEl={containerEl}
+			filenameBase={exportFilenameBase}
+		/>
+	</div>
+	<div
+		bind:this={containerEl}
+		class="trend-chart-container"
+		onmousemove={handleMouseMove}
+		onmouseleave={handleMouseLeave}
+		role="img"
+		aria-label={
+			playerName
+				? `${playerName} ${getMetricDisplayLabel(talentType)} trend`
+				: `${getMetricDisplayLabel(talentType)} trend`
+		}
+	>
+		<svg bind:this={svgEl} width="100%" height={HEIGHT}></svg>
 
-	{#if tooltipData}
-		<div
-			class="chart-tooltip trend-tooltip"
-			style="left: {tooltipData.px}px; top: {tooltipData.py - 10}px;"
-		>
-				<span class="chart-tooltip-value">{fmtMetric(getY(tooltipData.row))}</span>
-			<span class="chart-tooltip-date">{fmtDate(tooltipData.date)}</span>
-		</div>
-	{/if}
+		{#if tooltipData}
+			<div
+				class="chart-tooltip trend-tooltip"
+				style="left: {tooltipData.px}px; top: {tooltipData.py - 10}px;"
+			>
+					<span class="chart-tooltip-value">{fmtMetric(getY(tooltipData.row))}</span>
+				<span class="chart-tooltip-date">{fmtDate(tooltipData.date)}</span>
+			</div>
+		{/if}
+	</div>
 </div>
 
 <style>

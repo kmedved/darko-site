@@ -2,7 +2,6 @@
     import {
         exportCsvRows,
         leaderboardCsvColumns,
-        formatMinutes,
         formatSignedMetric,
         formatFixed,
         formatPercent
@@ -22,13 +21,11 @@
         player_name: { type: 'text' },
         team_name: { type: 'text' },
         position: { type: 'text' },
-        tr_minutes: { type: 'number' },
         dpm: { type: 'number' },
         o_dpm: { type: 'number' },
         d_dpm: { type: 'number' },
         box_dpm: { type: 'number' },
         on_off_dpm: { type: 'number' },
-        bayes_rapm_total: { type: 'number' },
         x_minutes: { type: 'number' },
         x_pace: { type: 'number' },
         x_pts_100: { type: 'number' },
@@ -60,21 +57,56 @@
         sortDirection = 'asc';
     }
 
-    function fmtMin(seconds) {
-        return formatMinutes(seconds);
-    }
-
-    function dpmClass(val) {
+    function signClass(val) {
         const n = Number.parseFloat(val);
         if (!Number.isFinite(n)) return '';
         return n >= 0 ? 'pos' : 'neg';
     }
 
+    function pctClass(val) {
+        const n = Number.parseFloat(val);
+        if (!Number.isFinite(n)) return '';
+        if (n >= 80) return 'high';
+        if (n >= 40) return 'mid';
+        if (n > 0) return 'low';
+        return 'zero';
+    }
+
+    function fmtMpg(min) {
+        if (min === null || min === undefined) return '—';
+        const n = Number.parseFloat(min);
+        if (!Number.isFinite(n)) return '—';
+        return formatFixed(Math.max(0, n), 1);
+    }
+
+    function statClass(column, value) {
+        const n = Number.parseFloat(value);
+        if (!Number.isFinite(n)) return '';
+
+        if (column.endsWith('_pct')) {
+            return `pct ${pctClass(n * 100)}`;
+        }
+
+        if (column === 'x_minutes') {
+            return n > 0 ? 'pos' : '';
+        }
+
+        return signClass(n);
+    }
+
+    const leaderboardCsvColumnsForExport = leaderboardCsvColumns
+        .filter((col) => col.accessor !== 'bayes_rapm_total' && col.accessor !== 'tr_minutes')
+        .map((col) =>
+            col.accessor === 'x_minutes'
+                ? { ...col, format: fmtMpg }
+                : col
+        );
+
     function exportPlayersCsv() {
         const rows = buildLeaderboardCsvRows(sortedPlayers);
         exportCsvRows({
             rows,
-            columns: leaderboardCsvColumns,
+            columns: leaderboardCsvColumnsForExport,
             filename: 'darko-dpm-leaderboard.csv'
         });
     }
@@ -136,12 +168,6 @@
                             Pos <span class="sort-indicator">{sortGlyph('position')}</span>
                         </th>
                         <th
-                            class="num sortable {sortColumn === 'tr_minutes' ? 'active' : ''}"
-                            onclick={() => toggleSort('tr_minutes')}
-                        >
-                            Min <span class="sort-indicator">{sortGlyph('tr_minutes')}</span>
-                        </th>
-                        <th
                             class="num sortable {sortColumn === 'dpm' ? 'active' : ''}"
                             onclick={() => toggleSort('dpm')}
                         >
@@ -170,12 +196,6 @@
                             onclick={() => toggleSort('on_off_dpm')}
                         >
                             On/Off <span class="sort-indicator">{sortGlyph('on_off_dpm')}</span>
-                        </th>
-                        <th
-                            class="num sortable {sortColumn === 'bayes_rapm_total' ? 'active' : ''}"
-                            onclick={() => toggleSort('bayes_rapm_total')}
-                        >
-                            RAPM <span class="sort-indicator">{sortGlyph('bayes_rapm_total')}</span>
                         </th>
                         <th
                             class="num sortable {sortColumn === 'x_minutes' ? 'active' : ''}"
@@ -236,20 +256,18 @@
                                 {/if}
                             </td>
                             <td class="position-col">{player.position || '—'}</td>
-                            <td class="num">{fmtMin(player.tr_minutes)}</td>
-                            <td class="num {dpmClass(player.dpm)}">{formatSignedMetric(player.dpm)}</td>
-                            <td class="num {dpmClass(player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
-                            <td class="num {dpmClass(player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
-                            <td class="num {dpmClass(player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
-                            <td class="num {dpmClass(player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
-                            <td class="num {dpmClass(player.bayes_rapm_total)}">{formatSignedMetric(player.bayes_rapm_total)}</td>
-                            <td class="num">{formatFixed(player.x_minutes, 1)}</td>
-                            <td class="num">{formatFixed(player.x_pace, 1)}</td>
-                            <td class="num">{formatFixed(player.x_pts_100, 1)}</td>
-                            <td class="num">{formatFixed(player.x_ast_100, 1)}</td>
-                            <td class="num">{formatPercent(player.x_fg_pct)}</td>
-                            <td class="num">{formatPercent(player.x_fg3_pct)}</td>
-                            <td class="num">{formatPercent(player.x_ft_pct)}</td>
+                            <td class="num {statClass('dpm', player.dpm)}">{formatSignedMetric(player.dpm)}</td>
+                            <td class="num {statClass('o_dpm', player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
+                            <td class="num {statClass('d_dpm', player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
+                            <td class="num {statClass('box_dpm', player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
+                            <td class="num {statClass('on_off_dpm', player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
+                            <td class="num {statClass('x_minutes', player.x_minutes)}">{fmtMpg(player.x_minutes)}</td>
+                            <td class="num {statClass('x_pace', player.x_pace)}">{formatFixed(player.x_pace, 1)}</td>
+                            <td class="num {statClass('x_pts_100', player.x_pts_100)}">{formatFixed(player.x_pts_100, 1)}</td>
+                            <td class="num {statClass('x_ast_100', player.x_ast_100)}">{formatFixed(player.x_ast_100, 1)}</td>
+                            <td class="num {statClass('x_fg_pct', player.x_fg_pct)}">{formatPercent(player.x_fg_pct)}</td>
+                            <td class="num {statClass('x_fg3_pct', player.x_fg3_pct)}">{formatPercent(player.x_fg3_pct)}</td>
+                            <td class="num {statClass('x_ft_pct', player.x_ft_pct)}">{formatPercent(player.x_ft_pct)}</td>
                         </tr>
                     {/each}
                 </tbody>
@@ -362,6 +380,10 @@
 
     .pos { color: var(--positive); }
     .neg { color: var(--negative); }
+    .pct.high { color: var(--positive); }
+    .pct.mid { color: var(--accent); }
+    .pct.low { color: var(--text-secondary); }
+    .pct.zero { color: var(--text-muted); }
 
     @media (max-width: 640px) {
         th, td { padding: 6px 8px; }

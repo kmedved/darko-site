@@ -263,12 +263,17 @@
     {#if sim && teamWinDist.length > 0}
         <h2 class="section-title">Win Distribution</h2>
         <div class="chart-card">
-            <WinDistChart data={teamWinDist} meanWins={parseFloat(sim.W)} currentWins={currentWins(sim.Current)} />
+            <WinDistChart
+                data={teamWinDist}
+                meanWins={parseFloat(sim.W)}
+                currentWins={currentWins(sim.Current)}
+                {teamName}
+            />
         </div>
 
         <h2 class="section-title">Seed Probabilities</h2>
         <div class="chart-card">
-            <SeedChart team={sim} />
+            <SeedChart team={sim} {teamName} />
         </div>
     {/if}
 </div>

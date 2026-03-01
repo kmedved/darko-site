@@ -1,11 +1,17 @@
 <script>
     import * as d3 from 'd3';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
+    import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
     let { player = null } = $props();
+    let chartRootEl = $state(null);
     let svgEl = $state(null);
     
     let chartPlayer = $state(null);
+    const exportFilenameBase = $derived.by(() => {
+        const prefix = player?.player_name ? `${player.player_name}-` : '';
+        return `${prefix}longevity-career-length`;
+    });
 
     function clearChart() {
         if (!svgEl) return;
@@ -166,8 +172,17 @@
     }
 </script>
 
-<div class="chart-shell">
-    <svg bind:this={svgEl} class="chart-svg" role="img" aria-label="Roster longevity projection chart"></svg>
+<div class="chart-download-shell" bind:this={chartRootEl}>
+    <div class="chart-download-toolbar">
+        <ChartDownloadMenu
+            {svgEl}
+            captureRootEl={chartRootEl}
+            filenameBase={exportFilenameBase}
+        />
+    </div>
+    <div class="chart-shell">
+        <svg bind:this={svgEl} class="chart-svg" role="img" aria-label="Roster longevity projection chart"></svg>
+    </div>
 </div>
 
 <style>
