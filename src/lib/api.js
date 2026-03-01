@@ -98,3 +98,24 @@ export function apiSearchPlayers(query) {
     const qs = new URLSearchParams({ q });
     return fetchJson(`/api/search-players?${qs}`);
 }
+
+export async function apiRateVote(winnerId, loserId) {
+    const response = await fetch('/api/rate/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ winner_id: winnerId, loser_id: loserId })
+    });
+
+    if (!response.ok) {
+        const message =
+            (await response.text().catch(() => response.statusText)) ||
+            `Vote failed (${response.status})`;
+        throw new Error(message);
+    }
+
+    return response.json();
+}
+
+export function apiRateLeaderboard(limit = 50) {
+    return fetchJson(`/api/rate/leaderboard?limit=${limit}`);
+}

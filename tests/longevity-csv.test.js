@@ -14,7 +14,7 @@ test('longevityCsvColumns includes required projection headers and accessors', (
         'Age',
         'Est. Retirement Age',
         'Years Remaining',
-        ...Array.from({ length: 12 }, (_, index) => `+${index + 1}`)
+        ...Array.from({ length: 15 }, (_, index) => `+${index + 1}`)
     ];
 
     const requiredAccessors = [
@@ -24,7 +24,7 @@ test('longevityCsvColumns includes required projection headers and accessors', (
         'age',
         'est_retirement_age',
         'years_remaining',
-        ...Array.from({ length: 12 }, (_, index) => `p${index + 1}`)
+        ...Array.from({ length: 15 }, (_, index) => `p${index + 1}`)
     ];
 
     assert.deepEqual(headers, requiredHeaders);

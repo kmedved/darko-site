@@ -105,6 +105,7 @@
             <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
             <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
             <a href="/projections" class:active={$page.url.pathname === '/projections'}>Daily Projections</a>
+            <a href="/rate" class:active={$page.url.pathname === '/rate'}>Rate</a>
         </div>
     </div>
 </nav>

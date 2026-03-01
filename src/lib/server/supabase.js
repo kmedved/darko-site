@@ -30,7 +30,8 @@ const CACHE_MS = {
     longevityTrajectory: 600_000,
     conferenceStandings: 60_000,
     teamSimulation: 60_000,
-    teamWinDistribution: 60_000
+    teamWinDistribution: 60_000,
+    eloLeaderboard: 30_000
 };
 
 function cacheKey(prefix, value = '') {
@@ -697,4 +698,109 @@ export async function getTeamPageData(teamName) {
         sim: sim || null,
         winDist: winDist || []
     };
+}
+
+// ---------------------------------------------------------------------------
+// Elo rating system
+// ---------------------------------------------------------------------------
+
+const ELO_K = 32;
+const ELO_DEFAULT = 1500;
+
+export async function getRandomPair() {
+    const { data, error } = await supabase.rpc('get_random_pair');
+    if (error) throw error;
+    if (!data || data.length < 2) throw new Error('Not enough players for comparison');
+    return data;
+}
+
+export async function recordVote(winnerId, loserId) {
+    const { data: ratings, error: fetchError } = await supabase
+        .from('elo_ratings')
+        .select('nba_id, elo_rating, total_comparisons, wins, losses')
+        .in('nba_id', [winnerId, loserId]);
+
+    if (fetchError) throw fetchError;
+
+    const ratingMap = new Map();
+    for (const r of ratings || []) {
+        ratingMap.set(r.nba_id, r);
+    }
+
+    const winnerBefore = ratingMap.get(winnerId)?.elo_rating ?? ELO_DEFAULT;
+    const loserBefore = ratingMap.get(loserId)?.elo_rating ?? ELO_DEFAULT;
+
+    const expectedWinner = 1 / (1 + Math.pow(10, (loserBefore - winnerBefore) / 400));
+    const delta = ELO_K * (1 - expectedWinner);
+
+    const winnerAfter = winnerBefore + delta;
+    const loserAfter = loserBefore - delta;
+
+    const winnerRow = ratingMap.get(winnerId);
+    const loserRow = ratingMap.get(loserId);
+
+    const [upsertWinner, upsertLoser, insertVote] = await Promise.all([
+        supabase.from('elo_ratings').upsert({
+            nba_id: winnerId,
+            elo_rating: winnerAfter,
+            total_comparisons: (winnerRow?.total_comparisons ?? 0) + 1,
+            wins: (winnerRow?.wins ?? 0) + 1,
+            losses: winnerRow?.losses ?? 0,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'nba_id' }),
+        supabase.from('elo_ratings').upsert({
+            nba_id: loserId,
+            elo_rating: loserAfter,
+            total_comparisons: (loserRow?.total_comparisons ?? 0) + 1,
+            wins: loserRow?.wins ?? 0,
+            losses: (loserRow?.losses ?? 0) + 1,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'nba_id' }),
+        supabase.from('elo_votes').insert({
+            winner_id: winnerId,
+            loser_id: loserId,
+            winner_elo_before: winnerBefore,
+            loser_elo_before: loserBefore,
+            winner_elo_after: winnerAfter,
+            loser_elo_after: loserAfter,
+            elo_delta: delta
+        })
+    ]);
+
+    if (upsertWinner.error) throw upsertWinner.error;
+    if (upsertLoser.error) throw upsertLoser.error;
+    if (insertVote.error) throw insertVote.error;
+
+    return {
+        winnerId,
+        loserId,
+        winnerEloBefore: winnerBefore,
+        loserEloBefore: loserBefore,
+        winnerEloAfter: winnerAfter,
+        loserEloAfter: loserAfter,
+        delta
+    };
+}
+
+export async function getEloLeaderboard(limit = 50) {
+    const key = cacheKey('eloLeaderboard', String(limit));
+    return runCached(key, CACHE_MS.eloLeaderboard, async () => {
+        const { data, error } = await supabase
+            .from('elo_ratings')
+            .select('nba_id, elo_rating, total_comparisons, wins, losses')
+            .order('elo_rating', { ascending: false })
+            .limit(limit);
+
+        if (error) throw error;
+
+        const ids = (data || []).map((r) => r.nba_id);
+        const playersMap = await getPlayersMapByIds(ids);
+
+        return (data || []).map((r) => ({
+            ...r,
+            player_name: playersMap.get(r.nba_id)?.player_name ?? null,
+            position: playersMap.get(r.nba_id)?.position ?? null,
+            current_team: playersMap.get(r.nba_id)?.current_team ?? null
+        }));
+    });
 }

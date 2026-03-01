@@ -25,4 +25,4 @@
 - `npm run build`: production build
 - `npm run preview`: preview build
 
-- App remains read-only; keep changes limited to read/query/export behavior and UI updates.
+- App is read-only for analytics tables (`player_ratings`, `players`, `season_sim`, `win_distribution`). The Elo voting feature (`elo_ratings`, `elo_votes` tables) is the exception — it performs writes via `/api/rate/vote`.

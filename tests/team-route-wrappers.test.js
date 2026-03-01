@@ -15,6 +15,6 @@ test('team route wrappers are thin and use shared TeamDetailView', async () => {
         const contents = await fs.readFile(absolutePath, 'utf8');
 
         assert.match(contents, /TeamDetailView/, `${file} should render TeamDetailView`);
-        assert.match(contents, /<TeamDetailView /, `${file} should include TeamDetailView tag`);
+        assert.match(contents, /<TeamDetailView\b/, `${file} should include TeamDetailView tag`);
     }
 });
