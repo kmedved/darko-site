@@ -181,6 +181,7 @@
 					<h2>{playerInfo.player_name}</h2>
 					<p class="player-meta">{playerInfo.team_name} · {playerInfo.position || '?'}</p>
 				</div>
+				<a href="/compare?ids={nbaId}" class="compare-link">Compare this player</a>
 			{/if}
 
 			<div class="sidebar-section">
@@ -279,6 +280,23 @@
 		font-size: 18px;
 		font-weight: 700;
 		color: var(--text);
+	}
+
+	.compare-link {
+		display: block;
+		text-align: center;
+		padding: 8px 12px;
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--accent);
+		border: 1px solid var(--accent);
+		border-radius: var(--radius-sm);
+		text-decoration: none;
+	}
+
+	.compare-link:hover {
+		background: var(--accent);
+		color: var(--bg);
 	}
 
 	.player-meta {
