@@ -261,6 +261,11 @@
         gap: 6px;
     }
 
+    th.has-tooltip:hover,
+    th.has-tooltip:focus-within {
+        z-index: 25;
+    }
+
     th.has-tooltip:hover .header-tooltip,
     th.has-tooltip:focus-within .header-tooltip {
         opacity: 1;

@@ -74,8 +74,8 @@
 
 	// ── Font toggle ──────────────────────────────────────
 	const FONT_KEY = 'darko-font';
-	const FONTS = ['dm', 'inter', 'roboto', 'system'];
-	const FONT_LABELS = ['DM Sans', 'Inter', 'Roboto', 'System'];
+	const FONTS = ['dm', 'inter', 'roboto', 'lato', 'opensans', 'sourcesans', 'nunito', 'worksans', 'raleway', 'outfit', 'jakarta', 'spacegrotesk', 'system'];
+	const FONT_LABELS = ['DM Sans', 'Inter', 'Roboto', 'Lato', 'Open Sans', 'Source Sans', 'Nunito Sans', 'Work Sans', 'Raleway', 'Outfit', 'Jakarta Sans', 'Space Grotesk', 'System'];
 
 	let font = $state('dm');
 

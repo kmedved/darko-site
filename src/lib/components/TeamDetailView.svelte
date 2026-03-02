@@ -3,7 +3,6 @@
     import SeedChart from './SeedChart.svelte';
     import {
         exportCsvRows,
-        formatMinutes,
         formatSignedMetric,
         formatFixed,
         formatOrDash,
@@ -23,6 +22,14 @@
 
     let sortColumn = $state('player_name');
     let sortDirection = $state('asc');
+    let logoFailed = $state(false);
+
+    const teamId = $derived(players?.[0]?.tm_id || null);
+
+    $effect(() => {
+        void teamName;
+        logoFailed = false;
+    });
 
     const teamPlayers = $derived(players || []);
     const teamWinDist = $derived(winDist || []);
@@ -45,13 +52,11 @@
     const teamPlayersSortConfig = {
         player_name: { type: 'text' },
         position: { type: 'text' },
-        tr_minutes: { type: 'number' },
         dpm: { type: 'number' },
         o_dpm: { type: 'number' },
         d_dpm: { type: 'number' },
         box_dpm: { type: 'number' },
         on_off_dpm: { type: 'number' },
-        bayes_rapm_total: { type: 'number' },
         x_minutes: { type: 'number' },
         x_pace: { type: 'number' },
         x_pts_100: { type: 'number' },
@@ -64,13 +69,11 @@
     const teamPlayerColumns = [
         { key: 'player_name', label: 'Player', alignClass: 'name', dataType: 'text' },
         { key: 'position', label: 'Pos', alignClass: 'pos-col', dataType: 'text' },
-        { key: 'tr_minutes', label: 'Min', alignClass: 'num', dataType: 'number', metricKey: 'tr_minutes' },
         { key: 'dpm', label: 'DPM', alignClass: 'num', dataType: 'number', metricKey: 'dpm' },
         { key: 'o_dpm', label: 'ODPM', alignClass: 'num', dataType: 'number', metricKey: 'o_dpm' },
         { key: 'd_dpm', label: 'DDPM', alignClass: 'num', dataType: 'number', metricKey: 'd_dpm' },
         { key: 'box_dpm', label: 'Box', alignClass: 'num', dataType: 'number', metricKey: 'box_dpm' },
         { key: 'on_off_dpm', label: 'On/Off', alignClass: 'num', dataType: 'number', metricKey: 'on_off_dpm' },
-        { key: 'bayes_rapm_total', label: 'RAPM', alignClass: 'num', dataType: 'number', metricKey: 'bayes_rapm_total' },
         { key: 'x_minutes', label: 'MPG', alignClass: 'num', dataType: 'number', metricKey: 'x_minutes' },
         { key: 'x_pace', label: 'Pace', alignClass: 'num', dataType: 'number', metricKey: 'x_pace' },
         { key: 'x_pts_100', label: 'Pts/100', alignClass: 'num', dataType: 'number', metricKey: 'x_pts_100' },
@@ -115,13 +118,11 @@
             columns: [
                 { header: 'Player', accessor: 'player_name', format: formatOrDash },
                 { header: 'Pos', accessor: 'position', format: formatOrDash },
-                { header: 'Min', accessor: 'tr_minutes', format: formatMinutes },
                 { header: 'DPM', accessor: 'dpm', format: formatSignedMetric },
                 { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
                 { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },
                 { header: 'Box', accessor: 'box_dpm', format: formatSignedMetric },
                 { header: 'On/Off DPM', accessor: 'on_off_dpm', format: formatSignedMetric },
-                { header: 'RAPM', accessor: 'bayes_rapm_total', format: formatSignedMetric },
                 { header: 'MPG', accessor: 'x_minutes', format: (v) => formatFixed(v, 1) },
                 { header: 'Pace', accessor: 'x_pace', format: (v) => formatFixed(v, 1) },
                 { header: 'Pts per 100', accessor: 'x_pts_100', format: (v) => formatFixed(v, 1) },
@@ -140,13 +141,23 @@
 
     <div class="page-header">
         <div class="page-header-toolbar">
-            <div>
-                <h1>{teamName || 'Team'}</h1>
-                {#if sim}
-                    <p>{sim.conference}ern Conference · Current: {sim.Current} · Projected: {formatFixed(sim.W)}-{formatFixed(sim.L)}</p>
-                {:else}
-                    <p>Current ratings for all active players on the team.</p>
+            <div class="team-header-info">
+                {#if teamId && !logoFailed}
+                    <img
+                        src="https://cdn.nba.com/logos/nba/{teamId}/global/L/logo.svg"
+                        alt=""
+                        class="team-logo"
+                        onerror={() => { logoFailed = true; }}
+                    />
                 {/if}
+                <div>
+                    <h1>{teamName || 'Team'}</h1>
+                    {#if sim}
+                        <p>{sim.conference}ern Conference · Current: {sim.Current} · Projected: {formatFixed(sim.W)}-{formatFixed(sim.L)}</p>
+                    {:else}
+                        <p>Current ratings for all active players on the team.</p>
+                    {/if}
+                </div>
             </div>
             <div class="page-header-actions">
                 <button
@@ -226,13 +237,11 @@
                                 <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
                             </td>
                             <td class="position">{player.position || '—'}</td>
-                            <td class="num">{formatMinutes(player.tr_minutes)}</td>
                             <td class="num {dpmClass(player.dpm)}">{formatSignedMetric(player.dpm)}</td>
                             <td class="num {dpmClass(player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
                             <td class="num {dpmClass(player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
                             <td class="num {dpmClass(player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
                             <td class="num {dpmClass(player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
-                            <td class="num {dpmClass(player.bayes_rapm_total)}">{formatSignedMetric(player.bayes_rapm_total)}</td>
                             <td class="num">{formatFixed(player.x_minutes, 1)}</td>
                             <td class="num">{formatFixed(player.x_pace, 1)}</td>
                             <td class="num">{formatFixed(player.x_pts_100, 1)}</td>
@@ -275,6 +284,19 @@
 
     .back-link:hover {
         color: var(--accent);
+    }
+
+    .team-header-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .team-logo {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        flex-shrink: 0;
     }
 
     .stats-grid {
@@ -366,6 +388,11 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
+    }
+
+    th.has-tooltip:hover,
+    th.has-tooltip:focus-within {
+        z-index: 25;
     }
 
     th.has-tooltip:hover .header-tooltip,
