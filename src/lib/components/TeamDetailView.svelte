@@ -333,17 +333,14 @@
         font-size: 13px;
     }
 
-    thead {
+    th {
         position: sticky;
         top: var(--nav-sticky-offset);
         z-index: 20;
-    }
-
-    th {
         cursor: pointer;
         user-select: none;
-        background: var(--bg-surface);
-        box-shadow: inset 0 -1px 0 var(--border);
+        background: var(--bg);
+        box-shadow: 0 calc(-1 * var(--nav-sticky-offset)) 0 0 var(--bg), inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
         padding: 8px 12px;
     }

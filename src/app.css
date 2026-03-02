@@ -134,6 +134,18 @@ nav {
     z-index: 100;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    overflow: visible;
+}
+
+nav::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: -3000px;
+    bottom: 0;
+    background: var(--bg-nav);
+    z-index: -1;
 }
 
 nav .container {

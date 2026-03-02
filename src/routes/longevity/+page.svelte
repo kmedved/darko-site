@@ -482,7 +482,8 @@
         position: sticky;
         top: var(--nav-sticky-offset);
         z-index: 15;
-        background: var(--bg-surface);
+        background: var(--bg);
+        box-shadow: 0 calc(-1 * var(--nav-sticky-offset)) 0 0 var(--bg);
         border-bottom: 1px solid var(--border);
         color: var(--text-muted);
         font-size: 10px;
