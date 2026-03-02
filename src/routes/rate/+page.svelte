@@ -370,13 +370,13 @@
         text-transform: uppercase;
         letter-spacing: 0.06em;
         color: var(--text-muted);
-        padding: 8px 10px;
+        padding: 8px 6px;
         border-bottom: 1px solid var(--border);
         white-space: nowrap;
     }
 
     .leaderboard-table td {
-        padding: 7px 10px;
+        padding: 7px 6px;
         border-bottom: 1px solid var(--border);
         white-space: nowrap;
     }

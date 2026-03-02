@@ -118,9 +118,9 @@ a:hover { color: var(--accent-hover); }
 /* ── Layout ─────────────────────────────────────────── */
 
 .container {
-    max-width: 1120px;
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 24px;
 }
 
 /* ── Nav ────────────────────────────────────────────── */

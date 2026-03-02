@@ -234,7 +234,7 @@
         background: var(--bg);
         box-shadow: 0 calc(-1 * var(--nav-sticky-offset)) 0 0 var(--bg), inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
-        padding: 8px 12px;
+        padding: 8px 6px;
         text-align: left;
         font-size: 10px;
         font-weight: 600;
@@ -245,7 +245,7 @@
     }
 
     td {
-        padding: 7px 12px;
+        padding: 7px 6px;
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
     }

@@ -490,7 +490,7 @@
         font-weight: 600;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        padding: 8px 8px;
+        padding: 8px 6px;
         white-space: nowrap;
         text-align: left;
     }
@@ -498,7 +498,7 @@
     .filter-row th {
         top: calc(var(--nav-sticky-offset) + 32px);
         z-index: 14;
-        padding: 7px 8px;
+        padding: 7px 6px;
         background: var(--bg-elevated);
         text-transform: none;
     }
@@ -549,7 +549,7 @@
     }
 
     td {
-        padding: 8px 8px;
+        padding: 7px 6px;
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
         font-family: var(--font-mono);
