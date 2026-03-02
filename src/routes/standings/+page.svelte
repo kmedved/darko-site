@@ -356,13 +356,9 @@
     table { border-collapse: separate; border-spacing: 0; font-size: 13px; }
 
     th {
-        position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 20;
         cursor: pointer;
         user-select: none;
         background: var(--bg);
-        box-shadow: 0 calc(-1 * var(--nav-sticky-offset)) 0 0 var(--bg), inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
         padding: 8px 6px;
         text-align: left;
