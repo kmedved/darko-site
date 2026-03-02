@@ -10,3 +10,5 @@ build
 1_main - Copy.ipynb
 .codex-screenshots/
 ".tools/" 
+.tools
+.DS_Store
