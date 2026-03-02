@@ -9,7 +9,9 @@
 		players = [],
 		timeScale = 'games',
 		talentType = 'dpm',
-		title = ''
+		title = '',
+		yMin = null,
+		yMax = null
 	} = $props();
 
 	let containerEl = $state(null);
@@ -104,6 +106,8 @@
 		void timeScale;
 		void talentType;
 		void players;
+		void yMin;
+		void yMax;
 		renderChart();
 		return withResizeObserver({ element: svgEl, onResize: renderChart });
 	});
@@ -152,12 +156,16 @@
 
 		const xExtent = d3.extent(allRows, (d) => d.x);
 		const yExtent = d3.extent(allRows, (d) => d.y);
-		const yPad = Math.max(Math.abs(yExtent[1] - yExtent[0]) * 0.1, 0.5);
+		const minPad = PERCENT_METRICS.has(talentType) ? 0.03 : 0.5;
+		const yPad = Math.max(Math.abs(yExtent[1] - yExtent[0]) * 0.1, minPad);
+
+		const yLow = yMin !== null && Number.isFinite(yMin) ? yMin : yExtent[0] - yPad;
+		const yHigh = yMax !== null && Number.isFinite(yMax) ? yMax : yExtent[1] + yPad;
 
 		const x = d3.scaleLinear().domain(xExtent).range([0, w]).nice();
 		const y = d3
 			.scaleLinear()
-			.domain([yExtent[0] - yPad, yExtent[1] + yPad])
+			.domain([yLow, yHigh])
 			.range([h, 0]);
 
 		scalesRef = { x, y, margin, w, h };

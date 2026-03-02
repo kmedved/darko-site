@@ -328,7 +328,11 @@
         background: var(--bg-hover);
     }
 
-    .table-wrapper { margin-bottom: 32px; }
+    .table-wrapper {
+        margin-bottom: 32px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
     .table-toolbar {
         display: flex;
         justify-content: space-between;

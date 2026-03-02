@@ -10,11 +10,13 @@
     let pendingLoads = $state(0);
     let loading = $derived(pendingLoads > 0);
     let error = $state(null);
+    let initialLoadDone = $state(false);
     const PLAYER_COLORS = getComparePlayerColors();
 
 	$effect(() => {
+        if (initialLoadDone) return;
         const ids = $page.url.searchParams.get('ids');
-        if (!ids || selectedPlayers.length > 0) return;
+        if (!ids) return;
 
         const idList = [...new Set(
             ids
@@ -23,11 +25,13 @@
                 .filter((id) => Number.isInteger(id) && id > 0)
         )].slice(0, 4);
 
+        initialLoadDone = true;
         if (idList.length === 0) return;
 
-        void (async () => {
-            const loads = idList.map((id) => loadPlayer(id));
-            await Promise.all(loads);
+        (async () => {
+            for (const id of idList) {
+                await loadPlayer(id);
+            }
         })();
     });
 

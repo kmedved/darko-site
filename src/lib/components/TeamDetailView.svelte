@@ -294,7 +294,7 @@
 
     .team-logo {
         width: 64px;
-        height: 64px;
+        max-height: 80px;
         object-fit: contain;
         flex-shrink: 0;
     }

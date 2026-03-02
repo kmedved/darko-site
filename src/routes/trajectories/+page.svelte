@@ -13,6 +13,27 @@
 	let loading = $derived(pendingLoads > 0);
 	let error = $state(null);
 	let initialLoadDone = $state(false);
+	let yAxisMin = $state(null);
+	let yAxisMax = $state(null);
+	let prevTalentType = $state('dpm');
+
+	$effect(() => {
+		if (talentType !== prevTalentType) {
+			prevTalentType = talentType;
+			yAxisMin = null;
+			yAxisMax = null;
+		}
+	});
+
+	function handleYMinChange(e) {
+		const v = parseFloat(e.target.value);
+		yAxisMin = Number.isFinite(v) ? v : null;
+	}
+
+	function handleYMaxChange(e) {
+		const v = parseFloat(e.target.value);
+		yAxisMax = Number.isFinite(v) ? v : null;
+	}
 
 	const MAX_PLAYERS = 5;
 
@@ -240,6 +261,22 @@
 			</div>
 
 			<div class="control-group">
+				<span class="control-label">Y-Axis Range</span>
+				<div class="y-axis-inputs">
+					<label class="y-axis-field">
+						<span>Min</span>
+						<input type="number" step="any" placeholder="Auto"
+							value={yAxisMin ?? ''} oninput={handleYMinChange} />
+					</label>
+					<label class="y-axis-field">
+						<span>Max</span>
+						<input type="number" step="any" placeholder="Auto"
+							value={yAxisMax ?? ''} oninput={handleYMaxChange} />
+					</label>
+				</div>
+			</div>
+
+			<div class="control-group">
 				<span class="control-label"
 					>Select Players to Compare (Max {MAX_PLAYERS})</span
 				>
@@ -285,6 +322,8 @@
 					{timeScale}
 					{talentType}
 					title={chartTitle}
+					yMin={yAxisMin}
+					yMax={yAxisMax}
 				/>
 			{:else if !loading}
 				<div class="empty-state">
@@ -383,6 +422,39 @@
 
 	.chip-remove:hover {
 		color: var(--negative);
+	}
+
+	.y-axis-inputs {
+		display: flex;
+		gap: 10px;
+	}
+
+	.y-axis-field {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		flex: 1;
+	}
+
+	.y-axis-field span {
+		font-size: 11px;
+		color: var(--text-muted);
+	}
+
+	.y-axis-field input {
+		width: 100%;
+		padding: 6px 8px;
+		font-size: 13px;
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		background: var(--bg);
+		color: var(--text);
+		font-family: var(--font-sans);
+	}
+
+	.y-axis-field input:focus {
+		border-color: var(--accent);
+		outline: none;
 	}
 
 	@media (max-width: 768px) {
