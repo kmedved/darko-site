@@ -333,10 +333,13 @@
         font-size: 13px;
     }
 
-    th {
+    thead {
         position: sticky;
         top: var(--nav-sticky-offset);
         z-index: 20;
+    }
+
+    th {
         cursor: pointer;
         user-select: none;
         background: var(--bg-surface);

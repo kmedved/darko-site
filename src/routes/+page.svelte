@@ -227,10 +227,13 @@
         font-size: 13px;
     }
 
-    th {
+    thead {
         position: sticky;
         top: var(--nav-sticky-offset);
         z-index: 20;
+    }
+
+    th {
         background: var(--bg-surface);
         box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
