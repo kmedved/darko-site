@@ -349,7 +349,7 @@
         accent-color: var(--accent);
     }
 
-    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+    table { border-collapse: separate; border-spacing: 0; font-size: 13px; }
 
     th {
         position: sticky;
