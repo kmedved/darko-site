@@ -19,7 +19,19 @@
 
 	let talentType = $state('dpm');
 	let selectedPercentileMetrics = $state(['dpm', 'o_dpm', 'd_dpm', 'x_pts_100', 'x_fg3_pct']);
+	let imgFailed = $state(false);
 	const loadSeq = createRequestSequencer();
+
+	function getInitials(name) {
+		if (!name) return '?';
+		return name
+			.split(/\s+/)
+			.map((w) => w[0])
+			.filter(Boolean)
+			.slice(0, 2)
+			.join('')
+			.toUpperCase();
+	}
 
 		const TALENT_OPTIONS = [
 			{ value: 'dpm', label: 'DPM' },
@@ -109,6 +121,7 @@
 		playerInfo = null;
 		historyRows = [];
 		allActivePlayers = [];
+		imgFailed = false;
 
 		try {
 			const history = await apiPlayerHistory(id, { full: true });
@@ -178,6 +191,20 @@
 
 			{#if playerInfo}
 				<div class="sidebar-player-info">
+					<div class="profile-headshot">
+						{#if nbaId && !imgFailed}
+							<img
+								src="https://cdn.nba.com/headshots/nba/latest/260x190/{nbaId}.png"
+								alt=""
+								class="headshot-img"
+								onerror={() => { imgFailed = true; }}
+							/>
+						{:else}
+							<div class="headshot-placeholder">
+								{getInitials(playerInfo?.player_name)}
+							</div>
+						{/if}
+					</div>
 					<h2>{playerInfo.player_name}</h2>
 					<p class="player-meta">{playerInfo.team_name} · {playerInfo.position || '?'}</p>
 				</div>
@@ -280,6 +307,32 @@
 		font-size: 18px;
 		font-weight: 700;
 		color: var(--text);
+	}
+
+	.profile-headshot {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 12px;
+	}
+
+	.profile-headshot .headshot-img {
+		width: 130px;
+		height: 95px;
+		object-fit: cover;
+		border-radius: 6px;
+	}
+
+	.profile-headshot .headshot-placeholder {
+		width: 90px;
+		height: 90px;
+		border-radius: 50%;
+		background: var(--bg-elevated);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 28px;
+		font-weight: 700;
+		color: var(--text-muted);
 	}
 
 	.compare-link {

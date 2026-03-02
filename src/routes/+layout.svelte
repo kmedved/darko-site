@@ -8,7 +8,7 @@
 	const THEME_ICONS = ['⚫', '🌙', '☀️', '⚪'];
 	let { children } = $props();
 
-	let theme = $state('dark');
+	let theme = $state('white');
 
 	function isThemeValue(value) {
 		return THEMES.includes(value);
@@ -28,7 +28,7 @@
 
 	function resolveInitialTheme() {
 		if (!browser) {
-			return 'dark';
+			return 'white';
 		}
 
 		const htmlTheme = document.documentElement.dataset.theme;
@@ -40,7 +40,7 @@
 		if (isThemeValue(savedTheme)) {
 			return savedTheme;
 		}
-		return 'dark';
+		return 'white';
 	}
 
 	function setTheme(nextTheme) {
@@ -71,6 +71,50 @@
 		const idx = Number(e.target.value);
 		setTheme(THEMES[idx]);
 	}
+
+	// ── Font toggle ──────────────────────────────────────
+	const FONT_KEY = 'darko-font';
+	const FONTS = ['dm', 'inter', 'roboto', 'system'];
+	const FONT_LABELS = ['DM Sans', 'Inter', 'Roboto', 'System'];
+
+	let font = $state('dm');
+
+	function isFontValue(value) {
+		return FONTS.includes(value);
+	}
+
+	function resolveInitialFont() {
+		if (!browser) return 'dm';
+
+		const htmlFont = document.documentElement.dataset.font;
+		if (isFontValue(htmlFont)) return htmlFont;
+
+		try {
+			const saved = localStorage.getItem(FONT_KEY);
+			if (isFontValue(saved)) return saved;
+		} catch {}
+		return 'dm';
+	}
+
+	function setFont(nextFont) {
+		if (!isFontValue(nextFont)) return;
+		font = nextFont;
+		if (!browser) return;
+
+		document.documentElement.dataset.font = nextFont;
+		try {
+			localStorage.setItem(FONT_KEY, nextFont);
+		} catch {}
+	}
+
+	$effect(() => {
+		if (!browser) return;
+		setFont(resolveInitialFont());
+	});
+
+	function handleFontChange(e) {
+		setFont(e.target.value);
+	}
 </script>
 
 <nav>
@@ -90,6 +134,11 @@
 			/>
 			<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
 		</div>
+		<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font">
+			{#each FONTS as f, i}
+				<option value={f}>{FONT_LABELS[i]}</option>
+			{/each}
+		</select>
 		<div class="links">
             <a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
         </div>
@@ -172,6 +221,25 @@
 		outline-offset: 4px;
 	}
 
+	.font-select {
+		-webkit-appearance: none;
+		appearance: none;
+		background: var(--bg-elevated, var(--bg));
+		color: var(--text);
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		padding: 4px 8px;
+		font-size: 11px;
+		font-family: var(--font-sans);
+		cursor: pointer;
+		outline: none;
+		margin-right: 12px;
+	}
+
+	.font-select:focus-visible {
+		border-color: var(--accent);
+	}
+
 	@media (max-width: 768px) {
 		.theme-slider {
 			margin-right: 10px;
@@ -179,6 +247,10 @@
 
 		.theme-slider__input {
 			width: 56px;
+		}
+
+		.font-select {
+			margin-right: 6px;
 		}
 	}
 </style>

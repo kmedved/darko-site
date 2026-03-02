@@ -73,9 +73,11 @@
 				.split(',')
 				.map(Number)
 				.filter(Boolean);
-			for (const id of idList) {
-				loadPlayerById(id);
-			}
+			(async () => {
+				for (const id of idList) {
+					await loadPlayerById(id);
+				}
+			})();
 		} else {
 			loadRandomPlayer();
 		}

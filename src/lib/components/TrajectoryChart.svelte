@@ -233,11 +233,12 @@
 		// X axis
 		let xAxisCall = d3.axisBottom(x);
 		if (timeScale === 'seasons') {
-			const maxSeason = d3.max(allRows, (r) => r.row._seasonIndex) || 1;
-			// Show every Nth season tick to avoid crowding
-			const step = maxSeason > 15 ? 5 : maxSeason > 8 ? 2 : 1;
-			const tickVals = d3.range(step, maxSeason + 1, step);
-			xAxisCall = xAxisCall.tickValues(tickVals).tickFormat((d) => d);
+			const minYear = d3.min(allRows, (r) => r.row._seasonIndex);
+			const maxYear = d3.max(allRows, (r) => r.row._seasonIndex);
+			const span = (maxYear || 0) - (minYear || 0);
+			const step = span > 15 ? 5 : span > 8 ? 2 : 1;
+			const tickVals = d3.range(minYear, maxYear + 1, step);
+			xAxisCall = xAxisCall.tickValues(tickVals).tickFormat((d) => String(d));
 		} else if (timeScale === 'age') {
 			xAxisCall = xAxisCall.ticks(12).tickFormat((d) => (Number.isInteger(d) ? d : ''));
 		} else {

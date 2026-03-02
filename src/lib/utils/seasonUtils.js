@@ -45,15 +45,16 @@ export function computeSeasonX(rows) {
 	const result = [];
 
 	for (let si = 0; si < sortedSeasons.length; si++) {
-		const seasonRows = seasons.get(sortedSeasons[si]);
+		const seasonYear = sortedSeasons[si];
+		const seasonRows = seasons.get(seasonYear);
 		for (let ri = 0; ri < seasonRows.length; ri++) {
 			const frac =
 				seasonRows.length > 1 ? ri / (seasonRows.length - 1) : 0.5;
 			result.push({
 				...seasonRows[ri],
-				_seasonX: si + 1 + frac * 0.8 - 0.4, // spread within +-0.4 of integer
-				_seasonLabel: formatSeasonLabel(sortedSeasons[si]),
-				_seasonIndex: si + 1
+				_seasonX: seasonYear + frac * 0.8 - 0.4, // spread within +-0.4 of the year
+				_seasonLabel: formatSeasonLabel(seasonYear),
+				_seasonIndex: seasonYear
 			});
 		}
 	}
