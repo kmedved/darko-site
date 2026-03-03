@@ -29,13 +29,17 @@
         { key: 'on_off_dpm', label: getMetricDisplayLabel('on_off_dpm') },
         { key: 'bayes_rapm_total', label: getMetricDisplayLabel('bayes_rapm_total') },
         { key: 'x_pts_100', label: getMetricDisplayLabel('x_pts_100') },
-        { key: 'x_ast_100', label: getMetricDisplayLabel('x_ast_100') }
+        { key: 'x_ast_100', label: getMetricDisplayLabel('x_ast_100') },
+        { key: 'sal_market_fixed', label: getMetricDisplayLabel('sal_market_fixed') }
     ];
 
     function fmtDpm(val) {
         if (val === null || val === undefined) return '—';
         const n = parseFloat(val);
         if (!Number.isFinite(n)) return '—';
+        if (activeStat === 'sal_market_fixed') {
+            return `$${(n / 1e6).toFixed(1)}M`;
+        }
         if (activeStat === 'x_fg_pct' || activeStat === 'x_fg3_pct' || activeStat === 'x_ft_pct') {
             return `${(n * 100).toFixed(1)}%`;
         }

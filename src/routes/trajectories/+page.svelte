@@ -60,7 +60,8 @@
 		{ key: 'x_fg3_pct', label: '3P%' },
 		{ key: 'x_ft_pct', label: 'FT%' },
 		{ key: 'x_minutes', label: 'MPG' },
-		{ key: 'x_pace', label: 'Pace' }
+		{ key: 'x_pace', label: 'Pace' },
+		{ key: 'sal_market_fixed', label: 'Fair Salary' }
 	];
 
 	const timeScaleOptions = [

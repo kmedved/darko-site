@@ -12,7 +12,9 @@ export const metricDefinitions = {
     x_ast_100: 'Projected assists per 100 possessions.',
     x_fg_pct: 'Projected field-goal percentage.',
     x_fg3_pct: 'Projected three-point percentage.',
-    x_ft_pct: 'Projected free-throw percentage.'
+    x_ft_pct: 'Projected free-throw percentage.',
+    sal_market_fixed: 'Estimated fair market salary based on projected on-court value.',
+    surplus_value: 'Difference between fair salary and actual salary. Positive means underpaid.'
 };
 
 export function getMetricDefinition(metric) {

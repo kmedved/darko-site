@@ -29,7 +29,7 @@ Core fact table. One row per player per game-date.
 - **Rows:** ~1,089,000
 - **Update strategy:** DELETE current season + INSERT current season (atomic transaction). Historical seasons are only re-uploaded if the table is dropped.
 
-Built by `build_supabase_tables.py` which left-joins five source files on `(nba_id, date)`:
+Built by `build_supabase_tables.py` which left-joins six source files on `(nba_id, date)`:
 
 | Source parquet | Join type | Columns contributed |
 |---|---|---|
@@ -38,8 +38,9 @@ Built by `build_supabase_tables.py` which left-joins five source files on `(nba_
 | `bayes_rapm_ratings.parq` | left join (semi-join filtered) | bayes_rapm_off, bayes_rapm_def, bayes_rapm_total, rapm_exposure |
 | `talent_game_predictions.parq` | left join | x_minutes, x_pace, x_{stat}_100 columns, x_{pct} columns, tr_minutes, tr_starter, tr_fg3_pct, tr_ft_pct |
 | `temp/nba_survivorship.parq` | left join | projected_years_remaining, projected_years_remaining_cal, x_retirement_age, x_retirement_age_cal, s1–s15 |
+| `dpm_salary.parq` | left join | game_value, wins_pg, warp, sal_market_fixed, actual_salary, surplus_value |
 
-**All 66 columns (exact Postgres types):**
+**All 72 columns (exact Postgres types):**
 
 | # | Column | Postgres type | Source | Notes |
 |---|---|---|---|---|
@@ -109,6 +110,12 @@ Built by `build_supabase_tables.py` which left-joins five source files on `(nba_
 | 64 | s13 | real | survivorship | P(plays ≥13 more seasons) |
 | 65 | s14 | real | survivorship | P(plays ≥14 more seasons) |
 | 66 | s15 | real | survivorship | P(plays ≥15 more seasons) |
+| 67 | game_value | double precision | salary | Per-game dollar value based on DPM and minutes |
+| 68 | wins_pg | double precision | salary | Wins produced per game |
+| 69 | warp | double precision | salary | Wins above replacement player |
+| 70 | sal_market_fixed | double precision | salary | Fair market salary estimate (dollars) |
+| 71 | actual_salary | double precision | salary | Actual contract salary (dollars) |
+| 72 | surplus_value | double precision | salary | sal_market_fixed − actual_salary (positive = underpaid) |
 
 ---
 
@@ -213,7 +220,7 @@ All Supabase queries go through `src/lib/server/supabase.js`. Key patterns:
 
 ### RATING_COLUMNS
 
-Comma-joined string of all 66 `player_ratings` column names, used by `getActivePlayers()` in `.select(RATING_COLUMNS)`. If you add a column to the DB, you must also add it here or it won't be fetched.
+Comma-joined string of all 68 fetched `player_ratings` column names (66 original + `sal_market_fixed`, `surplus_value`), used by `getActivePlayers()` in `.select(RATING_COLUMNS)`. If you add a column to the DB, you must also add it here or it won't be fetched. Note: 4 salary columns (`game_value`, `wins_pg`, `warp`, `actual_salary`) exist in the DB but are not in RATING_COLUMNS since they aren't displayed on the frontend.
 
 ### Core data functions
 

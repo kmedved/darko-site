@@ -27,6 +27,7 @@
 	const HEIGHT = 400;
 
 	const PERCENT_METRICS = new Set(['tr_fg3_pct', 'tr_ft_pct', 'x_fg_pct', 'x_fg3_pct', 'x_ft_pct']);
+	const MONEY_METRICS = new Set(['sal_market_fixed']);
 	const SIGNED_METRICS = new Set([
 		'dpm',
 		'o_dpm',
@@ -59,6 +60,7 @@
 		if (val === null || val === undefined) return '';
 		const n = parseFloat(val);
 		if (!Number.isFinite(n)) return '';
+		if (MONEY_METRICS.has(talentType)) return `$${(n / 1e6).toFixed(1)}M`;
 		if (PERCENT_METRICS.has(talentType)) return `${(n * 100).toFixed(1)}%`;
 		if (SIGNED_METRICS.has(talentType)) return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
 		return n.toFixed(1);
@@ -243,7 +245,11 @@
 			.text('@kmedved | www.darko.app | @anpatt7');
 
 		// Y axis
-		const yAxisG = g.append('g').call(d3.axisLeft(y).ticks(8));
+		const yAxis = d3.axisLeft(y).ticks(8);
+		if (MONEY_METRICS.has(talentType)) {
+			yAxis.tickFormat((d) => `$${(d / 1e6).toFixed(0)}M`);
+		}
+		const yAxisG = g.append('g').call(yAxis);
 		yAxisG.select('.domain').attr('stroke', 'var(--border, #555)');
 		yAxisG
 			.selectAll('.tick text')

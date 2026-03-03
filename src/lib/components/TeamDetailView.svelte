@@ -346,6 +346,8 @@
 
     .table-wrapper {
         margin-bottom: 32px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     table {

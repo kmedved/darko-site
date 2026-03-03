@@ -38,6 +38,20 @@ export function formatFixed(value, decimals = 1) {
     return n.toFixed(decimals);
 }
 
+export function formatMillions(value) {
+    if (value === null || value === undefined) return DASH;
+    const n = Number.parseFloat(value);
+    if (!Number.isFinite(n)) return DASH;
+    return `$${(n / 1e6).toFixed(1)}M`;
+}
+
+export function formatSignedMillions(value) {
+    if (value === null || value === undefined) return DASH;
+    const n = Number.parseFloat(value);
+    if (!Number.isFinite(n)) return DASH;
+    return `${n >= 0 ? '+' : '-'}$${(Math.abs(n) / 1e6).toFixed(1)}M`;
+}
+
 function formatConference(value) {
     if (value === 'East') return 'Eastern Conference';
     if (value === 'West') return 'Western Conference';
@@ -83,7 +97,9 @@ export const metricDisplayLabels = Object.freeze({
     projected_years_remaining: 'Years remaining',
     projected_years_remaining_cal: 'Years remaining (cal)',
     x_retirement_age: 'Retirement age',
-    x_retirement_age_cal: 'Retirement age (cal)'
+    x_retirement_age_cal: 'Retirement age (cal)',
+    sal_market_fixed: 'Fair Salary',
+    surplus_value: 'Surplus Value'
 });
 
 export function getMetricDisplayLabel(metric) {
@@ -108,7 +124,9 @@ export const leaderboardCsvColumns = [
     { header: 'Ast per 100', accessor: 'x_ast_100', format: (v) => formatFixed(v, 1) },
     { header: 'FG%', accessor: 'x_fg_pct', format: formatPercent },
     { header: '3P%', accessor: 'x_fg3_pct', format: formatPercent },
-    { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent }
+    { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent },
+    { header: 'Fair Salary', accessor: 'sal_market_fixed', format: formatMillions },
+    { header: 'Surplus Value', accessor: 'surplus_value', format: formatSignedMillions }
 ];
 
 export const compareCsvColumns = [
@@ -135,6 +153,8 @@ export const compareCsvColumns = [
     { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent },
     { header: '3P% (trend)', accessor: 'tr_fg3_pct', format: formatPercent },
     { header: 'FT% (trend)', accessor: 'tr_ft_pct', format: formatPercent },
+    { header: 'Fair Salary', accessor: 'sal_market_fixed', format: formatMillions },
+    { header: 'Surplus Value', accessor: 'surplus_value', format: formatSignedMillions },
 ];
 
 export const standingsCsvColumns = [
@@ -228,5 +248,7 @@ export const teamPlayersCsvColumns = [
     { header: 'Ast per 100', accessor: 'x_ast_100', format: (v) => formatFixed(v, 1) },
     { header: 'FG%', accessor: 'x_fg_pct', format: formatPercent },
     { header: '3P%', accessor: 'x_fg3_pct', format: formatPercent },
-    { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent }
+    { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent },
+    { header: 'Fair Salary', accessor: 'sal_market_fixed', format: formatMillions },
+    { header: 'Surplus Value', accessor: 'surplus_value', format: formatSignedMillions }
 ];

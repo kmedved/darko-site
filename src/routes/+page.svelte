@@ -4,7 +4,9 @@
         leaderboardCsvColumns,
         formatSignedMetric,
         formatFixed,
-        formatPercent
+        formatPercent,
+        formatMillions,
+        formatSignedMillions
     } from '$lib/utils/csvPresets.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
@@ -33,7 +35,9 @@
         x_ast_100: { type: 'number' },
         x_fg_pct: { type: 'number' },
         x_fg3_pct: { type: 'number' },
-        x_ft_pct: { type: 'number' }
+        x_ft_pct: { type: 'number' },
+        sal_market_fixed: { type: 'number' },
+        surplus_value: { type: 'number' }
     };
 
     const playerColumns = [
@@ -52,7 +56,9 @@
         { key: 'x_ast_100', label: 'Ast/100', alignClass: 'num', dataType: 'number', metricKey: 'x_ast_100' },
         { key: 'x_fg_pct', label: 'FG%', alignClass: 'num', dataType: 'number', metricKey: 'x_fg_pct' },
         { key: 'x_fg3_pct', label: '3P%', alignClass: 'num', dataType: 'number', metricKey: 'x_fg3_pct' },
-        { key: 'x_ft_pct', label: 'FT%', alignClass: 'num', dataType: 'number', metricKey: 'x_ft_pct' }
+        { key: 'x_ft_pct', label: 'FT%', alignClass: 'num', dataType: 'number', metricKey: 'x_ft_pct' },
+        { key: 'sal_market_fixed', label: 'Fair Salary', alignClass: 'num', dataType: 'number', metricKey: 'sal_market_fixed' },
+        { key: 'surplus_value', label: 'Surplus', alignClass: 'num', dataType: 'number', metricKey: 'surplus_value' }
     ];
 
     const sortedPlayers = $derived.by(() =>
@@ -207,6 +213,8 @@
                             <td class="num {statClass('x_fg_pct', player.x_fg_pct)}">{formatPercent(player.x_fg_pct)}</td>
                             <td class="num {statClass('x_fg3_pct', player.x_fg3_pct)}">{formatPercent(player.x_fg3_pct)}</td>
                             <td class="num {statClass('x_ft_pct', player.x_ft_pct)}">{formatPercent(player.x_ft_pct)}</td>
+                            <td class="num">{formatMillions(player.sal_market_fixed)}</td>
+                            <td class="num {signClass(player.surplus_value)}">{formatSignedMillions(player.surplus_value)}</td>
                         </tr>
                     {/each}
                 </tbody>
@@ -218,6 +226,8 @@
 <style>
     .table-wrapper {
         margin-bottom: 40px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     table {

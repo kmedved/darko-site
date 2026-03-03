@@ -155,7 +155,9 @@ const RATING_COLUMNS = [
     's12',
     's13',
     's14',
-    's15'
+    's15',
+    'sal_market_fixed',
+    'surplus_value'
 ].join(', ');
 
 const PLAYERS_DIM_COLUMNS = [

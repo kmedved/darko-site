@@ -48,7 +48,8 @@
 			{ value: 'x_pace', label: 'Pace' },
 			{ value: 'x_fg_pct', label: 'FG%' },
 			{ value: 'x_fg3_pct', label: '3P%' },
-			{ value: 'x_ft_pct', label: 'FT%' }
+			{ value: 'x_ft_pct', label: 'FT%' },
+			{ value: 'sal_market_fixed', label: 'Fair Salary' }
 		];
 
 		const PERCENTILE_OPTIONS = [
