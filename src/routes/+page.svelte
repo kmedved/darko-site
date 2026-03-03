@@ -165,7 +165,6 @@
     {#if players.length === 0}
         <div class="empty-state">No players are currently available.</div>
     {:else}
-        <div class="sticky-header-bg" aria-hidden="true"></div>
         <div class="table-wrapper">
             <table>
                 <thead>

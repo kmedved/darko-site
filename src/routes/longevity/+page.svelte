@@ -307,7 +307,6 @@
         </div>
 
         <h2 class="section-title">Career Longevity Projections</h2>
-        <div class="sticky-header-bg" aria-hidden="true"></div>
         <div class="table-wrapper">
             <table>
                 <thead>
