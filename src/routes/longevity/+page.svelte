@@ -307,6 +307,7 @@
         </div>
 
         <h2 class="section-title">Career Longevity Projections</h2>
+        <div class="sticky-header-bg" aria-hidden="true"></div>
         <div class="table-wrapper">
             <table>
                 <thead>
@@ -469,8 +470,6 @@
 
     .table-wrapper {
         margin-bottom: 14px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
     }
 
     table {
@@ -484,7 +483,7 @@
         top: var(--nav-sticky-offset);
         z-index: 15;
         background: var(--bg);
-        box-shadow: 0 calc(-1 * var(--nav-sticky-offset)) 0 0 var(--bg);
+        box-shadow: none;
         border-bottom: 1px solid var(--border);
         color: var(--text-muted);
         font-size: 10px;

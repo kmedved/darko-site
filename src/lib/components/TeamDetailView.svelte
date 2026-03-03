@@ -209,6 +209,7 @@
         <div class="empty-state">No active players found for {teamName}.</div>
     {:else}
         <h2 class="section-title">Players</h2>
+        <div class="sticky-header-bg" aria-hidden="true"></div>
         <div class="table-wrapper">
             <table>
                 <thead>
@@ -346,8 +347,6 @@
 
     .table-wrapper {
         margin-bottom: 32px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
     }
 
     table {
@@ -363,7 +362,7 @@
         cursor: pointer;
         user-select: none;
         background: var(--bg);
-        box-shadow: 0 calc(-1 * var(--nav-sticky-offset)) 0 0 var(--bg), inset 0 -1px 0 var(--border);
+        box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
         padding: 8px 6px;
     }

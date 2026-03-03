@@ -46,8 +46,9 @@
         { key: 'team_name', label: 'Team', alignClass: 'team', dataType: 'text' },
         { key: 'position', label: 'Pos', alignClass: 'position-col', dataType: 'text' },
         { key: 'dpm', label: 'DPM', alignClass: 'num', dataType: 'number', metricKey: 'dpm' },
-        { key: 'o_dpm', label: 'ODPM', alignClass: 'num', dataType: 'number', metricKey: 'o_dpm' },
-        { key: 'd_dpm', label: 'DDPM', alignClass: 'num', dataType: 'number', metricKey: 'd_dpm' },
+        { key: 'o_dpm', label: 'Offense', alignClass: 'num', dataType: 'number', metricKey: 'o_dpm' },
+        { key: 'd_dpm', label: 'Defense', alignClass: 'num', dataType: 'number', metricKey: 'd_dpm' },
+        { key: 'sal_market_fixed', label: 'Fair Salary', alignClass: 'num', dataType: 'number', metricKey: 'sal_market_fixed' },
         { key: 'box_dpm', label: 'Box', alignClass: 'num', dataType: 'number', metricKey: 'box_dpm' },
         { key: 'on_off_dpm', label: 'On/Off', alignClass: 'num', dataType: 'number', metricKey: 'on_off_dpm' },
         { key: 'x_minutes', label: 'MPG', alignClass: 'num', dataType: 'number', metricKey: 'x_minutes' },
@@ -57,7 +58,6 @@
         { key: 'x_fg_pct', label: 'FG%', alignClass: 'num', dataType: 'number', metricKey: 'x_fg_pct' },
         { key: 'x_fg3_pct', label: '3P%', alignClass: 'num', dataType: 'number', metricKey: 'x_fg3_pct' },
         { key: 'x_ft_pct', label: 'FT%', alignClass: 'num', dataType: 'number', metricKey: 'x_ft_pct' },
-        { key: 'sal_market_fixed', label: 'Fair Salary', alignClass: 'num', dataType: 'number', metricKey: 'sal_market_fixed' },
         { key: 'surplus_value', label: 'Surplus', alignClass: 'num', dataType: 'number', metricKey: 'surplus_value' }
     ];
 
@@ -165,6 +165,7 @@
     {#if players.length === 0}
         <div class="empty-state">No players are currently available.</div>
     {:else}
+        <div class="sticky-header-bg" aria-hidden="true"></div>
         <div class="table-wrapper">
             <table>
                 <thead>
@@ -204,6 +205,7 @@
                             <td class="num {statClass('dpm', player.dpm)}">{formatSignedMetric(player.dpm)}</td>
                             <td class="num {statClass('o_dpm', player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
                             <td class="num {statClass('d_dpm', player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
+                            <td class="num">{formatMillions(player.sal_market_fixed)}</td>
                             <td class="num {statClass('box_dpm', player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
                             <td class="num {statClass('on_off_dpm', player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
                             <td class="num {statClass('x_minutes', player.x_minutes)}">{fmtMpg(player.x_minutes)}</td>
@@ -213,7 +215,6 @@
                             <td class="num {statClass('x_fg_pct', player.x_fg_pct)}">{formatPercent(player.x_fg_pct)}</td>
                             <td class="num {statClass('x_fg3_pct', player.x_fg3_pct)}">{formatPercent(player.x_fg3_pct)}</td>
                             <td class="num {statClass('x_ft_pct', player.x_ft_pct)}">{formatPercent(player.x_ft_pct)}</td>
-                            <td class="num">{formatMillions(player.sal_market_fixed)}</td>
                             <td class="num {signClass(player.surplus_value)}">{formatSignedMillions(player.surplus_value)}</td>
                         </tr>
                     {/each}
@@ -226,8 +227,6 @@
 <style>
     .table-wrapper {
         margin-bottom: 40px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
     }
 
     table {
@@ -241,7 +240,7 @@
         top: var(--nav-sticky-offset);
         z-index: 20;
         background: var(--bg);
-        box-shadow: 0 calc(-1 * var(--nav-sticky-offset)) 0 0 var(--bg), inset 0 -1px 0 var(--border);
+        box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
         padding: 8px 6px;
         text-align: left;

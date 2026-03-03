@@ -680,6 +680,23 @@ nav .links a.active {
     gap: 16px;
 }
 
+/* ── Sticky Table Header Background Fill ─────────────── */
+/* Place a <div class="sticky-header-bg" aria-hidden="true"></div>
+   immediately BEFORE each .table-wrapper.  This covers the gap
+   between the sticky nav (top: 0, 210 px tall) and the sticky <th>
+   row (top: 210 px) with a solid page-background fill so that data
+   rows scrolling behind the nav area are always hidden.               */
+
+.sticky-header-bg {
+    position: sticky;
+    top: 0;
+    z-index: 19;
+    height: var(--nav-sticky-offset);
+    margin-bottom: calc(-1 * var(--nav-sticky-offset));
+    background: var(--bg);
+    pointer-events: none;
+}
+
 /* ── Misc ────────────────────────────────────────────── */
 
 .empty-state {

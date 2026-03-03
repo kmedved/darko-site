@@ -202,12 +202,24 @@ function formatSeasonLabel(startYear) {
     return `${startYear}-${endSuffix}`;
 }
 
+const POSITION_MAP = {
+    'Guard': 'G', 'Forward': 'F', 'Center': 'C',
+    'Guard-Forward': 'G-F', 'Forward-Guard': 'F-G',
+    'Forward-Center': 'F-C', 'Center-Forward': 'C-F',
+    'SG': 'G', 'SF': 'F', 'PF': 'F'
+};
+
+function normalizePosition(pos) {
+    if (!pos) return null;
+    return POSITION_MAP[pos] ?? pos;
+}
+
 function mergeWithPlayerDim(row, playerDim) {
     return {
         ...row,
         player_name: row.player_name ?? playerDim?.player_name ?? null,
         team_name: row.team_name ?? playerDim?.current_team ?? null,
-        position: row.position ?? playerDim?.position ?? null,
+        position: normalizePosition(row.position ?? playerDim?.position ?? null),
         rookie_season: row.rookie_season ?? playerDim?.rookie_season ?? null
     };
 }
@@ -359,7 +371,7 @@ export async function searchAllPlayers(searchTerm) {
                     nba_id: player.nba_id,
                     player_name: player.player_name,
                     team_name: active?.team_name ?? player.current_team ?? null,
-                    position: active?.position ?? player.position ?? null,
+                    position: normalizePosition(active?.position ?? player.position ?? null),
                     dpm: active?.dpm ?? null,
                     o_dpm: active?.o_dpm ?? null,
                     d_dpm: active?.d_dpm ?? null,
@@ -500,7 +512,7 @@ export async function getPlayersIndex() {
                     nba_id: player.nba_id,
                     player_name: player.player_name,
                     team_name: active?.team_name ?? player.current_team ?? null,
-                    position: active?.position ?? player.position ?? null,
+                    position: normalizePosition(active?.position ?? player.position ?? null),
                     dpm: active?.dpm ?? null,
                     o_dpm: active?.o_dpm ?? null,
                     d_dpm: active?.d_dpm ?? null,
@@ -801,7 +813,7 @@ export async function getEloLeaderboard(limit = 50) {
         return (data || []).map((r) => ({
             ...r,
             player_name: playersMap.get(r.nba_id)?.player_name ?? null,
-            position: playersMap.get(r.nba_id)?.position ?? null,
+            position: normalizePosition(playersMap.get(r.nba_id)?.position ?? null),
             current_team: playersMap.get(r.nba_id)?.current_team ?? null
         }));
     });
