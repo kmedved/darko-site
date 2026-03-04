@@ -13,6 +13,13 @@
   - **Never** use `box-shadow: 0 calc(-1 * var(--nav-sticky-offset)) …` on `<th>` to fill the gap — it gets clipped by overflow containers.
   - **Never** add a `.sticky-header-bg` (or similar gap-fill div) before `.table-wrapper` — its height + negative margin hides the first rows of the table. The nav's own background already covers the 0–210 px area; no extra gap-fill element is needed.
 - In D3/SVG chart rendering, avoid hardcoded color literals; prefer CSS variables (`--text`, `--text-muted`, `--border-subtle`) so theme contrast remains correct.
+- Trajectory / trend charts (`TrajectoryChart.svelte`, `TalentTrendChart.svelte`) filter out rows where the selected metric is null (`getY(row)` returns null → row excluded by `prepareRows()`). A column that is only partially populated in the pipeline (e.g. `sal_market_fixed` for recent seasons only) will appear as a sparse chart — this is correct behaviour and **not** a frontend bug. If a chart shows "only a handful of games," check column coverage in Supabase before modifying frontend code.
+- When adding a new column to the data pipeline:
+  1. Add it to `RATING_COLUMNS` in `src/lib/server/supabase.js` or Supabase won't return it.
+  2. Add it to the relevant chart component's metric sets (e.g. `MONEY_METRICS`, `SIGNED_METRICS`, `PERCENT_METRICS`) for correct formatting.
+  3. Add metric tooltip text in `src/lib/utils/metricDefinitions.js`.
+  4. Add CSV column definition in `src/lib/utils/csvPresets.js`.
+  5. Update `SUPABASE_SCHEMA.md` with the column schema.
 
 ## File Pointers
 
@@ -21,7 +28,11 @@
 - Shared CSV utility + presets: `src/lib/utils/csvPresets.js`
 - Standings page implementation: `src/routes/standings/+page.svelte`
 - Conference chart component: `src/lib/components/ConferenceChart.svelte`
-- Supabase schema, column mappings, API data layer, and pipeline freshness: `SUPABASE_SCHEMA.md`
+- Trajectory chart component: `src/lib/components/TrajectoryChart.svelte`
+- Player profile trend chart: `src/lib/components/TalentTrendChart.svelte`
+- Client-side API helpers: `src/lib/api.js`
+- Metric tooltip definitions: `src/lib/utils/metricDefinitions.js`
+- Supabase schema, column mappings, API data layer, pipeline scripts, and freshness: `SUPABASE_SCHEMA.md`
 
 ## Workflow Notes
 

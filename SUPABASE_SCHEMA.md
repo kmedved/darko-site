@@ -294,6 +294,55 @@ Deferred shifts to evaluate:
 
 ---
 
+## Pipeline Scripts
+
+The two Python scripts that build and upload data live in the DARKO pipeline repo (outside `darko-site/`). They are **not** part of the SvelteKit project but are the sole source of truth for Supabase data.
+
+### `build_supabase_tables.py` — Build parquet files
+
+Joins six source parquet files into two Supabase-ready tables using Polars lazy scans + semi-joins (avoids eagerly loading the 15.7 M-row RAPM table).
+
+**Inputs** (all relative to the DARKO project root):
+
+| File | Approx rows | Role |
+|---|---:|---|
+| `calculated_data/temp/spm_outputs.parq` | 1,089,000 | Base grain (defines the key space) |
+| `calculated_data/5_assembled_features.parq` | 1,089,000 | Bio columns: age, career_game_num, position, etc. |
+| `calculated_data/bayes_rapm_ratings.parq` | 15,700,000 | RAPM ratings (semi-join filtered before collect) |
+| `calculated_data/talent_game_predictions.parq` | 1,089,000 | Projected per-100, shooting, minutes, pace |
+| `calculated_data/temp/nba_survivorship.parq` | 1,084,000 | Survivorship curves s1–s15, retirement age |
+| `calculated_data/dpm_salary.parq` | varies | DPM-based salary valuation (game_value, warp, sal_market_fixed, surplus_value) |
+
+**Outputs:**
+- `supabase_tables/players.parq` — dimension (one row per player)
+- `supabase_tables/player_ratings.parq` — fact (one row per player per date, 72 columns)
+
+**Validation:** Asserts no duplicate `(nba_id, date)` rows and that row count equals the base table after all joins.
+
+### `upload_to_supabase.py` — Upload to Supabase Postgres
+
+Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at 50,000 rows with `tqdm` progress.
+
+**Upload modes per table:**
+
+| Table | `full_reload=True` (default for player_ratings) | `full_reload=False` | Fresh (table missing) |
+|---|---|---|---|
+| `players` | TRUNCATE + reload (CASCADE to elo_ratings) | same | CREATE + bulk load + PK |
+| `player_ratings` | DROP + CREATE + bulk load + indexes + RLS | DELETE current season + INSERT (atomic) | CREATE + bulk load + indexes + RLS |
+| `season_sim` | TRUNCATE + reload | same | CREATE + bulk load |
+| `win_distribution` | TRUNCATE + reload | same | CREATE + bulk load |
+
+**Indexes created on `player_ratings`:**
+- `pk_player_ratings PRIMARY KEY (nba_id, date)`
+- `idx_ratings_date (date DESC)`
+- `idx_ratings_season (season)`
+- `idx_ratings_nba_id (nba_id)`
+- Row Level Security: `allow_public_read` policy for SELECT
+
+**Connection:** Uses `SUPABASE_PG_DSN` env var, falling back to `fixed_data/supabase_secret.json`.
+
+---
+
 ## Pipeline Freshness Requirements
 
 **All source parquet files must cover the same date range.** The build script left-joins everything onto `spm_outputs` by `(nba_id, date)`. If any source file lags behind, those columns will be null for all dates beyond that file's max date.
