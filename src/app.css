@@ -183,6 +183,8 @@ nav .logo {
     display: none;
     height: 192px;
     width: auto;
+    max-width: 100%;
+    object-fit: contain;
 }
 
 .sr-only {
@@ -234,8 +236,25 @@ nav .links a.active {
 }
 
 @media (max-width: 768px) {
+    :root {
+        --nav-sticky-offset: 56px;
+    }
+
+    .container {
+        padding: 0 16px;
+    }
+
     nav .container {
         gap: 10px;
+        height: 56px;
+    }
+
+    .logo-mark {
+        height: 48px;
+    }
+
+    nav .logo {
+        margin-right: auto;
     }
 }
 

@@ -475,6 +475,7 @@
         border-collapse: separate;
         border-spacing: 0;
         font-size: 13px;
+        width: 100%;
     }
 
     th {
@@ -667,7 +668,28 @@
         }
 
         .filter-row th {
-            top: 238px;
+            top: calc(var(--nav-sticky-offset) + 32px);
+        }
+
+        .table-footer {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th {
+            position: static;
+        }
+
+        .filter-row th {
+            position: static;
         }
     }
 </style>

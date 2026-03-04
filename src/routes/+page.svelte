@@ -232,6 +232,7 @@
         border-collapse: separate;
         border-spacing: 0;
         font-size: 13px;
+        width: 100%;
     }
 
     th {
@@ -394,6 +395,17 @@
     .pct.mid { color: var(--accent); }
     .pct.low { color: var(--text-secondary); }
     .pct.zero { color: var(--text-muted); }
+
+    @media (max-width: 768px) {
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th {
+            position: static;
+        }
+    }
 
     @media (max-width: 640px) {
         th, td { padding: 6px 8px; }

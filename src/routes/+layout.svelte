@@ -9,6 +9,21 @@
 	let { children } = $props();
 
 	let theme = $state('white');
+	let mobileMenuOpen = $state(false);
+
+	function toggleMobileMenu() {
+		mobileMenuOpen = !mobileMenuOpen;
+	}
+
+	function closeMobileMenu() {
+		mobileMenuOpen = false;
+	}
+
+	// Close mobile menu on navigation
+	$effect(() => {
+		$page.url.pathname;
+		mobileMenuOpen = false;
+	});
 
 	function isThemeValue(value) {
 		return THEMES.includes(value);
@@ -119,6 +134,70 @@
 
 <nav>
     <div class="container">
+		<button class="mobile-menu-btn" onclick={toggleMobileMenu} aria-label="Toggle menu" aria-expanded={mobileMenuOpen}>
+			<span class="hamburger-line" class:open={mobileMenuOpen}></span>
+			<span class="hamburger-line" class:open={mobileMenuOpen}></span>
+			<span class="hamburger-line" class:open={mobileMenuOpen}></span>
+		</button>
+		<a href="/" class="logo" aria-label="DARKO DPM">
+            <span class="sr-only">DARKO DPM</span>
+            <img src="/logo-light.png" alt="" class="logo-mark logo-mark--light" aria-hidden="true" />
+            <img src="/logo-dark.png" alt="" class="logo-mark logo-mark--dark" aria-hidden="true" />
+        </a>
+		<div class="desktop-controls">
+			<div class="theme-slider" role="group" aria-label="Theme selector">
+				<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[0]}</span>
+				<input
+					type="range"
+					min="0"
+					max="3"
+					step="1"
+					value={themeIndex}
+					oninput={handleSlider}
+					class="theme-slider__input"
+					aria-label="Theme"
+					aria-valuetext={theme}
+				/>
+				<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
+			</div>
+			<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font">
+				{#each FONTS as f, i}
+					<option value={f}>{FONT_LABELS[i]}</option>
+				{/each}
+			</select>
+			<div class="links">
+				<a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
+			</div>
+		</div>
+        <div class="links desktop-links">
+            <a href="/" class:active={$page.url.pathname === '/'}>Active Leaderboard</a>
+            <a href="/standings" class:active={$page.url.pathname.startsWith('/standings')}>Standings</a>
+            <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Trajectories</a>
+            <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
+            <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
+            <a href="/projections" class:active={$page.url.pathname === '/projections'}>Projections</a>
+            <a href="/rate" class:active={$page.url.pathname === '/rate'}>Rate</a>
+        </div>
+    </div>
+</nav>
+
+{#if mobileMenuOpen}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="mobile-overlay" onclick={closeMobileMenu} onkeydown={() => {}}></div>
+{/if}
+
+<div class="mobile-drawer" class:open={mobileMenuOpen}>
+	<div class="mobile-drawer-links">
+		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMobileMenu}>Active Leaderboard</a>
+		<a href="/standings" class:active={$page.url.pathname.startsWith('/standings')} onclick={closeMobileMenu}>Standings</a>
+		<a href="/trajectories" class:active={$page.url.pathname === '/trajectories'} onclick={closeMobileMenu}>Trajectories</a>
+		<a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')} onclick={closeMobileMenu}>Longevity</a>
+		<a href="/lineups" class:active={$page.url.pathname === '/lineups'} onclick={closeMobileMenu}>Lineups</a>
+		<a href="/projections" class:active={$page.url.pathname === '/projections'} onclick={closeMobileMenu}>Projections</a>
+		<a href="/rate" class:active={$page.url.pathname === '/rate'} onclick={closeMobileMenu}>Rate</a>
+		<a href="/about" class:active={$page.url.pathname === '/about'} onclick={closeMobileMenu}>About</a>
+	</div>
+	<div class="mobile-drawer-controls">
 		<div class="theme-slider" role="group" aria-label="Theme selector">
 			<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[0]}</span>
 			<input
@@ -139,25 +218,8 @@
 				<option value={f}>{FONT_LABELS[i]}</option>
 			{/each}
 		</select>
-		<div class="links">
-            <a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
-        </div>
-        <a href="/" class="logo" aria-label="DARKO DPM">
-            <span class="sr-only">DARKO DPM</span>
-            <img src="/logo-light.png" alt="" class="logo-mark logo-mark--light" aria-hidden="true" />
-            <img src="/logo-dark.png" alt="" class="logo-mark logo-mark--dark" aria-hidden="true" />
-        </a>
-        <div class="links">
-            <a href="/" class:active={$page.url.pathname === '/'}>Active Leaderboard</a>
-            <a href="/standings" class:active={$page.url.pathname.startsWith('/standings')}>Standings</a>
-            <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Player career trajectories</a>
-            <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
-            <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
-            <a href="/projections" class:active={$page.url.pathname === '/projections'}>Daily Projections</a>
-            <a href="/rate" class:active={$page.url.pathname === '/rate'}>Rate</a>
-        </div>
-    </div>
-</nav>
+	</div>
+</div>
 
 <main>
     {@render children()}
@@ -240,7 +302,134 @@
 		border-color: var(--accent);
 	}
 
+	/* ── Hamburger menu button (mobile only) ── */
+	.mobile-menu-btn {
+		display: none;
+		flex-direction: column;
+		justify-content: center;
+		gap: 5px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 6px;
+		z-index: 200;
+	}
+
+	.hamburger-line {
+		display: block;
+		width: 22px;
+		height: 2px;
+		background: var(--text);
+		border-radius: 1px;
+		transition: transform 0.2s, opacity 0.2s;
+	}
+
+	.hamburger-line.open:nth-child(1) {
+		transform: translateY(7px) rotate(45deg);
+	}
+	.hamburger-line.open:nth-child(2) {
+		opacity: 0;
+	}
+	.hamburger-line.open:nth-child(3) {
+		transform: translateY(-7px) rotate(-45deg);
+	}
+
+	/* ── Mobile overlay ── */
+	.mobile-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 140;
+	}
+
+	/* ── Mobile drawer ── */
+	.mobile-drawer {
+		display: none;
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 280px;
+		height: 100dvh;
+		background: var(--bg-surface);
+		border-right: 1px solid var(--border);
+		z-index: 150;
+		transform: translateX(-100%);
+		transition: transform 0.25s ease;
+		flex-direction: column;
+		padding: 60px 0 24px;
+		overflow-y: auto;
+	}
+
+	.mobile-drawer.open {
+		transform: translateX(0);
+	}
+
+	.mobile-drawer-links {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+	}
+
+	.mobile-drawer-links a {
+		padding: 12px 24px;
+		color: var(--text-secondary);
+		font-size: 14px;
+		font-weight: 500;
+		text-decoration: none;
+		border-bottom: 1px solid var(--border-subtle);
+		transition: background 0.1s, color 0.1s;
+	}
+
+	.mobile-drawer-links a:hover {
+		background: var(--bg-hover);
+		color: var(--text);
+	}
+
+	.mobile-drawer-links a.active {
+		color: var(--accent);
+		background: var(--bg-elevated);
+	}
+
+	.mobile-drawer-controls {
+		padding: 16px 24px;
+		border-top: 1px solid var(--border);
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.mobile-drawer-controls .theme-slider {
+		margin-right: 0;
+	}
+
+	.mobile-drawer-controls .font-select {
+		margin-right: 0;
+		width: 100%;
+	}
+
+	/* ── Desktop controls wrapper ── */
+	.desktop-controls {
+		display: flex;
+		align-items: center;
+	}
+
 	@media (max-width: 768px) {
+		.mobile-menu-btn {
+			display: flex;
+		}
+
+		.mobile-drawer {
+			display: flex;
+		}
+
+		.desktop-links {
+			display: none !important;
+		}
+
+		.desktop-controls {
+			display: none;
+		}
+
 		.theme-slider {
 			margin-right: 10px;
 		}
