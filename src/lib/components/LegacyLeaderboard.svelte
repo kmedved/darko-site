@@ -10,6 +10,7 @@
         enrichPlayer,
         filterPlayers
     } from '$lib/utils/legacyLeaderboard.js';
+    import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
 
     let { players = [] } = $props();
 
@@ -103,7 +104,7 @@
                             {:else if col.key === 'team_name'}
                                 <td class="team-cell">
                                     {#if player.team_name}
-                                        <a href="/team/{encodeURIComponent(player.team_name)}">{player.team_name}</a>
+                                        <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
                                     {:else}
                                         —
                                     {/if}

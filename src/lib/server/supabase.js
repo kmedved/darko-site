@@ -738,8 +738,8 @@ function parseRpcNumber(value, fallback = null) {
     return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-export async function recordVote(winnerId, loserId) {
-    const { data, error } = await supabase.rpc('record_elo_vote', {
+export async function recordVote(winnerId, loserId, { client = supabase } = {}) {
+    const { data, error } = await client.rpc('record_elo_vote', {
         p_winner_id: winnerId,
         p_loser_id: loserId
     });
@@ -763,6 +763,42 @@ export async function recordVote(winnerId, loserId) {
         loserEloAfter: parseRpcNumber(result.loser_elo_after, null),
         delta: parseRpcNumber(result.elo_delta, null)
     };
+}
+
+export async function checkEloRateLimit(subjectHash, route, windowStart, { client = supabase } = {}) {
+    const timestamp =
+        windowStart instanceof Date ? windowStart.toISOString() : String(windowStart || '');
+
+    const { data, error } = await client.rpc('check_elo_rate_limit', {
+        p_subject_hash: subjectHash,
+        p_route: route,
+        p_window_start: timestamp
+    });
+
+    if (error) throw error;
+
+    const count = Number.parseInt(Array.isArray(data) ? data[0] : data, 10);
+    if (!Number.isInteger(count) || count < 1) {
+        throw new Error('Failed to increment Elo rate limit');
+    }
+
+    return count;
+}
+
+export async function pruneEloRateLimits({ olderThan, client = supabase } = {}) {
+    const cutoff =
+        olderThan instanceof Date ? olderThan.toISOString() : String(olderThan || '').trim();
+    if (!cutoff) {
+        throw new Error('olderThan is required');
+    }
+
+    const { count, error } = await client
+        .from('elo_rate_limits')
+        .delete({ count: 'exact' })
+        .lt('window_start', cutoff);
+
+    if (error) throw error;
+    return count ?? 0;
 }
 
 export async function getEloLeaderboard(limit = 50) {

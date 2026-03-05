@@ -11,6 +11,7 @@
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
+    import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import LegacyLeaderboard from '$lib/components/LegacyLeaderboard.svelte';
 
     let { data } = $props();
@@ -25,7 +26,6 @@
         _rank: { type: 'number' },
         player_name: { type: 'text' },
         team_name: { type: 'text' },
-        position: { type: 'text' },
         dpm: { type: 'number' },
         o_dpm: { type: 'number' },
         d_dpm: { type: 'number' },
@@ -46,7 +46,6 @@
         { key: '_rank', label: '#', alignClass: 'rank', dataType: 'number' },
         { key: 'player_name', label: 'Player', alignClass: 'name', dataType: 'text' },
         { key: 'team_name', label: 'Team', alignClass: 'team', dataType: 'text' },
-        { key: 'position', label: 'Pos', alignClass: 'position-col', dataType: 'text' },
         { key: 'dpm', label: 'DPM', alignClass: 'num', dataType: 'number', metricKey: 'dpm' },
         { key: 'o_dpm', label: 'Offense', alignClass: 'num', dataType: 'number', metricKey: 'o_dpm' },
         { key: 'd_dpm', label: 'Defense', alignClass: 'num', dataType: 'number', metricKey: 'd_dpm' },
@@ -201,16 +200,15 @@
                         <tr>
                             <td class="rank">{i + 1}</td>
                             <td class="name">
-                                <a href="/player/{player.nba_id}">{player.player_name}</a>
+                                <a href="/player/{player.nba_id}">{player.player_name}</a>{#if player.position}<span class="pos-label"> ({player.position})</span>{/if}
                             </td>
                             <td class="team">
                                 {#if player.team_name}
-                                    <a href="/team/{encodeURIComponent(player.team_name)}">{player.team_name}</a>
+                                    <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
                                 {:else}
                                     —
                                 {/if}
                             </td>
-                            <td class="position-col">{player.position || '—'}</td>
                             <td class="num {statClass('dpm', player.dpm)}">{formatSignedMetric(player.dpm)}</td>
                             <td class="num {statClass('o_dpm', player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
                             <td class="num {statClass('d_dpm', player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
@@ -359,6 +357,12 @@
     .name a { color: var(--text); }
     .name a:hover { color: var(--accent); }
 
+    .pos-label {
+        color: var(--text-muted);
+        font-weight: 400;
+        font-size: 12px;
+    }
+
     .team {
         color: var(--text-secondary);
         font-size: 12px;
@@ -371,12 +375,6 @@
     .team a:hover {
         color: var(--accent);
         text-decoration: underline;
-    }
-
-    .position-col {
-        color: var(--text-muted);
-        font-size: 12px;
-        width: 40px;
     }
 
     .num {

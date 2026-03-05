@@ -9,6 +9,7 @@ async function fetchJson(path) {
 }
 
 const activePlayersPromiseCache = new Map();
+export const ACTIVE_PLAYERS_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export async function apiPlayerHistory(nbaId, { limit, full = false, includeMetadata = false } = {}) {
     const id = Number.parseInt(nbaId, 10);
@@ -59,8 +60,12 @@ export function apiActivePlayers({ team } = {}) {
     const normalizedTeam = typeof team === 'string' ? team.trim() : '';
     const cacheKey = normalizedTeam || '__all__';
     const cached = activePlayersPromiseCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.promise;
+    }
+
     if (cached) {
-        return cached;
+        activePlayersPromiseCache.delete(cacheKey);
     }
 
     const qs = new URLSearchParams();
@@ -73,8 +78,15 @@ export function apiActivePlayers({ team } = {}) {
         activePlayersPromiseCache.delete(cacheKey);
         throw error;
     });
-    activePlayersPromiseCache.set(cacheKey, request);
+    activePlayersPromiseCache.set(cacheKey, {
+        promise: request,
+        expiresAt: Date.now() + ACTIVE_PLAYERS_CACHE_TTL_MS
+    });
     return request;
+}
+
+export function __resetApiCachesForTests() {
+    activePlayersPromiseCache.clear();
 }
 
 export function apiPlayersIndex() {

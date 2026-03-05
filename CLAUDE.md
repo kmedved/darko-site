@@ -9,10 +9,17 @@ This file is intentionally minimal. See the dedicated references:
 ## Commands
 
 ```bash
-npm run dev       # Dev server at localhost:5173
-npm run build     # Production build
-npm run preview   # Preview production build
+bun run dev       # Dev server at localhost:5173
+bun run build     # Production build
+bun run preview   # Preview production build
+bun run validate  # test + svelte-check + build
 ```
+
+## Runtime Notes
+
+- The app is read-only except for the Elo voting write path at `/api/rate/vote`.
+- Local development uses Bun; Vercel serverless functions run on Node 22.x.
+- Elo rate-limit cleanup is handled by the Vercel cron endpoint `/api/internal/maintenance/elo-rate-limits/prune`.
 
 ## Dev Server
 This is a SvelteKit project using Bun (not Node). To start the dev server for preview/screenshots:
@@ -23,6 +30,7 @@ Key details:
 - `bunx vite` — Node is not installed, so `npx`/`vite` won't work. Use `bunx`.
 - `--host` — Required. Without this, Vite binds to IPv6 localhost only (`::1`), and the preview tool connects to `127.0.0.1`, which will refuse connections.
 - `--port 5173` — Explicit port to avoid conflicts.
+- Vercel serverless functions run on Node 22.x even though the local workflow uses Bun.
 - If the port is busy, kill stale processes first: `lsof -ti:5173 | xargs kill -9`
 - After starting, wait a couple seconds before taking screenshots.
 

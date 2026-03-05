@@ -1,108 +1,110 @@
 <script>
-	import { page } from '$app/stores';
-	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
-	import TalentTrendChart from '$lib/components/TalentTrendChart.svelte';
-	import TalentPercentilesChart from '$lib/components/TalentPercentilesChart.svelte';
-	import { apiActivePlayers, apiPlayerHistory } from '$lib/api.js';
 	import { goto } from '$app/navigation';
+	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
+	import TalentPercentilesChart from '$lib/components/TalentPercentilesChart.svelte';
+	import TalentTrendChart from '$lib/components/TalentTrendChart.svelte';
+	import { apiActivePlayers } from '$lib/api.js';
 	import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
 
-	let nbaId = $derived($page.params.nbaId);
+	let { data } = $props();
 
-	let playerInfo = $state(null);
-	let historyRows = $state([]);
+	const TALENT_OPTIONS = [
+		{ value: 'dpm', label: 'DPM' },
+		{ value: 'o_dpm', label: 'O-DPM' },
+		{ value: 'd_dpm', label: 'D-DPM' },
+		{ value: 'box_dpm', label: 'Box DPM' },
+		{ value: 'box_odpm', label: 'Box O-DPM' },
+		{ value: 'box_ddpm', label: 'Box D-DPM' },
+		{ value: 'on_off_dpm', label: 'On/Off DPM' },
+		{ value: 'bayes_rapm_total', label: 'RAPM' },
+		{ value: 'x_pts_100', label: 'Pts per 100' },
+		{ value: 'x_ast_100', label: 'Ast per 100' },
+		{ value: 'x_minutes', label: 'MPG' },
+		{ value: 'x_pace', label: 'Pace' },
+		{ value: 'x_fg_pct', label: 'FG%' },
+		{ value: 'x_fg3_pct', label: '3P%' },
+		{ value: 'x_ft_pct', label: 'FT%' },
+		{ value: 'sal_market_fixed', label: 'Fair Salary' }
+	];
+
+	const PERCENTILE_OPTIONS = [
+		{ value: 'dpm', label: 'DPM' },
+		{ value: 'o_dpm', label: 'O-DPM' },
+		{ value: 'd_dpm', label: 'D-DPM' },
+		{ value: 'on_off_dpm', label: 'On/Off DPM' },
+		{ value: 'bayes_rapm_total', label: 'RAPM' },
+		{ value: 'x_pts_100', label: 'Pts per 100' },
+		{ value: 'x_ast_100', label: 'Ast per 100' },
+		{ value: 'x_fg_pct', label: 'FG%' },
+		{ value: 'x_fg3_pct', label: '3P%' },
+		{ value: 'x_ft_pct', label: 'FT%' },
+		{ value: 'tr_fg3_pct', label: '3P% (trend)' },
+		{ value: 'tr_ft_pct', label: 'FT% (trend)' }
+	];
+
 	let allActivePlayers = $state([]);
-	let loading = $state(true);
-	let error = $state(null);
-	let percentilesLoading = $state(false);
+	let percentilesLoading = $state(true);
 	let percentileNotice = $state(null);
-
 	let talentType = $state('dpm');
 	let selectedPercentileMetrics = $state(['dpm', 'o_dpm', 'd_dpm', 'x_pts_100', 'x_fg3_pct']);
 	let imgFailed = $state(false);
 	const loadSeq = createRequestSequencer();
 
+	const nbaId = $derived(data.nbaId ?? data.playerInfo?.nba_id ?? null);
+	const playerInfo = $derived(data.playerInfo ?? null);
+	const historyRows = $derived(data.historyRows ?? []);
+	const historyMeta = $derived(data.historyMeta ?? { truncated: false, maxRows: null });
+
 	function getInitials(name) {
 		if (!name) return '?';
 		return name
 			.split(/\s+/)
-			.map((w) => w[0])
+			.map((word) => word[0])
 			.filter(Boolean)
 			.slice(0, 2)
 			.join('')
 			.toUpperCase();
 	}
 
-		const TALENT_OPTIONS = [
-			{ value: 'dpm', label: 'DPM' },
-			{ value: 'o_dpm', label: 'O-DPM' },
-			{ value: 'd_dpm', label: 'D-DPM' },
-			{ value: 'box_dpm', label: 'Box DPM' },
-			{ value: 'box_odpm', label: 'Box O-DPM' },
-			{ value: 'box_ddpm', label: 'Box D-DPM' },
-			{ value: 'on_off_dpm', label: 'On/Off DPM' },
-			{ value: 'bayes_rapm_total', label: 'RAPM' },
-			{ value: 'x_pts_100', label: 'Pts per 100' },
-			{ value: 'x_ast_100', label: 'Ast per 100' },
-			{ value: 'x_minutes', label: 'MPG' },
-			{ value: 'x_pace', label: 'Pace' },
-			{ value: 'x_fg_pct', label: 'FG%' },
-			{ value: 'x_fg3_pct', label: '3P%' },
-			{ value: 'x_ft_pct', label: 'FT%' },
-			{ value: 'sal_market_fixed', label: 'Fair Salary' }
-		];
-
-		const PERCENTILE_OPTIONS = [
-			{ value: 'dpm', label: 'DPM' },
-			{ value: 'o_dpm', label: 'O-DPM' },
-			{ value: 'd_dpm', label: 'D-DPM' },
-			{ value: 'on_off_dpm', label: 'On/Off DPM' },
-			{ value: 'bayes_rapm_total', label: 'RAPM' },
-			{ value: 'x_pts_100', label: 'Pts per 100' },
-			{ value: 'x_ast_100', label: 'Ast per 100' },
-			{ value: 'x_fg_pct', label: 'FG%' },
-			{ value: 'x_fg3_pct', label: '3P%' },
-			{ value: 'x_ft_pct', label: 'FT%' },
-			{ value: 'tr_fg3_pct', label: '3P% (trend)' },
-			{ value: 'tr_ft_pct', label: 'FT% (trend)' }
-		];
-
 	const percentiles = $derived.by(() => {
 		if (!playerInfo || allActivePlayers.length === 0) return [];
 
 		const position = playerInfo.position;
-		const posPlayers = position
-			? allActivePlayers.filter((p) => p.position === position)
+		const positionPlayers = position
+			? allActivePlayers.filter((player) => player.position === position)
 			: allActivePlayers;
 
-		if (posPlayers.length === 0) return [];
+		if (positionPlayers.length === 0) return [];
 
 		return selectedPercentileMetrics.map((metric) => {
-			const playerVal = parseFloat(playerInfo[metric]);
-			if (isNaN(playerVal)) return { metric, value: 0 };
+			const playerValue = Number.parseFloat(playerInfo[metric]);
+			if (Number.isNaN(playerValue)) return { metric, value: 0 };
 
-			const values = posPlayers
-				.map((p) => parseFloat(p[metric]))
-				.filter((v) => !isNaN(v));
+			const values = positionPlayers
+				.map((player) => Number.parseFloat(player[metric]))
+				.filter((value) => !Number.isNaN(value));
 
 			if (values.length === 0) return { metric, value: 0 };
 
-			const below = values.filter((v) => v < playerVal).length;
-			const pct = Math.round((below / values.length) * 100);
-			return { metric, value: pct };
+			const below = values.filter((value) => value < playerValue).length;
+			return {
+				metric,
+				value: Math.round((below / values.length) * 100)
+			};
 		});
 	});
 
 	const currentDate = $derived.by(() => {
 		if (!playerInfo?.date) return '';
-		const d = playerInfo.date;
-		const dateOnly = d.includes('T') ? d.split('T')[0] : d;
+		const dateOnly = playerInfo.date.includes('T')
+			? playerInfo.date.split('T')[0]
+			: playerInfo.date;
 		return dateOnly;
 	});
 
 	$effect(() => {
-		if (!nbaId) return;
-		loadPlayer(nbaId);
+		void playerInfo;
+		imgFailed = false;
 	});
 
 	async function loadActivePlayersWithRetry() {
@@ -113,55 +115,42 @@
 		}
 	}
 
-	async function loadPlayer(id) {
+	$effect(() => {
+		if (!playerInfo?.nba_id) {
+			allActivePlayers = [];
+			percentileNotice = null;
+			percentilesLoading = false;
+			return;
+		}
+
 		const reqId = loadSeq.next();
-		loading = true;
-		percentilesLoading = false;
-		error = null;
-		percentileNotice = null;
-		playerInfo = null;
-		historyRows = [];
 		allActivePlayers = [];
-		imgFailed = false;
+		percentilesLoading = true;
+		percentileNotice = null;
 
-		try {
-			const history = await apiPlayerHistory(id, { full: true });
-			const info = history.at(-1);
-
-			if (!loadSeq.isCurrent(reqId)) return;
-			if (!info) {
-				throw new Error(`No history found for player ${id}`);
-			}
-
-			playerInfo = info;
-			historyRows = history;
-			loading = false;
-
-			percentilesLoading = true;
-			try {
-				const active = await loadActivePlayersWithRetry();
+		loadActivePlayersWithRetry()
+			.then((activePlayers) => {
 				if (!loadSeq.isCurrent(reqId)) return;
-				allActivePlayers = Array.isArray(active) ? active : [];
+				allActivePlayers = Array.isArray(activePlayers) ? activePlayers : [];
 				percentileNotice =
 					allActivePlayers.length === 0
 						? 'Active-player percentile data is temporarily unavailable.'
 						: null;
-			} catch {
+			})
+			.catch(() => {
 				if (!loadSeq.isCurrent(reqId)) return;
 				allActivePlayers = [];
 				percentileNotice = 'Active-player percentile data is temporarily unavailable.';
-			} finally {
+			})
+			.finally(() => {
 				if (!loadSeq.isCurrent(reqId)) return;
 				percentilesLoading = false;
-			}
-		} catch (err) {
-			if (!loadSeq.isCurrent(reqId)) return;
-			error = err?.message || 'Failed to load player data';
-			loading = false;
-			percentilesLoading = false;
-			percentileNotice = null;
-		}
-	}
+			});
+
+		return () => {
+			loadSeq.next();
+		};
+	});
 
 	function handleSelectPlayer(player) {
 		goto(`/player/${player.nba_id}`);
@@ -170,11 +159,12 @@
 	function togglePercentileMetric(metric) {
 		if (selectedPercentileMetrics.includes(metric)) {
 			if (selectedPercentileMetrics.length > 1) {
-				selectedPercentileMetrics = selectedPercentileMetrics.filter((m) => m !== metric);
+				selectedPercentileMetrics = selectedPercentileMetrics.filter((item) => item !== metric);
 			}
-		} else {
-			selectedPercentileMetrics = [...selectedPercentileMetrics, metric];
+			return;
 		}
+
+		selectedPercentileMetrics = [...selectedPercentileMetrics, metric];
 	}
 </script>
 
@@ -195,10 +185,12 @@
 					<div class="profile-headshot">
 						{#if nbaId && !imgFailed}
 							<img
-								src="https://cdn.nba.com/headshots/nba/latest/260x190/{nbaId}.png"
+								src={`https://cdn.nba.com/headshots/nba/latest/260x190/${nbaId}.png`}
 								alt=""
 								class="headshot-img"
-								onerror={() => { imgFailed = true; }}
+								onerror={() => {
+									imgFailed = true;
+								}}
 							/>
 						{:else}
 							<div class="headshot-placeholder">
@@ -214,12 +206,8 @@
 
 			<div class="sidebar-section">
 				<label class="sidebar-label" for="talent-trend-select">Talent Trend</label>
-				<select
-					id="talent-trend-select"
-					class="sidebar-select"
-					bind:value={talentType}
-				>
-					{#each TALENT_OPTIONS as opt}
+				<select id="talent-trend-select" class="sidebar-select" bind:value={talentType}>
+					{#each TALENT_OPTIONS as opt (opt.value)}
 						<option value={opt.value}>{opt.label}</option>
 					{/each}
 				</select>
@@ -228,7 +216,7 @@
 			<div class="sidebar-section">
 				<p class="sidebar-label">Talent Percentiles</p>
 				<div class="percentile-checkboxes">
-					{#each PERCENTILE_OPTIONS as opt}
+					{#each PERCENTILE_OPTIONS as opt (opt.value)}
 						<label class="checkbox-label">
 							<input
 								type="checkbox"
@@ -243,42 +231,43 @@
 		</aside>
 
 		<div class="profile-content">
-			{#if loading}
-				<div class="loading">Loading player data...</div>
-			{:else if error}
-				<div class="error-msg">{error}</div>
-			{:else if playerInfo}
+			{#if playerInfo}
+				<div class="chart-panel">
+					<TalentTrendChart
+						rows={historyRows}
+						{talentType}
+						playerName={playerInfo.player_name}
+					/>
+					{#if historyMeta.truncated}
+						<p class="history-note">
+							Showing the first {historyMeta.maxRows} rows of career history.
+						</p>
+					{/if}
+				</div>
+
+				{#if percentilesLoading}
 					<div class="chart-panel">
-						<TalentTrendChart
-							rows={historyRows}
-							{talentType}
+						<div class="loading">Loading percentile context...</div>
+					</div>
+				{:else if percentileNotice}
+					<div class="chart-panel">
+						<p class="percentile-notice">{percentileNotice}</p>
+					</div>
+				{:else if allActivePlayers.length > 0}
+					<div class="chart-panel">
+						<TalentPercentilesChart
 							playerName={playerInfo.player_name}
+							position={playerInfo.position}
+							date={currentDate}
+							{percentiles}
+							selectedMetrics={selectedPercentileMetrics}
 						/>
 					</div>
-
-					{#if percentilesLoading}
-						<div class="chart-panel">
-							<div class="loading">Loading percentile context...</div>
-						</div>
-					{:else if percentileNotice}
-						<div class="chart-panel">
-							<p class="percentile-notice">{percentileNotice}</p>
-						</div>
-					{:else if allActivePlayers.length > 0}
-						<div class="chart-panel">
-							<TalentPercentilesChart
-								playerName={playerInfo.player_name}
-								position={playerInfo.position}
-								date={currentDate}
-								{percentiles}
-								selectedMetrics={selectedPercentileMetrics}
-							/>
-						</div>
-					{/if}
 				{/if}
-			</div>
+			{/if}
 		</div>
 	</div>
+</div>
 
 <style>
 	.profile-layout {
@@ -426,6 +415,12 @@
 	.percentile-notice {
 		color: var(--text-muted);
 		font-size: 13px;
+	}
+
+	.history-note {
+		margin-top: 12px;
+		color: var(--text-muted);
+		font-size: 12px;
 	}
 
 	@media (max-width: 768px) {
