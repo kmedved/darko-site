@@ -361,6 +361,7 @@
         color: var(--text-muted);
         font-weight: 400;
         font-size: 12px;
+        margin-left: 4px;
     }
 
     .team {
