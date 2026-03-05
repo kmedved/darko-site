@@ -440,6 +440,15 @@
     .pct.zero { color: var(--text-muted); }
 
     @media (max-width: 768px) {
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .page-action-btn {
+            display: none;
+        }
+
         th {
             position: static;
         }

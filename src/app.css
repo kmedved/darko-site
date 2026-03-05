@@ -118,7 +118,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
-    overflow-x: clip;
+    overflow-x: hidden;
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-sans);
@@ -150,7 +150,7 @@ nav {
     z-index: 100;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    overflow-x: clip;
+    overflow-x: hidden;
     overflow-y: visible;
 }
 
