@@ -81,6 +81,10 @@
             } else {
                 await fetchPair({ clearPairOnError: true });
             }
+
+            if (showLeaderboard) {
+                void refreshLeaderboard();
+            }
             lastResult = null;
         } catch (e) {
             errorMsg = e?.message || 'Failed to record vote';
@@ -201,7 +205,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {#each leaderboard as player, i}
+                            {#each leaderboard as player, i (player.nba_id ?? i)}
                                 <tr>
                                     <td class="col-rk">{i + 1}</td>
                                     <td class="col-name">

@@ -766,24 +766,21 @@ export async function recordVote(winnerId, loserId) {
 }
 
 export async function getEloLeaderboard(limit = 50) {
-    const key = cacheKey('eloLeaderboard', String(limit));
-    return runCached(key, CACHE_MS.eloLeaderboard, async () => {
-        const { data, error } = await supabase
-            .from('elo_ratings')
-            .select('nba_id, elo_rating, total_comparisons, wins, losses')
-            .order('elo_rating', { ascending: false })
-            .limit(limit);
+    const { data, error } = await supabase
+        .from('elo_ratings')
+        .select('nba_id, elo_rating, total_comparisons, wins, losses')
+        .order('elo_rating', { ascending: false })
+        .limit(limit);
 
-        if (error) throw error;
+    if (error) throw error;
 
-        const ids = (data || []).map((r) => r.nba_id);
-        const playersMap = await getPlayersMapByIds(ids);
+    const ids = (data || []).map((r) => r.nba_id);
+    const playersMap = await getPlayersMapByIds(ids);
 
-        return (data || []).map((r) => ({
-            ...r,
-            player_name: playersMap.get(r.nba_id)?.player_name ?? null,
-            position: normalizePosition(playersMap.get(r.nba_id)?.position ?? null),
-            current_team: playersMap.get(r.nba_id)?.current_team ?? null
-        }));
-    });
+    return (data || []).map((r) => ({
+        ...r,
+        player_name: playersMap.get(r.nba_id)?.player_name ?? null,
+        position: normalizePosition(playersMap.get(r.nba_id)?.position ?? null),
+        current_team: playersMap.get(r.nba_id)?.current_team ?? null
+    }));
 }
