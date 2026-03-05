@@ -3,6 +3,7 @@
 	import { loess } from '$lib/utils/loess.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import { getChartLayout, getSeasonTickStep, getAgeTickCount } from '$lib/utils/chartLayout.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
 	let {
@@ -148,7 +149,8 @@
 		const allRows = preparedPlayers.flatMap((entry) => entry.rows);
 		if (allRows.length === 0) return;
 
-		const margin = { top: 50, right: 30, bottom: 65, left: 60 };
+		const layout = getChartLayout(width);
+		const { isMobile, margin } = layout;
 		const w = width - margin.left - margin.right;
 		const h = HEIGHT - margin.top - margin.bottom;
 
@@ -246,13 +248,13 @@
 			const minYear = d3.min(allRows, (r) => r.row._seasonIndex);
 			const maxYear = d3.max(allRows, (r) => r.row._seasonIndex);
 			const span = (maxYear || 0) - (minYear || 0);
-			const step = span > 15 ? 5 : span > 8 ? 2 : 1;
+			const step = getSeasonTickStep(span, isMobile);
 			const tickVals = d3.range(minYear, maxYear + 1, step);
 			xAxisCall = xAxisCall.tickValues(tickVals).tickFormat((d) => String(d));
 		} else if (timeScale === 'age') {
-			xAxisCall = xAxisCall.ticks(12).tickFormat((d) => (Number.isInteger(d) ? d : ''));
+			xAxisCall = xAxisCall.ticks(getAgeTickCount(isMobile)).tickFormat((d) => (Number.isInteger(d) ? d : ''));
 		} else {
-			xAxisCall = xAxisCall.ticks(8);
+			xAxisCall = xAxisCall.ticks(layout.xTicks);
 		}
 
 		const xAxisG = g
@@ -263,7 +265,7 @@
 		xAxisG
 			.selectAll('.tick text')
 			.style('fill', 'var(--text-muted)')
-			.attr('font-size', '11px');
+			.attr('font-size', layout.tickFontSize);
 		xAxisG
 			.selectAll('.tick line')
 			.attr('stroke', 'var(--border, #555)');
@@ -288,7 +290,7 @@
 			.text('@kmedved | www.darko.app | @anpatt7');
 
 		// Y axis
-		const yAxis = d3.axisLeft(y).ticks(8);
+		const yAxis = d3.axisLeft(y).ticks(layout.yTicks);
 		if (MONEY_METRICS.has(talentType)) {
 			yAxis.tickFormat((d) => `$${(d / 1e6).toFixed(0)}M`);
 		}

@@ -11,9 +11,11 @@
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
+    import LegacyLeaderboard from '$lib/components/LegacyLeaderboard.svelte';
 
     let { data } = $props();
 
+    let viewMode = $state('standard');
     let sortColumn = $state('_rank');
     let sortDirection = $state('asc');
 
@@ -150,20 +152,28 @@
                 <p>Daily Player Metrics for every NBA player, updated nightly.</p>
             </div>
             <div class="page-header-actions">
-                <button
-                    class="page-action-btn"
-                    type="button"
-                    onclick={exportPlayersCsv}
-                    disabled={players.length === 0}
-                >
-                    Download CSV
-                </button>
+                <div class="view-toggle">
+                    <button type="button" class:active={viewMode === 'standard'} onclick={() => (viewMode = 'standard')}>Standard</button>
+                    <button type="button" class:active={viewMode === 'legacy'} onclick={() => (viewMode = 'legacy')}>Legacy</button>
+                </div>
+                {#if viewMode === 'standard'}
+                    <button
+                        class="page-action-btn"
+                        type="button"
+                        onclick={exportPlayersCsv}
+                        disabled={players.length === 0}
+                    >
+                        Download CSV
+                    </button>
+                {/if}
             </div>
         </div>
     </div>
 
     {#if players.length === 0}
         <div class="empty-state">No players are currently available.</div>
+    {:else if viewMode === 'legacy'}
+        <LegacyLeaderboard {players} />
     {:else}
         <div class="table-wrapper">
             <table>
@@ -387,6 +397,39 @@
     th.active .sort-indicator {
         color: var(--accent);
         opacity: 1;
+    }
+
+    .view-toggle {
+        display: flex;
+        gap: 0;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+    }
+
+    .view-toggle button {
+        padding: 7px 16px;
+        background: var(--bg-elevated);
+        border: none;
+        color: var(--text-muted);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.12s;
+    }
+
+    .view-toggle button:first-child {
+        border-right: 1px solid var(--border);
+    }
+
+    .view-toggle button.active {
+        background: var(--accent);
+        color: white;
+    }
+
+    .view-toggle button:hover:not(.active) {
+        background: var(--bg-hover);
     }
 
     .pos { color: var(--positive); }

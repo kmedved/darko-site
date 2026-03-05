@@ -8,11 +8,13 @@
 - For table sorting, use `src/lib/utils/sortableTable.js` and `getSortedRows` with component-level `sortColumn`/`sortDirection` state.
 - For data tables, include CSV export via `exportCsvRows` and page-appropriate schemas in `src/lib/utils/csvPresets.js`.
 - Sticky tables: `nav` has a sticky height of `var(--nav-sticky-offset)` (210 px), so sticky `<th>` rows use `top: var(--nav-sticky-offset)`.
-  - **NEVER** add `overflow-x: auto` (or `scroll`) to `.table-wrapper` — the CSS spec normalises `overflow-y` to `auto` as well, creating a scroll container that **breaks `position: sticky` on `<th>`** (headers scroll away instead of sticking). Remove it if you see it.
-  - Wide tables are clipped by the body's `overflow-x: clip`; on narrow screens, hide columns via responsive CSS (`display: none` at breakpoints) instead.
+  - **NEVER** add `overflow-x: auto` (or `scroll`) to `.table-wrapper` **at desktop widths** — the CSS spec normalises `overflow-y` to `auto` as well, creating a scroll container that **breaks `position: sticky` on `<th>`** (headers scroll away instead of sticking). Remove it if you see it.
+  - **Exception — mobile breakpoints**: When `<th>` already has `position: static` (e.g. inside `@media (max-width: 768px)`), `overflow-x: auto` on the wrapper is safe and should be used to enable horizontal scrolling. The Legacy leaderboard (`LegacyLeaderboard.svelte`) uses this pattern. Only add `overflow-x: auto` **inside** the same media query where sticky is disabled.
+  - Wide tables on desktop are clipped by the body's `overflow-x: clip`; on narrow screens, either hide columns via responsive CSS (`display: none` at breakpoints) or use horizontal scroll (see exception above).
   - **Never** use `box-shadow: 0 calc(-1 * var(--nav-sticky-offset)) …` on `<th>` to fill the gap — it gets clipped by overflow containers.
   - **Never** add a `.sticky-header-bg` (or similar gap-fill div) before `.table-wrapper` — its height + negative margin hides the first rows of the table. The nav's own background already covers the 0–210 px area; no extra gap-fill element is needed.
 - In D3/SVG chart rendering, avoid hardcoded color literals; prefer CSS variables (`--text`, `--text-muted`, `--border-subtle`) so theme contrast remains correct.
+- D3 charts must be mobile-responsive: when `svgEl.clientWidth < 500`, reduce margins (left/right), reduce tick counts (`ticks(5)` instead of `ticks(8)`), and use smaller tick label font sizes. `TrajectoryChart.svelte` uses an `isMobile` flag derived from the SVG width for this. Failing to reduce ticks causes overlapping x-axis labels on narrow viewports.
 - Trajectory / trend charts (`TrajectoryChart.svelte`, `TalentTrendChart.svelte`) filter out rows where the selected metric is null (`getY(row)` returns null → row excluded by `prepareRows()`). A column that is only partially populated in the pipeline (e.g. `sal_market_fixed` for recent seasons only) will appear as a sparse chart — this is correct behaviour and **not** a frontend bug. If a chart shows "only a handful of games," check column coverage in Supabase before modifying frontend code.
 - When adding a new column to the data pipeline:
   1. Add it to `RATING_COLUMNS` in `src/lib/server/supabase.js` or Supabase won't return it.
@@ -29,6 +31,7 @@
 - Standings page implementation: `src/routes/standings/+page.svelte`
 - Conference chart component: `src/lib/components/ConferenceChart.svelte`
 - Trajectory chart component: `src/lib/components/TrajectoryChart.svelte`
+- Legacy leaderboard (dense table view): `src/lib/components/LegacyLeaderboard.svelte`
 - Player profile trend chart: `src/lib/components/TalentTrendChart.svelte`
 - Client-side API helpers: `src/lib/api.js`
 - Metric tooltip definitions: `src/lib/utils/metricDefinitions.js`
