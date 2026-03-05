@@ -453,19 +453,6 @@
             position: static;
         }
 
-        table th:nth-child(n + 9),
-        table td:nth-child(n + 9) {
-            display: none;
-        }
-    }
-
-    @media (max-width: 640px) {
-        table th:nth-child(n + 6),
-        table td:nth-child(n + 6) {
-            display: none;
-        }
-
         th, td { padding: 6px 8px; }
-        .team { display: none; }
     }
 </style>
