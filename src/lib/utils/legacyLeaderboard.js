@@ -3,25 +3,9 @@
  * Extracted from LegacyLeaderboard.svelte for testability.
  */
 
-export const LEGACY_COLUMNS = [
-	{ key: 'team_name', label: 'Team', type: 'text', align: 'left' },
-	{ key: 'player_name', label: 'Player', type: 'text', align: 'left' },
-	{ key: '_experience', label: 'Experience', type: 'text', align: 'center' },
-	{ key: 'dpm', label: 'DPM', type: 'number', align: 'right', format: 'signed' },
-	{ key: 'o_dpm', label: 'O-DPM', type: 'number', align: 'right', format: 'signed' },
-	{ key: 'd_dpm', label: 'D-DPM', type: 'number', align: 'right', format: 'signed' },
-	{ key: 'box_dpm', label: 'Box DPM', type: 'number', align: 'right', format: 'signed' },
-	{ key: 'box_odpm', label: 'Box O-DPM', type: 'number', align: 'right', format: 'signed' },
-	{ key: 'box_ddpm', label: 'Box D-DPM', type: 'number', align: 'right', format: 'signed' },
-	{ key: 'x_fga_100', label: 'FGA/100', type: 'number', align: 'right' },
-	{ key: 'x_fg_pct', label: 'FG%', type: 'number', align: 'right', format: 'percent' },
-	{ key: 'x_fg3a_100', label: 'FG3A/100', type: 'number', align: 'right' },
-	{ key: 'x_fg3_pct', label: 'FG3%', type: 'number', align: 'right', format: 'percent' },
-	{ key: '_fg3a_rate', label: 'FG3ARate%', type: 'number', align: 'right', format: 'percent' },
-	{ key: 'x_fta_100', label: 'FTA/100', type: 'number', align: 'right' },
-	{ key: 'x_ft_pct', label: 'FT%', type: 'number', align: 'right', format: 'percent' },
-	{ key: '_fta_rate', label: 'FTARate%', type: 'number', align: 'right', format: 'percent' }
-];
+import { LEADERBOARD_COLUMNS } from './leaderboardColumns.js';
+
+export const LEGACY_COLUMNS = LEADERBOARD_COLUMNS;
 
 /** Derive _experience, _fg3a_rate, _fta_rate from raw player data. */
 export function enrichPlayer(p) {

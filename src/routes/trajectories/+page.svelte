@@ -35,15 +35,65 @@
 		yAxisMax = Number.isFinite(v) ? v : null;
 	}
 
-	const MAX_PLAYERS = 5;
-
 	const PLAYER_COLORS = [
 		'#5b8def',
 		'#ef4444',
 		'#34d399',
 		'#f59e0b',
-		'#a78bfa'
+		'#a78bfa',
+		'#06b6d4',
+		'#f97316',
+		'#22c55e',
+		'#ec4899',
+		'#eab308'
 	];
+
+	function hslToHex(h, s, l) {
+		const saturation = s / 100;
+		const lightness = l / 100;
+		const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+		const huePrime = h / 60;
+		const x = chroma * (1 - Math.abs((huePrime % 2) - 1));
+		let red = 0;
+		let green = 0;
+		let blue = 0;
+
+		if (huePrime >= 0 && huePrime < 1) {
+			red = chroma;
+			green = x;
+		} else if (huePrime < 2) {
+			red = x;
+			green = chroma;
+		} else if (huePrime < 3) {
+			green = chroma;
+			blue = x;
+		} else if (huePrime < 4) {
+			green = x;
+			blue = chroma;
+		} else if (huePrime < 5) {
+			red = x;
+			blue = chroma;
+		} else {
+			red = chroma;
+			blue = x;
+		}
+
+		const match = lightness - chroma / 2;
+		const toHex = (value) =>
+			Math.round((value + match) * 255)
+				.toString(16)
+				.padStart(2, '0');
+
+		return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+	}
+
+	function getPlayerColor(index) {
+		const presetColor = PLAYER_COLORS[index];
+		if (presetColor) return presetColor;
+
+		const hue = (index * 137.508) % 360;
+		return hslToHex(hue, 68, 56);
+	}
 
 	const talentTypes = [
 		{ key: 'dpm', label: 'DPM' },
@@ -123,7 +173,7 @@
 					nba_id: nbaId,
 					player_name: rows[0].player_name,
 					team_name: rows[0].team_name,
-					color: PLAYER_COLORS[colorIndex % PLAYER_COLORS.length],
+					color: getPlayerColor(colorIndex),
 					rows
 				});
 			}
@@ -137,7 +187,7 @@
 						merged.push(player);
 					}
 				}
-				selectedPlayers = merged.slice(0, MAX_PLAYERS);
+				selectedPlayers = merged;
 			}
 		} finally {
 			pendingLoads = Math.max(0, pendingLoads - uniqueIds.length);
@@ -149,7 +199,7 @@
 		if (initialLoadDone) return;
 		const ids = $page.url.searchParams.get('ids');
 		if (ids) {
-			const idList = ids.split(',').slice(0, MAX_PLAYERS);
+			const idList = ids.split(',');
 			preloadPlayersById(idList);
 		} else {
 			loadRandomPlayer();
@@ -175,10 +225,9 @@
 
 	async function loadPlayerById(nbaId) {
 		if (selectedPlayers.some((p) => p.nba_id === nbaId)) return;
-		if (selectedPlayers.length >= MAX_PLAYERS) return;
 
 		const colorIndex = selectedPlayers.length;
-		const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+		const color = getPlayerColor(colorIndex);
 
 		pendingLoads += 1;
 		error = null;
@@ -206,8 +255,6 @@
 	}
 
 	async function loadRandomPlayer() {
-		if (selectedPlayers.length >= MAX_PLAYERS) return;
-
 		pendingLoads += 1;
 		error = null;
 		try {
@@ -229,10 +276,9 @@
 
 	async function addPlayer(player) {
 		if (selectedPlayers.some((p) => p.nba_id === player.nba_id)) return;
-		if (selectedPlayers.length >= MAX_PLAYERS) return;
 
 		const colorIndex = selectedPlayers.length;
-		const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+		const color = getPlayerColor(colorIndex);
 
 		pendingLoads += 1;
 		error = null;
@@ -265,7 +311,7 @@
 			.filter((p) => p.nba_id !== nbaId)
 			.map((p, i) => ({
 				...p,
-				color: PLAYER_COLORS[i % PLAYER_COLORS.length]
+				color: getPlayerColor(i)
 			}));
 	}
 </script>
@@ -277,14 +323,14 @@
 <div class="container">
 	<div class="page-header">
 		<h1>Player career trajectories</h1>
-		<p>Compare career arcs for up to {MAX_PLAYERS} players.</p>
+		<p>Compare career arcs for any number of players.</p>
 	</div>
 
 	<div class="trajectory-layout">
 		<div class="trajectory-controls">
 			<fieldset class="control-group">
 				<legend class="control-label">Time Scale</legend>
-				{#each timeScaleOptions as opt}
+				{#each timeScaleOptions as opt (opt.key)}
 					<label class="radio-label">
 						<input
 							type="radio"
@@ -306,7 +352,7 @@
 					class="control-select"
 					bind:value={talentType}
 				>
-					{#each talentTypes as tt}
+					{#each talentTypes as tt (tt.key)}
 						<option value={tt.key}>{tt.label}</option>
 					{/each}
 				</select>
@@ -329,9 +375,7 @@
 			</div>
 
 			<div class="control-group">
-				<span class="control-label"
-					>Select Players to Compare (Max {MAX_PLAYERS})</span
-				>
+				<span class="control-label">Select Players to Compare</span>
 				<div class="player-chips-input">
 					{#each selectedPlayers as p (p.nba_id)}
 						<span
@@ -350,12 +394,10 @@
 						</span>
 					{/each}
 				</div>
-				{#if selectedPlayers.length < MAX_PLAYERS}
-					<AllPlayerSearch
-						onSelect={addPlayer}
-						exclude={excludeIds}
-					/>
-				{/if}
+				<AllPlayerSearch
+					onSelect={addPlayer}
+					exclude={excludeIds}
+				/>
 			</div>
 		</div>
 

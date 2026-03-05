@@ -1,15 +1,16 @@
 <script>
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import {
-        formatSignedMetric,
-        formatPercent,
-        formatFixed
-    } from '$lib/utils/csvPresets.js';
+        formatLeaderboardCell,
+        getLeaderboardCellValue,
+        leaderboardSortConfig
+    } from '$lib/utils/leaderboardColumns.js';
     import {
         LEGACY_COLUMNS,
         enrichPlayer,
         filterPlayers
     } from '$lib/utils/legacyLeaderboard.js';
+    import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
 
     let { players = [] } = $props();
@@ -20,10 +21,6 @@
 
     const columns = LEGACY_COLUMNS;
 
-    const sortConfig = Object.fromEntries(
-        columns.map((c) => [c.key, { type: c.type === 'text' ? 'text' : 'number' }])
-    );
-
     const enrichedPlayers = $derived.by(() => players.map(enrichPlayer));
 
     const filteredPlayers = $derived.by(() =>
@@ -31,16 +28,12 @@
     );
 
     const sortedPlayers = $derived.by(() =>
-        getSortedRows(filteredPlayers, { sortColumn, sortDirection, sortConfigs: sortConfig })
+        getSortedRows(filteredPlayers, {
+            sortColumn,
+            sortDirection,
+            sortConfigs: leaderboardSortConfig
+        })
     );
-
-    function formatCell(col, value) {
-        if (value === null || value === undefined) return '—';
-        if (col.format === 'percent') return formatPercent(value);
-        if (col.format === 'signed') return formatSignedMetric(value);
-        if (col.type === 'number') return formatFixed(value, 1);
-        return String(value || '—');
-    }
 
     function sortGlyph(colKey) {
         if (sortColumn !== colKey) return '↕';
@@ -53,7 +46,7 @@
             return;
         }
         sortColumn = colKey;
-        sortDirection = colKey === 'player_name' || colKey === 'team_name' || colKey === '_experience' ? 'asc' : 'desc';
+        sortDirection = colKey === '_rank' || colKey === 'player_name' || colKey === 'team_name' ? 'asc' : 'desc';
     }
 
     function setFilter(colKey, value) {
@@ -70,8 +63,14 @@
                         class="sortable {col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : ''} {sortColumn === col.key ? 'active' : ''}"
                         onclick={() => toggleSort(col.key)}
                     >
-                        {col.label}
-                        <span class="sort-indicator">{sortGlyph(col.key)}</span>
+                        <span class="header-label-wrap">
+                            <span>{col.label}</span>
+                            {#if col.metricKey}
+                                <span class="header-tooltip-trigger" aria-hidden="true">?</span>
+                                <span class="header-tooltip">{getMetricDefinition(col.metricKey)}</span>
+                            {/if}
+                            <span class="sort-indicator">{sortGlyph(col.key)}</span>
+                        </span>
                     </th>
                 {/each}
             </tr>
@@ -94,12 +93,16 @@
                     <td class="empty-row" colspan={columns.length}>No matching players.</td>
                 </tr>
             {:else}
-                {#each sortedPlayers as player (player.nba_id)}
+                {#each sortedPlayers as player, index (player.nba_id)}
                     <tr>
                         {#each columns as col (col.key)}
+                            {@const value = getLeaderboardCellValue(player, col, index)}
                             {#if col.key === 'player_name'}
                                 <td class="player-cell">
                                     <a href="/player/{player.nba_id}">{player.player_name || '—'}</a>
+                                    {#if player.position}
+                                        <span class="pos-label"> ({player.position})</span>
+                                    {/if}
                                 </td>
                             {:else if col.key === 'team_name'}
                                 <td class="team-cell">
@@ -110,8 +113,10 @@
                                     {/if}
                                 </td>
                             {:else}
-                                <td class={col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : ''}>
-                                    {formatCell(col, player[col.key])}
+                                <td
+                                    class="{col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : ''} {col.key === '_rank' ? 'rank-cell' : ''}"
+                                >
+                                    {formatLeaderboardCell(col, value)}
                                 </td>
                             {/if}
                         {/each}
@@ -180,6 +185,68 @@
         user-select: none;
     }
 
+    .header-label-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .header-row th:hover,
+    .header-row th:focus-within {
+        z-index: 110;
+    }
+
+    .header-row th:hover .header-tooltip,
+    .header-row th:focus-within .header-tooltip {
+        opacity: 1;
+        visibility: visible;
+        transform: translate(-50%, 0);
+    }
+
+    .header-tooltip-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        border: 1px solid var(--border);
+        background: var(--bg-surface);
+        box-shadow: inset 0 0 0 1px var(--border);
+        color: var(--text-muted);
+        font-size: 8px;
+        line-height: 1;
+        opacity: 0.9;
+    }
+
+    .header-tooltip {
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 8px);
+        transform: translate(-50%, 4px);
+        transform-origin: bottom center;
+        width: max-content;
+        max-width: 240px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-surface);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0;
+        line-height: 1.35;
+        text-transform: none;
+        white-space: normal;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.12s ease, transform 0.12s ease;
+        z-index: 30;
+    }
+
     th.sortable:hover {
         background: var(--bg-hover);
     }
@@ -224,6 +291,12 @@
         font-size: 12px;
     }
 
+    .pos-label {
+        color: var(--text-muted);
+        font-weight: 400;
+        font-size: 11px;
+    }
+
     .player-cell a {
         color: var(--text);
     }
@@ -245,6 +318,10 @@
     .team-cell a:hover {
         color: var(--accent);
         text-decoration: underline;
+    }
+
+    .rank-cell {
+        color: var(--text-muted);
     }
 
     tr:hover td {

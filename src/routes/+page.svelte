@@ -2,12 +2,14 @@
     import {
         exportCsvRows,
         leaderboardCsvColumns,
-        formatSignedMetric,
-        formatFixed,
-        formatPercent,
-        formatMillions,
-        formatSignedMillions
+        formatFixed
     } from '$lib/utils/csvPresets.js';
+    import {
+        formatLeaderboardCell,
+        getLeaderboardCellValue,
+        LEADERBOARD_COLUMNS,
+        leaderboardSortConfig
+    } from '$lib/utils/leaderboardColumns.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
@@ -21,52 +23,13 @@
     let sortDirection = $state('asc');
 
     const players = $derived(data.players || []);
-
-    const playerSortConfig = {
-        _rank: { type: 'number' },
-        player_name: { type: 'text' },
-        team_name: { type: 'text' },
-        dpm: { type: 'number' },
-        o_dpm: { type: 'number' },
-        d_dpm: { type: 'number' },
-        box_dpm: { type: 'number' },
-        on_off_dpm: { type: 'number' },
-        x_minutes: { type: 'number' },
-        x_pace: { type: 'number' },
-        x_pts_100: { type: 'number' },
-        x_ast_100: { type: 'number' },
-        x_fg_pct: { type: 'number' },
-        x_fg3_pct: { type: 'number' },
-        x_ft_pct: { type: 'number' },
-        sal_market_fixed: { type: 'number' },
-        surplus_value: { type: 'number' }
-    };
-
-    const playerColumns = [
-        { key: '_rank', label: '#', alignClass: 'rank', dataType: 'number' },
-        { key: 'player_name', label: 'Player', alignClass: 'name', dataType: 'text' },
-        { key: 'team_name', label: 'Team', alignClass: 'team', dataType: 'text' },
-        { key: 'dpm', label: 'DPM', alignClass: 'num', dataType: 'number', metricKey: 'dpm' },
-        { key: 'o_dpm', label: 'Offense', alignClass: 'num', dataType: 'number', metricKey: 'o_dpm' },
-        { key: 'd_dpm', label: 'Defense', alignClass: 'num', dataType: 'number', metricKey: 'd_dpm' },
-        { key: 'sal_market_fixed', label: 'Fair Salary', alignClass: 'num', dataType: 'number', metricKey: 'sal_market_fixed' },
-        { key: 'box_dpm', label: 'Box', alignClass: 'num', dataType: 'number', metricKey: 'box_dpm' },
-        { key: 'on_off_dpm', label: 'On/Off', alignClass: 'num', dataType: 'number', metricKey: 'on_off_dpm' },
-        { key: 'x_minutes', label: 'MPG', alignClass: 'num', dataType: 'number', metricKey: 'x_minutes' },
-        { key: 'x_pace', label: 'Pace', alignClass: 'num', dataType: 'number', metricKey: 'x_pace' },
-        { key: 'x_pts_100', label: 'Pts/100', alignClass: 'num', dataType: 'number', metricKey: 'x_pts_100' },
-        { key: 'x_ast_100', label: 'Ast/100', alignClass: 'num', dataType: 'number', metricKey: 'x_ast_100' },
-        { key: 'x_fg_pct', label: 'FG%', alignClass: 'num', dataType: 'number', metricKey: 'x_fg_pct' },
-        { key: 'x_fg3_pct', label: '3P%', alignClass: 'num', dataType: 'number', metricKey: 'x_fg3_pct' },
-        { key: 'x_ft_pct', label: 'FT%', alignClass: 'num', dataType: 'number', metricKey: 'x_ft_pct' },
-        { key: 'surplus_value', label: 'Surplus', alignClass: 'num', dataType: 'number', metricKey: 'surplus_value' }
-    ];
+    const playerColumns = LEADERBOARD_COLUMNS;
 
     const sortedPlayers = $derived.by(() =>
         getSortedRows(players, {
             sortColumn,
             sortDirection,
-            sortConfigs: playerSortConfig
+            sortConfigs: leaderboardSortConfig
         })
     );
 
@@ -119,6 +82,16 @@
         }
 
         return signClass(n);
+    }
+
+    function cellClass(column, value) {
+        if (column.key === '_rank') return 'rank';
+        if (column.key === 'player_name') return 'name';
+        if (column.key === 'team_name') return 'team';
+        if (column.alignClass !== 'num') return column.alignClass;
+        if (column.key === 'surplus_value') return `num ${signClass(value)}`.trim();
+        if (column.key === 'sal_market_fixed') return 'num';
+        return `num ${statClass(column.key, value)}`.trim();
     }
 
     const leaderboardCsvColumnsForExport = leaderboardCsvColumns
@@ -178,7 +151,7 @@
             <table>
                 <thead>
                     <tr>
-                        {#each playerColumns as column}
+                        {#each playerColumns as column (column.key)}
                             <th
                                 class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
                                 onclick={() => toggleSort(column.key)}
@@ -196,33 +169,28 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each sortedPlayers as player, i}
+                    {#each sortedPlayers as player, index (player.nba_id)}
                         <tr>
-                            <td class="rank">{i + 1}</td>
-                            <td class="name">
-                                <a href="/player/{player.nba_id}">{player.player_name}</a>{#if player.position}<span class="pos-label"> ({player.position})</span>{/if}
-                            </td>
-                            <td class="team">
-                                {#if player.team_name}
-                                    <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
+                            {#each playerColumns as column (column.key)}
+                                {@const value = getLeaderboardCellValue(player, column, index)}
+                                {#if column.key === 'player_name'}
+                                    <td class={cellClass(column, value)}>
+                                        <a href="/player/{player.nba_id}">{player.player_name}</a>{#if player.position}<span class="pos-label"> ({player.position})</span>{/if}
+                                    </td>
+                                {:else if column.key === 'team_name'}
+                                    <td class={cellClass(column, value)}>
+                                        {#if player.team_name}
+                                            <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
+                                        {:else}
+                                            —
+                                        {/if}
+                                    </td>
                                 {:else}
-                                    —
+                                    <td class={cellClass(column, value)}>
+                                        {column.key === 'x_minutes' ? fmtMpg(value) : formatLeaderboardCell(column, value)}
+                                    </td>
                                 {/if}
-                            </td>
-                            <td class="num {statClass('dpm', player.dpm)}">{formatSignedMetric(player.dpm)}</td>
-                            <td class="num {statClass('o_dpm', player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
-                            <td class="num {statClass('d_dpm', player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
-                            <td class="num">{formatMillions(player.sal_market_fixed)}</td>
-                            <td class="num {statClass('box_dpm', player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
-                            <td class="num {statClass('on_off_dpm', player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
-                            <td class="num {statClass('x_minutes', player.x_minutes)}">{fmtMpg(player.x_minutes)}</td>
-                            <td class="num {statClass('x_pace', player.x_pace)}">{formatFixed(player.x_pace, 1)}</td>
-                            <td class="num {statClass('x_pts_100', player.x_pts_100)}">{formatFixed(player.x_pts_100, 1)}</td>
-                            <td class="num {statClass('x_ast_100', player.x_ast_100)}">{formatFixed(player.x_ast_100, 1)}</td>
-                            <td class="num {statClass('x_fg_pct', player.x_fg_pct)}">{formatPercent(player.x_fg_pct)}</td>
-                            <td class="num {statClass('x_fg3_pct', player.x_fg3_pct)}">{formatPercent(player.x_fg3_pct)}</td>
-                            <td class="num {statClass('x_ft_pct', player.x_ft_pct)}">{formatPercent(player.x_ft_pct)}</td>
-                            <td class="num {signClass(player.surplus_value)}">{formatSignedMillions(player.surplus_value)}</td>
+                            {/each}
                         </tr>
                     {/each}
                 </tbody>
@@ -280,14 +248,14 @@
 
     th.has-tooltip:hover,
     th.has-tooltip:focus-within {
-        z-index: 25;
+        z-index: 110;
     }
 
     th.has-tooltip:hover .header-tooltip,
     th.has-tooltip:focus-within .header-tooltip {
         opacity: 1;
         visibility: visible;
-        transform: translate(-50%, -4px);
+        transform: translate(-50%, 0);
     }
 
     .header-tooltip-trigger {
@@ -309,8 +277,9 @@
     .header-tooltip {
         position: absolute;
         left: 50%;
-        top: 0;
-        transform: translate(-50%, -8px);
+        bottom: calc(100% + 8px);
+        transform: translate(-50%, 4px);
+        transform-origin: bottom center;
         width: max-content;
         max-width: 250px;
         white-space: normal;

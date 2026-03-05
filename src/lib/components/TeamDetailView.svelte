@@ -213,7 +213,7 @@
             <table>
                 <thead>
                     <tr>
-                        {#each teamPlayerColumns as column}
+                        {#each teamPlayerColumns as column (column.key)}
                             <th
                                 class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
                                 onclick={() => toggleSort(column.key)}
@@ -231,7 +231,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each sortedPlayers as player}
+                    {#each sortedPlayers as player (player.nba_id)}
                         <tr>
                             <td class="name">
                                 <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
@@ -392,14 +392,14 @@
 
     th.has-tooltip:hover,
     th.has-tooltip:focus-within {
-        z-index: 25;
+        z-index: 110;
     }
 
     th.has-tooltip:hover .header-tooltip,
     th.has-tooltip:focus-within .header-tooltip {
         opacity: 1;
         visibility: visible;
-        transform: translate(-50%, -4px);
+        transform: translate(-50%, 0);
     }
 
     .header-tooltip-trigger {
@@ -421,8 +421,9 @@
     .header-tooltip {
         position: absolute;
         left: 50%;
-        top: 0;
-        transform: translate(-50%, -8px);
+        bottom: calc(100% + 8px);
+        transform: translate(-50%, 4px);
+        transform-origin: bottom center;
         width: max-content;
         max-width: 250px;
         white-space: normal;

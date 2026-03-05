@@ -51,16 +51,17 @@ test('LEGACY_COLUMNS has 17 columns', () => {
 	assert.equal(LEGACY_COLUMNS.length, 17);
 });
 
-test('LEGACY_COLUMNS first two columns are Team and Player', () => {
-	assert.equal(LEGACY_COLUMNS[0].key, 'team_name');
+test('LEGACY_COLUMNS starts with rank, player, and team to match the standard leaderboard', () => {
+	assert.equal(LEGACY_COLUMNS[0].key, '_rank');
 	assert.equal(LEGACY_COLUMNS[1].key, 'player_name');
+	assert.equal(LEGACY_COLUMNS[2].key, 'team_name');
 });
 
-test('LEGACY_COLUMNS includes derived rate columns', () => {
+test('LEGACY_COLUMNS includes the standard salary and surplus columns', () => {
 	const keys = LEGACY_COLUMNS.map((c) => c.key);
-	assert.ok(keys.includes('_fg3a_rate'));
-	assert.ok(keys.includes('_fta_rate'));
-	assert.ok(keys.includes('_experience'));
+	assert.ok(keys.includes('sal_market_fixed'));
+	assert.ok(keys.includes('surplus_value'));
+	assert.ok(keys.includes('on_off_dpm'));
 });
 
 // --- enrichPlayer ---

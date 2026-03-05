@@ -287,7 +287,7 @@
                     value={pageSize}
                     onchange={(event) => setPageSize(Number.parseInt(event.currentTarget.value, 10))}
                 >
-                    {#each pageSizeOptions as option}
+                    {#each pageSizeOptions as option (option)}
                         <option value={option}>{option}</option>
                     {/each}
                 </select>
@@ -311,7 +311,7 @@
             <table>
                 <thead>
                     <tr class="header-row">
-                        {#each tableColumns as column}
+                        {#each tableColumns as column (column.key)}
                             <th
                                 class="sortable {column.align === 'right' ? 'align-right' : ''} {sortColumn === column.key ? 'active' : ''}"
                                 onclick={() => toggleSort(column.key)}
@@ -322,7 +322,7 @@
                         {/each}
                     </tr>
                     <tr class="filter-row">
-                        {#each tableColumns as column}
+                        {#each tableColumns as column (column.key)}
                             <th class={column.align === 'right' ? 'align-right' : ''}>
                                 <input
                                     type="text"
@@ -340,7 +340,7 @@
                             <td class="empty-row" colspan={tableColumns.length}>No matching rows.</td>
                         </tr>
                     {:else}
-                        {#each pageRows as row}
+                        {#each pageRows as row (row.nba_id)}
                             <tr
                                 class="data-row {activePlayerId === row.nba_id ? 'active-row' : ''}"
                                 role="button"
@@ -349,7 +349,7 @@
                                 onclick={() => setActivePlayer(row.nba_id)}
                                 onkeydown={(event) => handleRowKeydown(event, row.nba_id)}
                             >
-                                {#each tableColumns as column}
+                                {#each tableColumns as column (column.key)}
                                     <td
                                         class="{column.align === 'right' ? 'align-right' : ''} {getCellClass(column, row)}"
                                     >
@@ -676,14 +676,20 @@
             align-items: flex-start;
             gap: 8px;
         }
-
-        table th:nth-child(n + 12),
-        table td:nth-child(n + 12) {
-            display: none;
-        }
     }
 
-    @media (max-width: 768px) {
+    /* Touch/mobile scroll mode */
+    @media (max-width: 768px), ((hover: none) and (pointer: coarse) and (max-width: 1024px)), ((any-hover: none) and (any-pointer: coarse) and (max-width: 1024px)) {
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: max-content;
+            min-width: 100%;
+        }
+
         th {
             position: static;
         }
@@ -691,7 +697,17 @@
         .filter-row th {
             position: static;
         }
+    }
+    /* End touch/mobile scroll mode */
 
+    @media (max-width: 900px) and (hover: hover) and (pointer: fine) {
+        table th:nth-child(n + 12),
+        table td:nth-child(n + 12) {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) and (hover: hover) and (pointer: fine) {
         table th:nth-child(2),
         table td:nth-child(2),
         table th:nth-child(3),

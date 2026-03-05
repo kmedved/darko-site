@@ -243,7 +243,7 @@
             <table>
                 <thead>
                     <tr>
-                        {#each visibleStandingsColumns as column}
+                        {#each visibleStandingsColumns as column (column.key)}
                             <th
                                 class="{column.alignClass} {column.dataType === 'percent' ? 'pct' : ''} sortable {sortColumn === column.key ? 'active' : ''}"
                                 onclick={() => toggleSort(column.key)}
@@ -254,9 +254,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each sortedStandings as team}
+                    {#each sortedStandings as team (team.team_name)}
                         <tr>
-                            {#each visibleStandingsColumns as column}
+                            {#each visibleStandingsColumns as column (column.key)}
                                 <td class={getCellClass(column, team?.[column.key])}>
                                     {#if column.isTeam}
                                         <a href="/standings/{encodeURIComponent(team.team_name)}">{team.team_name}</a>
@@ -275,7 +275,7 @@
         <div class="chart-toolbar">
             <span class="chart-toolbar-label">Sort chart by:</span>
             <div class="chart-radio-group">
-                {#each chartSortOptions as option}
+                {#each chartSortOptions as option (option.value)}
                     <label class="chart-radio">
                         <input
                             type="radio"
@@ -453,14 +453,37 @@
     .pct.low { color: var(--text-secondary); }
     .pct.zero { color: var(--text-muted); }
 
-    @media (max-width: 1024px) {
+    /* Touch/mobile scroll mode */
+    @media (max-width: 768px), ((hover: none) and (pointer: coarse) and (max-width: 1024px)), ((any-hover: none) and (any-pointer: coarse) and (max-width: 1024px)) {
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: max-content;
+            min-width: 100%;
+        }
+
+        th {
+            position: static;
+        }
+
+        .table-toolbar {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+    /* End touch/mobile scroll mode */
+
+    @media (max-width: 1024px) and (hover: hover) and (pointer: fine) {
         table th:nth-child(n + 8),
         table td:nth-child(n + 8) {
             display: none;
         }
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 768px) and (hover: hover) and (pointer: fine) {
         table th:nth-child(n + 6),
         table td:nth-child(n + 6) {
             display: none;
