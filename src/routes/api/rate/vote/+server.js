@@ -28,11 +28,18 @@ export async function POST({ request }) {
     }
 
     try {
-        const [result, nextPair] = await Promise.all([
-            recordVote(winnerId, loserId),
-            getRandomPair()
-        ]);
-        return json({ result, nextPair });
+        const result = await recordVote(winnerId, loserId);
+
+        let nextPair = [];
+        let nextPairWarning = null;
+        try {
+            nextPair = await getRandomPair();
+        } catch (pairError) {
+            nextPair = [];
+            nextPairWarning = pairError?.message || 'Vote recorded, but failed to fetch next pair';
+        }
+
+        return json({ result, nextPair, nextPairWarning });
     } catch (e) {
         throw error(500, e?.message || 'Failed to record vote');
     }

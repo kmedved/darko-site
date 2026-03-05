@@ -16,34 +16,43 @@
         loadInitialPair();
     });
 
-    async function loadInitialPair() {
+    function isValidPair(value) {
+        return Array.isArray(value) && value.length === 2;
+    }
+
+    async function fetchPair(options = {}) {
+        const {
+            clearResult = false,
+            clearPairOnError = false
+        } = options;
+
         loading = true;
         errorMsg = null;
+        if (clearResult) {
+            lastResult = null;
+        }
+
         try {
             const res = await fetch('/api/rate/pair');
             if (!res.ok) throw new Error('Failed to load players');
             pair = await res.json();
         } catch (e) {
+            if (clearPairOnError) {
+                pair = [];
+            }
             errorMsg = e?.message || 'Failed to load players';
         } finally {
             loading = false;
         }
     }
 
+    async function loadInitialPair() {
+        await fetchPair();
+    }
+
     async function skip() {
         if (voting) return;
-        loading = true;
-        errorMsg = null;
-        lastResult = null;
-        try {
-            const res = await fetch('/api/rate/pair');
-            if (!res.ok) throw new Error('Failed to load players');
-            pair = await res.json();
-        } catch (e) {
-            errorMsg = e?.message || 'Failed to load players';
-        } finally {
-            loading = false;
-        }
+        await fetchPair({ clearResult: true });
     }
 
     async function vote(winnerId) {
@@ -63,8 +72,15 @@
             totalVotes += 1;
 
             await new Promise((resolve) => setTimeout(resolve, 600));
+            if (response?.nextPairWarning) {
+                errorMsg = response.nextPairWarning;
+            }
 
-            pair = response.nextPair;
+            if (isValidPair(response?.nextPair)) {
+                pair = response.nextPair;
+            } else {
+                await fetchPair({ clearPairOnError: true });
+            }
             lastResult = null;
         } catch (e) {
             errorMsg = e?.message || 'Failed to record vote';
@@ -352,8 +368,7 @@
     }
 
     .leaderboard-table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        margin-bottom: 8px;
     }
 
     .leaderboard-table {
@@ -423,6 +438,15 @@
         margin-left: 8px;
         font-size: 11px;
         color: var(--text-muted);
+    }
+
+    @media (max-width: 640px) {
+        .leaderboard-table th:nth-child(4),
+        .leaderboard-table td:nth-child(4),
+        .leaderboard-table th:nth-child(5),
+        .leaderboard-table td:nth-child(5) {
+            display: none;
+        }
     }
 
     @media (max-width: 768px) {

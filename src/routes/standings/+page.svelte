@@ -330,8 +330,6 @@
 
     .table-wrapper {
         margin-bottom: 32px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
     }
     .table-toolbar {
         display: flex;
@@ -454,4 +452,23 @@
     .pct.mid { color: var(--accent); }
     .pct.low { color: var(--text-secondary); }
     .pct.zero { color: var(--text-muted); }
+
+    @media (max-width: 1024px) {
+        table th:nth-child(n + 8),
+        table td:nth-child(n + 8) {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        table th:nth-child(n + 6),
+        table td:nth-child(n + 6) {
+            display: none;
+        }
+
+        .table-toolbar {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
 </style>

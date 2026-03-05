@@ -676,20 +676,31 @@
             align-items: flex-start;
             gap: 8px;
         }
+
+        table th:nth-child(n + 12),
+        table td:nth-child(n + 12) {
+            display: none;
+        }
     }
 
     @media (max-width: 768px) {
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
         th {
             position: static;
         }
 
         .filter-row th {
             position: static;
+        }
+
+        table th:nth-child(2),
+        table td:nth-child(2),
+        table th:nth-child(3),
+        table td:nth-child(3),
+        table th:nth-child(5),
+        table td:nth-child(5),
+        table th:nth-child(n + 9),
+        table td:nth-child(n + 9) {
+            display: none;
         }
     }
 </style>

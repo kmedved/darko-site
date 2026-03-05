@@ -29,3 +29,9 @@ Key details:
 ## Browsing Live DARKO.app
 The live site (darko.app) is a Shiny app — fully JS-rendered. `web_fetch` returns empty HTML.
 To inspect it, connect to the Chrome extension and use `read_page` (accessibility tree). Screenshots of the Chrome extension URL may fail, but `read_page` gives enough structural info.
+
+## MCP Servers
+You have access to:
+- **Svelte MCP**: Use to look up Svelte 5 runes, SvelteKit APIs, routing, load functions
+- **Supabase MCP**: Use to inspect the database schema, list tables, check migrations
+- **Vercel MCP**: Use to check deployment logs and look up Vercel docs

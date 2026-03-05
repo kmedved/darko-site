@@ -65,6 +65,14 @@ function writeCache(key, value) {
     });
 }
 
+function invalidateCachePrefix(prefix) {
+    for (const key of cacheStore.keys()) {
+        if (key.startsWith(prefix)) {
+            cacheStore.delete(key);
+        }
+    }
+}
+
 async function runCached(key, maxAgeMs, loader) {
     const cached = readCache(key, maxAgeMs);
     if (cached !== undefined) {
@@ -718,9 +726,6 @@ export async function getTeamPageData(teamName) {
 // Elo rating system
 // ---------------------------------------------------------------------------
 
-const ELO_K = 32;
-const ELO_DEFAULT = 1500;
-
 export async function getRandomPair() {
     const { data, error } = await supabase.rpc('get_random_pair');
     if (error) throw error;
@@ -728,71 +733,35 @@ export async function getRandomPair() {
     return data;
 }
 
+function parseRpcNumber(value, fallback = null) {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export async function recordVote(winnerId, loserId) {
-    const { data: ratings, error: fetchError } = await supabase
-        .from('elo_ratings')
-        .select('nba_id, elo_rating, total_comparisons, wins, losses')
-        .in('nba_id', [winnerId, loserId]);
+    const { data, error } = await supabase.rpc('record_elo_vote', {
+        p_winner_id: winnerId,
+        p_loser_id: loserId
+    });
+    if (error) throw error;
 
-    if (fetchError) throw fetchError;
-
-    const ratingMap = new Map();
-    for (const r of ratings || []) {
-        ratingMap.set(r.nba_id, r);
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result) {
+        throw new Error('Failed to record vote');
     }
 
-    const winnerBefore = ratingMap.get(winnerId)?.elo_rating ?? ELO_DEFAULT;
-    const loserBefore = ratingMap.get(loserId)?.elo_rating ?? ELO_DEFAULT;
-
-    const expectedWinner = 1 / (1 + Math.pow(10, (loserBefore - winnerBefore) / 400));
-    const delta = ELO_K * (1 - expectedWinner);
-
-    const winnerAfter = winnerBefore + delta;
-    const loserAfter = loserBefore - delta;
-
-    const winnerRow = ratingMap.get(winnerId);
-    const loserRow = ratingMap.get(loserId);
-
-    const [upsertWinner, upsertLoser, insertVote] = await Promise.all([
-        supabase.from('elo_ratings').upsert({
-            nba_id: winnerId,
-            elo_rating: winnerAfter,
-            total_comparisons: (winnerRow?.total_comparisons ?? 0) + 1,
-            wins: (winnerRow?.wins ?? 0) + 1,
-            losses: winnerRow?.losses ?? 0,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'nba_id' }),
-        supabase.from('elo_ratings').upsert({
-            nba_id: loserId,
-            elo_rating: loserAfter,
-            total_comparisons: (loserRow?.total_comparisons ?? 0) + 1,
-            wins: loserRow?.wins ?? 0,
-            losses: (loserRow?.losses ?? 0) + 1,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'nba_id' }),
-        supabase.from('elo_votes').insert({
-            winner_id: winnerId,
-            loser_id: loserId,
-            winner_elo_before: winnerBefore,
-            loser_elo_before: loserBefore,
-            winner_elo_after: winnerAfter,
-            loser_elo_after: loserAfter,
-            elo_delta: delta
-        })
-    ]);
-
-    if (upsertWinner.error) throw upsertWinner.error;
-    if (upsertLoser.error) throw upsertLoser.error;
-    if (insertVote.error) throw insertVote.error;
+    invalidateCachePrefix('eloLeaderboard:');
+    const parsedWinnerId = Number.parseInt(result.winner_id, 10);
+    const parsedLoserId = Number.parseInt(result.loser_id, 10);
 
     return {
-        winnerId,
-        loserId,
-        winnerEloBefore: winnerBefore,
-        loserEloBefore: loserBefore,
-        winnerEloAfter: winnerAfter,
-        loserEloAfter: loserAfter,
-        delta
+        winnerId: Number.isInteger(parsedWinnerId) ? parsedWinnerId : winnerId,
+        loserId: Number.isInteger(parsedLoserId) ? parsedLoserId : loserId,
+        winnerEloBefore: parseRpcNumber(result.winner_elo_before, null),
+        loserEloBefore: parseRpcNumber(result.loser_elo_before, null),
+        winnerEloAfter: parseRpcNumber(result.winner_elo_after, null),
+        loserEloAfter: parseRpcNumber(result.loser_elo_after, null),
+        delta: parseRpcNumber(result.elo_delta, null)
     };
 }
 

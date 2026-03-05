@@ -36,8 +36,8 @@ test('computeSeasonX skips rows with invalid dates and annotates valid rows', ()
     assert.equal(result[0]._seasonLabel, '2023-24');
     assert.equal(result[1]._seasonLabel, '2023-24');
     assert.equal(result[2]._seasonLabel, '2024-25');
-    assert.equal(result[0]._seasonIndex, 1);
-    assert.equal(result[2]._seasonIndex, 2);
+    assert.equal(result[0]._seasonIndex, 2023);
+    assert.equal(result[2]._seasonIndex, 2024);
     assert.equal(Number.isFinite(result[0]._seasonX), true);
     assert.equal(Number.isFinite(result[1]._seasonX), true);
     assert.equal(Number.isFinite(result[2]._seasonX), true);

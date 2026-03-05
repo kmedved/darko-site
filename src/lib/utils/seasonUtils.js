@@ -29,7 +29,7 @@ export function formatSeasonLabel(startYear) {
 
 /**
  * Augment rows with _seasonX (fractional season position) and _seasonIndex.
- * Season 1 starts at x=1, Season 2 at x=2, etc.
+ * _seasonIndex is the season start year (e.g. 2023 for 2023-24).
  * Points within a season are spread evenly between integer boundaries.
  */
 export function computeSeasonX(rows) {

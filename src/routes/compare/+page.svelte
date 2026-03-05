@@ -13,6 +13,55 @@
     let initialLoadDone = $state(false);
     const PLAYER_COLORS = getComparePlayerColors();
 
+    async function preloadPlayersById(idList) {
+        if (idList.length === 0) return;
+
+        pendingLoads += idList.length;
+        error = null;
+
+        try {
+            const results = await Promise.allSettled(
+                idList.map((id) => apiPlayerHistory(id, { full: true }))
+            );
+
+            const additions = [];
+            for (const [index, result] of results.entries()) {
+                const id = idList[index];
+                if (result.status !== 'fulfilled') {
+                    error = error || result.reason?.message || `Failed to load player ${id}`;
+                    continue;
+                }
+
+                const rows = result.value || [];
+                if (rows.length === 0) {
+                    error = error || `No history found for player ${id}`;
+                    continue;
+                }
+
+                const current = rows.at(-1);
+                additions.push(buildComparePlayer({
+                    currentRow: current || {},
+                    rows,
+                    color: PLAYER_COLORS[(selectedPlayers.length + additions.length) % PLAYER_COLORS.length]
+                }));
+            }
+
+            if (additions.length > 0) {
+                const merged = [...selectedPlayers];
+                const seenIds = new Set(merged.map((player) => player.nba_id));
+                for (const player of additions) {
+                    if (!seenIds.has(player.nba_id)) {
+                        seenIds.add(player.nba_id);
+                        merged.push(player);
+                    }
+                }
+                selectedPlayers = merged.slice(0, 4);
+            }
+        } finally {
+            pendingLoads = Math.max(0, pendingLoads - idList.length);
+        }
+    }
+
 	$effect(() => {
         if (initialLoadDone) return;
         const ids = $page.url.searchParams.get('ids');
@@ -28,11 +77,7 @@
         initialLoadDone = true;
         if (idList.length === 0) return;
 
-        (async () => {
-            for (const id of idList) {
-                await loadPlayer(id);
-            }
-        })();
+        preloadPlayersById(idList);
     });
 
     async function loadPlayer(nbaId) {

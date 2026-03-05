@@ -94,7 +94,6 @@
 	}
 
 	.table-container {
-		overflow-x: auto;
 		margin-bottom: 48px;
 	}
 
@@ -139,5 +138,14 @@
 
 	tr:hover td {
 		background: var(--bg-hover);
+	}
+
+	@media (max-width: 640px) {
+		table th:nth-child(5),
+		table td:nth-child(5),
+		table th:nth-child(6),
+		table td:nth-child(6) {
+			display: none;
+		}
 	}
 </style>

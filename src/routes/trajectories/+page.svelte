@@ -86,20 +86,71 @@
 
 	const excludeIds = $derived(selectedPlayers.map((p) => p.nba_id));
 
+	async function preloadPlayersById(idList) {
+		if (!Array.isArray(idList) || idList.length === 0) return;
+
+		const uniqueIds = [...new Set(
+			idList
+				.map((id) => Number.parseInt(id, 10))
+				.filter((id) => Number.isInteger(id) && id > 0)
+		)];
+		if (uniqueIds.length === 0) return;
+
+		pendingLoads += uniqueIds.length;
+		error = null;
+
+		try {
+			const results = await Promise.allSettled(
+				uniqueIds.map((id) => apiPlayerHistory(id, { full: true }))
+			);
+
+			const additions = [];
+			for (const [index, result] of results.entries()) {
+				const nbaId = uniqueIds[index];
+				if (result.status !== 'fulfilled') {
+					error = error || result.reason?.message || `Failed to load player ${nbaId}`;
+					continue;
+				}
+
+				const rows = result.value || [];
+				if (rows.length === 0) {
+					error = error || `No history found for player ${nbaId}`;
+					continue;
+				}
+
+				const colorIndex = selectedPlayers.length + additions.length;
+				additions.push({
+					nba_id: nbaId,
+					player_name: rows[0].player_name,
+					team_name: rows[0].team_name,
+					color: PLAYER_COLORS[colorIndex % PLAYER_COLORS.length],
+					rows
+				});
+			}
+
+			if (additions.length > 0) {
+				const merged = [...selectedPlayers];
+				const seenIds = new Set(merged.map((player) => player.nba_id));
+				for (const player of additions) {
+					if (!seenIds.has(player.nba_id)) {
+						seenIds.add(player.nba_id);
+						merged.push(player);
+					}
+				}
+				selectedPlayers = merged.slice(0, MAX_PLAYERS);
+			}
+		} finally {
+			pendingLoads = Math.max(0, pendingLoads - uniqueIds.length);
+		}
+	}
+
 	// Load players from URL params on mount
 	$effect(() => {
 		if (initialLoadDone) return;
 		const ids = $page.url.searchParams.get('ids');
 		if (ids) {
-			const idList = ids
-				.split(',')
-				.map(Number)
-				.filter(Boolean);
-			(async () => {
-				for (const id of idList) {
-					await loadPlayerById(id);
-				}
-			})();
+			const idList = ids.split(',').slice(0, MAX_PLAYERS);
+			preloadPlayersById(idList);
 		} else {
 			loadRandomPlayer();
 		}

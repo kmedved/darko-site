@@ -41,3 +41,9 @@
 - `npm run preview`: preview build
 
 - App is read-only for analytics tables (`player_ratings`, `players`, `season_sim`, `win_distribution`). The Elo voting feature (`elo_ratings`, `elo_votes` tables) is the exception — it performs writes via `/api/rate/vote`.
+
+## MCP Servers
+You have access to:
+- **Svelte MCP**: Use to look up Svelte 5 runes, SvelteKit APIs, routing, load functions
+- **Supabase MCP**: Use to inspect the database schema, list tables, check migrations
+- **Vercel MCP**: Use to check deployment logs and look up Vercel docs

@@ -186,7 +186,7 @@
 	<div class="profile-layout">
 		<aside class="profile-sidebar">
 			<div class="sidebar-section">
-				<label class="sidebar-label">Player</label>
+				<p class="sidebar-label">Player</p>
 				<AllPlayerSearch onSelect={handleSelectPlayer} exclude={[]} />
 			</div>
 
@@ -226,7 +226,7 @@
 			</div>
 
 			<div class="sidebar-section">
-				<label class="sidebar-label">Talent Percentiles</label>
+				<p class="sidebar-label">Talent Percentiles</p>
 				<div class="percentile-checkboxes">
 					{#each PERCENTILE_OPTIONS as opt}
 						<label class="checkbox-label">
