@@ -6,9 +6,9 @@ export const config = {
     regions: ['pdx1']
 };
 
-export async function POST(event) {
+export async function POST({ request, url }) {
     try {
-        const payload = await handleRateVoteRequest(event);
+        const payload = await handleRateVoteRequest({ request, headers: request.headers, url });
         return json(payload);
     } catch (e) {
         if (typeof e?.status === 'number') {

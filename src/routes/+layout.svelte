@@ -89,36 +89,41 @@
 
 	// ── Font toggle ──────────────────────────────────────
 	const FONT_KEY = 'darko-font';
-	const FONTS = ['dm', 'inter', 'roboto', 'lato', 'opensans', 'sourcesans', 'nunito', 'worksans', 'raleway', 'outfit', 'jakarta', 'spacegrotesk', 'system'];
-	const FONT_LABELS = ['DM Sans', 'Inter', 'Roboto', 'Lato', 'Open Sans', 'Source Sans', 'Nunito Sans', 'Work Sans', 'Raleway', 'Outfit', 'Jakarta Sans', 'Space Grotesk', 'System'];
+	const FONTS = ['inter', 'roboto', 'lato', 'opensans', 'sourcesans', 'nunito', 'worksans', 'raleway', 'outfit', 'jakarta', 'spacegrotesk', 'system'];
+	const FONT_LABELS = ['Inter', 'Roboto', 'Lato', 'Open Sans', 'Source Sans', 'Nunito Sans', 'Work Sans', 'Raleway', 'Outfit', 'Jakarta Sans', 'Space Grotesk', 'System'];
 
 	let font = $state('system');
 
+	function normalizeFontValue(value) {
+		return value === 'dm' ? 'system' : value;
+	}
+
 	function isFontValue(value) {
-		return FONTS.includes(value);
+		return FONTS.includes(normalizeFontValue(value));
 	}
 
 	function resolveInitialFont() {
 		if (!browser) return 'system';
 
-		const htmlFont = document.documentElement.dataset.font;
+		const htmlFont = normalizeFontValue(document.documentElement.dataset.font);
 		if (isFontValue(htmlFont)) return htmlFont;
 
 		try {
-			const saved = localStorage.getItem(FONT_KEY);
+			const saved = normalizeFontValue(localStorage.getItem(FONT_KEY));
 			if (isFontValue(saved)) return saved;
 		} catch {}
 		return 'system';
 	}
 
 	function setFont(nextFont) {
-		if (!isFontValue(nextFont)) return;
-		font = nextFont;
+		const normalizedFont = normalizeFontValue(nextFont);
+		if (!isFontValue(normalizedFont)) return;
+		font = normalizedFont;
 		if (!browser) return;
 
-		document.documentElement.dataset.font = nextFont;
+		document.documentElement.dataset.font = normalizedFont;
 		try {
-			localStorage.setItem(FONT_KEY, nextFont);
+			localStorage.setItem(FONT_KEY, normalizedFont);
 		} catch {}
 	}
 
@@ -161,7 +166,7 @@
 				<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
 			</div>
 			<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font">
-				{#each FONTS as f, i}
+				{#each FONTS as f, i (f)}
 					<option value={f}>{FONT_LABELS[i]}</option>
 				{/each}
 			</select>
@@ -214,7 +219,7 @@
 			<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
 		</div>
 		<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font">
-			{#each FONTS as f, i}
+			{#each FONTS as f, i (f)}
 				<option value={f}>{FONT_LABELS[i]}</option>
 			{/each}
 		</select>

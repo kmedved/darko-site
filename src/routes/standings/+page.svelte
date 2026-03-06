@@ -385,7 +385,7 @@
     .table-wrapper th, .table-wrapper td {
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
-        padding: 7px 6px;
+        padding: 10px 8px;
     }
 
     .table-wrapper.expanded th, .table-wrapper.expanded td {
@@ -395,7 +395,7 @@
 
     tr:hover td { background: var(--bg-elevated); }
 
-    .rk, .num, .rec { text-align: right; font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+    .rk, .num, .rec { text-align: right; font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
 
     /* Frozen rank column */
     td.rk,
@@ -475,11 +475,25 @@
 
     .pos { color: var(--positive); }
     .neg { color: var(--negative); }
+    .table-wrapper td.pos {
+        background: linear-gradient(0deg, var(--positive-bg), var(--positive-bg)), var(--bg);
+    }
+    .table-wrapper td.neg {
+        background: linear-gradient(0deg, var(--negative-bg), var(--negative-bg)), var(--bg);
+    }
     .pct { font-family: var(--font-mono); }
     .pct.high { color: var(--positive); }
     .pct.mid { color: var(--accent); }
     .pct.low { color: var(--text-secondary); }
     .pct.zero { color: var(--text-muted); }
+
+    tr:hover td.pos {
+        background: linear-gradient(0deg, var(--positive-bg), var(--positive-bg)), var(--bg-elevated);
+    }
+
+    tr:hover td.neg {
+        background: linear-gradient(0deg, var(--negative-bg), var(--negative-bg)), var(--bg-elevated);
+    }
 
     @media (max-width: 768px) {
         .table-toolbar {

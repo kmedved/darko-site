@@ -11,7 +11,7 @@ export async function GET(event) {
     setHeaders({ 'cache-control': 'no-store' });
 
     try {
-        const pair = await handleRatePairRequest(event);
+        const pair = await handleRatePairRequest();
         return json(pair);
     } catch (e) {
         if (typeof e?.status === 'number') {

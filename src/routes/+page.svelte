@@ -202,8 +202,6 @@
 <style>
     .table-wrapper {
         margin-bottom: 40px;
-        overflow: auto;
-        max-height: calc(100vh - 120px);
     }
 
     table {
@@ -216,8 +214,8 @@
 
     th {
         position: sticky;
-        top: 0;
-        z-index: 2;
+        top: var(--nav-sticky-offset);
+        z-index: 20;
         background: var(--bg);
         box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
@@ -328,7 +326,7 @@
     }
 
     th:nth-child(1) {
-        z-index: 3;
+        z-index: 22;
     }
 
     .rank {
@@ -352,7 +350,7 @@
     }
 
     th:nth-child(2) {
-        z-index: 3;
+        z-index: 21;
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
     }
 
@@ -441,14 +439,43 @@
 
     .pos { color: var(--positive); }
     .neg { color: var(--negative); }
+    td.pos {
+        background: linear-gradient(0deg, var(--positive-bg), var(--positive-bg)), var(--bg);
+    }
+    td.neg {
+        background: linear-gradient(0deg, var(--negative-bg), var(--negative-bg)), var(--bg);
+    }
     .pct.high { color: var(--positive); }
     .pct.mid { color: var(--accent); }
     .pct.low { color: var(--text-secondary); }
     .pct.zero { color: var(--text-muted); }
 
+    tr:hover td.pos {
+        background: linear-gradient(0deg, var(--positive-bg), var(--positive-bg)), var(--bg-elevated);
+    }
+
+    tr:hover td.neg {
+        background: linear-gradient(0deg, var(--negative-bg), var(--negative-bg)), var(--bg-elevated);
+    }
+
     @media (max-width: 768px) {
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         .page-action-btn {
             display: none;
+        }
+
+        th,
+        td.rank,
+        td.name,
+        th:nth-child(1),
+        th:nth-child(2) {
+            position: static;
+            left: auto;
+            box-shadow: none;
         }
 
         th, td { padding: 6px 8px; }

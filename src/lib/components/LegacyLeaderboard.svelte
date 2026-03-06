@@ -129,9 +129,8 @@
 
 <style>
     .legacy-wrapper {
+        --legacy-header-row-height: 30px;
         margin-bottom: 40px;
-        overflow: auto;
-        max-height: calc(100vh - 120px);
     }
 
     table {
@@ -144,8 +143,8 @@
 
     th {
         position: sticky;
-        top: 0;
-        z-index: 2;
+        top: var(--nav-sticky-offset);
+        z-index: 30;
         background: var(--bg);
         border-bottom: 1px solid var(--border);
         color: var(--text-muted);
@@ -159,8 +158,8 @@
     }
 
     .filter-row th {
-        top: 30px;
-        z-index: 2;
+        top: calc(var(--nav-sticky-offset) + var(--legacy-header-row-height));
+        z-index: 25;
         padding: 5px 4px;
         background: var(--bg-elevated);
         text-transform: none;
@@ -335,7 +334,7 @@
 
     th:nth-child(1),
     .filter-row th:nth-child(1) {
-        z-index: 3;
+        z-index: 31;
     }
 
     .filter-row th:nth-child(1) {
@@ -361,7 +360,7 @@
 
     th:nth-child(2),
     .filter-row th:nth-child(2) {
-        z-index: 3;
+        z-index: 31;
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
     }
 
@@ -387,6 +386,24 @@
     }
 
     @media (max-width: 768px) {
+        .legacy-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th,
+        .filter-row th,
+        .rank-cell,
+        .player-cell,
+        th:nth-child(1),
+        th:nth-child(2),
+        .filter-row th:nth-child(1),
+        .filter-row th:nth-child(2) {
+            position: static;
+            left: auto;
+            box-shadow: none;
+        }
+
         th, td { padding: 5px 4px; }
     }
 </style>
