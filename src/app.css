@@ -82,24 +82,24 @@
     --negative-bg: rgba(220, 38, 38, 0.08);
 }
 
-/* Logo visibility: dark logos for dark themes, light logos for light themes */
-:root[data-theme='light'] .logo-mark--light,
-:root[data-theme='white'] .logo-mark--light {
+/* Use the black logo on light backgrounds and the white logo on dark backgrounds. */
+:root[data-theme='light'] .logo-mark--black,
+:root[data-theme='white'] .logo-mark--black {
     display: block;
 }
 
-:root[data-theme='light'] .logo-mark--dark,
-:root[data-theme='white'] .logo-mark--dark {
+:root[data-theme='light'] .logo-mark--white,
+:root[data-theme='white'] .logo-mark--white {
     display: none;
 }
 
-:root[data-theme='dark'] .logo-mark--dark,
-:root[data-theme='black'] .logo-mark--dark {
+:root[data-theme='dark'] .logo-mark--white,
+:root[data-theme='black'] .logo-mark--white {
     display: block;
 }
 
-:root[data-theme='dark'] .logo-mark--light,
-:root[data-theme='black'] .logo-mark--light {
+:root[data-theme='dark'] .logo-mark--black,
+:root[data-theme='black'] .logo-mark--black {
     display: none;
 }
 

@@ -287,7 +287,36 @@
 <style>
     .table-wrapper {
         --wide-sticky-header-height: 40px;
-        margin-bottom: 40px;
+        --frozen-rank-width: 42px;
+        margin-bottom: 24px;
+    }
+
+    .page-header {
+        padding: 24px 0 14px;
+    }
+
+    .page-header-toolbar {
+        align-items: center;
+        gap: 12px;
+    }
+
+    .page-header h1 {
+        font-size: 24px;
+        line-height: 1.05;
+    }
+
+    .page-header p {
+        margin-top: 4px;
+        font-size: 13px;
+    }
+
+    .page-header-actions {
+        gap: 8px;
+    }
+
+    .page-action-btn {
+        padding: 6px 10px;
+        font-size: 11px;
     }
 
     .table-shell {
@@ -312,7 +341,7 @@
     table {
         border-collapse: separate;
         border-spacing: 0;
-        font-size: 13px;
+        font-size: 12px;
         width: max-content;
         min-width: 100%;
     }
@@ -321,18 +350,18 @@
         background: var(--bg);
         box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
-        padding: 10px 8px;
+        padding: 8px 6px;
         text-align: left;
-        font-size: 10px;
+        font-size: 9.5px;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.07em;
         color: var(--text-muted);
         white-space: nowrap;
     }
 
     td {
-        padding: 10px 8px;
+        padding: 8px 6px;
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
     }
@@ -343,7 +372,7 @@
     }
 
     .filter-row th {
-        padding: 5px 4px;
+        padding: 4px 3px;
         background: var(--bg-elevated);
         text-transform: none;
     }
@@ -356,8 +385,8 @@
         border-radius: var(--radius-sm);
         color: var(--text);
         font-family: var(--font-sans);
-        font-size: 11px;
-        padding: 4px 5px;
+        font-size: 10.5px;
+        padding: 3px 4px;
         outline: none;
     }
 
@@ -373,7 +402,7 @@
     th.has-tooltip .header-label-wrap {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
     }
 
     th.sortable:hover {
@@ -409,11 +438,11 @@
 
     .rank {
         width: 36px;
-        min-width: 48px;
-        max-width: 48px;
+        min-width: var(--frozen-rank-width);
+        max-width: var(--frozen-rank-width);
         color: var(--text-secondary);
         font-family: var(--font-mono);
-        font-size: 11.5px;
+        font-size: 11px;
         font-weight: 500;
     }
 
@@ -422,7 +451,7 @@
     .table-header-scroll .header-row th:nth-child(2),
     .table-header-scroll .filter-row th:nth-child(2) {
         position: sticky;
-        left: 48px;
+        left: var(--frozen-rank-width);
         z-index: 1;
         background: var(--bg);
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
@@ -458,13 +487,13 @@
     .pos-label {
         color: var(--text-muted);
         font-weight: 400;
-        font-size: 12px;
-        margin-left: 4px;
+        font-size: 11px;
+        margin-left: 2px;
     }
 
     .team {
         color: var(--text-secondary);
-        font-size: 12px;
+        font-size: 11.5px;
     }
 
     .team a {
@@ -479,16 +508,16 @@
     .num {
         text-align: right;
         font-family: var(--font-mono);
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 600;
     }
 
     th.num { text-align: right; }
 
     .sort-indicator {
-        margin-left: 6px;
+        margin-left: 4px;
         opacity: 0.6;
-        font-size: 10px;
+        font-size: 9px;
     }
 
     th.active .sort-indicator {
@@ -498,21 +527,21 @@
 
     .view-toggle {
         display: flex;
-        gap: 4px;
+        gap: 3px;
         background: var(--bg-surface);
-        padding: 4px;
+        padding: 3px;
         border: 1px solid var(--border);
-        border-radius: 20px;
+        border-radius: 18px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
 
     .view-toggle button {
-        padding: 6px 16px;
+        padding: 5px 14px;
         background: transparent;
         border: none;
         color: var(--text-muted);
         font-family: var(--font-sans);
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 500;
         border-radius: 16px;
         cursor: pointer;
@@ -591,16 +620,31 @@
         }
 
         .table-body-scroll td.rank {
-            min-width: 32px;
-            max-width: 32px;
-            font-size: 10px;
+            min-width: 28px;
+            max-width: 28px;
+            font-size: 9.5px;
         }
 
         td.num { font-size: 11px; }
 
         .filter-row input { min-width: 30px; }
 
-        th, td { padding: 5px 4px; }
+        th, td { padding: 4px 3px; }
+    }
+
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 18px 0 12px;
+        }
+
+        .page-header p {
+            margin-top: 3px;
+            font-size: 12px;
+        }
+
+        .page-header-actions {
+            gap: 6px;
+        }
     }
     /* End touch/mobile scroll mode */
 </style>

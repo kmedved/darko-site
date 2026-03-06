@@ -179,7 +179,8 @@
 <style>
     .legacy-wrapper {
         --wide-sticky-header-height: 60px;
-        margin-bottom: 40px;
+        --legacy-rank-width: 40px;
+        margin-bottom: 24px;
     }
 
     .table-shell {
@@ -213,17 +214,17 @@
         background: var(--bg);
         border-bottom: 1px solid var(--border);
         color: var(--text-muted);
-        font-size: 10px;
+        font-size: 9.5px;
         font-weight: 600;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        padding: 7px 5px;
+        padding: 6px 4px;
         white-space: nowrap;
         text-align: left;
     }
 
     .filter-row th {
-        padding: 5px 4px;
+        padding: 4px 3px;
         background: var(--bg-elevated);
         text-transform: none;
     }
@@ -241,8 +242,8 @@
         border-radius: var(--radius-sm);
         color: var(--text);
         font-family: var(--font-sans);
-        font-size: 11px;
-        padding: 4px 5px;
+        font-size: 10.5px;
+        padding: 3px 4px;
         outline: none;
     }
 
@@ -291,20 +292,20 @@
     }
 
     td {
-        padding: 6px 5px;
+        padding: 5px 4px;
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
         font-family: var(--font-mono);
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 500;
     }
 
     .player-cell {
         font-family: var(--font-sans);
         font-weight: 600;
-        font-size: 12px;
+        font-size: 11.5px;
         position: sticky;
-        left: 48px;
+        left: var(--legacy-rank-width);
         z-index: 1;
         background: var(--bg);
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
@@ -326,7 +327,7 @@
 
     .team-cell {
         font-family: var(--font-sans);
-        font-size: 12px;
+        font-size: 11.5px;
         color: var(--text-secondary);
     }
 
@@ -359,14 +360,14 @@
 
     .rank-cell {
         color: var(--text-muted);
-        min-width: 38px;
-        max-width: 38px;
+        min-width: var(--legacy-rank-width);
+        max-width: var(--legacy-rank-width);
     }
 
     .table-header-scroll th:nth-child(2),
     .table-header-scroll .filter-row th:nth-child(2) {
         position: sticky;
-        left: 48px;
+        left: var(--legacy-rank-width);
         z-index: 31;
         background: var(--bg);
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
@@ -430,16 +431,16 @@
         }
 
         .rank-cell {
-            min-width: 32px;
-            max-width: 32px;
-            font-size: 10px;
+            min-width: 28px;
+            max-width: 28px;
+            font-size: 9.5px;
         }
 
         td.align-right { font-size: 11px; }
 
         .filter-row input { min-width: 30px; }
 
-        th, td { padding: 5px 4px; }
+        th, td { padding: 4px 3px; }
     }
     /* End touch/mobile scroll mode */
 </style>

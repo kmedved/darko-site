@@ -146,8 +146,8 @@
 		</button>
 		<a href="/" class="logo" aria-label="DARKO DPM">
             <span class="sr-only">DARKO DPM</span>
-            <img src="/logo-light.png" alt="" class="logo-mark logo-mark--light" aria-hidden="true" />
-            <img src="/logo-dark.png" alt="" class="logo-mark logo-mark--dark" aria-hidden="true" />
+            <img src="/darko-logo-black.png" alt="" class="logo-mark logo-mark--black" aria-hidden="true" />
+            <img src="/darko-logo-white.png" alt="" class="logo-mark logo-mark--white" aria-hidden="true" />
         </a>
 		<div class="desktop-controls">
 			<div class="theme-slider" role="group" aria-label="Theme selector">
