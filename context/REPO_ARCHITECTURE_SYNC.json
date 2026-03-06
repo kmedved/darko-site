@@ -1,0 +1,992 @@
+{
+  "arch_version": "0.1.0",
+  "behavior_snapshot": {
+    "api_routes": [
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getActivePlayers"
+        ],
+        "file": "src/routes/api/active-players/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "team"
+        ],
+        "route": "/api/active-players",
+        "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 86400,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/utils/csvPresets.js:metricDisplayLabels",
+          "$lib/utils/metricDefinitions.js:metricDefinitions"
+        ],
+        "file": "src/routes/api/docs/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "route": "/api/docs",
+        "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getLongevityRows"
+        ],
+        "file": "src/routes/api/longevity/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "route": "/api/longevity",
+        "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:MAX_FULL_HISTORY_ROWS",
+          "$lib/server/supabase.js:getFullPlayerHistory",
+          "$lib/server/supabase.js:getPlayerHistory"
+        ],
+        "file": "src/routes/api/player/[id]/history/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [
+          "id"
+        ],
+        "queryParams": [
+          "full",
+          "limit"
+        ],
+        "route": "/api/player/:id/history",
+        "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getLongevityTrajectory"
+        ],
+        "file": "src/routes/api/player/[id]/longevity/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [
+          "id"
+        ],
+        "queryParams": [],
+        "route": "/api/player/:id/longevity",
+        "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 86400,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getPlayersIndex"
+        ],
+        "file": "src/routes/api/players-index/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "route": "/api/players-index",
+        "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "type": "no-store"
+        },
+        "dataSources": [
+          "$lib/server/supabase.js:getEloLeaderboard"
+        ],
+        "file": "src/routes/api/rate/leaderboard/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "limit"
+        ],
+        "route": "/api/rate/leaderboard",
+        "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "type": "no-store"
+        },
+        "dataSources": [
+          "$lib/server/eloService.js:handleRatePairRequest"
+        ],
+        "file": "src/routes/api/rate/pair/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "route": "/api/rate/pair",
+        "writesState": false
+      },
+      {
+        "bodyFields": [
+          "loser_id",
+          "winner_id"
+        ],
+        "cache": {
+          "type": "no-store"
+        },
+        "dataSources": [
+          "$lib/server/eloService.js:handleRateVoteRequest"
+        ],
+        "file": "src/routes/api/rate/vote/+server.js",
+        "methods": [
+          "POST"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "route": "/api/rate/vote",
+        "writesState": true
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 120,
+          "sie": 3600,
+          "swr": 3600,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:searchAllPlayers"
+        ],
+        "file": "src/routes/api/search-players/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "q"
+        ],
+        "route": "/api/search-players",
+        "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getConferenceStandings"
+        ],
+        "file": "src/routes/api/standings/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "conference"
+        ],
+        "route": "/api/standings",
+        "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getTeamPageData",
+          "$lib/utils/teamRouteUtils.js:normalizeTeamSlug"
+        ],
+        "file": "src/routes/api/standings/[slug]/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [
+          "slug"
+        ],
+        "queryParams": [],
+        "route": "/api/standings/:slug",
+        "writesState": false
+      }
+    ],
+    "page_loaders": [
+      {
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getActivePlayers"
+        ],
+        "file": "src/routes/+page.server.js",
+        "pathParams": [],
+        "route": "/",
+        "signature": "load({ setHeaders })"
+      },
+      {
+        "cache": {
+          "type": "unspecified"
+        },
+        "dataSources": [
+          "$lib/server/comparePage.js:loadComparePageData",
+          "$lib/server/supabase.js:MAX_FULL_HISTORY_ROWS",
+          "$lib/server/supabase.js:getFullPlayerHistory",
+          "$lib/utils/compareUtils.js:buildComparePlayer",
+          "$lib/utils/compareUtils.js:getComparePlayerColors"
+        ],
+        "file": "src/routes/compare/+page.server.js",
+        "pathParams": [],
+        "route": "/compare",
+        "signature": "load({ url })"
+      },
+      {
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/playerPage.js:loadPlayerPageData",
+          "$lib/server/supabase.js:MAX_FULL_HISTORY_ROWS",
+          "$lib/server/supabase.js:getFullPlayerHistory"
+        ],
+        "file": "src/routes/player/[nbaId]/+page.server.js",
+        "pathParams": [
+          "nbaId"
+        ],
+        "route": "/player/:nbaId",
+        "signature": "load({ params, setHeaders })"
+      },
+      {
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getConferenceStandings"
+        ],
+        "file": "src/routes/standings/+page.server.js",
+        "pathParams": [],
+        "route": "/standings",
+        "signature": "load({ setHeaders })"
+      },
+      {
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getTeamPageData",
+          "$lib/utils/teamRouteUtils.js:normalizeTeamSlug"
+        ],
+        "file": "src/routes/standings/[slug]/+page.server.js",
+        "pathParams": [
+          "slug"
+        ],
+        "route": "/standings/:slug",
+        "signature": "load({ params, setHeaders })"
+      },
+      {
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getTeamPageData",
+          "$lib/utils/teamRouteUtils.js:decodeTeamParam"
+        ],
+        "file": "src/routes/team/[team]/+page.server.js",
+        "pathParams": [
+          "team"
+        ],
+        "route": "/team/:team",
+        "signature": "load({ params, setHeaders })"
+      }
+    ],
+    "persistence_surface": {
+      "read_tables": [
+        "player_ratings",
+        "players",
+        "season_sim",
+        "win_distribution"
+      ],
+      "write_tables": [
+        "elo_ratings",
+        "elo_votes"
+      ]
+    },
+    "query_limits": {
+      "activePlayers": {
+        "dedupeKey": "nba_id",
+        "lookbackDays": 7,
+        "sortOrder": "dpm desc"
+      },
+      "comparePage": {
+        "maxPlayers": 4
+      },
+      "eloLeaderboard": {
+        "defaultLimit": 50,
+        "maxLimit": 200
+      },
+      "playerHistory": {
+        "boundedMaxLimit": 2000,
+        "defaultLimit": 1000,
+        "fullMaxRows": 5000
+      },
+      "searchPlayers": {
+        "maxResults": 15,
+        "minimumQueryLength": 2
+      }
+    },
+    "runtime": {
+      "deploy_target": "Vercel serverless / edge cache",
+      "framework": "SvelteKit 2 on Svelte 5",
+      "local_dev": "Bun-powered local workflow",
+      "write_paths": [
+        "/api/rate/vote"
+      ]
+    }
+  },
+  "bundle_contract": {
+    "bundles": [
+      {
+        "name": "COMPRESSED_data_api.md",
+        "purpose": "config, Supabase access, API handlers, shared server loaders, and persistence-facing contracts"
+      },
+      {
+        "name": "COMPRESSED_pages_routes.md",
+        "purpose": "routing hooks, server load wrappers, route composition, and app-shell navigation behavior"
+      },
+      {
+        "name": "COMPRESSED_ui_charts.md",
+        "purpose": "chart components, trend rendering, resize behavior, and image/export support"
+      },
+      {
+        "name": "COMPRESSED_ui_tables.md",
+        "purpose": "sticky tables, CSV/export helpers, leaderboard/search UI, and metric labeling utilities"
+      },
+      {
+        "name": "COMPRESSED_tests_context.md",
+        "purpose": "tests, governance docs, repo manifests, and the scripts that generate context artifacts"
+      }
+    ],
+    "default_bundle": "COMPRESSED_data_api.md"
+  },
+  "file_inventory": [
+    ".gitignore",
+    ".repomixignore",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "SUPABASE_SCHEMA.md",
+    "context/FILE_INDEX.md",
+    "context/REPO_ARCHITECTURE.md",
+    "context/REPO_ARCHITECTURE_SYNC.json",
+    "context/START_HERE.md",
+    "package.json",
+    "repomix.config.json",
+    "scripts/build_context_bundle.js",
+    "scripts/context-framework.js",
+    "scripts/generate_repo_architecture_sync.js",
+    "src/app.css",
+    "src/app.html",
+    "src/hooks.server.js",
+    "src/lib/api.js",
+    "src/lib/components/AllPlayerSearch.svelte",
+    "src/lib/components/ChartDownloadMenu.svelte",
+    "src/lib/components/ConferenceChart.svelte",
+    "src/lib/components/DpmChart.svelte",
+    "src/lib/components/LegacyLeaderboard.svelte",
+    "src/lib/components/LongevityCareerLengthChart.svelte",
+    "src/lib/components/LongevityRosterChart.svelte",
+    "src/lib/components/MetricTooltip.svelte",
+    "src/lib/components/PlayerCard.svelte",
+    "src/lib/components/PlayerSearch.svelte",
+    "src/lib/components/RatePlayerCard.svelte",
+    "src/lib/components/SeedChart.svelte",
+    "src/lib/components/TalentPercentilesChart.svelte",
+    "src/lib/components/TalentTrendChart.svelte",
+    "src/lib/components/TeamDetailView.svelte",
+    "src/lib/components/TrajectoryChart.svelte",
+    "src/lib/components/WinDistChart.svelte",
+    "src/lib/data/longevityScaffold.js",
+    "src/lib/server/cacheHeaders.js",
+    "src/lib/server/comparePage.js",
+    "src/lib/server/eloSecurity.js",
+    "src/lib/server/eloService.js",
+    "src/lib/server/playerPage.js",
+    "src/lib/server/supabase.js",
+    "src/lib/utils/chartImageExport.js",
+    "src/lib/utils/chartLayout.js",
+    "src/lib/utils/chartQuickExport.js",
+    "src/lib/utils/chartResizeObserver.js",
+    "src/lib/utils/compareUtils.js",
+    "src/lib/utils/csv.js",
+    "src/lib/utils/csvPresets.js",
+    "src/lib/utils/leaderboardColumns.js",
+    "src/lib/utils/leaderboardCsv.js",
+    "src/lib/utils/legacyLeaderboard.js",
+    "src/lib/utils/loess.js",
+    "src/lib/utils/longevityTable.js",
+    "src/lib/utils/metricDefinitions.js",
+    "src/lib/utils/requestSequencer.js",
+    "src/lib/utils/seasonUtils.js",
+    "src/lib/utils/sortableTable.js",
+    "src/lib/utils/supabaseConfig.js",
+    "src/lib/utils/teamAbbreviations.js",
+    "src/lib/utils/teamRouteUtils.js",
+    "src/lib/utils/wideStickyTable.js",
+    "src/routes/+layout.svelte",
+    "src/routes/+page.server.js",
+    "src/routes/+page.svelte",
+    "src/routes/about/+page.svelte",
+    "src/routes/api/active-players/+server.js",
+    "src/routes/api/docs/+server.js",
+    "src/routes/api/longevity/+server.js",
+    "src/routes/api/player/[id]/history/+server.js",
+    "src/routes/api/player/[id]/longevity/+server.js",
+    "src/routes/api/players-index/+server.js",
+    "src/routes/api/rate/leaderboard/+server.js",
+    "src/routes/api/rate/pair/+server.js",
+    "src/routes/api/rate/vote/+server.js",
+    "src/routes/api/search-players/+server.js",
+    "src/routes/api/standings/+server.js",
+    "src/routes/api/standings/[slug]/+server.js",
+    "src/routes/compare/+page.server.js",
+    "src/routes/compare/+page.svelte",
+    "src/routes/favicon.ico/+server.js",
+    "src/routes/lineups/+page.svelte",
+    "src/routes/longevity/+page.svelte",
+    "src/routes/player/[nbaId]/+page.server.js",
+    "src/routes/player/[nbaId]/+page.svelte",
+    "src/routes/projections/+page.svelte",
+    "src/routes/rate/+page.svelte",
+    "src/routes/standings/+page.server.js",
+    "src/routes/standings/+page.svelte",
+    "src/routes/standings/[slug]/+page.server.js",
+    "src/routes/standings/[slug]/+page.svelte",
+    "src/routes/team/[team]/+page.server.js",
+    "src/routes/team/[team]/+page.svelte",
+    "src/routes/trajectories/+page.svelte",
+    "supabase/migrations/20260303_001_enable_players_rls.sql",
+    "supabase/migrations/20260303_002_harden_elo_vote_path.sql",
+    "supabase/migrations/20260305_001_secure_elo_vote_and_rate_limits.sql",
+    "supabase/migrations/20260306_001_simplify_elo_permissions.sql",
+    "svelte.config.js",
+    "tests/api-active-players-cache.test.js",
+    "tests/api-player-history.test.js",
+    "tests/aria-label-bindings.test.js",
+    "tests/chart-download-integration.test.js",
+    "tests/chart-image-export.test.js",
+    "tests/chart-layout.test.js",
+    "tests/chart-quick-export.test.js",
+    "tests/chart-resize-hosts.test.js",
+    "tests/compare-page-server-load.test.js",
+    "tests/compare-utils.test.js",
+    "tests/context-framework.test.js",
+    "tests/csv-formatters.test.js",
+    "tests/d3-theme-colors.test.js",
+    "tests/leaderboard-export.test.js",
+    "tests/legacy-leaderboard.test.js",
+    "tests/longevity-csv.test.js",
+    "tests/longevity-table.test.js",
+    "tests/mobile-table-scroll.test.js",
+    "tests/player-page-server-load.test.js",
+    "tests/request-sequencer.test.js",
+    "tests/season-utils.test.js",
+    "tests/supabase-config.test.js",
+    "tests/supabase-query-shape.test.js",
+    "tests/team-route-utils.test.js",
+    "tests/team-route-wrappers.test.js",
+    "tests/trajectories-mobile-layout.test.js",
+    "tests/wide-sticky-table-layout.test.js",
+    "vite.config.js"
+  ],
+  "module_dependencies": {
+    "edges": {
+      "routes:api": [
+        "server:data",
+        "server:helpers",
+        "ui:utils"
+      ],
+      "routes:page-loaders": [
+        "server:data",
+        "server:helpers",
+        "ui:utils"
+      ],
+      "routes:pages": [
+        "client:api",
+        "ui:components",
+        "ui:utils"
+      ],
+      "server:data": [
+        "ui:utils"
+      ],
+      "server:helpers": [
+        "server:data"
+      ],
+      "tests": [
+        "client:api",
+        "server:helpers",
+        "tooling:context",
+        "ui:utils"
+      ],
+      "ui:components": [
+        "client:api",
+        "ui:utils"
+      ]
+    },
+    "reverseEdges": {
+      "client:api": [
+        "routes:pages",
+        "tests",
+        "ui:components"
+      ],
+      "server:data": [
+        "routes:api",
+        "routes:page-loaders",
+        "server:helpers"
+      ],
+      "server:helpers": [
+        "routes:api",
+        "routes:page-loaders",
+        "tests"
+      ],
+      "tooling:context": [
+        "tests"
+      ],
+      "ui:components": [
+        "routes:pages"
+      ],
+      "ui:utils": [
+        "routes:api",
+        "routes:page-loaders",
+        "routes:pages",
+        "server:data",
+        "tests",
+        "ui:components"
+      ]
+    }
+  },
+  "public_contracts": {
+    "apiRoutes": [
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "team"
+        ],
+        "returns": "current active roster snapshot",
+        "route": "/api/active-players"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "returns": "public API contract document",
+        "route": "/api/docs"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "returns": "active-player longevity table",
+        "route": "/api/longevity"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [
+          "id"
+        ],
+        "queryParams": [
+          "full",
+          "limit"
+        ],
+        "returns": "bounded or full career history",
+        "route": "/api/player/:id/history"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [
+          "id"
+        ],
+        "queryParams": [],
+        "returns": "player longevity trajectory",
+        "route": "/api/player/:id/longevity"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "returns": "full player index",
+        "route": "/api/players-index"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "limit"
+        ],
+        "returns": "Elo leaderboard",
+        "route": "/api/rate/leaderboard"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "returns": "random Elo comparison pair",
+        "route": "/api/rate/pair"
+      },
+      {
+        "bodyFields": [
+          "loser_id",
+          "winner_id"
+        ],
+        "methods": [
+          "POST"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "returns": "vote result plus next pair",
+        "route": "/api/rate/vote"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "q"
+        ],
+        "returns": "typeahead search results",
+        "route": "/api/search-players"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "conference"
+        ],
+        "returns": "conference standings payload",
+        "route": "/api/standings"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [
+          "slug"
+        ],
+        "queryParams": [],
+        "returns": "team detail payload",
+        "route": "/api/standings/:slug"
+      }
+    ],
+    "clientApi": [
+      {
+        "name": "ACTIVE_PLAYERS_CACHE_TTL_MS",
+        "signature": "ACTIVE_PLAYERS_CACHE_TTL_MS = 5 * 60 * 1000"
+      },
+      {
+        "name": "apiActivePlayers",
+        "signature": "apiActivePlayers({ team } = {})"
+      },
+      {
+        "name": "apiLongevity",
+        "signature": "apiLongevity()"
+      },
+      {
+        "name": "apiPlayerHistory",
+        "signature": "apiPlayerHistory(nbaId, { limit, full = false, includeMetadata = false } = {})"
+      },
+      {
+        "name": "apiPlayerLongevity",
+        "signature": "apiPlayerLongevity(nbaId)"
+      },
+      {
+        "name": "apiPlayersIndex",
+        "signature": "apiPlayersIndex()"
+      },
+      {
+        "name": "apiRateLeaderboard",
+        "signature": "apiRateLeaderboard(limit = 50)"
+      },
+      {
+        "name": "apiRateVote",
+        "signature": "apiRateVote(winnerId, loserId)"
+      },
+      {
+        "name": "apiSearchPlayers",
+        "signature": "apiSearchPlayers(query)"
+      }
+    ],
+    "pageLoaders": [
+      {
+        "returns": "homepage active-player leaderboard",
+        "route": "/",
+        "signature": "load({ setHeaders })"
+      },
+      {
+        "returns": "preloaded compare cards from `?ids=`",
+        "route": "/compare",
+        "signature": "load({ url })"
+      },
+      {
+        "returns": "full player profile payload",
+        "route": "/player/:nbaId",
+        "signature": "load({ params, setHeaders })"
+      },
+      {
+        "returns": "east/west standings split",
+        "route": "/standings",
+        "signature": "load({ setHeaders })"
+      },
+      {
+        "returns": "team detail wrapper payload",
+        "route": "/standings/:slug",
+        "signature": "load({ params, setHeaders })"
+      },
+      {
+        "returns": "legacy team detail wrapper payload",
+        "route": "/team/:team",
+        "signature": "load({ params, setHeaders })"
+      }
+    ],
+    "sharedServer": [
+      {
+        "exports": [
+          {
+            "name": "loadPlayerPageData",
+            "signature": "loadPlayerPageData({ nbaIdParam, setHeaders, setCacheHeaders, loadFullHistory })"
+          },
+          {
+            "name": "parsePlayerRouteId",
+            "signature": "parsePlayerRouteId(nbaIdParam)"
+          }
+        ],
+        "module": "src/lib/server/playerPage.js"
+      },
+      {
+        "exports": [
+          {
+            "name": "loadComparePageData",
+            "signature": "loadComparePageData({ rawIds, loadFullHistory, buildComparePlayer, getComparePlayerColors })"
+          },
+          {
+            "name": "parseCompareIds",
+            "signature": "parseCompareIds(rawIds)"
+          }
+        ],
+        "module": "src/lib/server/comparePage.js"
+      },
+      {
+        "exports": [
+          {
+            "name": "setEdgeCache",
+            "signature": "setEdgeCache(setHeaders, { browserMaxAge = 0, edgeSMaxAge = 3600, swr = 86400, sie = 86400 } = {})"
+          }
+        ],
+        "module": "src/lib/server/cacheHeaders.js"
+      },
+      {
+        "exports": [
+          {
+            "name": "isAllowedVoteOrigin",
+            "signature": "isAllowedVoteOrigin(url, headers)"
+          }
+        ],
+        "module": "src/lib/server/eloSecurity.js"
+      },
+      {
+        "exports": [
+          {
+            "name": "handleRatePairRequest",
+            "signature": "handleRatePairRequest()"
+          },
+          {
+            "name": "handleRateVoteRequest",
+            "signature": "handleRateVoteRequest({ request, headers, url })"
+          }
+        ],
+        "module": "src/lib/server/eloService.js"
+      },
+      {
+        "exports": [
+          {
+            "name": "getActivePlayers",
+            "signature": "getActivePlayers(options = {})"
+          },
+          {
+            "name": "getConferenceStandings",
+            "signature": "getConferenceStandings(conference)"
+          },
+          {
+            "name": "getEloLeaderboard",
+            "signature": "getEloLeaderboard(limit = 50)"
+          },
+          {
+            "name": "getFullPlayerHistory",
+            "signature": "getFullPlayerHistory(nbaId, options = {})"
+          },
+          {
+            "name": "getLongevityRows",
+            "signature": "getLongevityRows(options = {})"
+          },
+          {
+            "name": "getLongevityTrajectory",
+            "signature": "getLongevityTrajectory(nbaId)"
+          },
+          {
+            "name": "getPlayerCurrent",
+            "signature": "getPlayerCurrent(nbaId)"
+          },
+          {
+            "name": "getPlayerHistory",
+            "signature": "getPlayerHistory(nbaId, limit = 500)"
+          },
+          {
+            "name": "getPlayersIndex",
+            "signature": "getPlayersIndex()"
+          },
+          {
+            "name": "getRandomPair",
+            "signature": "getRandomPair()"
+          },
+          {
+            "name": "getTeamPageData",
+            "signature": "getTeamPageData(teamName)"
+          },
+          {
+            "name": "getTeamSimulation",
+            "signature": "getTeamSimulation(teamName)"
+          },
+          {
+            "name": "getTeamWinDistribution",
+            "signature": "getTeamWinDistribution(teamName)"
+          },
+          {
+            "name": "MAX_FULL_HISTORY_ROWS",
+            "signature": "MAX_FULL_HISTORY_ROWS = 5_000"
+          },
+          {
+            "name": "recordVote",
+            "signature": "recordVote(winnerId, loserId, { client = supabase } = {})"
+          },
+          {
+            "name": "searchAllPlayers",
+            "signature": "searchAllPlayers(searchTerm)"
+          }
+        ],
+        "module": "src/lib/server/supabase.js"
+      }
+    ]
+  },
+  "repo_archetype": {
+    "primary": "Service / App",
+    "secondary": [
+      "Data / Workflow / Pipeline"
+    ],
+    "topology": "single-unit"
+  },
+  "version_policy": "Policy B: only shipped/runtime behavior changes bump version."
+}

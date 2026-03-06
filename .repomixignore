@@ -1,0 +1,11 @@
+context/COMPRESSED_*.md
+context/CONTEXT_BUDGET.*
+context/CONTEXT_INDEX.md
+context/START_HERE.md
+context/REPO_ARCHITECTURE.md
+context/REPO_ARCHITECTURE_SYNC.json
+context/FILE_INDEX.md
+node_modules/
+.svelte-kit/
+.vercel/
+build/

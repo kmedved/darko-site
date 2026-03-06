@@ -1,0 +1,8 @@
+{
+  "output": {
+    "filePath": "context/COMPRESSED_SRC.md",
+    "style": "markdown",
+    "compress": true,
+    "removeComments": true
+  }
+}

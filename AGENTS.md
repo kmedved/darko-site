@@ -25,7 +25,7 @@
 
 ## File Pointers
 
-- Data/API helpers: `src/lib/supabase.js`
+- Data/API helpers: `src/lib/server/supabase.js`
 - Shared sorting utility: `src/lib/utils/sortableTable.js`
 - Shared CSV utility + presets: `src/lib/utils/csvPresets.js`
 - Standings page implementation: `src/routes/standings/+page.svelte`
@@ -42,8 +42,20 @@
 - `npm run dev`: local server
 - `npm run build`: production build
 - `npm run preview`: preview build
+- `npm run context:sync`: regenerate `context/START_HERE.md`, `context/REPO_ARCHITECTURE.md`, `context/REPO_ARCHITECTURE_SYNC.json`, and `context/FILE_INDEX.md`
+- `npm run context:build`: regenerate local `context/COMPRESSED_*.md` bundles and `context/CONTEXT_BUDGET.md`
 
 - App is read-only for analytics tables (`player_ratings`, `players`, `season_sim`, `win_distribution`). The Elo voting feature (`elo_ratings`, `elo_votes` tables) is the exception — it performs writes via `/api/rate/vote`.
+
+## LLM Context Artifacts
+
+- LLM context artifacts live in `context/`. If you need a human guide, start at `context/START_HERE.md`.
+- Default handoff is `context/REPO_ARCHITECTURE.md` first, then one matching `context/COMPRESSED_*.md` bundle.
+- For oracle workflows, pair `context/REPO_ARCHITECTURE.md` with `context/FILE_INDEX.md`.
+- For implementation tasks, include raw source for the files you expect to edit; compressed bundles are navigation aids, not a substitute for source.
+- Changes touching exposed contracts, routing, module boundaries, cache behavior, or listed invariants must regenerate `context/REPO_ARCHITECTURE.md` and `context/REPO_ARCHITECTURE_SYNC.json` in the same change.
+- Use `npm run context:sync` to refresh checked-in context artifacts and `npm run context:build` to refresh local bundles/budgets.
+- Version policy is **Policy B**: only shipped/runtime behavior changes bump `package.json`'s version.
 
 ## MCP Servers
 You have access to:

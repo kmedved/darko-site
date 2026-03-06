@@ -12,3 +12,6 @@ build
 ".tools/" 
 .tools
 .DS_Store
+context/COMPRESSED_*.md
+context/CONTEXT_BUDGET.*
+context/CONTEXT_INDEX.md
