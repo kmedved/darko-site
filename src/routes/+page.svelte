@@ -371,7 +371,6 @@ if (column.alignClass !== 'num') return column.alignClass;
     }
 
     .filter-row input {
-        width: 100%;
         min-width: 40px;
         background: var(--bg);
         border: 1px solid var(--border);
@@ -381,6 +380,14 @@ if (column.alignClass !== 'num') return column.alignClass;
         font-size: 10.5px;
         padding: 3px 4px;
         outline: none;
+    }
+
+    .filter-row th.name input {
+        width: 100%;
+    }
+
+    .filter-row th.num input {
+        width: 40px;
     }
 
     .filter-row input:focus {

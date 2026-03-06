@@ -5,6 +5,7 @@
         exportCsvRows,
         formatSignedMetric,
         formatFixed,
+        formatMillions,
         formatOrDash,
         formatPercent
     } from '$lib/utils/csvPresets.js';
@@ -63,6 +64,7 @@
         dpm: { type: 'number' },
         o_dpm: { type: 'number' },
         d_dpm: { type: 'number' },
+        sal_market_fixed: { type: 'number' },
         box_dpm: { type: 'number' },
         on_off_dpm: { type: 'number' },
         x_minutes: { type: 'number' },
@@ -80,6 +82,7 @@
         { key: 'dpm', label: 'DPM', alignClass: 'num', dataType: 'number', metricKey: 'dpm' },
         { key: 'o_dpm', label: 'ODPM', alignClass: 'num', dataType: 'number', metricKey: 'o_dpm' },
         { key: 'd_dpm', label: 'DDPM', alignClass: 'num', dataType: 'number', metricKey: 'd_dpm' },
+        { key: 'sal_market_fixed', label: 'Fair Salary', alignClass: 'num', dataType: 'number', metricKey: 'sal_market_fixed' },
         { key: 'box_dpm', label: 'Box', alignClass: 'num', dataType: 'number', metricKey: 'box_dpm' },
         { key: 'on_off_dpm', label: 'On/Off', alignClass: 'num', dataType: 'number', metricKey: 'on_off_dpm' },
         { key: 'x_minutes', label: 'MPG', alignClass: 'num', dataType: 'number', metricKey: 'x_minutes' },
@@ -129,6 +132,7 @@
                 { header: 'DPM', accessor: 'dpm', format: formatSignedMetric },
                 { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
                 { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },
+                { header: 'Fair Salary', accessor: 'sal_market_fixed', format: formatMillions },
                 { header: 'Box', accessor: 'box_dpm', format: formatSignedMetric },
                 { header: 'On/Off DPM', accessor: 'on_off_dpm', format: formatSignedMetric },
                 { header: 'MPG', accessor: 'x_minutes', format: (v) => formatFixed(v, 1) },
@@ -287,6 +291,7 @@
                                 <td class="num {dpmClass(player.dpm)}">{formatSignedMetric(player.dpm)}</td>
                                 <td class="num {dpmClass(player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
                                 <td class="num {dpmClass(player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
+                                <td class="num">{formatMillions(player.sal_market_fixed)}</td>
                                 <td class="num {dpmClass(player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
                                 <td class="num {dpmClass(player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
                                 <td class="num">{formatFixed(player.x_minutes, 1)}</td>

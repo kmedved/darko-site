@@ -99,7 +99,10 @@
 		const dateOnly = playerInfo.date.includes('T')
 			? playerInfo.date.split('T')[0]
 			: playerInfo.date;
-		return dateOnly;
+		const d = new Date(dateOnly + 'T00:00:00');
+		return Number.isNaN(d.getTime())
+			? dateOnly
+			: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 	});
 
 	$effect(() => {
