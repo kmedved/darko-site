@@ -330,6 +330,7 @@
 
     .table-wrapper {
         margin-bottom: 32px;
+        overflow-x: auto;
     }
     .table-toolbar {
         display: flex;
@@ -351,7 +352,7 @@
         accent-color: var(--accent);
     }
 
-    table { border-collapse: separate; border-spacing: 0; font-size: 13px; }
+    table { border-collapse: separate; border-spacing: 0; font-size: 13px; width: max-content; min-width: 100%; }
 
     th {
         cursor: pointer;
@@ -395,6 +396,33 @@
     tr:hover td { background: var(--bg-elevated); }
 
     .rk, .num, .rec { text-align: right; font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+
+    /* Frozen rank column */
+    td.rk,
+    th:nth-child(1) {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--bg);
+        min-width: 36px;
+        max-width: 36px;
+    }
+
+    /* Frozen team-name column */
+    td.name,
+    th:nth-child(2) {
+        position: sticky;
+        left: 48px;
+        z-index: 1;
+        background: var(--bg);
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
+    }
+
+    tr:hover td.rk,
+    tr:hover td.name {
+        background: var(--bg-elevated);
+    }
+
     .name { font-weight: 500; text-align: left; }
     .name a { color: var(--text); }
     .name a:hover { color: var(--accent); }
@@ -453,42 +481,7 @@
     .pct.low { color: var(--text-secondary); }
     .pct.zero { color: var(--text-muted); }
 
-    /* Touch/mobile scroll mode */
-    @media (max-width: 768px), ((hover: none) and (pointer: coarse) and (max-width: 1024px)), ((any-hover: none) and (any-pointer: coarse) and (max-width: 1024px)) {
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        table {
-            width: max-content;
-            min-width: 100%;
-        }
-
-        th {
-            position: static;
-        }
-
-        .table-toolbar {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-    }
-    /* End touch/mobile scroll mode */
-
-    @media (max-width: 1024px) and (hover: hover) and (pointer: fine) {
-        table th:nth-child(n + 8),
-        table td:nth-child(n + 8) {
-            display: none;
-        }
-    }
-
-    @media (max-width: 768px) and (hover: hover) and (pointer: fine) {
-        table th:nth-child(n + 6),
-        table td:nth-child(n + 6) {
-            display: none;
-        }
-
+    @media (max-width: 768px) {
         .table-toolbar {
             flex-direction: column;
             align-items: flex-start;

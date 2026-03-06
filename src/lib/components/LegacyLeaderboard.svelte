@@ -130,19 +130,22 @@
 <style>
     .legacy-wrapper {
         margin-bottom: 40px;
+        overflow: auto;
+        max-height: calc(100vh - 120px);
     }
 
     table {
         border-collapse: separate;
         border-spacing: 0;
         font-size: 12px;
-        width: 100%;
+        width: max-content;
+        min-width: 100%;
     }
 
     th {
         position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 15;
+        top: 0;
+        z-index: 2;
         background: var(--bg);
         border-bottom: 1px solid var(--border);
         color: var(--text-muted);
@@ -156,8 +159,8 @@
     }
 
     .filter-row th {
-        top: calc(var(--nav-sticky-offset) + 30px);
-        z-index: 14;
+        top: 30px;
+        z-index: 2;
         padding: 5px 4px;
         background: var(--bg-elevated);
         text-transform: none;
@@ -320,8 +323,55 @@
         text-decoration: underline;
     }
 
+    /* Frozen rank column */
+    .rank-cell,
+    th:nth-child(1),
+    .filter-row th:nth-child(1) {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--bg);
+    }
+
+    th:nth-child(1),
+    .filter-row th:nth-child(1) {
+        z-index: 3;
+    }
+
+    .filter-row th:nth-child(1) {
+        background: var(--bg-elevated);
+    }
+
     .rank-cell {
         color: var(--text-muted);
+        min-width: 38px;
+        max-width: 38px;
+    }
+
+    /* Frozen player-name column */
+    .player-cell,
+    th:nth-child(2),
+    .filter-row th:nth-child(2) {
+        position: sticky;
+        left: 48px;
+        z-index: 1;
+        background: var(--bg);
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
+    }
+
+    th:nth-child(2),
+    .filter-row th:nth-child(2) {
+        z-index: 3;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .filter-row th:nth-child(2) {
+        background: var(--bg-elevated);
+    }
+
+    tr:hover td.rank-cell,
+    tr:hover td.player-cell {
+        background: var(--bg-elevated);
     }
 
     tr:hover td {
@@ -337,19 +387,6 @@
     }
 
     @media (max-width: 768px) {
-        .legacy-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        th {
-            position: static;
-        }
-
-        .filter-row th {
-            position: static;
-        }
-
         th, td { padding: 5px 4px; }
     }
 </style>

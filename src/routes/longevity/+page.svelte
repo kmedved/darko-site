@@ -469,19 +469,22 @@
 
     .table-wrapper {
         margin-bottom: 14px;
+        overflow: auto;
+        max-height: calc(100vh - 120px);
     }
 
     table {
         border-collapse: separate;
         border-spacing: 0;
         font-size: 13px;
-        width: 100%;
+        width: max-content;
+        min-width: 100%;
     }
 
     th {
         position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 15;
+        top: 0;
+        z-index: 2;
         background: var(--bg);
         box-shadow: none;
         border-bottom: 1px solid var(--border);
@@ -496,8 +499,8 @@
     }
 
     .filter-row th {
-        top: calc(var(--nav-sticky-offset) + 32px);
-        z-index: 14;
+        top: 32px;
+        z-index: 2;
         padding: 7px 6px;
         background: var(--bg-elevated);
         text-transform: none;
@@ -562,6 +565,18 @@
         font-size: 13px;
         font-weight: 600;
         text-align: left;
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--bg);
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
+    }
+
+    th:first-child,
+    .filter-row th:first-child {
+        left: 0;
+        z-index: 3;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
     }
 
     .data-row {
@@ -667,10 +682,6 @@
             padding: 7px 6px;
         }
 
-        .filter-row th {
-            top: calc(var(--nav-sticky-offset) + 32px);
-        }
-
         .table-footer {
             flex-direction: column;
             align-items: flex-start;
@@ -678,45 +689,4 @@
         }
     }
 
-    /* Touch/mobile scroll mode */
-    @media (max-width: 768px), ((hover: none) and (pointer: coarse) and (max-width: 1024px)), ((any-hover: none) and (any-pointer: coarse) and (max-width: 1024px)) {
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        table {
-            width: max-content;
-            min-width: 100%;
-        }
-
-        th {
-            position: static;
-        }
-
-        .filter-row th {
-            position: static;
-        }
-    }
-    /* End touch/mobile scroll mode */
-
-    @media (max-width: 900px) and (hover: hover) and (pointer: fine) {
-        table th:nth-child(n + 12),
-        table td:nth-child(n + 12) {
-            display: none;
-        }
-    }
-
-    @media (max-width: 768px) and (hover: hover) and (pointer: fine) {
-        table th:nth-child(2),
-        table td:nth-child(2),
-        table th:nth-child(3),
-        table td:nth-child(3),
-        table th:nth-child(5),
-        table td:nth-child(5),
-        table th:nth-child(n + 9),
-        table td:nth-child(n + 9) {
-            display: none;
-        }
-    }
 </style>

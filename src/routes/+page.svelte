@@ -202,19 +202,22 @@
 <style>
     .table-wrapper {
         margin-bottom: 40px;
+        overflow: auto;
+        max-height: calc(100vh - 120px);
     }
 
     table {
         border-collapse: separate;
         border-spacing: 0;
         font-size: 13px;
-        width: 100%;
+        width: max-content;
+        min-width: 100%;
     }
 
     th {
         position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 20;
+        top: 0;
+        z-index: 2;
         background: var(--bg);
         box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
@@ -315,11 +318,46 @@
         background: var(--bg-elevated);
     }
 
+    /* Frozen rank column */
+    td.rank,
+    th:nth-child(1) {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--bg);
+    }
+
+    th:nth-child(1) {
+        z-index: 3;
+    }
+
     .rank {
         width: 36px;
+        min-width: 48px;
+        max-width: 48px;
         color: var(--text-muted);
         font-family: var(--font-mono);
         font-size: 11px;
+    }
+
+    /* Frozen player-name column */
+    td.name,
+    th:nth-child(2) {
+        position: sticky;
+        left: 48px;
+        z-index: 1;
+        background: var(--bg);
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
+    }
+
+    th:nth-child(2) {
+        z-index: 3;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
+    }
+
+    tr:hover td.rank,
+    tr:hover td.name {
+        background: var(--bg-elevated);
     }
 
     .name { font-weight: 500; }
@@ -408,17 +446,8 @@
     .pct.zero { color: var(--text-muted); }
 
     @media (max-width: 768px) {
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
         .page-action-btn {
             display: none;
-        }
-
-        th {
-            position: static;
         }
 
         th, td { padding: 6px 8px; }

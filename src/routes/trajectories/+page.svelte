@@ -2,7 +2,7 @@
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import TrajectoryChart from '$lib/components/TrajectoryChart.svelte';
 	import { apiPlayerHistory, apiActivePlayers } from '$lib/api.js';
-	import { computeSeasonX } from '$lib/utils/seasonUtils.js';
+	import { computeSeasonX, getSeasonStartYear, formatSeasonLabel } from '$lib/utils/seasonUtils.js';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
@@ -15,6 +15,8 @@
 	let initialLoadDone = $state(false);
 	let yAxisMin = $state(null);
 	let yAxisMax = $state(null);
+	let seasonFilterMin = $state(null);
+	let seasonFilterMax = $state(null);
 	let prevTalentType = $state('dpm');
 
 	$effect(() => {
@@ -124,9 +126,29 @@
 		`DARKO Career ${talentTypes.find((t) => t.key === talentType)?.label ?? 'DPM'} Progression`
 	);
 
+	const availableSeasons = $derived.by(() => {
+		const years = new Set();
+		for (const p of selectedPlayers) {
+			for (const row of p.rows) {
+				const y = getSeasonStartYear(row.date);
+				if (y != null) years.add(y);
+			}
+		}
+		return [...years].sort((a, b) => a - b);
+	});
+
 	const chartData = $derived(
 		selectedPlayers.map((p) => {
 			let rows = p.rows;
+			if (seasonFilterMin != null || seasonFilterMax != null) {
+				rows = rows.filter((row) => {
+					const y = getSeasonStartYear(row.date);
+					if (y == null) return false;
+					if (seasonFilterMin != null && y < seasonFilterMin) return false;
+					if (seasonFilterMax != null && y > seasonFilterMax) return false;
+					return true;
+				});
+			}
 			if (timeScale === 'seasons') {
 				rows = computeSeasonX(rows);
 			}
@@ -373,6 +395,34 @@
 					</label>
 				</div>
 			</div>
+
+			{#if availableSeasons.length > 1}
+				<div class="control-group">
+					<span class="control-label">Season Range</span>
+					<div class="y-axis-inputs">
+						<label class="y-axis-field">
+							<span>From</span>
+							<select class="control-select" value={seasonFilterMin ?? ''}
+								onchange={(e) => { seasonFilterMin = e.currentTarget.value ? Number(e.currentTarget.value) : null; }}>
+								<option value="">Earliest</option>
+								{#each availableSeasons as yr (yr)}
+									<option value={yr}>{formatSeasonLabel(yr)}</option>
+								{/each}
+							</select>
+						</label>
+						<label class="y-axis-field">
+							<span>To</span>
+							<select class="control-select" value={seasonFilterMax ?? ''}
+								onchange={(e) => { seasonFilterMax = e.currentTarget.value ? Number(e.currentTarget.value) : null; }}>
+								<option value="">Latest</option>
+								{#each availableSeasons as yr (yr)}
+									<option value={yr}>{formatSeasonLabel(yr)}</option>
+								{/each}
+							</select>
+						</label>
+					</div>
+				</div>
+			{/if}
 
 			<div class="control-group">
 				<span class="control-label">Select Players to Compare</span>
