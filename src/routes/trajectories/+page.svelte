@@ -15,15 +15,24 @@
 	let initialLoadDone = $state(false);
 	let yAxisMin = $state(null);
 	let yAxisMax = $state(null);
-	let seasonFilterMin = $state(null);
-	let seasonFilterMax = $state(null);
+	let rangeFilterMin = $state(null);
+	let rangeFilterMax = $state(null);
 	let prevTalentType = $state('dpm');
+	let prevTimeScale = $state('games');
 
 	$effect(() => {
 		if (talentType !== prevTalentType) {
 			prevTalentType = talentType;
 			yAxisMin = null;
 			yAxisMax = null;
+		}
+	});
+
+	$effect(() => {
+		if (timeScale !== prevTimeScale) {
+			prevTimeScale = timeScale;
+			rangeFilterMin = null;
+			rangeFilterMax = null;
 		}
 	});
 
@@ -35,6 +44,16 @@
 	function handleYMaxChange(e) {
 		const v = parseFloat(e.target.value);
 		yAxisMax = Number.isFinite(v) ? v : null;
+	}
+
+	function handleRangeMinChange(e) {
+		const v = parseFloat(e.target.value);
+		rangeFilterMin = Number.isFinite(v) ? v : null;
+	}
+
+	function handleRangeMaxChange(e) {
+		const v = parseFloat(e.target.value);
+		rangeFilterMax = Number.isFinite(v) ? v : null;
 	}
 
 	const PLAYER_COLORS = [
@@ -137,15 +156,31 @@
 		return [...years].sort((a, b) => a - b);
 	});
 
+	const rangeLabel = $derived(
+		timeScale === 'seasons' ? 'Season Range' : timeScale === 'age' ? 'Age Range' : 'Games Range'
+	);
+
+	const showRangeFilter = $derived(
+		selectedPlayers.length > 0 &&
+		(timeScale === 'seasons' ? availableSeasons.length > 1 : selectedPlayers.some((p) => p.rows.length > 0))
+	);
+
 	const chartData = $derived(
 		selectedPlayers.map((p) => {
 			let rows = p.rows;
-			if (seasonFilterMin != null || seasonFilterMax != null) {
+			if (rangeFilterMin != null || rangeFilterMax != null) {
 				rows = rows.filter((row) => {
-					const y = getSeasonStartYear(row.date);
-					if (y == null) return false;
-					if (seasonFilterMin != null && y < seasonFilterMin) return false;
-					if (seasonFilterMax != null && y > seasonFilterMax) return false;
+					let val;
+					if (timeScale === 'seasons') {
+						val = getSeasonStartYear(row.date);
+					} else if (timeScale === 'age') {
+						val = Number.parseFloat(row.age);
+					} else {
+						val = Number.parseFloat(row.career_game_num);
+					}
+					if (val == null || !Number.isFinite(val)) return false;
+					if (rangeFilterMin != null && val < rangeFilterMin) return false;
+					if (rangeFilterMax != null && val > rangeFilterMax) return false;
 					return true;
 				});
 			}
@@ -396,30 +431,43 @@
 				</div>
 			</div>
 
-			{#if availableSeasons.length > 1}
+			{#if showRangeFilter}
 				<div class="control-group">
-					<span class="control-label">Season Range</span>
+					<span class="control-label">{rangeLabel}</span>
 					<div class="y-axis-inputs">
-						<label class="y-axis-field">
-							<span>From</span>
-							<select class="control-select" value={seasonFilterMin ?? ''}
-								onchange={(e) => { seasonFilterMin = e.currentTarget.value ? Number(e.currentTarget.value) : null; }}>
-								<option value="">Earliest</option>
-								{#each availableSeasons as yr (yr)}
-									<option value={yr}>{formatSeasonLabel(yr)}</option>
-								{/each}
-							</select>
-						</label>
-						<label class="y-axis-field">
-							<span>To</span>
-							<select class="control-select" value={seasonFilterMax ?? ''}
-								onchange={(e) => { seasonFilterMax = e.currentTarget.value ? Number(e.currentTarget.value) : null; }}>
-								<option value="">Latest</option>
-								{#each availableSeasons as yr (yr)}
-									<option value={yr}>{formatSeasonLabel(yr)}</option>
-								{/each}
-							</select>
-						</label>
+						{#if timeScale === 'seasons'}
+							<label class="y-axis-field">
+								<span>From</span>
+								<select class="control-select" value={rangeFilterMin ?? ''}
+									onchange={(e) => { rangeFilterMin = e.currentTarget.value ? Number(e.currentTarget.value) : null; }}>
+									<option value="">Earliest</option>
+									{#each availableSeasons as yr (yr)}
+										<option value={yr}>{formatSeasonLabel(yr)}</option>
+									{/each}
+								</select>
+							</label>
+							<label class="y-axis-field">
+								<span>To</span>
+								<select class="control-select" value={rangeFilterMax ?? ''}
+									onchange={(e) => { rangeFilterMax = e.currentTarget.value ? Number(e.currentTarget.value) : null; }}>
+									<option value="">Latest</option>
+									{#each availableSeasons as yr (yr)}
+										<option value={yr}>{formatSeasonLabel(yr)}</option>
+									{/each}
+								</select>
+							</label>
+						{:else}
+							<label class="y-axis-field">
+								<span>Min</span>
+								<input type="number" step={timeScale === 'age' ? 'any' : '1'} placeholder="Auto"
+									value={rangeFilterMin ?? ''} oninput={handleRangeMinChange} />
+							</label>
+							<label class="y-axis-field">
+								<span>Max</span>
+								<input type="number" step={timeScale === 'age' ? 'any' : '1'} placeholder="Auto"
+									value={rangeFilterMax ?? ''} oninput={handleRangeMaxChange} />
+							</label>
+						{/if}
 					</div>
 				</div>
 			{/if}
