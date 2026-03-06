@@ -105,8 +105,7 @@
     function cellClass(column, value) {
         if (column.key === '_rank') return 'rank';
         if (column.key === 'player_name') return 'name';
-        if (column.key === 'team_name') return 'team';
-        if (column.alignClass !== 'num') return column.alignClass;
+if (column.alignClass !== 'num') return column.alignClass;
         if (column.key === 'surplus_value') return `num ${signClass(value)}`.trim();
         if (column.key === 'sal_market_fixed') return 'num';
         return `num ${statClass(column.key, value)}`.trim();
@@ -259,13 +258,8 @@
                                         {#if column.key === 'player_name'}
                                             <td class={cellClass(column, value)}>
                                                 <a href="/player/{player.nba_id}">{player.player_name}</a>{#if player.position}<span class="pos-label"> ({player.position})</span>{/if}
-                                            </td>
-                                        {:else if column.key === 'team_name'}
-                                            <td class={cellClass(column, value)}>
                                                 {#if player.team_name}
-                                                    <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
-                                                {:else}
-                                                    —
+                                                    <div class="player-team"><a href="/team/{encodeURIComponent(player.team_name)}">{teamAbbr(player.team_name)}</a></div>
                                                 {/if}
                                             </td>
                                         {:else}
@@ -343,7 +337,6 @@
         border-spacing: 0;
         font-size: 12px;
         width: max-content;
-        min-width: 100%;
     }
 
     th {
@@ -491,18 +484,19 @@
         margin-left: 2px;
     }
 
-    .team {
-        color: var(--text-secondary);
-        font-size: 11.5px;
+    .player-team {
+        font-size: 10px;
+        color: var(--text-muted);
+        line-height: 1.1;
+        margin-top: 1px;
     }
 
-    .team a {
+    .player-team a {
         color: inherit;
     }
 
-    .team a:hover {
+    .player-team a:hover {
         color: var(--accent);
-        text-decoration: underline;
     }
 
     .num {

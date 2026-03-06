@@ -11,10 +11,9 @@ const DASH = '—';
 export const LEADERBOARD_COLUMNS = [
     { key: '_rank', label: '#', type: 'number', align: 'right', alignClass: 'rank', dataType: 'number' },
     { key: 'player_name', label: 'Player', type: 'text', align: 'left', alignClass: 'name', dataType: 'text' },
-    { key: 'team_name', label: 'Team', type: 'text', align: 'left', alignClass: 'team', dataType: 'text' },
-    { key: 'dpm', label: 'DPM', type: 'number', align: 'right', alignClass: 'num', dataType: 'number', format: 'signed', metricKey: 'dpm' },
-    { key: 'o_dpm', label: 'Offense', type: 'number', align: 'right', alignClass: 'num', dataType: 'number', format: 'signed', metricKey: 'o_dpm' },
-    { key: 'd_dpm', label: 'Defense', type: 'number', align: 'right', alignClass: 'num', dataType: 'number', format: 'signed', metricKey: 'd_dpm' },
+{ key: 'dpm', label: 'DPM', type: 'number', align: 'right', alignClass: 'num', dataType: 'number', format: 'signed', metricKey: 'dpm' },
+    { key: 'o_dpm', label: 'Off', type: 'number', align: 'right', alignClass: 'num', dataType: 'number', format: 'signed', metricKey: 'o_dpm' },
+    { key: 'd_dpm', label: 'Def', type: 'number', align: 'right', alignClass: 'num', dataType: 'number', format: 'signed', metricKey: 'd_dpm' },
     { key: 'sal_market_fixed', label: 'Fair Salary', type: 'number', align: 'right', alignClass: 'num', dataType: 'number', format: 'millions', metricKey: 'sal_market_fixed' },
     { key: 'box_dpm', label: 'Box', type: 'number', align: 'right', alignClass: 'num', dataType: 'number', format: 'signed', metricKey: 'box_dpm' },
     { key: 'on_off_dpm', label: 'On/Off', type: 'number', align: 'right', alignClass: 'num', dataType: 'number', format: 'signed', metricKey: 'on_off_dpm' },
