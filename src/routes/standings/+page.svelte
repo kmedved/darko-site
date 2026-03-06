@@ -495,6 +495,48 @@
         background: linear-gradient(0deg, var(--negative-bg), var(--negative-bg)), var(--bg-elevated);
     }
 
+    /* Touch/mobile scroll mode */
+    @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
+        (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: max-content;
+            min-width: 100%;
+        }
+
+        th {
+            position: static;
+        }
+
+        td.rk,
+        td.name,
+        th:nth-child(1),
+        th:nth-child(2) {
+            position: static;
+            left: auto;
+            box-shadow: none;
+        }
+    }
+    /* End touch/mobile scroll mode */
+
+    @media (hover: hover) and (pointer: fine) and (max-width: 1280px) {
+        .table-wrapper.expanded th:nth-child(n + 12),
+        .table-wrapper.expanded td:nth-child(n + 12) {
+            display: none;
+        }
+    }
+
+    @media (hover: hover) and (pointer: fine) and (max-width: 1120px) {
+        .table-wrapper th:nth-child(n + 8),
+        .table-wrapper td:nth-child(n + 8) {
+            display: none;
+        }
+    }
+
     @media (max-width: 768px) {
         .table-toolbar {
             flex-direction: column;

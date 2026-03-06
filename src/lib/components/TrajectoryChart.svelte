@@ -166,7 +166,7 @@
 		const yLow = yMin !== null && Number.isFinite(yMin) ? yMin : yExtent[0] - yPad;
 		const yHigh = yMax !== null && Number.isFinite(yMax) ? yMax : yExtent[1] + yPad;
 
-		const x = d3.scaleLinear().domain(xExtent).range([0, w]).nice();
+		const x = d3.scaleLinear().domain(xExtent).range([0, w]);
 		const y = d3
 			.scaleLinear()
 			.domain([yLow, yHigh])

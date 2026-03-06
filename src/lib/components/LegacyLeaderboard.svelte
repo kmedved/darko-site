@@ -12,12 +12,19 @@
     } from '$lib/utils/legacyLeaderboard.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
+    import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
 
     let { players = [] } = $props();
 
     let sortColumn = $state('dpm');
     let sortDirection = $state('desc');
     let columnFilters = $state({});
+    let legacyTableRoot = $state(null);
+    let legacyBodyScroller = $state(null);
+    let legacyBodyTable = $state(null);
+    let legacySourceHead = $state(null);
+    let legacyHeaderScroller = $state(null);
+    let legacyHeaderTable = $state(null);
 
     const columns = LEGACY_COLUMNS;
 
@@ -52,85 +59,142 @@
     function setFilter(colKey, value) {
         columnFilters = { ...columnFilters, [colKey]: value };
     }
+
+    $effect(() => {
+        sortColumn;
+        sortDirection;
+        columnFilters;
+        sortedPlayers.length;
+        legacyTableRoot;
+        legacyBodyScroller;
+        legacyBodyTable;
+        legacySourceHead;
+        legacyHeaderScroller;
+        legacyHeaderTable;
+
+        return setupWideStickyTable({
+            root: legacyTableRoot,
+            bodyScroller: legacyBodyScroller,
+            bodyTable: legacyBodyTable,
+            sourceHead: legacySourceHead,
+            headerScroller: legacyHeaderScroller,
+            headerTable: legacyHeaderTable,
+            wheelTarget: legacyHeaderScroller
+        });
+    });
 </script>
 
-<div class="legacy-wrapper">
-    <table>
-        <thead>
-            <tr class="header-row">
-                {#each columns as col (col.key)}
-                    <th
-                        class="sortable {col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : ''} {sortColumn === col.key ? 'active' : ''}"
-                        onclick={() => toggleSort(col.key)}
-                    >
-                        <span class="header-label-wrap">
-                            <span>{col.label}</span>
-                            {#if col.metricKey}
-                                <span class="header-tooltip-trigger" aria-hidden="true">?</span>
-                                <span class="header-tooltip">{getMetricDefinition(col.metricKey)}</span>
-                            {/if}
-                            <span class="sort-indicator">{sortGlyph(col.key)}</span>
-                        </span>
-                    </th>
-                {/each}
-            </tr>
-            <tr class="filter-row">
-                {#each columns as col (col.key)}
-                    <th class={col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : ''}>
-                        <input
-                            type="text"
-                            value={columnFilters[col.key] || ''}
-                            oninput={(e) => setFilter(col.key, e.currentTarget.value)}
-                            placeholder={col.type === 'text' ? 'All' : ''}
-                        />
-                    </th>
-                {/each}
-            </tr>
-        </thead>
-        <tbody>
-            {#if sortedPlayers.length === 0}
-                <tr>
-                    <td class="empty-row" colspan={columns.length}>No matching players.</td>
-                </tr>
-            {:else}
-                {#each sortedPlayers as player, index (player.nba_id)}
+{#snippet legacyHeaderRows()}
+    <tr class="header-row">
+        {#each columns as col (col.key)}
+            <th
+                class="sortable {col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : ''} {sortColumn === col.key ? 'active' : ''}"
+                onclick={() => toggleSort(col.key)}
+            >
+                <span class="header-label-wrap">
+                    <span>{col.label}</span>
+                    {#if col.metricKey}
+                        <span class="header-tooltip-trigger" aria-hidden="true">?</span>
+                        <span class="header-tooltip">{getMetricDefinition(col.metricKey)}</span>
+                    {/if}
+                    <span class="sort-indicator">{sortGlyph(col.key)}</span>
+                </span>
+            </th>
+        {/each}
+    </tr>
+    <tr class="filter-row">
+        {#each columns as col (col.key)}
+            <th class={col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : ''}>
+                <input
+                    type="text"
+                    value={columnFilters[col.key] || ''}
+                    oninput={(e) => setFilter(col.key, e.currentTarget.value)}
+                    placeholder={col.type === 'text' ? 'All' : ''}
+                />
+            </th>
+        {/each}
+    </tr>
+{/snippet}
+
+<div class="legacy-wrapper table-shell" bind:this={legacyTableRoot}>
+    <div class="sticky-header-shell">
+        <div class="table-header-scroll" bind:this={legacyHeaderScroller}>
+            <table class="sticky-header-table" bind:this={legacyHeaderTable}>
+                <thead>
+                    {@render legacyHeaderRows()}
+                </thead>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-body-scroll" bind:this={legacyBodyScroller}>
+        <table bind:this={legacyBodyTable}>
+            <thead class="table-sizing-head" aria-hidden="true" bind:this={legacySourceHead}>
+                {@render legacyHeaderRows()}
+            </thead>
+            <tbody>
+                {#if sortedPlayers.length === 0}
                     <tr>
-                        {#each columns as col (col.key)}
-                            {@const value = getLeaderboardCellValue(player, col, index)}
-                            {#if col.key === 'player_name'}
-                                <td class="player-cell">
-                                    <a href="/player/{player.nba_id}">{player.player_name || '—'}</a>
-                                    {#if player.position}
-                                        <span class="pos-label"> ({player.position})</span>
-                                    {/if}
-                                </td>
-                            {:else if col.key === 'team_name'}
-                                <td class="team-cell">
-                                    {#if player.team_name}
-                                        <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
-                                    {:else}
-                                        —
-                                    {/if}
-                                </td>
-                            {:else}
-                                <td
-                                    class="{col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : ''} {col.key === '_rank' ? 'rank-cell' : ''}"
-                                >
-                                    {formatLeaderboardCell(col, value)}
-                                </td>
-                            {/if}
-                        {/each}
+                        <td class="empty-row" colspan={columns.length}>No matching players.</td>
                     </tr>
-                {/each}
-            {/if}
-        </tbody>
-    </table>
+                {:else}
+                    {#each sortedPlayers as player, index (player.nba_id)}
+                        <tr>
+                            {#each columns as col (col.key)}
+                                {@const value = getLeaderboardCellValue(player, col, index)}
+                                {#if col.key === 'player_name'}
+                                    <td class="player-cell">
+                                        <a href="/player/{player.nba_id}">{player.player_name || '—'}</a>
+                                        {#if player.position}
+                                            <span class="pos-label"> ({player.position})</span>
+                                        {/if}
+                                    </td>
+                                {:else if col.key === 'team_name'}
+                                    <td class="team-cell">
+                                        {#if player.team_name}
+                                            <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
+                                        {:else}
+                                            —
+                                        {/if}
+                                    </td>
+                                {:else}
+                                    <td
+                                        class="{col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : ''} {col.key === '_rank' ? 'rank-cell' : ''}"
+                                    >
+                                        {formatLeaderboardCell(col, value)}
+                                    </td>
+                                {/if}
+                            {/each}
+                        </tr>
+                    {/each}
+                {/if}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <style>
     .legacy-wrapper {
-        --legacy-header-row-height: 30px;
+        --wide-sticky-header-height: 60px;
         margin-bottom: 40px;
+    }
+
+    .table-shell {
+        position: relative;
+    }
+
+    .sticky-header-shell {
+        position: sticky;
+        top: var(--nav-sticky-offset);
+        z-index: 35;
+        margin-bottom: calc(-1 * var(--wide-sticky-header-height));
+    }
+
+    .table-header-scroll {
+        overflow: hidden;
+    }
+
+    .table-body-scroll {
         overflow-x: auto;
     }
 
@@ -143,9 +207,6 @@
     }
 
     th {
-        position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 30;
         background: var(--bg);
         border-bottom: 1px solid var(--border);
         color: var(--text-muted);
@@ -159,11 +220,14 @@
     }
 
     .filter-row th {
-        top: calc(var(--nav-sticky-offset) + var(--legacy-header-row-height));
-        z-index: 25;
         padding: 5px 4px;
         background: var(--bg-elevated);
         text-transform: none;
+    }
+
+    .table-sizing-head th {
+        visibility: hidden;
+        pointer-events: none;
     }
 
     .filter-row input {
@@ -292,6 +356,11 @@
         font-family: var(--font-sans);
         font-weight: 600;
         font-size: 12px;
+        position: sticky;
+        left: 48px;
+        z-index: 1;
+        background: var(--bg);
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
     }
 
     .pos-label {
@@ -323,22 +392,21 @@
         text-decoration: underline;
     }
 
-    /* Frozen rank column */
     .rank-cell,
-    th:nth-child(1),
-    .filter-row th:nth-child(1) {
+    .table-header-scroll th:nth-child(1),
+    .table-header-scroll .filter-row th:nth-child(1) {
         position: sticky;
         left: 0;
         z-index: 1;
         background: var(--bg);
     }
 
-    th:nth-child(1),
-    .filter-row th:nth-child(1) {
+    .table-header-scroll th:nth-child(1),
+    .table-header-scroll .filter-row th:nth-child(1) {
         z-index: 31;
     }
 
-    .filter-row th:nth-child(1) {
+    .table-header-scroll .filter-row th:nth-child(1) {
         background: var(--bg-elevated);
     }
 
@@ -348,33 +416,25 @@
         max-width: 38px;
     }
 
-    /* Frozen player-name column */
-    .player-cell,
-    th:nth-child(2),
-    .filter-row th:nth-child(2) {
+    .table-header-scroll th:nth-child(2),
+    .table-header-scroll .filter-row th:nth-child(2) {
         position: sticky;
         left: 48px;
-        z-index: 1;
+        z-index: 31;
         background: var(--bg);
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
     }
 
-    th:nth-child(2),
-    .filter-row th:nth-child(2) {
-        z-index: 31;
-        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
-    }
-
-    .filter-row th:nth-child(2) {
+    .table-header-scroll .filter-row th:nth-child(2) {
         background: var(--bg-elevated);
     }
 
-    tr:hover td.rank-cell,
-    tr:hover td.player-cell {
+    .table-body-scroll tr:hover td.rank-cell,
+    .table-body-scroll tr:hover td.player-cell {
         background: var(--bg-elevated);
     }
 
-    tr:hover td {
+    .table-body-scroll tr:hover td {
         background: var(--bg-elevated);
     }
 
@@ -386,20 +446,39 @@
         font-size: 13px;
     }
 
-    @media (max-width: 768px) {
+    /* Touch/mobile scroll mode */
+    @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
+        (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
+        .sticky-header-shell {
+            display: none;
+        }
+
+        .table-body-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-sizing-head th {
+            visibility: visible;
+            pointer-events: auto;
+        }
+
         th,
         .filter-row th,
         .rank-cell,
-        .player-cell,
-        th:nth-child(1),
-        th:nth-child(2),
-        .filter-row th:nth-child(1),
-        .filter-row th:nth-child(2) {
+        .player-cell {
             position: static;
             left: auto;
             box-shadow: none;
         }
 
+        .player-cell {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         th, td { padding: 5px 4px; }
     }
+    /* End touch/mobile scroll mode */
 </style>

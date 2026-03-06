@@ -10,6 +10,7 @@
     } from '$lib/utils/csvPresets.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
+    import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
 
     let {
         teamName = '',
@@ -23,6 +24,12 @@
     let sortColumn = $state('player_name');
     let sortDirection = $state('asc');
     let logoFailed = $state(false);
+    let teamTableRoot = $state(null);
+    let teamBodyScroller = $state(null);
+    let teamBodyTable = $state(null);
+    let teamSourceHead = $state(null);
+    let teamHeaderScroller = $state(null);
+    let teamHeaderTable = $state(null);
 
     const teamId = $derived(players?.[0]?.tm_id || null);
 
@@ -134,7 +141,49 @@
             filename: `${teamName || 'team'}-players.csv`
         });
     }
+
+    $effect(() => {
+        sortColumn;
+        sortDirection;
+        sortedPlayers.length;
+        teamTableRoot;
+        teamBodyScroller;
+        teamBodyTable;
+        teamSourceHead;
+        teamHeaderScroller;
+        teamHeaderTable;
+
+        return setupWideStickyTable({
+            root: teamTableRoot,
+            bodyScroller: teamBodyScroller,
+            bodyTable: teamBodyTable,
+            sourceHead: teamSourceHead,
+            headerScroller: teamHeaderScroller,
+            headerTable: teamHeaderTable,
+            wheelTarget: teamHeaderScroller
+        });
+    });
 </script>
+
+{#snippet teamHeaderRow()}
+    <tr>
+        {#each teamPlayerColumns as column (column.key)}
+            <th
+                class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
+                onclick={() => toggleSort(column.key)}
+            >
+                <span class="header-label-wrap">
+                    <span>{column.label}</span>
+                    {#if column.metricKey}
+                        <span class="header-tooltip-trigger" aria-hidden="true">?</span>
+                        <span class="header-tooltip">{getMetricDefinition(column.metricKey)}</span>
+                    {/if}
+                    <span class="sort-indicator">{sortGlyph(column.key)}</span>
+                </span>
+            </th>
+        {/each}
+    </tr>
+{/snippet}
 
 <div class="container">
     <a class="back-link" href={backHref}>{backLabel}</a>
@@ -209,50 +258,46 @@
         <div class="empty-state">No active players found for {teamName}.</div>
     {:else}
         <h2 class="section-title">Players</h2>
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        {#each teamPlayerColumns as column (column.key)}
-                            <th
-                                class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
-                                onclick={() => toggleSort(column.key)}
-                            >
-                                <span class="header-label-wrap">
-                                    <span>{column.label}</span>
-                                    {#if column.metricKey}
-                                        <span class="header-tooltip-trigger" aria-hidden="true">?</span>
-                                        <span class="header-tooltip">{getMetricDefinition(column.metricKey)}</span>
-                                    {/if}
-                                    <span class="sort-indicator">{sortGlyph(column.key)}</span>
-                                </span>
-                            </th>
+        <div class="table-wrapper table-shell" bind:this={teamTableRoot}>
+            <div class="sticky-header-shell">
+                <div class="table-header-scroll" bind:this={teamHeaderScroller}>
+                    <table class="sticky-header-table" bind:this={teamHeaderTable}>
+                        <thead>
+                            {@render teamHeaderRow()}
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-body-scroll" bind:this={teamBodyScroller}>
+                <table bind:this={teamBodyTable}>
+                    <thead class="table-sizing-head" aria-hidden="true" bind:this={teamSourceHead}>
+                        {@render teamHeaderRow()}
+                    </thead>
+                    <tbody>
+                        {#each sortedPlayers as player (player.nba_id)}
+                            <tr>
+                                <td class="name">
+                                    <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
+                                </td>
+                                <td class="position">{player.position || '—'}</td>
+                                <td class="num {dpmClass(player.dpm)}">{formatSignedMetric(player.dpm)}</td>
+                                <td class="num {dpmClass(player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
+                                <td class="num {dpmClass(player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
+                                <td class="num {dpmClass(player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
+                                <td class="num {dpmClass(player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
+                                <td class="num">{formatFixed(player.x_minutes, 1)}</td>
+                                <td class="num">{formatFixed(player.x_pace, 1)}</td>
+                                <td class="num">{formatFixed(player.x_pts_100, 1)}</td>
+                                <td class="num">{formatFixed(player.x_ast_100, 1)}</td>
+                                <td class="num">{formatPercent(player.x_fg_pct)}</td>
+                                <td class="num">{formatPercent(player.x_fg3_pct)}</td>
+                                <td class="num">{formatPercent(player.x_ft_pct)}</td>
+                            </tr>
                         {/each}
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each sortedPlayers as player (player.nba_id)}
-                        <tr>
-                            <td class="name">
-                                <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
-                            </td>
-                            <td class="position">{player.position || '—'}</td>
-                            <td class="num {dpmClass(player.dpm)}">{formatSignedMetric(player.dpm)}</td>
-                            <td class="num {dpmClass(player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
-                            <td class="num {dpmClass(player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
-                            <td class="num {dpmClass(player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
-                            <td class="num {dpmClass(player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
-                            <td class="num">{formatFixed(player.x_minutes, 1)}</td>
-                            <td class="num">{formatFixed(player.x_pace, 1)}</td>
-                            <td class="num">{formatFixed(player.x_pts_100, 1)}</td>
-                            <td class="num">{formatFixed(player.x_ast_100, 1)}</td>
-                            <td class="num">{formatPercent(player.x_fg_pct)}</td>
-                            <td class="num">{formatPercent(player.x_fg3_pct)}</td>
-                            <td class="num">{formatPercent(player.x_ft_pct)}</td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
     {/if}
 
@@ -345,19 +390,38 @@
     }
 
     .table-wrapper {
+        --wide-sticky-header-height: 36px;
         margin-bottom: 32px;
+    }
+
+    .table-shell {
+        position: relative;
+    }
+
+    .sticky-header-shell {
+        position: sticky;
+        top: var(--nav-sticky-offset);
+        z-index: 30;
+        margin-bottom: calc(-1 * var(--wide-sticky-header-height));
+    }
+
+    .table-header-scroll {
+        overflow: hidden;
+    }
+
+    .table-body-scroll {
+        overflow-x: auto;
     }
 
     table {
         border-collapse: separate;
         border-spacing: 0;
         font-size: 13px;
+        width: max-content;
+        min-width: 100%;
     }
 
     th {
-        position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 20;
         cursor: pointer;
         user-select: none;
         background: var(--bg);
@@ -370,6 +434,28 @@
         padding: 7px 6px;
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
+    }
+
+    th.sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    th.sortable:hover {
+        background: var(--bg-hover);
+    }
+
+    th.active {
+        color: var(--text);
+    }
+
+    .table-body-scroll tr:hover td {
+        background: var(--bg-elevated);
+    }
+
+    .table-sizing-head th {
+        visibility: hidden;
+        pointer-events: none;
     }
 
     .empty-state {
@@ -445,4 +531,74 @@
         font-weight: 500;
         color: var(--text-secondary);
     }
+
+    .name {
+        font-weight: 500;
+    }
+
+    .name a {
+        color: var(--text);
+    }
+
+    .name a:hover {
+        color: var(--accent);
+    }
+
+    .position {
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+
+    .num {
+        text-align: right;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    th.num {
+        text-align: right;
+    }
+
+    .num.pos {
+        color: var(--positive);
+    }
+
+    .num.neg {
+        color: var(--negative);
+    }
+
+    .sort-indicator {
+        margin-left: 6px;
+        opacity: 0.6;
+        font-size: 10px;
+    }
+
+    th.active .sort-indicator {
+        color: var(--accent);
+        opacity: 1;
+    }
+
+    /* Touch/mobile scroll mode */
+    @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
+        (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
+        .sticky-header-shell {
+            display: none;
+        }
+
+        .table-body-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-sizing-head th {
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        th {
+            position: static;
+        }
+    }
+    /* End touch/mobile scroll mode */
 </style>

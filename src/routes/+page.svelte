@@ -14,6 +14,7 @@
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
+    import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
     import LegacyLeaderboard from '$lib/components/LegacyLeaderboard.svelte';
 
     let { data } = $props();
@@ -21,6 +22,12 @@
     let viewMode = $state('standard');
     let sortColumn = $state('_rank');
     let sortDirection = $state('asc');
+    let standardTableRoot = $state(null);
+    let standardBodyScroller = $state(null);
+    let standardBodyTable = $state(null);
+    let standardSourceHead = $state(null);
+    let standardHeaderScroller = $state(null);
+    let standardHeaderTable = $state(null);
 
     const players = $derived(data.players || []);
     const playerColumns = LEADERBOARD_COLUMNS;
@@ -110,6 +117,33 @@
             filename: 'darko-dpm-leaderboard.csv'
         });
     }
+
+    $effect(() => {
+        viewMode;
+        sortColumn;
+        sortDirection;
+        sortedPlayers.length;
+        standardTableRoot;
+        standardBodyScroller;
+        standardBodyTable;
+        standardSourceHead;
+        standardHeaderScroller;
+        standardHeaderTable;
+
+        if (viewMode !== 'standard') {
+            return;
+        }
+
+        return setupWideStickyTable({
+            root: standardTableRoot,
+            bodyScroller: standardBodyScroller,
+            bodyTable: standardBodyTable,
+            sourceHead: standardSourceHead,
+            headerScroller: standardHeaderScroller,
+            headerTable: standardHeaderTable,
+            wheelTarget: standardHeaderScroller
+        });
+    });
 </script>
 
 <svelte:head>
@@ -142,66 +176,101 @@
         </div>
     </div>
 
+    {#snippet standardHeaderRow()}
+        <tr>
+            {#each playerColumns as column (column.key)}
+                <th
+                    class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
+                    onclick={() => toggleSort(column.key)}
+                >
+                    <span class="header-label-wrap">
+                        <span>{column.label}</span>
+                        {#if column.metricKey}
+                            <span class="header-tooltip-trigger" aria-hidden="true">?</span>
+                            <span class="header-tooltip">{getMetricDefinition(column.metricKey)}</span>
+                        {/if}
+                        <span class="sort-indicator">{sortGlyph(column.key)}</span>
+                    </span>
+                </th>
+            {/each}
+        </tr>
+    {/snippet}
+
     {#if players.length === 0}
         <div class="empty-state">No players are currently available.</div>
     {:else if viewMode === 'legacy'}
         <LegacyLeaderboard {players} />
     {:else}
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        {#each playerColumns as column (column.key)}
-                            <th
-                                class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
-                                onclick={() => toggleSort(column.key)}
-                            >
-                                <span class="header-label-wrap">
-                                    <span>{column.label}</span>
-                                    {#if column.metricKey}
-                                        <span class="header-tooltip-trigger" aria-hidden="true">?</span>
-                                        <span class="header-tooltip">{getMetricDefinition(column.metricKey)}</span>
+        <div class="table-wrapper table-shell" bind:this={standardTableRoot}>
+            <div class="sticky-header-shell">
+                <div class="table-header-scroll" bind:this={standardHeaderScroller}>
+                    <table class="sticky-header-table" bind:this={standardHeaderTable}>
+                        <thead>
+                            {@render standardHeaderRow()}
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-body-scroll" bind:this={standardBodyScroller}>
+                <table bind:this={standardBodyTable}>
+                    <thead class="table-sizing-head" aria-hidden="true" bind:this={standardSourceHead}>
+                        {@render standardHeaderRow()}
+                    </thead>
+                    <tbody>
+                        {#each sortedPlayers as player, index (player.nba_id)}
+                            <tr>
+                                {#each playerColumns as column (column.key)}
+                                    {@const value = getLeaderboardCellValue(player, column, index)}
+                                    {#if column.key === 'player_name'}
+                                        <td class={cellClass(column, value)}>
+                                            <a href="/player/{player.nba_id}">{player.player_name}</a>{#if player.position}<span class="pos-label"> ({player.position})</span>{/if}
+                                        </td>
+                                    {:else if column.key === 'team_name'}
+                                        <td class={cellClass(column, value)}>
+                                            {#if player.team_name}
+                                                <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
+                                            {:else}
+                                                —
+                                            {/if}
+                                        </td>
+                                    {:else}
+                                        <td class={cellClass(column, value)}>
+                                            {column.key === 'x_minutes' ? fmtMpg(value) : formatLeaderboardCell(column, value)}
+                                        </td>
                                     {/if}
-                                    <span class="sort-indicator">{sortGlyph(column.key)}</span>
-                                </span>
-                            </th>
+                                {/each}
+                            </tr>
                         {/each}
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each sortedPlayers as player, index (player.nba_id)}
-                        <tr>
-                            {#each playerColumns as column (column.key)}
-                                {@const value = getLeaderboardCellValue(player, column, index)}
-                                {#if column.key === 'player_name'}
-                                    <td class={cellClass(column, value)}>
-                                        <a href="/player/{player.nba_id}">{player.player_name}</a>{#if player.position}<span class="pos-label"> ({player.position})</span>{/if}
-                                    </td>
-                                {:else if column.key === 'team_name'}
-                                    <td class={cellClass(column, value)}>
-                                        {#if player.team_name}
-                                            <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
-                                        {:else}
-                                            —
-                                        {/if}
-                                    </td>
-                                {:else}
-                                    <td class={cellClass(column, value)}>
-                                        {column.key === 'x_minutes' ? fmtMpg(value) : formatLeaderboardCell(column, value)}
-                                    </td>
-                                {/if}
-                            {/each}
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
     {/if}
 </div>
 
 <style>
     .table-wrapper {
+        --wide-sticky-header-height: 40px;
         margin-bottom: 40px;
+    }
+
+    .table-shell {
+        position: relative;
+    }
+
+    .sticky-header-shell {
+        position: sticky;
+        top: var(--nav-sticky-offset);
+        z-index: 30;
+        margin-bottom: calc(-1 * var(--wide-sticky-header-height));
+    }
+
+    .table-header-scroll {
+        overflow: hidden;
+    }
+
+    .table-body-scroll {
         overflow-x: auto;
     }
 
@@ -214,9 +283,6 @@
     }
 
     th {
-        position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 20;
         background: var(--bg);
         box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
@@ -234,6 +300,11 @@
         padding: 10px 8px;
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
+    }
+
+    .table-sizing-head th {
+        visibility: hidden;
+        pointer-events: none;
     }
 
     th.sortable {
@@ -313,20 +384,20 @@
         color: var(--text);
     }
 
-    tr:hover td {
+    .table-body-scroll tr:hover td {
         background: var(--bg-elevated);
     }
 
     /* Frozen rank column */
-    td.rank,
-    th:nth-child(1) {
+    .table-body-scroll td.rank,
+    .table-header-scroll th:nth-child(1) {
         position: sticky;
         left: 0;
         z-index: 1;
         background: var(--bg);
     }
 
-    th:nth-child(1) {
+    .table-header-scroll th:nth-child(1) {
         z-index: 22;
     }
 
@@ -341,8 +412,8 @@
     }
 
     /* Frozen player-name column */
-    td.name,
-    th:nth-child(2) {
+    .table-body-scroll td.name,
+    .table-header-scroll th:nth-child(2) {
         position: sticky;
         left: 48px;
         z-index: 1;
@@ -350,13 +421,13 @@
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
     }
 
-    th:nth-child(2) {
+    .table-header-scroll th:nth-child(2) {
         z-index: 21;
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
     }
 
-    tr:hover td.rank,
-    tr:hover td.name {
+    .table-body-scroll tr:hover td.rank,
+    .table-body-scroll tr:hover td.name {
         background: var(--bg-elevated);
     }
 
@@ -451,29 +522,50 @@
     .pct.low { color: var(--text-secondary); }
     .pct.zero { color: var(--text-muted); }
 
-    tr:hover td.pos {
+    .table-body-scroll tr:hover td.pos {
         background: linear-gradient(0deg, var(--positive-bg), var(--positive-bg)), var(--bg-elevated);
     }
 
-    tr:hover td.neg {
+    .table-body-scroll tr:hover td.neg {
         background: linear-gradient(0deg, var(--negative-bg), var(--negative-bg)), var(--bg-elevated);
     }
 
-    @media (max-width: 768px) {
+    /* Touch/mobile scroll mode */
+    @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
+        (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
+        .sticky-header-shell {
+            display: none;
+        }
+
+        .table-body-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-sizing-head th {
+            visibility: visible;
+            pointer-events: auto;
+        }
+
         .page-action-btn {
             display: none;
         }
 
         th,
-        td.rank,
-        td.name,
-        th:nth-child(1),
-        th:nth-child(2) {
+        .table-body-scroll td.rank,
+        .table-body-scroll td.name {
             position: static;
             left: auto;
             box-shadow: none;
         }
 
+        .table-body-scroll td.name {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         th, td { padding: 6px 8px; }
     }
+    /* End touch/mobile scroll mode */
 </style>
