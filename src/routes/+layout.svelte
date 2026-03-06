@@ -92,14 +92,14 @@
 	const FONTS = ['dm', 'inter', 'roboto', 'lato', 'opensans', 'sourcesans', 'nunito', 'worksans', 'raleway', 'outfit', 'jakarta', 'spacegrotesk', 'system'];
 	const FONT_LABELS = ['DM Sans', 'Inter', 'Roboto', 'Lato', 'Open Sans', 'Source Sans', 'Nunito Sans', 'Work Sans', 'Raleway', 'Outfit', 'Jakarta Sans', 'Space Grotesk', 'System'];
 
-	let font = $state('dm');
+	let font = $state('system');
 
 	function isFontValue(value) {
 		return FONTS.includes(value);
 	}
 
 	function resolveInitialFont() {
-		if (!browser) return 'dm';
+		if (!browser) return 'system';
 
 		const htmlFont = document.documentElement.dataset.font;
 		if (isFontValue(htmlFont)) return htmlFont;
@@ -108,7 +108,7 @@
 			const saved = localStorage.getItem(FONT_KEY);
 			if (isFontValue(saved)) return saved;
 		} catch {}
-		return 'dm';
+		return 'system';
 	}
 
 	function setFont(nextFont) {
@@ -257,24 +257,25 @@
 		width: 18px;
 		height: 18px;
 		border-radius: 50%;
-		background: var(--text);
-		border: 2px solid var(--bg);
-		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+		background: #ffffff;
+		border: 1px solid rgba(0,0,0,0.05);
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
 		cursor: pointer;
-		transition: transform 0.15s;
+		transition: transform 0.15s, box-shadow 0.15s;
 	}
 
 	.theme-slider__input::-webkit-slider-thumb:hover {
-		transform: scale(1.15);
+		transform: scale(1.1);
+		box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 	}
 
 	.theme-slider__input::-moz-range-thumb {
 		width: 18px;
 		height: 18px;
 		border-radius: 50%;
-		background: var(--text);
-		border: 2px solid var(--bg);
-		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+		background: #ffffff;
+		border: 1px solid rgba(0,0,0,0.05);
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
 		cursor: pointer;
 	}
 

@@ -221,7 +221,7 @@
         background: var(--bg);
         box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
-        padding: 8px 6px;
+        padding: 10px 8px;
         text-align: left;
         font-size: 10px;
         font-weight: 600;
@@ -232,7 +232,7 @@
     }
 
     td {
-        padding: 7px 6px;
+        padding: 10px 8px;
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
     }
@@ -335,9 +335,10 @@
         width: 36px;
         min-width: 48px;
         max-width: 48px;
-        color: var(--text-muted);
+        color: var(--text-secondary);
         font-family: var(--font-mono);
-        font-size: 11px;
+        font-size: 11.5px;
+        font-weight: 500;
     }
 
     /* Frozen player-name column */
@@ -389,7 +390,7 @@
         text-align: right;
         font-family: var(--font-mono);
         font-size: 12px;
-        font-weight: 500;
+        font-weight: 600;
     }
 
     th.num { text-align: right; }
@@ -407,35 +408,35 @@
 
     .view-toggle {
         display: flex;
-        gap: 0;
+        gap: 4px;
+        background: var(--bg-surface);
+        padding: 4px;
         border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        overflow: hidden;
+        border-radius: 20px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
 
     .view-toggle button {
-        padding: 7px 16px;
-        background: var(--bg-elevated);
+        padding: 6px 16px;
+        background: transparent;
         border: none;
         color: var(--text-muted);
         font-family: var(--font-sans);
         font-size: 12px;
         font-weight: 500;
+        border-radius: 16px;
         cursor: pointer;
-        transition: all 0.12s;
-    }
-
-    .view-toggle button:first-child {
-        border-right: 1px solid var(--border);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .view-toggle button.active {
-        background: var(--accent);
-        color: white;
+        background: var(--bg-elevated);
+        color: var(--text);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--border);
     }
 
     .view-toggle button:hover:not(.active) {
-        background: var(--bg-hover);
+        color: var(--text);
     }
 
     .pos { color: var(--positive); }
