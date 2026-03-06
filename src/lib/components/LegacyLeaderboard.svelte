@@ -131,6 +131,7 @@
     .legacy-wrapper {
         --legacy-header-row-height: 30px;
         margin-bottom: 40px;
+        overflow-x: auto;
     }
 
     table {
@@ -386,11 +387,6 @@
     }
 
     @media (max-width: 768px) {
-        .legacy-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
         th,
         .filter-row th,
         .rank-cell,

@@ -202,6 +202,7 @@
 <style>
     .table-wrapper {
         margin-bottom: 40px;
+        overflow-x: auto;
     }
 
     table {
@@ -459,11 +460,6 @@
     }
 
     @media (max-width: 768px) {
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
         .page-action-btn {
             display: none;
         }
