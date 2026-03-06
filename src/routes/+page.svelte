@@ -10,18 +10,21 @@
         LEADERBOARD_COLUMNS,
         leaderboardSortConfig
     } from '$lib/utils/leaderboardColumns.js';
+    import { filterPlayers } from '$lib/utils/legacyLeaderboard.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
     import LegacyLeaderboard from '$lib/components/LegacyLeaderboard.svelte';
+    import MetricTooltip from '$lib/components/MetricTooltip.svelte';
 
     let { data } = $props();
 
     let viewMode = $state('standard');
     let sortColumn = $state('_rank');
     let sortDirection = $state('asc');
+    let columnFilters = $state({});
     let standardTableRoot = $state(null);
     let standardBodyScroller = $state(null);
     let standardBodyTable = $state(null);
@@ -32,8 +35,12 @@
     const players = $derived(data.players || []);
     const playerColumns = LEADERBOARD_COLUMNS;
 
+    const filteredPlayers = $derived.by(() =>
+        filterPlayers(players, playerColumns, columnFilters)
+    );
+
     const sortedPlayers = $derived.by(() =>
-        getSortedRows(players, {
+        getSortedRows(filteredPlayers, {
             sortColumn,
             sortDirection,
             sortConfigs: leaderboardSortConfig
@@ -52,6 +59,10 @@
         }
         sortColumn = column;
         sortDirection = 'asc';
+    }
+
+    function setFilter(column, value) {
+        columnFilters = { ...columnFilters, [column]: value };
     }
 
     function signClass(val) {
@@ -122,6 +133,7 @@
         viewMode;
         sortColumn;
         sortDirection;
+        columnFilters;
         sortedPlayers.length;
         standardTableRoot;
         standardBodyScroller;
@@ -167,7 +179,7 @@
                         class="page-action-btn"
                         type="button"
                         onclick={exportPlayersCsv}
-                        disabled={players.length === 0}
+                        disabled={sortedPlayers.length === 0}
                     >
                         Download CSV
                     </button>
@@ -176,21 +188,38 @@
         </div>
     </div>
 
-    {#snippet standardHeaderRow()}
-        <tr>
+    {#snippet standardHeaderRows()}
+        <tr class="header-row">
             {#each playerColumns as column (column.key)}
                 <th
                     class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
                     onclick={() => toggleSort(column.key)}
                 >
                     <span class="header-label-wrap">
-                        <span>{column.label}</span>
                         {#if column.metricKey}
-                            <span class="header-tooltip-trigger" aria-hidden="true">?</span>
-                            <span class="header-tooltip">{getMetricDefinition(column.metricKey)}</span>
+                            <MetricTooltip text={getMetricDefinition(column.metricKey)}>
+                                <span>{column.label}</span>
+                            </MetricTooltip>
+                        {:else}
+                            <span>{column.label}</span>
                         {/if}
                         <span class="sort-indicator">{sortGlyph(column.key)}</span>
                     </span>
+                </th>
+            {/each}
+        </tr>
+        <tr class="filter-row">
+            {#each playerColumns as column (column.key)}
+                <th class={column.alignClass}>
+                    {#if column.key !== '_rank'}
+                        <input
+                            type="text"
+                            value={columnFilters[column.key] || ''}
+                            oninput={(event) => setFilter(column.key, event.currentTarget.value)}
+                            placeholder={column.type === 'text' ? 'All' : ''}
+                            aria-label={`Filter ${column.label}`}
+                        />
+                    {/if}
                 </th>
             {/each}
         </tr>
@@ -206,7 +235,7 @@
                 <div class="table-header-scroll" bind:this={standardHeaderScroller}>
                     <table class="sticky-header-table" bind:this={standardHeaderTable}>
                         <thead>
-                            {@render standardHeaderRow()}
+                            {@render standardHeaderRows()}
                         </thead>
                     </table>
                 </div>
@@ -215,33 +244,39 @@
             <div class="table-body-scroll" bind:this={standardBodyScroller}>
                 <table bind:this={standardBodyTable}>
                     <thead class="table-sizing-head" aria-hidden="true" bind:this={standardSourceHead}>
-                        {@render standardHeaderRow()}
+                        {@render standardHeaderRows()}
                     </thead>
                     <tbody>
-                        {#each sortedPlayers as player, index (player.nba_id)}
+                        {#if sortedPlayers.length === 0}
                             <tr>
-                                {#each playerColumns as column (column.key)}
-                                    {@const value = getLeaderboardCellValue(player, column, index)}
-                                    {#if column.key === 'player_name'}
-                                        <td class={cellClass(column, value)}>
-                                            <a href="/player/{player.nba_id}">{player.player_name}</a>{#if player.position}<span class="pos-label"> ({player.position})</span>{/if}
-                                        </td>
-                                    {:else if column.key === 'team_name'}
-                                        <td class={cellClass(column, value)}>
-                                            {#if player.team_name}
-                                                <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
-                                            {:else}
-                                                —
-                                            {/if}
-                                        </td>
-                                    {:else}
-                                        <td class={cellClass(column, value)}>
-                                            {column.key === 'x_minutes' ? fmtMpg(value) : formatLeaderboardCell(column, value)}
-                                        </td>
-                                    {/if}
-                                {/each}
+                                <td class="empty-row" colspan={playerColumns.length}>No matching players.</td>
                             </tr>
-                        {/each}
+                        {:else}
+                            {#each sortedPlayers as player, index (player.nba_id)}
+                                <tr>
+                                    {#each playerColumns as column (column.key)}
+                                        {@const value = getLeaderboardCellValue(player, column, index)}
+                                        {#if column.key === 'player_name'}
+                                            <td class={cellClass(column, value)}>
+                                                <a href="/player/{player.nba_id}">{player.player_name}</a>{#if player.position}<span class="pos-label"> ({player.position})</span>{/if}
+                                            </td>
+                                        {:else if column.key === 'team_name'}
+                                            <td class={cellClass(column, value)}>
+                                                {#if player.team_name}
+                                                    <a href="/team/{encodeURIComponent(player.team_name)}" title={player.team_name}>{teamAbbr(player.team_name)}</a>
+                                                {:else}
+                                                    —
+                                                {/if}
+                                            </td>
+                                        {:else}
+                                            <td class={cellClass(column, value)}>
+                                                {column.key === 'x_minutes' ? fmtMpg(value) : formatLeaderboardCell(column, value)}
+                                            </td>
+                                        {/if}
+                                    {/each}
+                                </tr>
+                            {/each}
+                        {/if}
                     </tbody>
                 </table>
             </div>
@@ -307,73 +342,38 @@
         pointer-events: none;
     }
 
+    .filter-row th {
+        padding: 5px 4px;
+        background: var(--bg-elevated);
+        text-transform: none;
+    }
+
+    .filter-row input {
+        width: 100%;
+        min-width: 40px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        padding: 4px 5px;
+        outline: none;
+    }
+
+    .filter-row input:focus {
+        border-color: var(--accent);
+    }
+
     th.sortable {
         cursor: pointer;
         user-select: none;
     }
 
     th.has-tooltip .header-label-wrap {
-        position: relative;
         display: inline-flex;
         align-items: center;
         gap: 6px;
-    }
-
-    th.has-tooltip:hover,
-    th.has-tooltip:focus-within {
-        z-index: 110;
-    }
-
-    th.has-tooltip:hover .header-tooltip,
-    th.has-tooltip:focus-within .header-tooltip {
-        opacity: 1;
-        visibility: visible;
-        transform: translate(-50%, 0);
-    }
-
-    .header-tooltip-trigger {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        font-size: 9px;
-        line-height: 1;
-        opacity: 0.9;
-        background: var(--bg-surface);
-        box-shadow: inset 0 0 0 1px var(--border);
-    }
-
-    .header-tooltip {
-        position: absolute;
-        left: 50%;
-        bottom: calc(100% + 8px);
-        transform: translate(-50%, 4px);
-        transform-origin: bottom center;
-        width: max-content;
-        max-width: 250px;
-        white-space: normal;
-        background: var(--bg-surface);
-        color: var(--text);
-        border: 1px solid var(--border);
-        padding: 8px 10px;
-        border-radius: var(--radius-sm);
-        font-size: 11px;
-        line-height: 1.35;
-        letter-spacing: 0;
-        text-transform: none;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-        pointer-events: none;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.12s ease, transform 0.12s ease;
-        z-index: 30;
-        white-space: normal;
-        font-weight: 500;
-        color: var(--text-secondary);
     }
 
     th.sortable:hover {
@@ -390,15 +390,21 @@
 
     /* Frozen rank column */
     .table-body-scroll td.rank,
-    .table-header-scroll th:nth-child(1) {
+    .table-header-scroll .header-row th:nth-child(1),
+    .table-header-scroll .filter-row th:nth-child(1) {
         position: sticky;
         left: 0;
         z-index: 1;
         background: var(--bg);
     }
 
-    .table-header-scroll th:nth-child(1) {
+    .table-header-scroll .header-row th:nth-child(1),
+    .table-header-scroll .filter-row th:nth-child(1) {
         z-index: 22;
+    }
+
+    .table-header-scroll .filter-row th:nth-child(1) {
+        background: var(--bg-elevated);
     }
 
     .rank {
@@ -413,7 +419,8 @@
 
     /* Frozen player-name column */
     .table-body-scroll td.name,
-    .table-header-scroll th:nth-child(2) {
+    .table-header-scroll .header-row th:nth-child(2),
+    .table-header-scroll .filter-row th:nth-child(2) {
         position: sticky;
         left: 48px;
         z-index: 1;
@@ -421,14 +428,27 @@
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
     }
 
-    .table-header-scroll th:nth-child(2) {
+    .table-header-scroll .header-row th:nth-child(2),
+    .table-header-scroll .filter-row th:nth-child(2) {
         z-index: 21;
         box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .table-header-scroll .filter-row th:nth-child(2) {
+        background: var(--bg-elevated);
     }
 
     .table-body-scroll tr:hover td.rank,
     .table-body-scroll tr:hover td.name {
         background: var(--bg-elevated);
+    }
+
+    .empty-row {
+        padding: 20px;
+        text-align: center;
+        color: var(--text-muted);
+        font-family: var(--font-sans);
+        font-size: 13px;
     }
 
     .name { font-weight: 500; }
@@ -552,6 +572,7 @@
         }
 
         th,
+        .filter-row th,
         .table-body-scroll td.rank,
         .table-body-scroll td.name {
             position: static;
@@ -576,6 +597,8 @@
         }
 
         td.num { font-size: 11px; }
+
+        .filter-row input { min-width: 30px; }
 
         th, td { padding: 5px 4px; }
     }

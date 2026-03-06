@@ -11,6 +11,7 @@
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
+    import MetricTooltip from '$lib/components/MetricTooltip.svelte';
 
     let {
         teamName = '',
@@ -173,10 +174,12 @@
                 onclick={() => toggleSort(column.key)}
             >
                 <span class="header-label-wrap">
-                    <span>{column.label}</span>
                     {#if column.metricKey}
-                        <span class="header-tooltip-trigger" aria-hidden="true">?</span>
-                        <span class="header-tooltip">{getMetricDefinition(column.metricKey)}</span>
+                        <MetricTooltip text={getMetricDefinition(column.metricKey)}>
+                            <span>{column.label}</span>
+                        </MetricTooltip>
+                    {:else}
+                        <span>{column.label}</span>
                     {/if}
                     <span class="sort-indicator">{sortGlyph(column.key)}</span>
                 </span>
@@ -470,66 +473,9 @@
     }
 
     th.has-tooltip .header-label-wrap {
-        position: relative;
         display: inline-flex;
         align-items: center;
         gap: 6px;
-    }
-
-    th.has-tooltip:hover,
-    th.has-tooltip:focus-within {
-        z-index: 110;
-    }
-
-    th.has-tooltip:hover .header-tooltip,
-    th.has-tooltip:focus-within .header-tooltip {
-        opacity: 1;
-        visibility: visible;
-        transform: translate(-50%, 0);
-    }
-
-    .header-tooltip-trigger {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        font-size: 9px;
-        line-height: 1;
-        opacity: 0.9;
-        background: var(--bg-surface);
-        box-shadow: inset 0 0 0 1px var(--border);
-    }
-
-    .header-tooltip {
-        position: absolute;
-        left: 50%;
-        bottom: calc(100% + 8px);
-        transform: translate(-50%, 4px);
-        transform-origin: bottom center;
-        width: max-content;
-        max-width: 250px;
-        white-space: normal;
-        background: var(--bg-surface);
-        color: var(--text);
-        border: 1px solid var(--border);
-        padding: 8px 10px;
-        border-radius: var(--radius-sm);
-        font-size: 11px;
-        line-height: 1.35;
-        letter-spacing: 0;
-        text-transform: none;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-        pointer-events: none;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.12s ease, transform 0.12s ease;
-        z-index: 30;
-        font-weight: 500;
-        color: var(--text-secondary);
     }
 
     .name {

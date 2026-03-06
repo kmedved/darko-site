@@ -154,6 +154,16 @@ test('filterPlayers applies exact match on numeric column', () => {
 	assert.equal(result[0].player_name, 'Nikola Jokic');
 });
 
+test('filterPlayers also works with raw standard leaderboard rows', () => {
+	const players = [samplePlayer, rookiePlayer];
+	const result = filterPlayers(players, LEGACY_COLUMNS, {
+		player_name: 'nikola',
+		dpm: '>5'
+	});
+	assert.equal(result.length, 1);
+	assert.equal(result[0].player_name, 'Nikola Jokic');
+});
+
 test('filterPlayers combines multiple column filters with AND logic', () => {
 	const players = [enrichPlayer(samplePlayer), enrichPlayer(rookiePlayer)];
 	const result = filterPlayers(players, LEGACY_COLUMNS, {
