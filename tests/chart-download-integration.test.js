@@ -36,3 +36,21 @@ test('parent components pass filename context props to chart components', async 
     assert.match(teamDetail, /<WinDistChart[\s\S]*\{teamName\}/, 'TeamDetailView should pass teamName to WinDistChart');
     assert.match(teamDetail, /<SeedChart[\s\S]*\{teamName\}/, 'TeamDetailView should pass teamName to SeedChart');
 });
+
+test('ChartDownloadMenu quick export uses the chart surface and the existing PNG export path', async () => {
+    const menuPath = path.resolve(process.cwd(), 'src/lib/components/ChartDownloadMenu.svelte');
+    const contents = await fs.readFile(menuPath, 'utf8');
+
+    assert.match(contents, /setupQuickChartExport/, 'ChartDownloadMenu should wire up quick export gestures');
+    assert.match(
+        contents,
+        /const\s+interactionTargetEl\s*=\s*\$derived\(svgEl\?\.parentElement\s*\?\?\s*null\)/,
+        'ChartDownloadMenu should target the chart surface rather than the toolbar'
+    );
+    assert.match(
+        contents,
+        /onQuickExport:\s*\(\)\s*=>\s*downloadChart\('png'\)/,
+        'quick export should reuse the PNG download action'
+    );
+    assert.match(contents, /await\s+exportChartImage\(/, 'quick export should continue to use the chart image export helper');
+});

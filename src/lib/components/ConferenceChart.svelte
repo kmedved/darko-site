@@ -35,7 +35,7 @@
     }
 
     $effect(() => {
-        if (!svgEl) return;
+        if (!svgEl || !chartRootEl) return;
         if (!standings || standings.length === 0) {
             d3.select(svgEl).selectAll('*').remove();
             return;
@@ -44,7 +44,7 @@
         const _sortMetric = sortMetric;
         void _sortMetric;
         renderChart();
-        return withResizeObserver({ element: svgEl, onResize: renderChart });
+        return withResizeObserver({ element: chartRootEl, onResize: renderChart });
     });
     function renderChart() {
 		if (!svgEl) return;
@@ -70,7 +70,7 @@
         svg.selectAll('*').remove();
 
         const margin = { top: 16, right: 60, bottom: 24, left: 140 };
-        const width = svgEl.clientWidth;
+        const width = chartRootEl?.clientWidth ?? 0;
         if (!width) return;
 
         const barHeight = 28;

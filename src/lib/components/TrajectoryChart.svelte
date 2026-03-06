@@ -101,7 +101,7 @@
 	}
 
 	$effect(() => {
-		if (!svgEl || players.length === 0) {
+		if (!svgEl || !containerEl || players.length === 0) {
 			if (svgEl) d3.select(svgEl).selectAll('*').remove();
 			rowsForTooltip = [];
 			return;
@@ -112,7 +112,7 @@
 		void yMin;
 		void yMax;
 		renderChart();
-		return withResizeObserver({ element: svgEl, onResize: renderChart });
+		return withResizeObserver({ element: containerEl, onResize: renderChart });
 	});
 
 	function prepareRows(rawRows) {
@@ -131,7 +131,7 @@
 		const svg = d3.select(svgEl);
 		svg.selectAll('*').remove();
 
-		const width = svgEl.clientWidth;
+		const width = containerEl?.clientWidth ?? 0;
 		if (!width) return;
 
 		const preparedPlayers = players

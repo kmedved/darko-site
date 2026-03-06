@@ -82,7 +82,7 @@
 	}
 
     $effect(() => {
-        if (!svgEl || data.length === 0) {
+        if (!svgEl || !containerEl || data.length === 0) {
             if (svgEl) d3.select(svgEl).selectAll('*').remove();
             tooltipData = null;
             chartPoints = [];
@@ -93,14 +93,15 @@
         void activeStat;
         void data;
         renderChart();
-        return withResizeObserver({ element: svgEl, onResize: renderChart });
+        return withResizeObserver({ element: containerEl, onResize: renderChart });
     });
 
     function renderChart() {
         const svg = d3.select(svgEl);
         svg.selectAll('*').remove();
 
-        const width = svgEl.clientWidth;
+        const width = containerEl?.clientWidth ?? 0;
+        if (!width) return;
         const margin = { top: 4, right: 2, bottom: 4, left: 2 };
         const w = width - margin.left - margin.right;
         const h = height - margin.top - margin.bottom;
@@ -239,7 +240,7 @@
 <div class="chart-wrapper" bind:this={chartRootEl}>
 	<div class="chart-controls-row">
 		<div class="chart-toggles">
-			{#each stats as s}
+			{#each stats as s (s.key)}
 				<button
 					type="button"
 					class="chart-toggle-btn"

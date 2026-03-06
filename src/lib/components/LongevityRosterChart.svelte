@@ -18,7 +18,7 @@
     }
 
     $effect(() => {
-        if (!svgEl) return;
+        if (!svgEl || !chartRootEl) return;
         chartPlayer = player;
 
         if (!chartPlayer?.trajectory?.length) {
@@ -29,7 +29,7 @@
         renderChart(chartPlayer);
 
         return withResizeObserver({
-            element: svgEl,
+            element: chartRootEl,
             onResize: () => {
                 if (chartPlayer?.trajectory?.length) renderChart(chartPlayer);
             }
@@ -37,7 +37,7 @@
     });
 
     function renderChart(currentPlayer) {
-        const width = svgEl.clientWidth || 520;
+        const width = chartRootEl?.clientWidth ?? 0;
         const height = 290;
 
         if (!width) {

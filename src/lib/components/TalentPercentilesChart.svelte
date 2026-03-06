@@ -34,19 +34,19 @@
 	};
 
 	$effect(() => {
-		if (!svgEl || selectedMetrics.length === 0) return;
+		if (!svgEl || !chartRootEl || selectedMetrics.length === 0) return;
 		void percentiles;
 		void selectedMetrics;
 		void playerName;
 		renderChart();
-		return withResizeObserver({ element: svgEl, onResize: renderChart });
+		return withResizeObserver({ element: chartRootEl, onResize: renderChart });
 	});
 
 	function renderChart() {
 		const svg = d3.select(svgEl);
 		svg.selectAll('*').remove();
 
-		const width = svgEl.clientWidth;
+		const width = chartRootEl?.clientWidth ?? 0;
 		if (width === 0) return;
 
 		const margin = { top: 60, right: 30, bottom: 70, left: 60 };

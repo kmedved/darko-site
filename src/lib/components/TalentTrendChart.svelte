@@ -93,7 +93,7 @@
 	}
 
 	$effect(() => {
-		if (!svgEl || rows.length === 0) {
+		if (!svgEl || !containerEl || rows.length === 0) {
 			if (svgEl) d3.select(svgEl).selectAll('*').remove();
 			tooltipData = null;
 			chartPoints = [];
@@ -103,14 +103,14 @@
 		void talentType;
 		void rows;
 		renderChart();
-		return withResizeObserver({ element: svgEl, onResize: renderChart });
+		return withResizeObserver({ element: containerEl, onResize: renderChart });
 	});
 
 	function renderChart() {
 		const svg = d3.select(svgEl);
 		svg.selectAll('*').remove();
 
-		const width = svgEl.clientWidth;
+		const width = containerEl?.clientWidth ?? 0;
 		if (width === 0) return;
 
 		const margin = { top: 40, right: 30, bottom: 55, left: 60 };

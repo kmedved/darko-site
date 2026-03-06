@@ -16,7 +16,7 @@
 
 
     $effect(() => {
-        if (!svgEl) return;
+        if (!svgEl || !chartRootEl) return;
 
         if (!team || Object.keys(team).length === 0) {
             d3.select(svgEl).selectAll('*').remove();
@@ -24,7 +24,7 @@
         }
 
         renderChart();
-        return withResizeObserver({ element: svgEl, onResize: renderChart });
+        return withResizeObserver({ element: chartRootEl, onResize: renderChart });
     });
 
 	function renderChart() {
@@ -37,7 +37,7 @@
 			seeds.push({ seed: s, prob: Number.isFinite(prob) ? prob : 0 });
 		}
 
-		const width = svgEl.clientWidth;
+		const width = chartRootEl?.clientWidth ?? 0;
 		if (!width) return clearChart();
 		const height = 160;
 		const svg = d3.select(svgEl);

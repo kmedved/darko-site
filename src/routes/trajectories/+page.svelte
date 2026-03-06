@@ -652,11 +652,17 @@
 	@media (max-width: 768px) {
 		.trajectory-layout {
 			flex-direction: column;
+			align-items: stretch;
 		}
 
 		.trajectory-controls {
 			flex: none;
 			width: 100%;
+		}
+
+		.trajectory-chart-area {
+			width: 100%;
+			min-width: 0;
 		}
 	}
 </style>

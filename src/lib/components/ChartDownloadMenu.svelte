@@ -1,5 +1,6 @@
 <script>
     import { exportChartImage } from '$lib/utils/chartImageExport.js';
+    import { setupQuickChartExport } from '$lib/utils/chartQuickExport.js';
 
     let {
         svgEl = null,
@@ -14,6 +15,7 @@
     let exportBusy = $state(false);
 
     const canExport = $derived(!disabled && !!svgEl && !exportBusy);
+    const interactionTargetEl = $derived(svgEl?.parentElement ?? null);
 
     $effect(() => {
         if (!menuOpen) return;
@@ -36,6 +38,16 @@
             window.removeEventListener('pointerdown', handleWindowPointerDown);
             window.removeEventListener('keydown', handleWindowKeydown);
         };
+    });
+
+    $effect(() => {
+        if (!interactionTargetEl) return;
+
+        return setupQuickChartExport({
+            targetEl: interactionTargetEl,
+            canExport: () => canExport,
+            onQuickExport: () => downloadChart('png')
+        });
     });
 
     function toggleMenu() {

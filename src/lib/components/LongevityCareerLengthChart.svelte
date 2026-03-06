@@ -31,7 +31,7 @@
     }
 
     $effect(() => {
-        if (!svgEl) return;
+        if (!svgEl || !chartRootEl) return;
         chartPlayer = player;
 
         const currentPlayer = chartPlayer;
@@ -43,7 +43,7 @@
         renderChart(currentPlayer);
 
         return withResizeObserver({
-            element: svgEl,
+            element: chartRootEl,
             onResize: () => {
                 if (chartPlayer) renderChart(chartPlayer);
             }
@@ -51,7 +51,7 @@
     });
 
     function renderChart(currentPlayer) {
-        const width = svgEl.clientWidth;
+        const width = chartRootEl?.clientWidth ?? 0;
         if (!width) {
             clearChart();
             return;
