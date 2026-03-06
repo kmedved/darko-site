@@ -565,6 +565,8 @@ nav .links a.active {
 
 .chart-download-shell {
     width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .chart-download-toolbar {

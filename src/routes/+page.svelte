@@ -560,12 +560,24 @@
         }
 
         .table-body-scroll td.name {
-            max-width: 150px;
+            max-width: 100px;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        th, td { padding: 6px 8px; }
+        .pos-label {
+            display: none;
+        }
+
+        .table-body-scroll td.rank {
+            min-width: 32px;
+            max-width: 32px;
+            font-size: 10px;
+        }
+
+        td.num { font-size: 11px; }
+
+        th, td { padding: 5px 4px; }
     }
     /* End touch/mobile scroll mode */
 </style>

@@ -467,6 +467,7 @@
 	.trajectory-chart-container {
 		position: relative;
 		width: 100%;
+		overflow: hidden;
 	}
 
 	.trajectory-tooltip {

@@ -473,10 +473,24 @@
         }
 
         .player-cell {
-            max-width: 150px;
+            max-width: 100px;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        .pos-label {
+            display: none;
+        }
+
+        .rank-cell {
+            min-width: 32px;
+            max-width: 32px;
+            font-size: 10px;
+        }
+
+        td.align-right { font-size: 11px; }
+
+        .filter-row input { min-width: 30px; }
 
         th, td { padding: 5px 4px; }
     }
