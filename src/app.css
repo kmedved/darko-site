@@ -82,26 +82,11 @@
     --negative-bg: rgba(220, 38, 38, 0.08);
 }
 
-/* Use the black logo on light backgrounds and the white logo on dark backgrounds. */
-:root[data-theme='light'] .logo-mark--black,
-:root[data-theme='white'] .logo-mark--black {
-    display: block;
-}
-
-:root[data-theme='light'] .logo-mark--white,
-:root[data-theme='white'] .logo-mark--white {
-    display: none;
-}
-
-:root[data-theme='dark'] .logo-mark--white,
-:root[data-theme='black'] .logo-mark--white {
-    display: block;
-}
-
-:root[data-theme='dark'] .logo-mark--black,
-:root[data-theme='black'] .logo-mark--black {
-    display: none;
-}
+/* Each theme gets its own logo variant; hide all by default via .logo-mark { display:none } */
+:root[data-theme='black'] .logo-mark--black { display: block; }
+:root[data-theme='dark']  .logo-mark--dark  { display: block; }
+:root[data-theme='light'] .logo-mark--light { display: block; }
+:root[data-theme='white'] .logo-mark--white { display: block; }
 
 /* ── Font overrides ──────────────────────────────────── */
 
