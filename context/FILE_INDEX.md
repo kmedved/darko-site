@@ -51,6 +51,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/components/MetricTooltip.svelte` - component
 - `src/lib/components/PlayerCard.svelte` - component
 - `src/lib/components/PlayerSearch.svelte` - component
+- `src/lib/components/PlayerSearchField.svelte` - component
 - `src/lib/components/RatePlayerCard.svelte` - component
 - `src/lib/components/SeedChart.svelte` - component
 - `src/lib/components/TalentPercentilesChart.svelte` - component
@@ -71,6 +72,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/server/eloService.js` - server helper
 - `src/lib/server/playerPage.js` - server helper
 - `src/lib/server/supabase.js` - Supabase query layer, in-memory caches, and Elo RPC access.
+- `src/lib/server/teamPage.js` - server helper
 
 ## src/lib/utils
 
@@ -87,6 +89,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/utils/loess.js` - util
 - `src/lib/utils/longevityTable.js` - util
 - `src/lib/utils/metricDefinitions.js` - util
+- `src/lib/utils/playerSearch.js` - util
 - `src/lib/utils/requestSequencer.js` - util
 - `src/lib/utils/seasonUtils.js` - util
 - `src/lib/utils/sortableTable.js` - util
@@ -161,10 +164,13 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/longevity-table.test.js` - test
 - `tests/mobile-table-scroll.test.js` - test
 - `tests/player-page-server-load.test.js` - test
+- `tests/player-search-contracts.test.js` - test
+- `tests/player-search.test.js` - test
 - `tests/request-sequencer.test.js` - test
 - `tests/season-utils.test.js` - test
 - `tests/supabase-config.test.js` - test
 - `tests/supabase-query-shape.test.js` - test
+- `tests/team-page-loader-contracts.test.js` - test
 - `tests/team-route-utils.test.js` - test
 - `tests/team-route-wrappers.test.js` - test
 - `tests/trajectories-mobile-layout.test.js` - test

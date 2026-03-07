@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.0",
+  "arch_version": "0.1.1",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -245,14 +245,11 @@
       {
         "bodyFields": [],
         "cache": {
-          "edgeSMaxAge": 3600,
-          "sie": 86400,
-          "swr": 86400,
-          "type": "edge"
+          "type": "unspecified"
         },
         "dataSources": [
-          "$lib/server/cacheHeaders.js:setEdgeCache",
-          "$lib/server/supabase.js:getTeamPageData",
+          "$lib/server/teamPage.js:getTeamPagePayload",
+          "$lib/server/teamPage.js:setTeamPageCacheHeaders",
           "$lib/utils/teamRouteUtils.js:normalizeTeamSlug"
         ],
         "file": "src/routes/api/standings/[slug]/+server.js",
@@ -338,14 +335,10 @@
       },
       {
         "cache": {
-          "edgeSMaxAge": 3600,
-          "sie": 86400,
-          "swr": 86400,
-          "type": "edge"
+          "type": "unspecified"
         },
         "dataSources": [
-          "$lib/server/cacheHeaders.js:setEdgeCache",
-          "$lib/server/supabase.js:getTeamPageData",
+          "$lib/server/teamPage.js:loadTeamPageData",
           "$lib/utils/teamRouteUtils.js:normalizeTeamSlug"
         ],
         "file": "src/routes/standings/[slug]/+page.server.js",
@@ -357,14 +350,10 @@
       },
       {
         "cache": {
-          "edgeSMaxAge": 3600,
-          "sie": 86400,
-          "swr": 86400,
-          "type": "edge"
+          "type": "unspecified"
         },
         "dataSources": [
-          "$lib/server/cacheHeaders.js:setEdgeCache",
-          "$lib/server/supabase.js:getTeamPageData",
+          "$lib/server/teamPage.js:loadTeamPageData",
           "$lib/utils/teamRouteUtils.js:decodeTeamParam"
         ],
         "file": "src/routes/team/[team]/+page.server.js",
@@ -473,6 +462,7 @@
     "src/lib/components/MetricTooltip.svelte",
     "src/lib/components/PlayerCard.svelte",
     "src/lib/components/PlayerSearch.svelte",
+    "src/lib/components/PlayerSearchField.svelte",
     "src/lib/components/RatePlayerCard.svelte",
     "src/lib/components/SeedChart.svelte",
     "src/lib/components/TalentPercentilesChart.svelte",
@@ -487,6 +477,7 @@
     "src/lib/server/eloService.js",
     "src/lib/server/playerPage.js",
     "src/lib/server/supabase.js",
+    "src/lib/server/teamPage.js",
     "src/lib/utils/chartImageExport.js",
     "src/lib/utils/chartLayout.js",
     "src/lib/utils/chartQuickExport.js",
@@ -500,6 +491,7 @@
     "src/lib/utils/loess.js",
     "src/lib/utils/longevityTable.js",
     "src/lib/utils/metricDefinitions.js",
+    "src/lib/utils/playerSearch.js",
     "src/lib/utils/requestSequencer.js",
     "src/lib/utils/seasonUtils.js",
     "src/lib/utils/sortableTable.js",
@@ -563,10 +555,13 @@
     "tests/longevity-table.test.js",
     "tests/mobile-table-scroll.test.js",
     "tests/player-page-server-load.test.js",
+    "tests/player-search-contracts.test.js",
+    "tests/player-search.test.js",
     "tests/request-sequencer.test.js",
     "tests/season-utils.test.js",
     "tests/supabase-config.test.js",
     "tests/supabase-query-shape.test.js",
+    "tests/team-page-loader-contracts.test.js",
     "tests/team-route-utils.test.js",
     "tests/team-route-wrappers.test.js",
     "tests/trajectories-mobile-layout.test.js",

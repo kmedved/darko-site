@@ -3,15 +3,18 @@
     import SeedChart from './SeedChart.svelte';
     import {
         exportCsvRows,
-        formatSignedMetric,
         formatFixed,
-        formatMillions,
-        formatOrDash,
-        formatPercent
+        teamPlayersCsvColumns
     } from '$lib/utils/csvPresets.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
+    import {
+        formatPlayerTableCell,
+        getPlayerTableCellValue,
+        TEAM_PLAYER_COLUMNS,
+        teamPlayerSortConfig
+    } from '$lib/utils/leaderboardColumns.js';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
 
     let {
@@ -58,49 +61,23 @@
         return 'zero';
     }
 
-    const teamPlayersSortConfig = {
-        player_name: { type: 'text' },
-        position: { type: 'text' },
-        dpm: { type: 'number' },
-        o_dpm: { type: 'number' },
-        d_dpm: { type: 'number' },
-        sal_market_fixed: { type: 'number' },
-        box_dpm: { type: 'number' },
-        on_off_dpm: { type: 'number' },
-        x_minutes: { type: 'number' },
-        x_pace: { type: 'number' },
-        x_pts_100: { type: 'number' },
-        x_ast_100: { type: 'number' },
-        x_fg_pct: { type: 'number' },
-        x_fg3_pct: { type: 'number' },
-        x_ft_pct: { type: 'number' }
-    };
-
-    const teamPlayerColumns = [
-        { key: 'player_name', label: 'Player', alignClass: 'name', dataType: 'text' },
-        { key: 'position', label: 'Pos', alignClass: 'pos-col', dataType: 'text' },
-        { key: 'dpm', label: 'DPM', alignClass: 'num', dataType: 'number', metricKey: 'dpm' },
-        { key: 'o_dpm', label: 'ODPM', alignClass: 'num', dataType: 'number', metricKey: 'o_dpm' },
-        { key: 'd_dpm', label: 'DDPM', alignClass: 'num', dataType: 'number', metricKey: 'd_dpm' },
-        { key: 'sal_market_fixed', label: 'Fair Salary', alignClass: 'num', dataType: 'number', metricKey: 'sal_market_fixed' },
-        { key: 'box_dpm', label: 'Box', alignClass: 'num', dataType: 'number', metricKey: 'box_dpm' },
-        { key: 'on_off_dpm', label: 'On/Off', alignClass: 'num', dataType: 'number', metricKey: 'on_off_dpm' },
-        { key: 'x_minutes', label: 'MPG', alignClass: 'num', dataType: 'number', metricKey: 'x_minutes' },
-        { key: 'x_pace', label: 'Pace', alignClass: 'num', dataType: 'number', metricKey: 'x_pace' },
-        { key: 'x_pts_100', label: 'Pts/100', alignClass: 'num', dataType: 'number', metricKey: 'x_pts_100' },
-        { key: 'x_ast_100', label: 'Ast/100', alignClass: 'num', dataType: 'number', metricKey: 'x_ast_100' },
-        { key: 'x_fg_pct', label: 'FG%', alignClass: 'num', dataType: 'number', metricKey: 'x_fg_pct' },
-        { key: 'x_fg3_pct', label: '3P%', alignClass: 'num', dataType: 'number', metricKey: 'x_fg3_pct' },
-        { key: 'x_ft_pct', label: 'FT%', alignClass: 'num', dataType: 'number', metricKey: 'x_ft_pct' }
-    ];
+    const teamPlayerColumns = TEAM_PLAYER_COLUMNS;
 
     const sortedPlayers = $derived.by(() =>
         getSortedRows(teamPlayers, {
             sortColumn,
             sortDirection,
-            sortConfigs: teamPlayersSortConfig
+            sortConfigs: teamPlayerSortConfig
         })
     );
+
+    const signedMetricKeys = new Set([
+        'dpm',
+        'o_dpm',
+        'd_dpm',
+        'box_dpm',
+        'on_off_dpm'
+    ]);
 
     function sortGlyph(column) {
         if (sortColumn !== column) return '↕';
@@ -126,25 +103,21 @@
     function exportTeamCsv() {
         exportCsvRows({
             rows: sortedPlayers,
-            columns: [
-                { header: 'Player', accessor: 'player_name', format: formatOrDash },
-                { header: 'Pos', accessor: 'position', format: formatOrDash },
-                { header: 'DPM', accessor: 'dpm', format: formatSignedMetric },
-                { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
-                { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },
-                { header: 'Fair Salary', accessor: 'sal_market_fixed', format: formatMillions },
-                { header: 'Box', accessor: 'box_dpm', format: formatSignedMetric },
-                { header: 'On/Off DPM', accessor: 'on_off_dpm', format: formatSignedMetric },
-                { header: 'MPG', accessor: 'x_minutes', format: (v) => formatFixed(v, 1) },
-                { header: 'Pace', accessor: 'x_pace', format: (v) => formatFixed(v, 1) },
-                { header: 'Pts per 100', accessor: 'x_pts_100', format: (v) => formatFixed(v, 1) },
-                { header: 'Ast per 100', accessor: 'x_ast_100', format: (v) => formatFixed(v, 1) },
-                { header: 'FG%', accessor: 'x_fg_pct', format: formatPercent },
-                { header: '3P%', accessor: 'x_fg3_pct', format: formatPercent },
-                { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent }
-            ],
+            columns: teamPlayersCsvColumns,
             filename: `${teamName || 'team'}-players.csv`
         });
+    }
+
+    function teamCellClass(column, value) {
+        if (column.alignClass !== 'num') {
+            return column.alignClass;
+        }
+
+        if (!signedMetricKeys.has(column.key)) {
+            return 'num';
+        }
+
+        return `num ${dpmClass(value)}`.trim();
     }
 
     $effect(() => {
@@ -284,23 +257,18 @@
                     <tbody>
                         {#each sortedPlayers as player (player.nba_id)}
                             <tr>
-                                <td class="name">
-                                    <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
-                                </td>
-                                <td class="position">{player.position || '—'}</td>
-                                <td class="num {dpmClass(player.dpm)}">{formatSignedMetric(player.dpm)}</td>
-                                <td class="num {dpmClass(player.o_dpm)}">{formatSignedMetric(player.o_dpm)}</td>
-                                <td class="num {dpmClass(player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</td>
-                                <td class="num">{formatMillions(player.sal_market_fixed)}</td>
-                                <td class="num {dpmClass(player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</td>
-                                <td class="num {dpmClass(player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</td>
-                                <td class="num">{formatFixed(player.x_minutes, 1)}</td>
-                                <td class="num">{formatFixed(player.x_pace, 1)}</td>
-                                <td class="num">{formatFixed(player.x_pts_100, 1)}</td>
-                                <td class="num">{formatFixed(player.x_ast_100, 1)}</td>
-                                <td class="num">{formatPercent(player.x_fg_pct)}</td>
-                                <td class="num">{formatPercent(player.x_fg3_pct)}</td>
-                                <td class="num">{formatPercent(player.x_ft_pct)}</td>
+                                {#each teamPlayerColumns as column (column.key)}
+                                    {@const value = getPlayerTableCellValue(player, column)}
+                                    {#if column.key === 'player_name'}
+                                        <td class="name">
+                                            <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
+                                        </td>
+                                    {:else}
+                                        <td class={teamCellClass(column, value)}>
+                                            {formatPlayerTableCell(column, value)}
+                                        </td>
+                                    {/if}
+                                {/each}
                             </tr>
                         {/each}
                     </tbody>

@@ -3,9 +3,9 @@
  * Extracted from LegacyLeaderboard.svelte for testability.
  */
 
-import { LEADERBOARD_COLUMNS } from './leaderboardColumns.js';
+import { LEGACY_LEADERBOARD_COLUMNS } from './leaderboardColumns.js';
 
-export const LEGACY_COLUMNS = LEADERBOARD_COLUMNS;
+export const LEGACY_COLUMNS = LEGACY_LEADERBOARD_COLUMNS;
 
 /** Derive _experience, _fg3a_rate, _fta_rate from raw player data. */
 export function enrichPlayer(p) {

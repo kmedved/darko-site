@@ -1,7 +1,5 @@
-import { error } from '@sveltejs/kit';
-import { getTeamPageData } from '$lib/server/supabase.js';
+import { loadTeamPageData } from '$lib/server/teamPage.js';
 import { decodeTeamParam } from '$lib/utils/teamRouteUtils.js';
-import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -9,21 +7,9 @@ export const config = {
 };
 
 export async function load({ params, setHeaders }) {
-    setEdgeCache(setHeaders, {
-        edgeSMaxAge: 3600,
-        swr: 86400,
-        sie: 86400
+    return loadTeamPageData({
+        rawTeamParam: params.team,
+        normalizeTeamParam: decodeTeamParam,
+        setHeaders
     });
-
-    const teamName = decodeTeamParam(params.team || '').trim();
-    if (!teamName) {
-        throw error(400, 'Team not specified');
-    }
-
-    const teamData = await getTeamPageData(teamName);
-
-    return {
-        teamName,
-        ...teamData
-    };
 }

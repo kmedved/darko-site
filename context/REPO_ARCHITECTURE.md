@@ -2,7 +2,7 @@ Paste this first.
 Pair with one `context/COMPRESSED_*.md` bundle for guided context, or with `context/FILE_INDEX.md` for oracle workflows.
 For implementation tasks, also paste raw source of the files you expect to edit.
 
-Architecture sync version: 0.1.0
+Architecture sync version: 0.1.1
 Archetype: Service / App | Secondary: Data / Workflow / Pipeline | Topology: single-unit | Policy B: only shipped/runtime behavior changes bump version.
 
 ## TL;DR

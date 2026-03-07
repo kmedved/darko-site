@@ -3,7 +3,7 @@
     import {
         formatLeaderboardCell,
         getLeaderboardCellValue,
-        leaderboardSortConfig
+        legacyLeaderboardSortConfig
     } from '$lib/utils/leaderboardColumns.js';
     import {
         LEGACY_COLUMNS,
@@ -39,7 +39,7 @@
         getSortedRows(filteredPlayers, {
             sortColumn,
             sortDirection,
-            sortConfigs: leaderboardSortConfig
+            sortConfigs: legacyLeaderboardSortConfig
         })
     );
 
