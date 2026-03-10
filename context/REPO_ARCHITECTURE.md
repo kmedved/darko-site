@@ -46,7 +46,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | Route | Methods | Inputs | Returns |
 |---|---|---|---|
 | `/api/active-players` | `GET` | query: team | current active roster snapshot |
-| `/api/internal/cache-bust` | `POST` | none | JSON route payload |
+| `/api/internal/cache-bust` | `POST` | body: tags | JSON route payload |
 | `/api/longevity` | `GET` | none | active-player longevity table |
 | `/api/player/:id/history` | `GET` | query: full, limit | bounded or full career history |
 | `/api/player/:id/longevity` | `GET` | path: id | player longevity trajectory |

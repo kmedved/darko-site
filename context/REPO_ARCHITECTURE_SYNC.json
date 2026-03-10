@@ -48,7 +48,9 @@
         "writesState": false
       },
       {
-        "bodyFields": [],
+        "bodyFields": [
+          "tags"
+        ],
         "cache": {
           "type": "unspecified"
         },
@@ -718,7 +720,9 @@
         "route": "/api/docs"
       },
       {
-        "bodyFields": [],
+        "bodyFields": [
+          "tags"
+        ],
         "methods": [
           "POST"
         ],
