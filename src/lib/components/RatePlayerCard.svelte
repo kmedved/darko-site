@@ -35,6 +35,21 @@
             .toUpperCase();
     }
 
+    const POSITION_COLORS = {
+        'G': { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' },
+        'F': { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
+        'C': { bg: 'rgba(52, 211, 153, 0.15)', text: '#34d399' },
+        'F-G': { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' },
+        'G-F': { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' },
+        'F-C': { bg: 'rgba(167, 139, 250, 0.15)', text: '#a78bfa' },
+        'C-F': { bg: 'rgba(167, 139, 250, 0.15)', text: '#a78bfa' }
+    };
+
+    const placeholderColors = $derived.by(() => {
+        const pos = player?.position || '';
+        return POSITION_COLORS[pos] || { bg: 'rgba(100, 101, 122, 0.15)', text: 'var(--text-muted)' };
+    });
+
     const isActive = $derived(player?.active_roster === 1);
     const teamDisplay = $derived(isActive ? (player?.current_team || '?') : 'Retired');
     const headshotUrl = $derived(
@@ -68,7 +83,7 @@
                 onerror={() => { imgFailed = true; }}
             />
         {:else}
-            <div class="headshot-placeholder">
+            <div class="headshot-placeholder" style="background: {placeholderColors.bg}; color: {placeholderColors.text}">
                 {getInitials(player?.player_name)}
             </div>
         {/if}

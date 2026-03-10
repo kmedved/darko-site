@@ -65,6 +65,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | `/compare` | `load({ url })` | preloaded compare cards from `?ids=` |
 | `/lineups` | `load({ setHeaders })` | server-rendered page payload |
 | `/player/:nbaId` | `load({ params, setHeaders })` | full player profile payload |
+| `/scatterplot` | `load({ setHeaders })` | server-rendered page payload |
 | `/standings` | `load({ setHeaders })` | east/west standings split |
 | `/standings/:slug` | `load({ params, setHeaders })` | team detail wrapper payload |
 | `/team/:team` | `load({ params, setHeaders })` | legacy team detail wrapper payload |

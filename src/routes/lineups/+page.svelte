@@ -140,7 +140,6 @@
             <div>
                 <h1>Lineup Projections</h1>
                 <p>Lineup Plus/Minus in Relation to League Average</p>
-                <p class="subtitle-note">Table limited to lineups with more than 100 possessions.</p>
             </div>
 
             <div class="page-header-actions">
@@ -208,7 +207,7 @@
                                     type="text"
                                     value={columnFilters[column.key] || ''}
                                     oninput={(event) => setFilter(column.key, event.currentTarget.value)}
-                                    placeholder={column.type === 'text' ? 'All' : ''}
+                                    placeholder={column.type === 'text' ? 'All' : '>N'}
                                     aria-label={`Filter ${column.label}`}
                                 />
                             </th>
@@ -292,31 +291,7 @@
         gap: 10px;
     }
 
-    .page-action-btn {
-        padding: 6px 10px;
-        background: var(--bg-elevated);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        color: var(--text);
-        cursor: pointer;
-        font-family: var(--font-sans);
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-    }
-
-    .page-action-btn:hover:enabled {
-        background: var(--bg-hover);
-        border-color: var(--accent);
-    }
-
-    .page-action-btn:disabled {
-        cursor: not-allowed;
-        color: var(--text-muted);
-        opacity: 0.7;
-    }
+    /* page-action-btn inherits from app.css */
 
     .variant-picker {
         margin: 0;

@@ -53,6 +53,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/components/PlayerSearch.svelte` - component
 - `src/lib/components/PlayerSearchField.svelte` - component
 - `src/lib/components/RatePlayerCard.svelte` - component
+- `src/lib/components/ScatterplotChart.svelte` - component
 - `src/lib/components/SeedChart.svelte` - component
 - `src/lib/components/TalentPercentilesChart.svelte` - component
 - `src/lib/components/TalentTrendChart.svelte` - component
@@ -116,6 +117,8 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/player/[nbaId]/+page.svelte` - page /player/:nbaId
 - `src/routes/projections/+page.svelte` - page /projections
 - `src/routes/rate/+page.svelte` - page /rate
+- `src/routes/scatterplot/+page.server.js` - load /scatterplot
+- `src/routes/scatterplot/+page.svelte` - page /scatterplot
 - `src/routes/standings/+page.server.js` - load /standings
 - `src/routes/standings/+page.svelte` - page /standings
 - `src/routes/standings/[slug]/+page.server.js` - load /standings/:slug

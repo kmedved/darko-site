@@ -55,6 +55,10 @@
 		if (isThemeValue(savedTheme)) {
 			return savedTheme;
 		}
+		// Auto-detect OS dark mode preference
+		if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
+			return 'dark';
+		}
 		return 'white';
 	}
 
@@ -183,6 +187,7 @@
             <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
             <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
             <a href="/scatterplot" class:active={$page.url.pathname === '/scatterplot'}>Scatterplot</a>
+            <a href="/compare" class:active={$page.url.pathname === '/compare'}>Compare</a>
             <a href="/projections" class:active={$page.url.pathname === '/projections'}>Projections</a>
             <a href="/rate" class:active={$page.url.pathname === '/rate'}>Rate a Player</a>
         </div>
@@ -202,6 +207,7 @@
 		<a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')} onclick={closeMobileMenu}>Longevity</a>
 		<a href="/lineups" class:active={$page.url.pathname === '/lineups'} onclick={closeMobileMenu}>Lineups</a>
 		<a href="/scatterplot" class:active={$page.url.pathname === '/scatterplot'} onclick={closeMobileMenu}>Scatterplot</a>
+		<a href="/compare" class:active={$page.url.pathname === '/compare'} onclick={closeMobileMenu}>Compare</a>
 		<a href="/projections" class:active={$page.url.pathname === '/projections'} onclick={closeMobileMenu}>Projections</a>
 		<a href="/rate" class:active={$page.url.pathname === '/rate'} onclick={closeMobileMenu}>Rate a Player</a>
 		<a href="/about" class:active={$page.url.pathname === '/about'} onclick={closeMobileMenu}>About</a>
@@ -233,6 +239,13 @@
 <main>
     {@render children()}
 </main>
+
+<footer class="site-footer">
+    <div class="container footer-inner">
+        <span>DARKO DPM by <a href="https://x.com/kmedved" target="_blank" rel="noopener">@kmedved</a> & <a href="https://x.com/anpatt7" target="_blank" rel="noopener">@anpatt7</a></span>
+        <a href="/about">About</a>
+    </div>
+</footer>
 
 <style>
 	.theme-slider {
@@ -450,6 +463,36 @@
 
 		.font-select {
 			margin-right: 6px;
+		}
+	}
+	/* ── Footer ── */
+	.site-footer {
+		margin-top: 48px;
+		padding: 20px 0;
+		border-top: 1px solid var(--border-subtle);
+	}
+
+	.footer-inner {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+
+	.footer-inner a {
+		color: var(--text-muted);
+	}
+
+	.footer-inner a:hover {
+		color: var(--accent);
+	}
+
+	@media (max-width: 768px) {
+		.footer-inner {
+			flex-direction: column;
+			gap: 8px;
+			text-align: center;
 		}
 	}
 </style>

@@ -19,7 +19,7 @@
     --font-mono: 'DM Mono', 'SF Mono', 'Consolas', monospace;
     --radius: 10px;
     --radius-sm: 6px;
-    --nav-sticky-offset: 210px;
+    --nav-sticky-offset: 96px;
 }
 
 :root[data-theme='black'] {
@@ -174,7 +174,7 @@ nav .logo {
 
 .logo-mark {
     display: none;
-    height: 192px;
+    height: 80px;
     width: auto;
     max-width: 100%;
     object-fit: contain;

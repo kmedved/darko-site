@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import { resolveSupabaseConfig } from '$lib/utils/supabaseConfig.js';
 import {
-    LINEUP_MIN_POSSESSIONS,
     LINEUP_QUERY_VARIANTS,
     groupLineupRows
 } from './lineupRatings.js';
@@ -700,7 +699,6 @@ async function fetchLineupRatingsRows() {
             .from('lineup_ratings')
             .select(LINEUP_RATING_COLUMNS)
             .in('variant', LINEUP_QUERY_VARIANTS)
-            .gt('min_season_poss', LINEUP_MIN_POSSESSIONS)
             .order('min_season_poss', { ascending: false })
             .range(page * pageSize, (page + 1) * pageSize - 1);
 

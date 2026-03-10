@@ -242,7 +242,7 @@
                     onclick={exportTeamCsv}
                     disabled={sortedPlayers.length === 0}
                 >
-                    Download Table CSV
+                    Download CSV
                 </button>
             </div>
         </div>
@@ -643,7 +643,23 @@
         background: var(--bg-hover);
     }
 
-    /* Touch/mobile scroll mode */
+    @media (max-width: 1024px) {
+        .stats-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width: 600px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .stat-value {
+            font-size: 16px;
+        }
+    }
+
+        /* Touch/mobile scroll mode */
     @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
         (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
         .sticky-header-shell {

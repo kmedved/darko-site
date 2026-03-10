@@ -340,6 +340,22 @@
         },
         "dataSources": [
           "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getActivePlayers"
+        ],
+        "file": "src/routes/scatterplot/+page.server.js",
+        "pathParams": [],
+        "route": "/scatterplot",
+        "signature": "load({ setHeaders })"
+      },
+      {
+        "cache": {
+          "edgeSMaxAge": 3600,
+          "sie": 86400,
+          "swr": 86400,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
           "$lib/server/supabase.js:getConferenceStandings"
         ],
         "file": "src/routes/standings/+page.server.js",
@@ -478,6 +494,7 @@
     "src/lib/components/PlayerSearch.svelte",
     "src/lib/components/PlayerSearchField.svelte",
     "src/lib/components/RatePlayerCard.svelte",
+    "src/lib/components/ScatterplotChart.svelte",
     "src/lib/components/SeedChart.svelte",
     "src/lib/components/TalentPercentilesChart.svelte",
     "src/lib/components/TalentTrendChart.svelte",
@@ -541,6 +558,8 @@
     "src/routes/player/[nbaId]/+page.svelte",
     "src/routes/projections/+page.svelte",
     "src/routes/rate/+page.svelte",
+    "src/routes/scatterplot/+page.server.js",
+    "src/routes/scatterplot/+page.svelte",
     "src/routes/standings/+page.server.js",
     "src/routes/standings/+page.svelte",
     "src/routes/standings/[slug]/+page.server.js",
@@ -859,6 +878,11 @@
         "signature": "load({ params, setHeaders })"
       },
       {
+        "returns": "server-rendered page payload",
+        "route": "/scatterplot",
+        "signature": "load({ setHeaders })"
+      },
+      {
         "returns": "east/west standings split",
         "route": "/standings",
         "signature": "load({ setHeaders })"
@@ -977,6 +1001,10 @@
           {
             "name": "getRandomPair",
             "signature": "getRandomPair()"
+          },
+          {
+            "name": "getTeamLineups",
+            "signature": "getTeamLineups(teamName, { variant = 'pi', topN = 5 } = {})"
           },
           {
             "name": "getTeamPageData",

@@ -215,7 +215,7 @@ if (column.alignClass !== 'num') return column.alignClass;
                             type="text"
                             value={columnFilters[column.key] || ''}
                             oninput={(event) => setFilter(column.key, event.currentTarget.value)}
-                            placeholder={column.type === 'text' ? 'All' : ''}
+                            placeholder={column.type === 'text' ? 'All' : '>N'}
                             aria-label={`Filter ${column.label}`}
                         />
                     {/if}

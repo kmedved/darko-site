@@ -8,6 +8,7 @@
 	let yMetric = $state('d_dpm');
 	let colorByPosition = $state(true);
 	let mpgMinimum = $state(0);
+	let filtersOpen = $state(false);
 
 	const STAT_GROUPS = [
 		{
@@ -60,7 +61,10 @@
 	</div>
 
 	<div class="scatterplot-layout">
-		<div class="scatterplot-controls">
+		<button class="filters-toggle" onclick={() => filtersOpen = !filtersOpen}>
+			{filtersOpen ? 'Hide Filters' : 'Filters'}
+		</button>
+		<div class="scatterplot-controls" class:mobile-open={filtersOpen}>
 			<div class="control-group">
 				<label class="control-label" for="x-metric">X-Axis</label>
 				<select id="x-metric" class="control-select" bind:value={xMetric}>
@@ -185,15 +189,44 @@
 		cursor: pointer;
 	}
 
+	.filters-toggle {
+		display: none;
+	}
+
 	@media (max-width: 768px) {
 		.scatterplot-layout {
 			flex-direction: column;
 			align-items: stretch;
 		}
 
+		.filters-toggle {
+			display: inline-flex;
+			align-items: center;
+			align-self: flex-start;
+			gap: 6px;
+			padding: 8px 14px;
+			font-size: 13px;
+			font-weight: 600;
+			color: var(--text);
+			background: var(--bg-elevated);
+			border: 1px solid var(--border);
+			border-radius: var(--radius-sm, 4px);
+			cursor: pointer;
+			margin-bottom: 12px;
+		}
+
+		.filters-toggle:hover {
+			background: var(--bg-hover);
+		}
+
 		.scatterplot-controls {
 			flex: none;
 			width: 100%;
+			display: none;
+		}
+
+		.scatterplot-controls.mobile-open {
+			display: block;
 		}
 
 		.scatterplot-chart-area {
