@@ -49,6 +49,12 @@ test('normalizeLineupRow falls back to Team pending when tm_id is missing', () =
     assert.equal(row.team_name, TEAM_PENDING_LABEL);
 });
 
+test('normalizeLineupRow falls back to Team pending when tm_id is unmapped', () => {
+    const row = normalizeLineupRow(buildLineupRow({ tm_id: 9999999999 }));
+
+    assert.equal(row.team_name, TEAM_PENDING_LABEL);
+});
+
 test('normalizeLineupRow passes through synergy values', () => {
     const row = normalizeLineupRow(buildLineupRow({
         tm_id: 1610612743,

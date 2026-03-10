@@ -149,7 +149,7 @@ export function normalizeLineupRow(row = {}) {
         row_key: `${variant}:${identity}`,
         variant,
         lineup_label: lineupLabel,
-        team_name: teamNameFromId(row?.tm_id) ?? (row?.tm_id != null ? `Team #${row.tm_id}` : TEAM_PENDING_LABEL),
+        team_name: teamNameFromId(row?.tm_id) ?? TEAM_PENDING_LABEL,
         possessions,
         net_pm: netPm,
         off_pm: offPm,

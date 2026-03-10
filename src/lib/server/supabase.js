@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import { resolveSupabaseConfig } from '$lib/utils/supabaseConfig.js';
 import {
+    LINEUP_MIN_POSSESSIONS,
     LINEUP_QUERY_VARIANTS,
     groupLineupRows
 } from './lineupRatings.js';
@@ -76,13 +77,6 @@ function invalidateCachePrefix(prefix) {
             cacheStore.delete(key);
         }
     }
-}
-
-export function clearAllCaches() {
-    const size = cacheStore.size;
-    cacheStore.clear();
-    inFlightStore.clear();
-    return size;
 }
 
 async function runCached(key, maxAgeMs, loader) {
@@ -177,7 +171,6 @@ const RATING_COLUMNS = [
     's14',
     's15',
     'sal_market_fixed',
-    'actual_salary',
     'surplus_value'
 ].join(', ');
 
@@ -186,9 +179,7 @@ const PLAYERS_DIM_COLUMNS = [
     'player_name',
     'current_team',
     'position',
-    'rookie_season',
-    'draft_year',
-    'draft_slot'
+    'rookie_season'
 ].join(', ');
 
 const LINEUP_RATING_COLUMNS = [
@@ -266,9 +257,7 @@ function mergeWithPlayerDim(row, playerDim) {
         player_name: row.player_name ?? playerDim?.player_name ?? null,
         team_name: row.team_name ?? playerDim?.current_team ?? null,
         position: normalizePosition(row.position ?? playerDim?.position ?? null),
-        rookie_season: row.rookie_season ?? playerDim?.rookie_season ?? null,
-        draft_year: playerDim?.draft_year ?? null,
-        draft_slot: playerDim?.draft_slot ?? null
+        rookie_season: row.rookie_season ?? playerDim?.rookie_season ?? null
     };
 }
 
@@ -308,7 +297,7 @@ async function getLatestActiveDate() {
 }
 
 /**
- * Get all active players - most recent row per player from the last 7 days.
+ * Get all active players — most recent row per player from the last 7 days.
  * Uses a date range and deduplicates per nba_id to handle cases where
  * the data pipeline updates teams at different times.
  */
@@ -711,6 +700,7 @@ async function fetchLineupRatingsRows() {
             .from('lineup_ratings')
             .select(LINEUP_RATING_COLUMNS)
             .in('variant', LINEUP_QUERY_VARIANTS)
+            .gt('min_season_poss', LINEUP_MIN_POSSESSIONS)
             .order('min_season_poss', { ascending: false })
             .range(page * pageSize, (page + 1) * pageSize - 1);
 

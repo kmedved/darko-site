@@ -2,7 +2,7 @@ Paste this first.
 Pair with one `context/COMPRESSED_*.md` bundle for guided context, or with `context/FILE_INDEX.md` for oracle workflows.
 For implementation tasks, also paste raw source of the files you expect to edit.
 
-Architecture sync version: 0.1.2
+Architecture sync version: 0.1.3
 Archetype: Service / App | Secondary: Data / Workflow / Pipeline | Topology: single-unit | Policy B: only shipped/runtime behavior changes bump version.
 
 ## TL;DR
@@ -46,7 +46,6 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | Route | Methods | Inputs | Returns |
 |---|---|---|---|
 | `/api/active-players` | `GET` | query: team | current active roster snapshot |
-| `/api/internal/cache-bust` | `POST` | body: tags | JSON route payload |
 | `/api/longevity` | `GET` | none | active-player longevity table |
 | `/api/player/:id/history` | `GET` | query: full, limit | bounded or full career history |
 | `/api/player/:id/longevity` | `GET` | path: id | player longevity trajectory |
@@ -94,11 +93,11 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | `comparePage.js` | `parseCompareIds(rawIds)` |
 | `eloService.js` | `handleRatePairRequest()` |
 | `eloService.js` | `handleRateVoteRequest({ request, headers, url })` |
-| `supabase.js` | `clearAllCaches()` |
 | `supabase.js` | `getActivePlayers(options = {})` |
 | `supabase.js` | `getConferenceStandings(conference)` |
 | `supabase.js` | `getEloLeaderboard(limit = 50)` |
 | `supabase.js` | `getFullPlayerHistory(nbaId, options = {})` |
+| `supabase.js` | `getLineupRatings()` |
 
 ## Core Abstractions
 

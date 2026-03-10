@@ -3,8 +3,6 @@
     import { filterPlayers } from '$lib/utils/legacyLeaderboard.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
-    import MetricTooltip from '$lib/components/MetricTooltip.svelte';
-    import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
 
     /** @type {import('./$types').PageProps} */
     let { data } = $props();
@@ -12,15 +10,15 @@
     const baseColumns = [
         { key: 'lineup_label', label: 'Lineup', alignClass: 'lineup-col', type: 'text', dataType: 'text' },
         { key: 'team_name', label: 'Team', alignClass: 'team-col', type: 'text', dataType: 'text' },
-        { key: 'possessions', label: 'Poss', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_poss' },
-        { key: 'net_pm', label: 'Net +/-', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_net_pm' },
-        { key: 'off_pm', label: 'Off +/-', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_off_pm' },
-        { key: 'def_pm', label: 'Def +/-', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_def_pm' }
+        { key: 'possessions', label: 'Poss', alignClass: 'num', type: 'number', dataType: 'number' },
+        { key: 'net_pm', label: 'Net +/-', alignClass: 'num', type: 'number', dataType: 'number' },
+        { key: 'off_pm', label: 'Off +/-', alignClass: 'num', type: 'number', dataType: 'number' },
+        { key: 'def_pm', label: 'Def +/-', alignClass: 'num', type: 'number', dataType: 'number' }
     ];
 
     const synergyColumns = [
-        { key: 'off_synergy', label: 'Off Syn', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_off_synergy' },
-        { key: 'def_synergy', label: 'Def Syn', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_def_synergy' }
+        { key: 'off_synergy', label: 'Off Syn', alignClass: 'num', type: 'number', dataType: 'number' },
+        { key: 'def_synergy', label: 'Def Syn', alignClass: 'num', type: 'number', dataType: 'number' }
     ];
 
     const sortConfigs = {
@@ -142,6 +140,7 @@
             <div>
                 <h1>Lineup Projections</h1>
                 <p>Lineup Plus/Minus in Relation to League Average</p>
+                <p class="subtitle-note">Table limited to lineups with more than 100 possessions.</p>
             </div>
 
             <div class="page-header-actions">
@@ -194,16 +193,10 @@
                     <tr class="header-row">
                         {#each tableColumns as column (column.key)}
                             <th
-                                class="sortable {column.alignClass} {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
+                                class="sortable {column.alignClass} {sortColumn === column.key ? 'active' : ''}"
                                 onclick={() => toggleSort(column.key)}
                             >
-                                {#if column.metricKey}
-                                    <MetricTooltip text={getMetricDefinition(column.metricKey)}>
-                                        <span>{column.label}</span>
-                                    </MetricTooltip>
-                                {:else}
-                                    {column.label}
-                                {/if}
+                                {column.label}
                                 <span class="sort-indicator">{sortGlyph(column.key)}</span>
                             </th>
                         {/each}
@@ -236,7 +229,7 @@
                                     >
                                         {#if column.key === 'lineup_label'}
                                             <span class="lineup-label">
-                                                {#each lineup.players as p, i}
+                                                {#each lineup.players as p, i (p.id ?? `${p.name ?? 'Unknown'}-${i}`)}
                                                     {#if i > 0}, {/if}
                                                     {#if p.id}
                                                         <a href="/player/{p.id}" class="player-link">{p.name ?? 'Unknown'}</a>
@@ -378,6 +371,7 @@
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
+        table-layout: fixed;
         font-size: 13px;
     }
 
@@ -468,14 +462,16 @@
         font-size: 13px;
     }
 
+    .lineup-col {
+        width: 36%;
+    }
+
     .team-col {
-        width: 1px;
-        white-space: nowrap;
+        width: 14%;
     }
 
     .num {
-        width: 1px;
-        white-space: nowrap;
+        width: 9%;
         text-align: right;
         font-family: var(--font-mono);
         font-size: 12px;
@@ -549,7 +545,9 @@
             position: static;
         }
 
-        .lineup-col {
+        .lineup-col,
+        .team-col,
+        .num {
             width: auto;
         }
 
