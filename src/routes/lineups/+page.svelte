@@ -378,7 +378,6 @@
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        table-layout: fixed;
         font-size: 13px;
     }
 
@@ -469,16 +468,14 @@
         font-size: 13px;
     }
 
-    .lineup-col {
-        width: 36%;
-    }
-
     .team-col {
-        width: 14%;
+        width: 1px;
+        white-space: nowrap;
     }
 
     .num {
-        width: 9%;
+        width: 1px;
+        white-space: nowrap;
         text-align: right;
         font-family: var(--font-mono);
         font-size: 12px;
@@ -552,9 +549,7 @@
             position: static;
         }
 
-        .lineup-col,
-        .team-col,
-        .num {
+        .lineup-col {
             width: auto;
         }
 

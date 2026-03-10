@@ -131,6 +131,7 @@ For implementation work, request or paste raw source for the files you expect to
 
 - `src/routes/api/active-players/+server.js` - API /api/active-players
 - `src/routes/api/docs/+server.js` - API /api/docs
+- `src/routes/api/internal/cache-bust/+server.js` - API /api/internal/cache-bust
 - `src/routes/api/longevity/+server.js` - API /api/longevity
 - `src/routes/api/player/[id]/history/+server.js` - API /api/player/:id/history
 - `src/routes/api/player/[id]/longevity/+server.js` - API /api/player/:id/longevity

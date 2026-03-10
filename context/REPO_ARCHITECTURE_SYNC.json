@@ -50,6 +50,23 @@
       {
         "bodyFields": [],
         "cache": {
+          "type": "unspecified"
+        },
+        "dataSources": [
+          "$lib/server/supabase.js:clearAllCaches"
+        ],
+        "file": "src/routes/api/internal/cache-bust/+server.js",
+        "methods": [
+          "POST"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "route": "/api/internal/cache-bust",
+        "writesState": true
+      },
+      {
+        "bodyFields": [],
+        "cache": {
           "edgeSMaxAge": 3600,
           "sie": 86400,
           "swr": 86400,
@@ -538,6 +555,7 @@
     "src/routes/about/+page.svelte",
     "src/routes/api/active-players/+server.js",
     "src/routes/api/docs/+server.js",
+    "src/routes/api/internal/cache-bust/+server.js",
     "src/routes/api/longevity/+server.js",
     "src/routes/api/player/[id]/history/+server.js",
     "src/routes/api/player/[id]/longevity/+server.js",
@@ -698,6 +716,16 @@
         "queryParams": [],
         "returns": "public API contract document",
         "route": "/api/docs"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "POST"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "returns": "JSON route payload",
+        "route": "/api/internal/cache-bust"
       },
       {
         "bodyFields": [],
@@ -958,6 +986,10 @@
       },
       {
         "exports": [
+          {
+            "name": "clearAllCaches",
+            "signature": "clearAllCaches()"
+          },
           {
             "name": "getActivePlayers",
             "signature": "getActivePlayers(options = {})"

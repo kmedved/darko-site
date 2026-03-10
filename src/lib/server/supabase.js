@@ -78,6 +78,13 @@ function invalidateCachePrefix(prefix) {
     }
 }
 
+export function clearAllCaches() {
+    const size = cacheStore.size;
+    cacheStore.clear();
+    inFlightStore.clear();
+    return size;
+}
+
 async function runCached(key, maxAgeMs, loader) {
     const cached = readCache(key, maxAgeMs);
     if (cached !== undefined) {
