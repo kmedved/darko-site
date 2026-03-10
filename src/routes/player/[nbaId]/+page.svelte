@@ -1,6 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
+	import LongevityCareerLengthChart from '$lib/components/LongevityCareerLengthChart.svelte';
 	import TalentPercentilesChart from '$lib/components/TalentPercentilesChart.svelte';
 	import TalentTrendChart from '$lib/components/TalentTrendChart.svelte';
 	import { apiActivePlayers } from '$lib/api.js';
@@ -155,6 +156,50 @@
 		};
 	});
 
+	function normalizeProbability(value) {
+		const parsed = Number.parseFloat(value);
+		if (!Number.isFinite(parsed)) return null;
+		return parsed <= 1 ? parsed * 100 : parsed;
+	}
+
+	const longevityPlayer = $derived.by(() => {
+		if (!playerInfo) return null;
+		return {
+			player_name: playerInfo.player_name,
+			p1: normalizeProbability(playerInfo.s1),
+			p2: normalizeProbability(playerInfo.s2),
+			p3: normalizeProbability(playerInfo.s3),
+			p4: normalizeProbability(playerInfo.s4),
+			p5: normalizeProbability(playerInfo.s5),
+			p6: normalizeProbability(playerInfo.s6),
+			p7: normalizeProbability(playerInfo.s7),
+			p8: normalizeProbability(playerInfo.s8),
+			p9: normalizeProbability(playerInfo.s9),
+			p10: normalizeProbability(playerInfo.s10),
+			p11: normalizeProbability(playerInfo.s11),
+			p12: normalizeProbability(playerInfo.s12)
+		};
+	});
+
+	const playerDetailText = $derived.by(() => {
+		if (!playerInfo) return '';
+		const parts = [];
+		if (playerInfo.age) parts.push('Age ' + Math.floor(playerInfo.age));
+		if (playerInfo.draft_year) {
+			let d = '';
+			if (playerInfo.draft_slot) d += 'Pick #' + Math.round(playerInfo.draft_slot) + ', ';
+			d += Math.round(playerInfo.draft_year) + ' Draft';
+			parts.push(d);
+		}
+		if (playerInfo.rookie_season) parts.push('Rookie ' + playerInfo.rookie_season);
+		return parts.join(' · ');
+	});
+
+		const hasLongevityData = $derived(
+		longevityPlayer !== null &&
+		longevityPlayer.p1 !== null
+	);
+
 	function handleSelectPlayer(player) {
 		goto(`/player/${player.nba_id}`);
 	}
@@ -203,6 +248,7 @@
 					</div>
 					<h2>{playerInfo.player_name}</h2>
 					<p class="player-meta">{playerInfo.team_name} · {playerInfo.position || '?'}</p>
+					<p class="player-detail">{playerDetailText}</p>
 				</div>
 				<a href="/compare?ids={nbaId}" class="compare-link">Compare this player</a>
 			{/if}
@@ -235,16 +281,25 @@
 
 		<div class="profile-content">
 			{#if playerInfo}
-				<div class="chart-panel">
-					<TalentTrendChart
-						rows={historyRows}
-						{talentType}
-						playerName={playerInfo.player_name}
-					/>
-					{#if historyMeta.truncated}
-						<p class="history-note">
-							Showing the first {historyMeta.maxRows} rows of career history.
-						</p>
+				<div class="charts-row">
+					<div class="chart-panel chart-half">
+						<TalentTrendChart
+							rows={historyRows}
+							{talentType}
+							playerName={playerInfo.player_name}
+						/>
+						{#if historyMeta.truncated}
+							<p class="history-note">
+								Showing the first {historyMeta.maxRows} rows of career history.
+							</p>
+						{/if}
+					</div>
+					{#if hasLongevityData}
+						<div class="chart-panel chart-half">
+							<h3 class="chart-panel-title">{playerInfo.player_name}</h3>
+							<p class="chart-panel-subtitle">Career Length Projections</p>
+							<LongevityCareerLengthChart player={longevityPlayer} />
+						</div>
 					{/if}
 				</div>
 
@@ -264,6 +319,7 @@
 							date={currentDate}
 							{percentiles}
 							selectedMetrics={selectedPercentileMetrics}
+							rawValues={playerInfo}
 						/>
 					</div>
 				{/if}
@@ -351,6 +407,12 @@
 		margin-top: 4px;
 	}
 
+	.player-detail {
+		font-size: 12px;
+		color: var(--text-muted);
+		margin-top: 2px;
+	}
+
 	.sidebar-section {
 		display: flex;
 		flex-direction: column;
@@ -408,11 +470,36 @@
 		min-width: 0;
 	}
 
+	.charts-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 16px;
+	}
+
 	.chart-panel {
 		background: var(--bg-surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		padding: 16px;
+	}
+
+	.chart-half {
+		min-width: 0;
+	}
+
+	.chart-panel-title {
+		font-size: 16px;
+		font-weight: 700;
+		color: var(--text);
+		text-align: center;
+		margin-bottom: 2px;
+	}
+
+	.chart-panel-subtitle {
+		font-size: 13px;
+		color: var(--text-secondary);
+		text-align: center;
+		margin-bottom: 8px;
 	}
 
 	.percentile-notice {
@@ -434,6 +521,10 @@
 
 		.profile-sidebar {
 			position: static;
+		}
+
+		.charts-row {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

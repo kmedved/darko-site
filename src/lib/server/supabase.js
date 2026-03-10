@@ -186,7 +186,9 @@ const PLAYERS_DIM_COLUMNS = [
     'player_name',
     'current_team',
     'position',
-    'rookie_season'
+    'rookie_season',
+    'draft_year',
+    'draft_slot'
 ].join(', ');
 
 const LINEUP_RATING_COLUMNS = [
@@ -264,7 +266,9 @@ function mergeWithPlayerDim(row, playerDim) {
         player_name: row.player_name ?? playerDim?.player_name ?? null,
         team_name: row.team_name ?? playerDim?.current_team ?? null,
         position: normalizePosition(row.position ?? playerDim?.position ?? null),
-        rookie_season: row.rookie_season ?? playerDim?.rookie_season ?? null
+        rookie_season: row.rookie_season ?? playerDim?.rookie_season ?? null,
+        draft_year: playerDim?.draft_year ?? null,
+        draft_slot: playerDim?.draft_slot ?? null
     };
 }
 
