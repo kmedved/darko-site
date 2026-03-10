@@ -36,11 +36,28 @@ test('normalizeLineupVariant maps raw and npi variants into the npi bucket', () 
     assert.equal(normalizeLineupVariant('other'), null);
 });
 
-test('normalizeLineupRow falls back to a visible team placeholder', () => {
-    const row = normalizeLineupRow(buildLineupRow({ team_name: undefined }));
+test('normalizeLineupRow resolves tm_id to team name', () => {
+    const row = normalizeLineupRow(buildLineupRow({ tm_id: 1610612738 }));
+
+    assert.equal(row.team_name, 'Boston Celtics');
+    assert.equal(row.lineup_label, 'Player 1, Player 2, Player 3, Player 4, Player 5');
+});
+
+test('normalizeLineupRow falls back to Team pending when tm_id is missing', () => {
+    const row = normalizeLineupRow(buildLineupRow({ tm_id: undefined }));
 
     assert.equal(row.team_name, TEAM_PENDING_LABEL);
-    assert.equal(row.lineup_label, 'Player 1, Player 2, Player 3, Player 4, Player 5');
+});
+
+test('normalizeLineupRow passes through synergy values', () => {
+    const row = normalizeLineupRow(buildLineupRow({
+        tm_id: 1610612743,
+        off_synergy: 1.5,
+        def_synergy: -0.8
+    }));
+
+    assert.equal(row.off_synergy, 1.5);
+    assert.equal(row.def_synergy, -0.8);
 });
 
 test('normalizeLineupRow excludes rows missing total ratings', () => {
@@ -58,12 +75,12 @@ test('groupLineupRows prefers exact npi rows over raw duplicates during rollout'
     const grouped = groupLineupRows([
         buildLineupRow({
             variant: 'raw',
-            team_name: undefined,
+            tm_id: undefined,
             total_net_rating: 1.1
         }),
         buildLineupRow({
             variant: 'npi',
-            team_name: 'Boston Celtics',
+            tm_id: 1610612738,
             total_net_rating: 2.4
         })
     ]);

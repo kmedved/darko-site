@@ -184,10 +184,15 @@ const PLAYERS_DIM_COLUMNS = [
 
 const LINEUP_RATING_COLUMNS = [
     'variant',
+    'lineup_size',
     'min_season_poss',
     'total_net_rating',
     'total_off_rating',
     'total_def_rating',
+    'net_synergy',
+    'off_synergy',
+    'def_synergy',
+    'tm_id',
     'player_1',
     'player_2',
     'player_3',
@@ -199,8 +204,6 @@ const LINEUP_RATING_COLUMNS = [
     'player_4_id',
     'player_5_id'
 ].join(', ');
-
-const LINEUP_RATING_COLUMNS_WITH_TEAM = `${LINEUP_RATING_COLUMNS}, team_name`;
 
 export const MAX_FULL_HISTORY_ROWS = 5_000;
 
@@ -687,11 +690,7 @@ export async function getConferenceStandings(conference) {
     });
 }
 
-function isMissingLineupTeamColumnError(error) {
-    return error?.code === '42703' && /team_name/i.test(String(error?.message || ''));
-}
-
-async function fetchLineupRatingsRows(selectColumns) {
+async function fetchLineupRatingsRows() {
     const rows = [];
     let page = 0;
     const pageSize = 1_000;
@@ -699,7 +698,7 @@ async function fetchLineupRatingsRows(selectColumns) {
     while (true) {
         const { data, error } = await supabase
             .from('lineup_ratings')
-            .select(selectColumns)
+            .select(LINEUP_RATING_COLUMNS)
             .in('variant', LINEUP_QUERY_VARIANTS)
             .gt('min_season_poss', LINEUP_MIN_POSSESSIONS)
             .order('min_season_poss', { ascending: false })
@@ -721,24 +720,23 @@ async function fetchLineupRatingsRows(selectColumns) {
     return rows;
 }
 
-async function fetchLineupRatingsRowsWithOptionalTeam() {
-    try {
-        return await fetchLineupRatingsRows(LINEUP_RATING_COLUMNS_WITH_TEAM);
-    } catch (error) {
-        if (!isMissingLineupTeamColumnError(error)) {
-            throw error;
-        }
-
-        return fetchLineupRatingsRows(LINEUP_RATING_COLUMNS);
-    }
-}
-
 export async function getLineupRatings() {
     const key = cacheKey('lineupRatings', 'all');
     return runCached(key, CACHE_MS.lineupRatings, async () => {
-        const rows = await fetchLineupRatingsRowsWithOptionalTeam();
+        const rows = await fetchLineupRatingsRows();
         return groupLineupRows(rows);
     });
+}
+
+export async function getTeamLineups(teamName, { variant = 'pi', topN = 5 } = {}) {
+    const allLineups = await getLineupRatings();
+    const bucket = allLineups?.[variant] ?? [];
+    const teamRows = bucket.filter((r) => r.team_name === teamName);
+    const sorted = [...teamRows].sort((a, b) => b.net_pm - a.net_pm);
+    return {
+        top: sorted.slice(0, topN),
+        worst: sorted.slice(-topN).reverse()
+    };
 }
 
 export async function getTeamSimulation(teamName) {
@@ -789,16 +787,18 @@ export async function getTeamPageData(teamName) {
         };
     }
 
-    const [players, sim, winDist] = await Promise.all([
+    const [players, sim, winDist, lineups] = await Promise.all([
         getActivePlayers({ teamName: normalizedTeam }),
         getTeamSimulation(normalizedTeam),
-        getTeamWinDistribution(normalizedTeam)
+        getTeamWinDistribution(normalizedTeam),
+        getTeamLineups(normalizedTeam)
     ]);
 
     return {
         players: players || [],
         sim: sim || null,
-        winDist: winDist || []
+        winDist: winDist || [],
+        lineups: lineups || { top: [], worst: [] }
     };
 }
 

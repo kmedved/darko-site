@@ -4,6 +4,7 @@
     import {
         exportCsvRows,
         formatFixed,
+        formatSignedMetric,
         teamPlayersCsvColumns
     } from '$lib/utils/csvPresets.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
@@ -23,7 +24,8 @@
         backLabel = '← Back',
         players = [],
         sim = null,
-        winDist = []
+        winDist = [],
+        lineups = { top: [], worst: [] }
     } = $props();
 
     let sortColumn = $state('player_name');
@@ -45,6 +47,8 @@
 
     const teamPlayers = $derived(players || []);
     const teamWinDist = $derived(winDist || []);
+    const topLineups = $derived(lineups?.top ?? []);
+    const worstLineups = $derived(lineups?.worst ?? []);
 
     function dpmClass(val) {
         const n = parseFloat(val);
@@ -165,6 +169,49 @@
     </tr>
 {/snippet}
 
+
+{#snippet lineupTable(rows, emptyMessage)}
+    {#if rows.length === 0}
+        <p class="lineup-empty">{emptyMessage}</p>
+    {:else}
+        <div class="lineup-table-wrapper">
+            <table class="lineup-table">
+                <thead>
+                    <tr>
+                        <th class="lineup-th lineup-col">Lineup</th>
+                        <th class="lineup-th lineup-num">Poss</th>
+                        <th class="lineup-th lineup-num">Net +/-</th>
+                        <th class="lineup-th lineup-num">Off +/-</th>
+                        <th class="lineup-th lineup-num">Def +/-</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each rows as lineup (lineup.row_key)}
+                        <tr>
+                            <td class="lineup-cell lineup-col">
+                                <span class="lineup-names">
+                                    {#each lineup.players as p, i}
+                                        {#if i > 0}, {/if}
+                                        {#if p.id}
+                                            <a href="/player/{p.id}" class="lineup-player-link">{p.name ?? 'Unknown'}</a>
+                                        {:else}
+                                            {p.name ?? 'Unknown'}
+                                        {/if}
+                                    {/each}
+                                </span>
+                            </td>
+                            <td class="lineup-cell lineup-num">{formatFixed(lineup.possessions, 0)}</td>
+                            <td class="lineup-cell lineup-num {dpmClass(lineup.net_pm)}">{formatSignedMetric(lineup.net_pm)}</td>
+                            <td class="lineup-cell lineup-num {dpmClass(lineup.off_pm)}">{formatSignedMetric(lineup.off_pm)}</td>
+                            <td class="lineup-cell lineup-num {dpmClass(lineup.def_pm)}">{formatSignedMetric(lineup.def_pm)}</td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
+    {/if}
+{/snippet}
+
 <div class="container">
     <a class="back-link" href={backHref}>{backLabel}</a>
 
@@ -273,6 +320,20 @@
                         {/each}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    {/if}
+
+
+    {#if topLineups.length > 0 || worstLineups.length > 0}
+        <div class="lineups-grid">
+            <div>
+                <h2 class="section-title">Top Lineups</h2>
+                {@render lineupTable(topLineups, 'No lineup data available.')}
+            </div>
+            <div>
+                <h2 class="section-title">Worst Lineups</h2>
+                {@render lineupTable(worstLineups, 'No lineup data available.')}
             </div>
         </div>
     {/if}
@@ -498,6 +559,90 @@
         opacity: 1;
     }
 
+
+    /* Lineup sections */
+    .lineups-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .lineup-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .lineup-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 12px;
+        table-layout: fixed;
+    }
+
+    .lineup-th {
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        padding: 8px 8px;
+        text-align: left;
+        font-size: 9.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--text-muted);
+        white-space: nowrap;
+        cursor: default;
+    }
+
+    .lineup-th.lineup-num {
+        text-align: right;
+        width: 60px;
+    }
+
+    .lineup-th.lineup-col {
+        width: auto;
+    }
+
+    .lineup-cell {
+        padding: 8px 8px;
+        border-bottom: 1px solid var(--border-subtle);
+        vertical-align: top;
+    }
+
+    .lineup-cell.lineup-num {
+        text-align: right;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .lineup-cell.pos { color: var(--positive); }
+    .lineup-cell.neg { color: var(--negative); }
+
+    .lineup-names {
+        display: block;
+        white-space: normal;
+        line-height: 1.35;
+    }
+
+    .lineup-player-link {
+        color: var(--text);
+    }
+
+    .lineup-player-link:hover {
+        color: var(--accent);
+    }
+
+    .lineup-empty {
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+
+    .lineup-table tbody tr:hover .lineup-cell {
+        background: var(--bg-hover);
+    }
+
     /* Touch/mobile scroll mode */
     @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
         (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
@@ -517,6 +662,10 @@
 
         th {
             position: static;
+        }
+
+        .lineups-grid {
+            grid-template-columns: 1fr;
         }
     }
     /* End touch/mobile scroll mode */

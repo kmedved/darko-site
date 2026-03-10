@@ -13,6 +13,7 @@
     players={data.players}
     sim={data.sim}
     winDist={data.winDist}
+    lineups={data.lineups}
     backHref="/"
     backLabel="← Back to leaderboard"
 />

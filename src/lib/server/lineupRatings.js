@@ -4,6 +4,45 @@ export const TEAM_PENDING_LABEL = 'Team pending';
 
 const PLAYER_NAME_KEYS = ['player_1', 'player_2', 'player_3', 'player_4', 'player_5'];
 const PLAYER_ID_KEYS = ['player_1_id', 'player_2_id', 'player_3_id', 'player_4_id', 'player_5_id'];
+const PLAYER_SLOTS = [1, 2, 3, 4, 5];
+
+const TM_ID_TO_NAME = {
+    1610612737: 'Atlanta Hawks',
+    1610612738: 'Boston Celtics',
+    1610612751: 'Brooklyn Nets',
+    1610612766: 'Charlotte Hornets',
+    1610612741: 'Chicago Bulls',
+    1610612739: 'Cleveland Cavaliers',
+    1610612742: 'Dallas Mavericks',
+    1610612743: 'Denver Nuggets',
+    1610612765: 'Detroit Pistons',
+    1610612744: 'Golden State Warriors',
+    1610612745: 'Houston Rockets',
+    1610612754: 'Indiana Pacers',
+    1610612746: 'Los Angeles Clippers',
+    1610612747: 'Los Angeles Lakers',
+    1610612763: 'Memphis Grizzlies',
+    1610612748: 'Miami Heat',
+    1610612749: 'Milwaukee Bucks',
+    1610612750: 'Minnesota Timberwolves',
+    1610612740: 'New Orleans Pelicans',
+    1610612752: 'New York Knicks',
+    1610612760: 'Oklahoma City Thunder',
+    1610612753: 'Orlando Magic',
+    1610612755: 'Philadelphia 76ers',
+    1610612756: 'Phoenix Suns',
+    1610612757: 'Portland Trail Blazers',
+    1610612758: 'Sacramento Kings',
+    1610612759: 'San Antonio Spurs',
+    1610612761: 'Toronto Raptors',
+    1610612762: 'Utah Jazz',
+    1610612764: 'Washington Wizards'
+};
+
+export function teamNameFromId(tmId) {
+    if (tmId == null) return null;
+    return TM_ID_TO_NAME[tmId] ?? null;
+}
 
 function toFiniteNumber(value) {
     const parsed = Number.parseFloat(value);
@@ -99,15 +138,25 @@ export function normalizeLineupRow(row = {}) {
     const lineupLabel = players.filter(Boolean).join(', ') || 'Unnamed lineup';
     const identity = getPlayerIdentity(row);
 
+    const playerSlots = PLAYER_SLOTS.map((i) => {
+        const name = players[i - 1];
+        const rawId = row?.[`player_${i}_id`];
+        const id = rawId != null && rawId !== '' ? String(rawId).trim() : null;
+        return { name, id };
+    });
+
     return {
         row_key: `${variant}:${identity}`,
         variant,
         lineup_label: lineupLabel,
-        team_name: normalizeText(row?.team_name) ?? TEAM_PENDING_LABEL,
+        team_name: teamNameFromId(row?.tm_id) ?? TEAM_PENDING_LABEL,
         possessions,
         net_pm: netPm,
         off_pm: offPm,
         def_pm: defPm,
+        off_synergy: toFiniteNumber(row?.off_synergy),
+        def_synergy: toFiniteNumber(row?.def_synergy),
+        players: playerSlots,
         player_1: players[0],
         player_2: players[1],
         player_3: players[2],
