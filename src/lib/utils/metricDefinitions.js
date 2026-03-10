@@ -14,7 +14,13 @@ export const metricDefinitions = {
     x_fg3_pct: 'Projected three-point percentage.',
     x_ft_pct: 'Projected free-throw percentage.',
     sal_market_fixed: 'Estimated fair market salary based on projected on-court value.',
-    surplus_value: 'Difference between fair salary and actual salary. Positive means underpaid.'
+    surplus_value: 'Difference between fair salary and actual salary. Positive means underpaid.',
+    lineup_net_pm: 'Projected net plus/minus per 100 possessions for this lineup, relative to league average.',
+    lineup_off_pm: 'Projected offensive plus/minus per 100 possessions for this lineup, relative to league average.',
+    lineup_def_pm: 'Projected defensive plus/minus per 100 possessions for this lineup, relative to league average.',
+    lineup_poss: 'Number of possessions this lineup has played together this season.',
+    lineup_off_synergy: 'Offensive synergy — the gap between this lineup\'s projected offensive rating and the sum of its individual players\' offensive ratings.',
+    lineup_def_synergy: 'Defensive synergy — the gap between this lineup\'s projected defensive rating and the sum of its individual players\' defensive ratings.'
 };
 
 export function getMetricDefinition(metric) {

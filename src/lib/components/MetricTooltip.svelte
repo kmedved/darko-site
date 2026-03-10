@@ -31,11 +31,11 @@
             maxLeft
         );
 
-        const preferredTop = anchorRect.bottom + tooltipGap;
-        const fitsBelow = preferredTop + bubbleRect.height <= window.innerHeight - viewportPadding;
-        const top = fitsBelow
-            ? preferredTop
-            : Math.max(viewportPadding, anchorRect.top - bubbleRect.height - tooltipGap);
+        const preferredAbove = anchorRect.top - bubbleRect.height - tooltipGap;
+        const fitsAbove = preferredAbove >= viewportPadding;
+        const top = fitsAbove
+            ? preferredAbove
+            : anchorRect.bottom + tooltipGap;
 
         bubbleStyle = `left: ${left}px; top: ${top}px;`;
     }

@@ -107,7 +107,7 @@
         if (column.key === 'player_name') return 'name';
 if (column.alignClass !== 'num') return column.alignClass;
         if (column.key === 'surplus_value') return `num ${signClass(value)}`.trim();
-        if (column.key === 'sal_market_fixed') return 'num';
+        if (column.key === 'sal_market_fixed' || column.key === 'actual_salary') return 'num';
         return `num ${statClass(column.key, value)}`.trim();
     }
 

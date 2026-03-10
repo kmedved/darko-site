@@ -7,7 +7,7 @@ import {
     formatSignedMillions
 } from './csvPresets.js';
 
-const DASH = '—';
+const DASH = '\u2014';
 
 const COLUMN_DEFINITIONS = Object.freeze({
     _rank: {
@@ -83,6 +83,15 @@ const COLUMN_DEFINITIONS = Object.freeze({
         dataType: 'number',
         format: 'millions',
         metricKey: 'sal_market_fixed'
+    },
+    actual_salary: {
+        key: 'actual_salary',
+        label: 'Salary',
+        type: 'number',
+        align: 'right',
+        alignClass: 'num',
+        dataType: 'number',
+        format: 'millions'
     },
     box_dpm: {
         key: 'box_dpm',
@@ -190,6 +199,23 @@ const COLUMN_DEFINITIONS = Object.freeze({
     }
 });
 
+const STANDARD_LEADERBOARD_METRIC_KEYS = Object.freeze([
+    'dpm',
+    'o_dpm',
+    'd_dpm',
+    'box_dpm',
+    'on_off_dpm',
+    'x_minutes',
+    'x_pace',
+    'x_pts_100',
+    'x_ast_100',
+    'x_fg_pct',
+    'x_fg3_pct',
+    'x_ft_pct',
+    'sal_market_fixed',
+    'actual_salary',
+    'surplus_value'
+]);
 const SHARED_PLAYER_METRIC_KEYS = Object.freeze([
     'dpm',
     'o_dpm',
@@ -218,8 +244,9 @@ export function buildPlayerTableSortConfig(columns) {
 }
 
 export const LEADERBOARD_COLUMNS = buildColumns(
-    ['_rank', 'player_name', ...SHARED_PLAYER_METRIC_KEYS, 'surplus_value'],
+    ['_rank', 'player_name', ...STANDARD_LEADERBOARD_METRIC_KEYS],
     {
+        sal_market_fixed: { label: '$ Value' },
         o_dpm: { label: 'Off' },
         d_dpm: { label: 'Def' }
     }

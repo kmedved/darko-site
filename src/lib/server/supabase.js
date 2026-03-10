@@ -170,6 +170,7 @@ const RATING_COLUMNS = [
     's14',
     's15',
     'sal_market_fixed',
+    'actual_salary',
     'surplus_value'
 ].join(', ');
 
@@ -296,7 +297,7 @@ async function getLatestActiveDate() {
 }
 
 /**
- * Get all active players — most recent row per player from the last 7 days.
+ * Get all active players - most recent row per player from the last 7 days.
  * Uses a date range and deduplicates per nba_id to handle cases where
  * the data pipeline updates teams at different times.
  */

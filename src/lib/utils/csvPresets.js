@@ -1,6 +1,6 @@
 import { downloadCsv } from './csv.js';
 
-const DASH = '—';
+const DASH = '\u2014';
 
 export function formatMinutes(seconds) {
     if (seconds === null || seconds === undefined) return DASH;
@@ -125,7 +125,8 @@ export const leaderboardCsvColumns = [
     { header: 'FG%', accessor: 'x_fg_pct', format: formatPercent },
     { header: '3P%', accessor: 'x_fg3_pct', format: formatPercent },
     { header: 'FT%', accessor: 'x_ft_pct', format: formatPercent },
-    { header: 'Fair Salary', accessor: 'sal_market_fixed', format: formatMillions },
+    { header: '$ Value', accessor: 'sal_market_fixed', format: formatMillions },
+    { header: 'Salary', accessor: 'actual_salary', format: formatMillions },
     { header: 'Surplus Value', accessor: 'surplus_value', format: formatSignedMillions }
 ];
 

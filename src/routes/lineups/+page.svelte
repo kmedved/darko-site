@@ -3,6 +3,8 @@
     import { filterPlayers } from '$lib/utils/legacyLeaderboard.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
+    import MetricTooltip from '$lib/components/MetricTooltip.svelte';
+    import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
 
     /** @type {import('./$types').PageProps} */
     let { data } = $props();
@@ -10,15 +12,15 @@
     const baseColumns = [
         { key: 'lineup_label', label: 'Lineup', alignClass: 'lineup-col', type: 'text', dataType: 'text' },
         { key: 'team_name', label: 'Team', alignClass: 'team-col', type: 'text', dataType: 'text' },
-        { key: 'possessions', label: 'Poss', alignClass: 'num', type: 'number', dataType: 'number' },
-        { key: 'net_pm', label: 'Net +/-', alignClass: 'num', type: 'number', dataType: 'number' },
-        { key: 'off_pm', label: 'Off +/-', alignClass: 'num', type: 'number', dataType: 'number' },
-        { key: 'def_pm', label: 'Def +/-', alignClass: 'num', type: 'number', dataType: 'number' }
+        { key: 'possessions', label: 'Poss', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_poss' },
+        { key: 'net_pm', label: 'Net +/-', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_net_pm' },
+        { key: 'off_pm', label: 'Off +/-', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_off_pm' },
+        { key: 'def_pm', label: 'Def +/-', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_def_pm' }
     ];
 
     const synergyColumns = [
-        { key: 'off_synergy', label: 'Off Syn', alignClass: 'num', type: 'number', dataType: 'number' },
-        { key: 'def_synergy', label: 'Def Syn', alignClass: 'num', type: 'number', dataType: 'number' }
+        { key: 'off_synergy', label: 'Off Syn', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_off_synergy' },
+        { key: 'def_synergy', label: 'Def Syn', alignClass: 'num', type: 'number', dataType: 'number', metricKey: 'lineup_def_synergy' }
     ];
 
     const sortConfigs = {
@@ -192,10 +194,16 @@
                     <tr class="header-row">
                         {#each tableColumns as column (column.key)}
                             <th
-                                class="sortable {column.alignClass} {sortColumn === column.key ? 'active' : ''}"
+                                class="sortable {column.alignClass} {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
                                 onclick={() => toggleSort(column.key)}
                             >
-                                {column.label}
+                                {#if column.metricKey}
+                                    <MetricTooltip text={getMetricDefinition(column.metricKey)}>
+                                        <span>{column.label}</span>
+                                    </MetricTooltip>
+                                {:else}
+                                    {column.label}
+                                {/if}
                                 <span class="sort-indicator">{sortGlyph(column.key)}</span>
                             </th>
                         {/each}

@@ -49,7 +49,7 @@ export async function GET({ setHeaders }) {
                     }
                 },
                 response:
-                    'Array of player objects. Each object includes: nba_id, player_name, team_name, position, age, dpm, o_dpm, d_dpm, box_dpm, on_off_dpm, bayes_rapm_total, tr_minutes, x_minutes, x_pace, x_pts_100, x_ast_100, x_orb_100, x_drb_100, x_stl_100, x_blk_100, x_tov_100, x_fga_100, x_fg3a_100, x_fta_100, x_fg_pct, x_fg3_pct, x_ft_pct, tr_fg3_pct, tr_ft_pct, sal_market_fixed, surplus_value, and survivorship columns (s1-s15).',
+                    'Array of player objects. Each object includes: nba_id, player_name, team_name, position, age, dpm, o_dpm, d_dpm, box_dpm, on_off_dpm, bayes_rapm_total, tr_minutes, x_minutes, x_pace, x_pts_100, x_ast_100, x_orb_100, x_drb_100, x_stl_100, x_blk_100, x_tov_100, x_fga_100, x_fg3a_100, x_fta_100, x_fg_pct, x_fg3_pct, x_ft_pct, tr_fg3_pct, tr_ft_pct, sal_market_fixed, actual_salary, surplus_value, and survivorship columns (s1-s15).',
                 cache: '1 hour edge, 24h stale-while-revalidate'
             },
             {
@@ -111,14 +111,14 @@ export async function GET({ setHeaders }) {
                     }
                 },
                 response:
-                    'Standard mode: Array of history rows. Full mode: { rows: [...], truncated: boolean, maxRows: number }. Each row includes: date, season, team_name, dpm, o_dpm, d_dpm, box_dpm, on_off_dpm, bayes_rapm_total, tr_minutes, x_minutes, x_pts_100, x_ast_100, x_fg_pct, x_fg3_pct, x_ft_pct, sal_market_fixed, surplus_value, age, career_game_num, and more.',
+                    'Standard mode: Array of history rows. Full mode: { rows: [...], truncated: boolean, maxRows: number }. Each row includes: date, season, team_name, dpm, o_dpm, d_dpm, box_dpm, on_off_dpm, bayes_rapm_total, tr_minutes, x_minutes, x_pts_100, x_ast_100, x_fg_pct, x_fg3_pct, x_ft_pct, sal_market_fixed, actual_salary, surplus_value, age, career_game_num, and more.',
                 cache: '1 hour edge, 24h stale-while-revalidate'
             },
             {
                 path: '/api/player/:id/longevity',
                 method: 'GET',
                 description:
-                    "Longevity trajectory for a single player — how the model's retirement age estimate has changed over their career.",
+                    "Longevity trajectory for a single player - how the model's retirement age estimate has changed over their career.",
                 params: {
                     path: {
                         id: {

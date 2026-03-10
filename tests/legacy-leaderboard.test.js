@@ -61,6 +61,7 @@ test('LEGACY_COLUMNS includes the standard salary and surplus columns', () => {
 	const keys = LEGACY_COLUMNS.map((c) => c.key);
 	assert.ok(keys.includes('sal_market_fixed'));
 	assert.ok(keys.includes('surplus_value'));
+	assert.ok(!keys.includes('actual_salary'));
 	assert.ok(keys.includes('on_off_dpm'));
 });
 

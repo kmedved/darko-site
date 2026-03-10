@@ -250,7 +250,7 @@ All Supabase queries go through `src/lib/server/supabase.js`. Key patterns:
 
 ### RATING_COLUMNS
 
-Comma-joined string of all 68 fetched `player_ratings` column names (66 original + `sal_market_fixed`, `surplus_value`), used by `getActivePlayers()` in `.select(RATING_COLUMNS)`. If you add a column to the DB, you must also add it here or it won't be fetched. Note: 4 salary columns (`game_value`, `wins_pg`, `warp`, `actual_salary`) exist in the DB but are not in RATING_COLUMNS since they aren't displayed on the frontend.
+Comma-joined string of all 69 fetched `player_ratings` column names (66 original + `sal_market_fixed`, `actual_salary`, `surplus_value`), used by `getActivePlayers()` and `getPlayerHistory()` in `.select(RATING_COLUMNS)`. If you add a column to the DB, you must also add it here or it won't be fetched. Note: 3 salary columns (`game_value`, `wins_pg`, `warp`) exist in the DB but are not in RATING_COLUMNS since they aren't displayed on the frontend.
 
 ### Core data functions
 
