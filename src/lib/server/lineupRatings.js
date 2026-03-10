@@ -113,14 +113,7 @@ export function normalizeLineupVariant(variant) {
     return null;
 }
 
-let _debugLoggedOnce = false;
 export function normalizeLineupRow(row = {}) {
-    if (!_debugLoggedOnce) {
-        console.log('[DEBUG lineup] first row keys:', Object.keys(row ?? {}));
-        console.log('[DEBUG lineup] tm_id value:', row?.tm_id, 'type:', typeof row?.tm_id);
-        console.log('[DEBUG lineup] teamNameFromId result:', teamNameFromId(row?.tm_id));
-        _debugLoggedOnce = true;
-    }
     const variant = normalizeLineupVariant(row?.variant);
     if (!variant) {
         return null;
