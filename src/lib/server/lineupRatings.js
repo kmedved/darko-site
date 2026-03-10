@@ -1,5 +1,5 @@
 export const LINEUP_QUERY_VARIANTS = Object.freeze(['pi', 'raw', 'npi']);
-export const LINEUP_MIN_POSSESSIONS = 0;
+export const LINEUP_MIN_POSSESSIONS = 100;
 export const TEAM_PENDING_LABEL = 'Team pending';
 
 const PLAYER_NAME_KEYS = ['player_1', 'player_2', 'player_3', 'player_4', 'player_5'];
