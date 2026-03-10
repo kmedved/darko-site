@@ -2,7 +2,7 @@ Paste this first.
 Pair with one `context/COMPRESSED_*.md` bundle for guided context, or with `context/FILE_INDEX.md` for oracle workflows.
 For implementation tasks, also paste raw source of the files you expect to edit.
 
-Architecture sync version: 0.1.1
+Architecture sync version: 0.1.2
 Archetype: Service / App | Secondary: Data / Workflow / Pipeline | Topology: single-unit | Policy B: only shipped/runtime behavior changes bump version.
 
 ## TL;DR
@@ -63,6 +63,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 |---|---|---|
 | `/` | `load({ setHeaders })` | homepage active-player leaderboard |
 | `/compare` | `load({ url })` | preloaded compare cards from `?ids=` |
+| `/lineups` | `load({ setHeaders })` | server-rendered page payload |
 | `/player/:nbaId` | `load({ params, setHeaders })` | full player profile payload |
 | `/standings` | `load({ setHeaders })` | east/west standings split |
 | `/standings/:slug` | `load({ params, setHeaders })` | team detail wrapper payload |
@@ -95,7 +96,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | `supabase.js` | `getConferenceStandings(conference)` |
 | `supabase.js` | `getEloLeaderboard(limit = 50)` |
 | `supabase.js` | `getFullPlayerHistory(nbaId, options = {})` |
-| `supabase.js` | `getLongevityRows(options = {})` |
+| `supabase.js` | `getLineupRatings()` |
 
 ## Core Abstractions
 
@@ -111,7 +112,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 - `routes:api` -> `server:data`, `server:helpers`, `ui:utils`
 - `routes:page-loaders` -> `server:data`, `server:helpers`, `ui:utils`
 - `routes:pages` -> `client:api`, `ui:components`, `ui:utils`
-- `server:data` -> `ui:utils`
+- `server:data` -> `server:helpers`, `ui:utils`
 - `server:helpers` -> `server:data`
 - `tests` -> `client:api`, `server:helpers`, `tooling:context`, `ui:utils`
 - `ui:components` -> `client:api`, `ui:utils`
@@ -119,9 +120,9 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 High-fan-in reverse edges:
 
 - `ui:utils` <- `routes:api`, `routes:page-loaders`, `routes:pages`, `server:data`, `tests`, `ui:components`
+- `server:helpers` <- `routes:api`, `routes:page-loaders`, `server:data`, `tests`
 - `client:api` <- `routes:pages`, `tests`, `ui:components`
 - `server:data` <- `routes:api`, `routes:page-loaders`, `server:helpers`
-- `server:helpers` <- `routes:api`, `routes:page-loaders`, `tests`
 
 ## Interface Surface
 

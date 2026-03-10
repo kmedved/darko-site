@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import { resolveSupabaseConfig } from '$lib/utils/supabaseConfig.js';
+import {
+    LINEUP_MIN_POSSESSIONS,
+    LINEUP_QUERY_VARIANTS,
+    groupLineupRows
+} from './lineupRatings.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -31,6 +36,7 @@ const CACHE_MS = {
     conferenceStandings: 60_000,
     teamSimulation: 60_000,
     teamWinDistribution: 60_000,
+    lineupRatings: 60_000,
     eloLeaderboard: 30_000
 };
 
@@ -175,6 +181,26 @@ const PLAYERS_DIM_COLUMNS = [
     'position',
     'rookie_season'
 ].join(', ');
+
+const LINEUP_RATING_COLUMNS = [
+    'variant',
+    'min_season_poss',
+    'total_net_rating',
+    'total_off_rating',
+    'total_def_rating',
+    'player_1',
+    'player_2',
+    'player_3',
+    'player_4',
+    'player_5',
+    'player_1_id',
+    'player_2_id',
+    'player_3_id',
+    'player_4_id',
+    'player_5_id'
+].join(', ');
+
+const LINEUP_RATING_COLUMNS_WITH_TEAM = `${LINEUP_RATING_COLUMNS}, team_name`;
 
 export const MAX_FULL_HISTORY_ROWS = 5_000;
 
@@ -658,6 +684,60 @@ export async function getConferenceStandings(conference) {
 
         if (error) throw error;
         return data || [];
+    });
+}
+
+function isMissingLineupTeamColumnError(error) {
+    return error?.code === '42703' && /team_name/i.test(String(error?.message || ''));
+}
+
+async function fetchLineupRatingsRows(selectColumns) {
+    const rows = [];
+    let page = 0;
+    const pageSize = 1_000;
+
+    while (true) {
+        const { data, error } = await supabase
+            .from('lineup_ratings')
+            .select(selectColumns)
+            .in('variant', LINEUP_QUERY_VARIANTS)
+            .gt('min_season_poss', LINEUP_MIN_POSSESSIONS)
+            .order('min_season_poss', { ascending: false })
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) {
+            throw error;
+        }
+
+        rows.push(...(data || []));
+
+        if (!data || data.length < pageSize) {
+            break;
+        }
+
+        page += 1;
+    }
+
+    return rows;
+}
+
+async function fetchLineupRatingsRowsWithOptionalTeam() {
+    try {
+        return await fetchLineupRatingsRows(LINEUP_RATING_COLUMNS_WITH_TEAM);
+    } catch (error) {
+        if (!isMissingLineupTeamColumnError(error)) {
+            throw error;
+        }
+
+        return fetchLineupRatingsRows(LINEUP_RATING_COLUMNS);
+    }
+}
+
+export async function getLineupRatings() {
+    const key = cacheKey('lineupRatings', 'all');
+    return runCached(key, CACHE_MS.lineupRatings, async () => {
+        const rows = await fetchLineupRatingsRowsWithOptionalTeam();
+        return groupLineupRows(rows);
     });
 }
 

@@ -182,6 +182,7 @@
             <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Trajectories</a>
             <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
             <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
+            <a href="/scatterplot" class:active={$page.url.pathname === '/scatterplot'}>Scatterplot</a>
             <a href="/projections" class:active={$page.url.pathname === '/projections'}>Projections</a>
             <a href="/rate" class:active={$page.url.pathname === '/rate'}>Rate a Player</a>
         </div>
@@ -200,6 +201,7 @@
 		<a href="/trajectories" class:active={$page.url.pathname === '/trajectories'} onclick={closeMobileMenu}>Trajectories</a>
 		<a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')} onclick={closeMobileMenu}>Longevity</a>
 		<a href="/lineups" class:active={$page.url.pathname === '/lineups'} onclick={closeMobileMenu}>Lineups</a>
+		<a href="/scatterplot" class:active={$page.url.pathname === '/scatterplot'} onclick={closeMobileMenu}>Scatterplot</a>
 		<a href="/projections" class:active={$page.url.pathname === '/projections'} onclick={closeMobileMenu}>Projections</a>
 		<a href="/rate" class:active={$page.url.pathname === '/rate'} onclick={closeMobileMenu}>Rate a Player</a>
 		<a href="/about" class:active={$page.url.pathname === '/about'} onclick={closeMobileMenu}>About</a>

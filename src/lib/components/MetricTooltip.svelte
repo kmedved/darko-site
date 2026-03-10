@@ -3,12 +3,15 @@
 
     const viewportPadding = 12;
     const tooltipGap = 10;
+    const tooltipUid = $props.id();
+    const tooltipId = `${tooltipUid}-bubble`;
 
     let anchorEl = $state(null);
     let triggerEl = $state(null);
     let bubbleEl = $state(null);
     let isOpen = $state(false);
     let bubbleStyle = $state('');
+    let lastPointerType = $state('');
 
     function clamp(value, min, max) {
         return Math.min(Math.max(value, min), max);
@@ -45,9 +48,22 @@
         isOpen = false;
     }
 
-    function toggleTooltip(event) {
+    function handleTriggerPointerDown(event) {
+        lastPointerType = typeof event.pointerType === 'string' ? event.pointerType : '';
+    }
+
+    function handleTriggerClick(event) {
         event.stopPropagation();
-        isOpen = !isOpen;
+
+        const pointerType = lastPointerType;
+        lastPointerType = '';
+
+        if (pointerType === 'touch' || pointerType === 'pen') {
+            isOpen = !isOpen;
+            return;
+        }
+
+        openTooltip();
     }
 
     function handleFocusOut(event) {
@@ -108,24 +124,25 @@
     onfocusin={openTooltip}
     onfocusout={handleFocusOut}
 >
-    <span class="metric-tooltip-label">
-        {@render children?.()}
-    </span>
-
     <button
         type="button"
         class="metric-tooltip-trigger"
         bind:this={triggerEl}
         aria-label="Show metric definition"
         aria-expanded={isOpen}
-        onclick={toggleTooltip}
+        aria-describedby={isOpen ? tooltipId : undefined}
+        onpointerdown={handleTriggerPointerDown}
+        onclick={handleTriggerClick}
         onkeydown={handleKeydown}
     >
-        ?
+        <span class="metric-tooltip-label">
+            {@render children?.()}
+        </span>
     </button>
 
     {#if isOpen}
         <span
+            id={tooltipId}
             class="metric-tooltip-bubble"
             bind:this={bubbleEl}
             role="tooltip"
@@ -141,7 +158,6 @@
         display: inline-flex;
         align-items: center;
         position: relative;
-        gap: 6px;
     }
 
     .metric-tooltip-label {
@@ -153,16 +169,12 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        font-size: 9px;
-        line-height: 1;
-        opacity: 0.9;
-        background: var(--bg-surface);
-        box-shadow: inset 0 0 0 1px var(--border);
+        border: 0;
+        color: inherit;
+        line-height: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+        background: none;
         padding: 0;
         font: inherit;
         cursor: help;
@@ -171,6 +183,7 @@
     .metric-tooltip-trigger:focus-visible {
         outline: 2px solid var(--accent);
         outline-offset: 2px;
+        border-radius: 2px;
     }
 
     .metric-tooltip-bubble {

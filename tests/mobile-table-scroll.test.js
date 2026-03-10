@@ -8,7 +8,8 @@ const END_MARKER = '/* End touch/mobile scroll mode */';
 
 const TARGET_FILES = [
     'src/routes/standings/+page.svelte',
-    'src/routes/longevity/+page.svelte'
+    'src/routes/longevity/+page.svelte',
+    'src/routes/lineups/+page.svelte'
 ];
 
 function extractTouchScrollBlock(contents, file) {

@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.1",
+  "arch_version": "0.1.2",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -299,6 +299,20 @@
       },
       {
         "cache": {
+          "type": "unspecified"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/lineupsPage.js:loadLineupsPageData",
+          "$lib/server/supabase.js:getLineupRatings"
+        ],
+        "file": "src/routes/lineups/+page.server.js",
+        "pathParams": [],
+        "route": "/lineups",
+        "signature": "load({ setHeaders })"
+      },
+      {
+        "cache": {
           "edgeSMaxAge": 3600,
           "sie": 86400,
           "swr": 86400,
@@ -475,6 +489,8 @@
     "src/lib/server/comparePage.js",
     "src/lib/server/eloSecurity.js",
     "src/lib/server/eloService.js",
+    "src/lib/server/lineupRatings.js",
+    "src/lib/server/lineupsPage.js",
     "src/lib/server/playerPage.js",
     "src/lib/server/supabase.js",
     "src/lib/server/teamPage.js",
@@ -518,6 +534,7 @@
     "src/routes/compare/+page.server.js",
     "src/routes/compare/+page.svelte",
     "src/routes/favicon.ico/+server.js",
+    "src/routes/lineups/+page.server.js",
     "src/routes/lineups/+page.svelte",
     "src/routes/longevity/+page.svelte",
     "src/routes/player/[nbaId]/+page.server.js",
@@ -551,6 +568,9 @@
     "tests/d3-theme-colors.test.js",
     "tests/leaderboard-export.test.js",
     "tests/legacy-leaderboard.test.js",
+    "tests/lineup-ratings.test.js",
+    "tests/lineups-csv.test.js",
+    "tests/lineups-page-loader.test.js",
     "tests/longevity-csv.test.js",
     "tests/longevity-table.test.js",
     "tests/mobile-table-scroll.test.js",
@@ -586,6 +606,7 @@
         "ui:utils"
       ],
       "server:data": [
+        "server:helpers",
         "ui:utils"
       ],
       "server:helpers": [
@@ -616,6 +637,7 @@
       "server:helpers": [
         "routes:api",
         "routes:page-loaders",
+        "server:data",
         "tests"
       ],
       "tooling:context": [
@@ -827,6 +849,11 @@
         "signature": "load({ url })"
       },
       {
+        "returns": "server-rendered page payload",
+        "route": "/lineups",
+        "signature": "load({ setHeaders })"
+      },
+      {
         "returns": "full player profile payload",
         "route": "/player/:nbaId",
         "signature": "load({ params, setHeaders })"
@@ -922,6 +949,10 @@
           {
             "name": "getFullPlayerHistory",
             "signature": "getFullPlayerHistory(nbaId, options = {})"
+          },
+          {
+            "name": "getLineupRatings",
+            "signature": "getLineupRatings()"
           },
           {
             "name": "getLongevityRows",

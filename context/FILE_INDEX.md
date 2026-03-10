@@ -70,6 +70,8 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/server/comparePage.js` - server helper
 - `src/lib/server/eloSecurity.js` - server helper
 - `src/lib/server/eloService.js` - server helper
+- `src/lib/server/lineupRatings.js` - server helper
+- `src/lib/server/lineupsPage.js` - server helper
 - `src/lib/server/playerPage.js` - server helper
 - `src/lib/server/supabase.js` - Supabase query layer, in-memory caches, and Elo RPC access.
 - `src/lib/server/teamPage.js` - server helper
@@ -107,6 +109,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/compare/+page.server.js` - load /compare
 - `src/routes/compare/+page.svelte` - page /compare
 - `src/routes/favicon.ico/+server.js` - API /favicon.ico
+- `src/routes/lineups/+page.server.js` - load /lineups
 - `src/routes/lineups/+page.svelte` - page /lineups
 - `src/routes/longevity/+page.svelte` - page /longevity
 - `src/routes/player/[nbaId]/+page.server.js` - load /player/:nbaId
@@ -160,6 +163,9 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/d3-theme-colors.test.js` - test
 - `tests/leaderboard-export.test.js` - test
 - `tests/legacy-leaderboard.test.js` - test
+- `tests/lineup-ratings.test.js` - test
+- `tests/lineups-csv.test.js` - test
+- `tests/lineups-page-loader.test.js` - test
 - `tests/longevity-csv.test.js` - test
 - `tests/longevity-table.test.js` - test
 - `tests/mobile-table-scroll.test.js` - test

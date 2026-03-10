@@ -214,6 +214,36 @@ Win probability distribution. One row per team per win count.
 
 ---
 
+### lineup_ratings
+
+Five-man lineup ratings used by the `/lineups` page. One row per lineup variant.
+
+- **Rows:** varies by upload
+- **Update strategy:** reloads with the lineup upload pipeline
+- **Frontend note:** `/lineups` reads `team_name` when present and falls back to `"Team pending"` while that column is rolling out.
+- **Variant note:** `variant='pi'` stays PI; `variant='raw'` and `variant='npi'` are both normalized into the NPI bucket on the frontend during the upload transition.
+
+| # | Column | Postgres type | Notes |
+|---|---|---|---|
+| 1 | variant | text | Variant label (`pi`, `raw`, `npi`) |
+| 2 | min_season_poss | real | Minimum possession sample used for the lineup |
+| 3 | total_net_rating | real | Total net rating shown as Net +/- |
+| 4 | total_off_rating | real | Total offensive rating shown as Off +/- |
+| 5 | total_def_rating | real | Total defensive rating shown as Def +/- |
+| 6 | team_name | text | Optional team label; may be absent during rollout |
+| 7 | player_1 | text | First player display name |
+| 8 | player_2 | text | Second player display name |
+| 9 | player_3 | text | Third player display name |
+| 10 | player_4 | text | Fourth player display name |
+| 11 | player_5 | text | Fifth player display name |
+| 12 | player_1_id | bigint | First player NBA ID |
+| 13 | player_2_id | bigint | Second player NBA ID |
+| 14 | player_3_id | bigint | Third player NBA ID |
+| 15 | player_4_id | bigint | Fourth player NBA ID |
+| 16 | player_5_id | bigint | Fifth player NBA ID |
+
+---
+
 ## SvelteKit Data Access Layer
 
 All Supabase queries go through `src/lib/server/supabase.js`. Key patterns:
@@ -227,9 +257,10 @@ Comma-joined string of all 68 fetched `player_ratings` column names (66 original
 | Function | Queries | Returns | Used by |
 |---|---|---|---|
 | `getActivePlayers()` | `player_ratings` with RATING_COLUMNS, `active_roster=1`, last 7 days, deduped to latest row per player. Merges with `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
-| `getPlayersIndex()` | `players` with `SELECT *`, merged with `getActivePlayers()`. **Hardcodes output fields** — does NOT pass through survivorship, projections, or RAPM columns. | Array of player objects (subset of fields) | Player search/index pages |
+| `getPlayersIndex()` | `players` with explicit `PLAYERS_DIM_COLUMNS`, merged with `getActivePlayers()`. **Hardcodes output fields** — does NOT pass through survivorship, projections, or RAPM columns. | Array of player objects (subset of fields) | Player search/index pages |
 | `getLongevityRows()` | Calls `getActivePlayers()`, maps DB columns to frontend-aliased keys | Array with aliased longevity fields | `/api/longevity` |
 | `getLongevityTrajectory(id)` | `player_ratings` filtered to one player, maps to chart fields | Array of trajectory points | `/api/player/[id]/longevity` |
+| `getLineupRatings()` | `lineup_ratings` with explicit projection, `min_season_poss > 100`, variants in `('pi', 'raw', 'npi')`. Retries without `team_name` if the column is not available yet, drops rows missing `total_*_rating`, and normalizes `raw` + `npi` into the NPI bucket. | `{ pi: LineupRow[], npi: LineupRow[] }` | `/lineups` |
 
 ### Helper functions
 
@@ -260,6 +291,7 @@ All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. 
 | playersIndex | 5min |
 | longevityRows | 5min |
 | longevityTrajectory | 10min |
+| lineupRatings | 60s |
 | playerCurrent | 60s |
 | playerHistory | 5min |
 
