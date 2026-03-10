@@ -590,16 +590,12 @@
     }
 
     .active-row td {
-        background: var(--accent);
-        color: var(--bg-surface);
+        background: var(--bg-elevated);
+        box-shadow: inset 0 -2px 0 var(--accent);
     }
 
-    .active-row td.probability-elite,
-    .active-row td.probability-high,
-    .active-row td.probability-mid,
-    .active-row td.probability-low,
-    .active-row td.probability-minimal {
-        color: var(--bg-surface);
+    .active-row td:first-child {
+        box-shadow: inset 3px 0 0 var(--accent), inset 0 -2px 0 var(--accent);
     }
 
     td.probability-elite {
