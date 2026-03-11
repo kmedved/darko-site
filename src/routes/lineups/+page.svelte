@@ -278,7 +278,7 @@
                                             {#if p?.id}
                                                 <a href="/player/{p.id}" class="player-cell-link">
                                                     <img
-                                                        src="https://cdn.nba.com/headshots/nba/latest/260x190/{p.id}.png"
+                                                        src="/api/img/headshot/{p.id}"
                                                         alt=""
                                                         class="player-headshot"
                                                         loading="lazy"
@@ -293,7 +293,7 @@
                                                 <a href="/team/{encodeURIComponent(lineup.team_name)}" class="team-cell-link">
                                                     {#if lineup.tm_id}
                                                         <img
-                                                            src="https://cdn.nba.com/logos/nba/{lineup.tm_id}/global/L/logo.svg"
+                                                            src="/api/img/logo/{lineup.tm_id}"
                                                             alt=""
                                                             class="team-logo"
                                                             loading="lazy"
