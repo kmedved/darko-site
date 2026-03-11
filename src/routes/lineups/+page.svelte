@@ -1,5 +1,6 @@
 <script>
-    import { exportCsvRows, formatFixed, formatSignedMetric, lineupsCsvColumns } from '$lib/utils/csvPresets.js';
+    import { goto } from '$app/navigation';
+    import { exportCsvRows, formatFixed, formatSignedMetric, getLineupsCsvColumns } from '$lib/utils/csvPresets.js';
     import { filterPlayers } from '$lib/utils/legacyLeaderboard.js';
     import { getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
@@ -7,38 +8,17 @@
     /** @type {import('./$types').PageProps} */
     let { data } = $props();
 
-    const baseColumns = [
-        { key: 'team_name', label: 'Team', alignClass: 'team-col', type: 'text', dataType: 'text' },
-        { key: 'player_1', label: 'Player 1', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 0 },
-        { key: 'player_2', label: 'Player 2', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 1 },
-        { key: 'player_3', label: 'Player 3', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 2 },
-        { key: 'player_4', label: 'Player 4', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 3 },
-        { key: 'player_5', label: 'Player 5', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 4 },
-        { key: 'possessions', label: 'Poss', alignClass: 'num', type: 'number', dataType: 'number' },
-        { key: 'net_pm', label: 'Net +/-', alignClass: 'num', type: 'number', dataType: 'number' },
-        { key: 'off_pm', label: 'Off +/-', alignClass: 'num', type: 'number', dataType: 'number' },
-        { key: 'def_pm', label: 'Def +/-', alignClass: 'num', type: 'number', dataType: 'number' }
+    const sizeOptions = [
+        { value: 2, label: '2-Man' },
+        { value: 3, label: '3-Man' },
+        { value: 4, label: '4-Man' },
+        { value: 5, label: '5-Man' },
     ];
 
     const synergyColumns = [
         { key: 'off_synergy', label: 'Off Syn', alignClass: 'num', type: 'number', dataType: 'number' },
         { key: 'def_synergy', label: 'Def Syn', alignClass: 'num', type: 'number', dataType: 'number' }
     ];
-
-    const sortConfigs = {
-        player_1: { type: 'text' },
-        player_2: { type: 'text' },
-        player_3: { type: 'text' },
-        player_4: { type: 'text' },
-        player_5: { type: 'text' },
-        team_name: { type: 'text' },
-        possessions: { type: 'number' },
-        net_pm: { type: 'number' },
-        off_pm: { type: 'number' },
-        def_pm: { type: 'number' },
-        off_synergy: { type: 'number' },
-        def_synergy: { type: 'number' }
-    };
 
     const variantOptions = [
         { value: 'pi', label: 'PI' },
@@ -47,7 +27,45 @@
 
     const TEAM_PENDING_LABEL = 'Team pending';
 
-    const PLAYER_KEYS = ['player_1', 'player_2', 'player_3', 'player_4', 'player_5'];
+    let baseColumns = $derived.by(() => {
+        const playerCount = data.lineupSize ?? 5;
+        const playerCols = Array.from({ length: playerCount }, (_, i) => ({
+            key: `player_${i + 1}`,
+            label: `Player ${i + 1}`,
+            alignClass: 'player-col',
+            type: 'text',
+            dataType: 'text',
+            slotIndex: i,
+        }));
+        return [
+            { key: 'team_name', label: 'Team', alignClass: 'team-col', type: 'text', dataType: 'text' },
+            ...playerCols,
+            { key: 'possessions', label: 'Poss', alignClass: 'num', type: 'number', dataType: 'number' },
+            { key: 'net_pm', label: 'Net +/-', alignClass: 'num', type: 'number', dataType: 'number' },
+            { key: 'off_pm', label: 'Off +/-', alignClass: 'num', type: 'number', dataType: 'number' },
+            { key: 'def_pm', label: 'Def +/-', alignClass: 'num', type: 'number', dataType: 'number' },
+        ];
+    });
+
+    let PLAYER_KEYS = $derived(
+        Array.from({ length: data.lineupSize ?? 5 }, (_, i) => `player_${i + 1}`)
+    );
+
+    let sortConfigs = $derived.by(() => {
+        const configs = {
+            team_name: { type: 'text' },
+            possessions: { type: 'number' },
+            net_pm: { type: 'number' },
+            off_pm: { type: 'number' },
+            def_pm: { type: 'number' },
+            off_synergy: { type: 'number' },
+            def_synergy: { type: 'number' }
+        };
+        for (const key of PLAYER_KEYS) {
+            configs[key] = { type: 'text' };
+        }
+        return configs;
+    });
 
     let selectedVariant = $derived(data.defaultVariant ?? 'pi');
     let sortColumn = $state('net_pm');
@@ -81,8 +99,12 @@
             sortConfigs
         })
     );
+
     let selectedVariantLabel = $derived(
         variantOptions.find((option) => option.value === selectedVariant)?.label ?? selectedVariant.toUpperCase()
+    );
+    let currentSizeLabel = $derived(
+        sizeOptions.find((o) => o.value === data.lineupSize)?.label ?? `${data.lineupSize}-Man`
     );
     let emptyStateTitle = $derived(
         selectedVariant === 'npi' ? 'NPI lineup data is still uploading.' : 'Lineup data is not yet available.'
@@ -92,6 +114,11 @@
             ? 'Rows will appear here once the NPI upload completes in Supabase.'
             : 'Rows will appear here once lineup ratings are published to Supabase.'
     );
+
+    function selectSize(size) {
+        if (size === data.lineupSize) return;
+        goto(`/lineups?size=${size}`, { keepFocus: true });
+    }
 
     function toggleSort(column) {
         if (sortColumn === column) {
@@ -152,8 +179,8 @@
     function exportVisibleLineups() {
         exportCsvRows({
             rows: sortedLineups,
-            columns: lineupsCsvColumns,
-            filename: `lineups-${selectedVariant}.csv`
+            columns: getLineupsCsvColumns(data.lineupSize ?? 5),
+            filename: `lineups-${currentSizeLabel.toLowerCase().replace(/\s+/g, '')}-${selectedVariant}.csv`
         });
     }
 </script>
@@ -168,10 +195,27 @@
             <div>
                 <h1>Lineup Projections</h1>
                 <p>Lineup Plus/Minus in Relation to League Average</p>
-                <p class="subtitle-note">Table limited to lineups with more than 100 possessions.</p>
+                <p class="subtitle-note">Table limited to lineups with more than {data.minPoss ?? 100} possessions.</p>
             </div>
 
             <div class="page-header-actions">
+                <fieldset class="variant-picker">
+                    <legend>Lineup Size</legend>
+
+                    <div class="variant-radio-group">
+                        {#each sizeOptions as option (option.value)}
+                            <button
+                                class="size-btn"
+                                class:active={data.lineupSize === option.value}
+                                type="button"
+                                onclick={() => selectSize(option.value)}
+                            >
+                                {option.label}
+                            </button>
+                        {/each}
+                    </div>
+                </fieldset>
+
                 <fieldset class="variant-picker">
                     <legend>Variant</legend>
 
@@ -209,7 +253,7 @@
         </div>
     {:else}
         <p class="variant-summary">
-            Showing {selectedVariantLabel} lineup ratings
+            Showing {selectedVariantLabel} {currentSizeLabel} lineup ratings
             ({filteredLineups.length === selectedLineups.length
                 ? `${selectedLineups.length} lineups`
                 : `${filteredLineups.length} of ${selectedLineups.length} lineups`}).
@@ -239,7 +283,7 @@
                                 aria-label="Filter Team"
                             />
                         </th>
-                        <th class="player-filter-col" colspan="5">
+                        <th class="player-filter-col" colspan={data.lineupSize ?? 5}>
                             <input
                                 type="text"
                                 value={playerFilter}
@@ -393,6 +437,27 @@
 
     .variant-radio input {
         accent-color: var(--accent);
+    }
+
+    .size-btn {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: none;
+        background: transparent;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        font-family: var(--font-sans);
+    }
+
+    .size-btn:hover {
+        background: var(--bg-hover);
+    }
+
+    .size-btn.active {
+        background: var(--accent);
+        color: var(--bg);
     }
 
     .variant-summary {
@@ -642,15 +707,6 @@
         }
     }
     /* End touch/mobile scroll mode */
-
-    @media (hover: hover) and (pointer: fine) and (max-width: 1400px) {
-        table th:nth-child(9),
-        table td:nth-child(9),
-        table th:nth-child(10),
-        table td:nth-child(10) {
-            display: none;
-        }
-    }
 
     @media (max-width: 900px) {
         .page-header-toolbar,

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { lineupsCsvColumns } from '../src/lib/utils/csvPresets.js';
+import { lineupsCsvColumns, getLineupsCsvColumns } from '../src/lib/utils/csvPresets.js';
 
-test('lineupsCsvColumns exposes the expected headers and accessors', () => {
+test('lineupsCsvColumns exposes the expected headers and accessors for 5-man', () => {
     const headers = lineupsCsvColumns.map((column) => column.header);
     const accessors = lineupsCsvColumns.map((column) => column.accessor);
 
@@ -16,7 +16,6 @@ test('lineupsCsvColumns exposes the expected headers and accessors', () => {
         'Def +/-',
         'Off Synergy',
         'Def Synergy',
-        'Lineup',
         'Player 1',
         'Player 2',
         'Player 3',
@@ -33,7 +32,6 @@ test('lineupsCsvColumns exposes the expected headers and accessors', () => {
         'def_pm',
         'off_synergy',
         'def_synergy',
-        'lineup_label',
         'player_1',
         'player_2',
         'player_3',
@@ -50,5 +48,34 @@ test('lineupsCsvColumns format variant, possessions, and signed ratings for expo
     assert.equal(variantColumn.format('npi'), 'NPI');
     assert.equal(possessionsColumn.format(138), '138');
     assert.equal(netColumn.format(2.34), '+2.3');
-    assert.equal(netColumn.format(null), '—');
+    assert.equal(netColumn.format(null), '\u2014');
+});
+
+test('getLineupsCsvColumns produces correct player columns for 3-man lineups', () => {
+    const columns = getLineupsCsvColumns(3);
+    const playerHeaders = columns.filter((c) => c.header.startsWith('Player'));
+
+    assert.equal(playerHeaders.length, 3);
+    assert.deepEqual(
+        playerHeaders.map((c) => c.accessor),
+        ['player_1', 'player_2', 'player_3']
+    );
+});
+
+test('getLineupsCsvColumns produces correct player columns for 2-man lineups', () => {
+    const columns = getLineupsCsvColumns(2);
+    const playerHeaders = columns.filter((c) => c.header.startsWith('Player'));
+
+    assert.equal(playerHeaders.length, 2);
+    assert.deepEqual(
+        playerHeaders.map((c) => c.accessor),
+        ['player_1', 'player_2']
+    );
+});
+
+test('getLineupsCsvColumns defaults to 5 player columns', () => {
+    const columns = getLineupsCsvColumns();
+    const playerHeaders = columns.filter((c) => c.header.startsWith('Player'));
+
+    assert.equal(playerHeaders.length, 5);
 });

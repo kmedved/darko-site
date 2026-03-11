@@ -178,7 +178,8 @@ const RATING_COLUMNS = [
     's14',
     's15',
     'sal_market_fixed',
-    'surplus_value'
+    'surplus_value',
+    'actual_salary'
 ].join(', ');
 
 const PLAYERS_DIM_COLUMNS = [
@@ -697,7 +698,7 @@ export async function getConferenceStandings(conference) {
     });
 }
 
-async function fetchLineupRatingsRows() {
+async function fetchLineupRatingsRows({ lineupSize = 5, minPoss = LINEUP_MIN_POSSESSIONS } = {}) {
     const rows = [];
     let page = 0;
     const pageSize = 1_000;
@@ -707,8 +708,8 @@ async function fetchLineupRatingsRows() {
             .from('lineup_ratings')
             .select(LINEUP_RATING_COLUMNS)
             .in('variant', LINEUP_QUERY_VARIANTS)
-            .eq('lineup_size', 5)
-            .gt('min_season_poss', LINEUP_MIN_POSSESSIONS)
+            .eq('lineup_size', lineupSize)
+            .gt('min_season_poss', minPoss)
             .order('min_season_poss', { ascending: false })
             .range(page * pageSize, (page + 1) * pageSize - 1);
 
@@ -728,11 +729,11 @@ async function fetchLineupRatingsRows() {
     return rows;
 }
 
-export async function getLineupRatings() {
-    const key = cacheKey('lineupRatings', 'all');
+export async function getLineupRatings({ lineupSize = 5, minPoss = LINEUP_MIN_POSSESSIONS } = {}) {
+    const key = cacheKey('lineupRatings', `size-${lineupSize}`);
     return runCached(key, CACHE_MS.lineupRatings, async () => {
-        const rows = await fetchLineupRatingsRows();
-        return groupLineupRows(rows);
+        const rows = await fetchLineupRatingsRows({ lineupSize, minPoss });
+        return groupLineupRows(rows, { minPoss, playerCount: lineupSize });
     });
 }
 

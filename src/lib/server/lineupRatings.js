@@ -2,6 +2,15 @@ export const LINEUP_QUERY_VARIANTS = Object.freeze(['pi', 'raw', 'npi']);
 export const LINEUP_MIN_POSSESSIONS = 100;
 export const TEAM_PENDING_LABEL = 'Team pending';
 
+export const LINEUP_SIZE_CONFIG = Object.freeze({
+    2: { label: '2-Man', minPoss: 500 },
+    3: { label: '3-Man', minPoss: 500 },
+    4: { label: '4-Man', minPoss: 200 },
+    5: { label: '5-Man', minPoss: 100 },
+});
+export const VALID_LINEUP_SIZES = Object.freeze([2, 3, 4, 5]);
+export const DEFAULT_LINEUP_SIZE = 5;
+
 const PLAYER_NAME_KEYS = ['player_1', 'player_2', 'player_3', 'player_4', 'player_5'];
 const PLAYER_ID_KEYS = ['player_1_id', 'player_2_id', 'player_3_id', 'player_4_id', 'player_5_id'];
 const PLAYER_SLOTS = [1, 2, 3, 4, 5];
@@ -113,7 +122,7 @@ export function normalizeLineupVariant(variant) {
     return null;
 }
 
-export function normalizeLineupRow(row = {}) {
+export function normalizeLineupRow(row = {}, options = {}) {
     const variant = normalizeLineupVariant(row?.variant);
     if (!variant) {
         return null;
@@ -124,9 +133,10 @@ export function normalizeLineupRow(row = {}) {
     const offPm = toFiniteNumber(row?.total_off_rating);
     const defPm = toFiniteNumber(row?.total_def_rating);
 
+    const minPoss = options.minPoss ?? LINEUP_MIN_POSSESSIONS;
     if (
         !Number.isFinite(possessions) ||
-        possessions <= LINEUP_MIN_POSSESSIONS ||
+        possessions <= minPoss ||
         !Number.isFinite(netPm) ||
         !Number.isFinite(offPm) ||
         !Number.isFinite(defPm)
@@ -134,11 +144,12 @@ export function normalizeLineupRow(row = {}) {
         return null;
     }
 
+    const playerCount = options.playerCount ?? 5;
     const players = getPlayerNames(row);
-    const lineupLabel = players.filter(Boolean).join(', ') || 'Unnamed lineup';
+    const lineupLabel = players.slice(0, playerCount).filter(Boolean).join(', ') || 'Unnamed lineup';
     const identity = getPlayerIdentity(row);
 
-    const playerSlots = PLAYER_SLOTS.map((i) => {
+    const playerSlots = PLAYER_SLOTS.slice(0, playerCount).map((i) => {
         const name = players[i - 1];
         const rawId = row?.[`player_${i}_id`];
         const id = rawId != null && rawId !== '' ? String(rawId).trim() : null;
@@ -150,6 +161,7 @@ export function normalizeLineupRow(row = {}) {
     return {
         row_key: `${variant}:${identity}`,
         variant,
+        lineup_size: playerCount,
         lineup_label: lineupLabel,
         tm_id: Number.isFinite(tmId) ? tmId : null,
         team_name: teamNameFromId(row?.tm_id) ?? TEAM_PENDING_LABEL,
@@ -160,15 +172,15 @@ export function normalizeLineupRow(row = {}) {
         off_synergy: toFiniteNumber(row?.off_synergy),
         def_synergy: toFiniteNumber(row?.def_synergy),
         players: playerSlots,
-        player_1: players[0],
-        player_2: players[1],
-        player_3: players[2],
-        player_4: players[3],
-        player_5: players[4]
+        player_1: playerCount >= 1 ? players[0] : null,
+        player_2: playerCount >= 2 ? players[1] : null,
+        player_3: playerCount >= 3 ? players[2] : null,
+        player_4: playerCount >= 4 ? players[3] : null,
+        player_5: playerCount >= 5 ? players[4] : null,
     };
 }
 
-export function groupLineupRows(rows = []) {
+export function groupLineupRows(rows = [], options = {}) {
     const grouped = {
         pi: [],
         npi: []
@@ -179,7 +191,7 @@ export function groupLineupRows(rows = []) {
     };
 
     for (const row of rows || []) {
-        const normalizedRow = normalizeLineupRow(row);
+        const normalizedRow = normalizeLineupRow(row, options);
         if (!normalizedRow) {
             continue;
         }

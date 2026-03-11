@@ -46,6 +46,8 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | Route | Methods | Inputs | Returns |
 |---|---|---|---|
 | `/api/active-players` | `GET` | query: team | current active roster snapshot |
+| `/api/img/:type/:id` | `GET` | none | JSON route payload |
+| `/api/internal/cache-bust` | `POST` | body: tags | JSON route payload |
 | `/api/longevity` | `GET` | none | active-player longevity table |
 | `/api/player/:id/history` | `GET` | query: full, limit | bounded or full career history |
 | `/api/player/:id/longevity` | `GET` | path: id | player longevity trajectory |
@@ -63,7 +65,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 |---|---|---|
 | `/` | `load({ setHeaders })` | homepage active-player leaderboard |
 | `/compare` | `load({ url })` | preloaded compare cards from `?ids=` |
-| `/lineups` | `load({ setHeaders })` | server-rendered page payload |
+| `/lineups` | `load({ url, setHeaders })` | server-rendered page payload |
 | `/player/:nbaId` | `load({ params, setHeaders })` | full player profile payload |
 | `/scatterplot` | `load({ setHeaders })` | server-rendered page payload |
 | `/standings` | `load({ setHeaders })` | east/west standings split |
@@ -93,11 +95,11 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | `comparePage.js` | `parseCompareIds(rawIds)` |
 | `eloService.js` | `handleRatePairRequest()` |
 | `eloService.js` | `handleRateVoteRequest({ request, headers, url })` |
+| `supabase.js` | `clearAllCaches()` |
 | `supabase.js` | `getActivePlayers(options = {})` |
 | `supabase.js` | `getConferenceStandings(conference)` |
 | `supabase.js` | `getEloLeaderboard(limit = 50)` |
 | `supabase.js` | `getFullPlayerHistory(nbaId, options = {})` |
-| `supabase.js` | `getLineupRatings()` |
 
 ## Core Abstractions
 

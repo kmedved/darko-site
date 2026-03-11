@@ -254,18 +254,21 @@ export const teamPlayersCsvColumns = [
     { header: 'Surplus Value', accessor: 'surplus_value', format: formatSignedMillions }
 ];
 
-export const lineupsCsvColumns = [
-    { header: 'Variant', accessor: 'variant', format: (v) => String(v || '').toUpperCase() || DASH },
-    { header: 'Team', accessor: 'team_name', format: formatOrDash },
-    { header: 'Poss', accessor: 'possessions', format: (v) => formatFixed(v, 0) },
-    { header: 'Net +/-', accessor: 'net_pm', format: formatSignedMetric },
-    { header: 'Off +/-', accessor: 'off_pm', format: formatSignedMetric },
-    { header: 'Def +/-', accessor: 'def_pm', format: formatSignedMetric },
-    { header: 'Off Synergy', accessor: 'off_synergy', format: formatSignedMetric },
-    { header: 'Def Synergy', accessor: 'def_synergy', format: formatSignedMetric },
-    { header: 'Player 1', accessor: 'player_1', format: formatOrDash },
-    { header: 'Player 2', accessor: 'player_2', format: formatOrDash },
-    { header: 'Player 3', accessor: 'player_3', format: formatOrDash },
-    { header: 'Player 4', accessor: 'player_4', format: formatOrDash },
-    { header: 'Player 5', accessor: 'player_5', format: formatOrDash }
-];
+export function getLineupsCsvColumns(playerCount = 5) {
+    const base = [
+        { header: 'Variant', accessor: 'variant', format: (v) => String(v || '').toUpperCase() || DASH },
+        { header: 'Team', accessor: 'team_name', format: formatOrDash },
+        { header: 'Poss', accessor: 'possessions', format: (v) => formatFixed(v, 0) },
+        { header: 'Net +/-', accessor: 'net_pm', format: formatSignedMetric },
+        { header: 'Off +/-', accessor: 'off_pm', format: formatSignedMetric },
+        { header: 'Def +/-', accessor: 'def_pm', format: formatSignedMetric },
+        { header: 'Off Synergy', accessor: 'off_synergy', format: formatSignedMetric },
+        { header: 'Def Synergy', accessor: 'def_synergy', format: formatSignedMetric },
+    ];
+    for (let i = 1; i <= playerCount; i++) {
+        base.push({ header: `Player ${i}`, accessor: `player_${i}`, format: formatOrDash });
+    }
+    return base;
+}
+
+export const lineupsCsvColumns = getLineupsCsvColumns(5);

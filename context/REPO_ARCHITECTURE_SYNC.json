@@ -50,6 +50,40 @@
       {
         "bodyFields": [],
         "cache": {
+          "type": "unspecified"
+        },
+        "dataSources": [],
+        "file": "src/routes/api/img/[type]/[id]/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "route": "/api/img/:type/:id",
+        "writesState": false
+      },
+      {
+        "bodyFields": [
+          "tags"
+        ],
+        "cache": {
+          "type": "unspecified"
+        },
+        "dataSources": [
+          "$lib/server/supabase.js:clearAllCaches"
+        ],
+        "file": "src/routes/api/internal/cache-bust/+server.js",
+        "methods": [
+          "POST"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "route": "/api/internal/cache-bust",
+        "writesState": true
+      },
+      {
+        "bodyFields": [],
+        "cache": {
           "edgeSMaxAge": 3600,
           "sie": 86400,
           "swr": 86400,
@@ -303,13 +337,15 @@
         },
         "dataSources": [
           "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/lineupRatings.js:DEFAULT_LINEUP_SIZE",
+          "$lib/server/lineupRatings.js:VALID_LINEUP_SIZES",
           "$lib/server/lineupsPage.js:loadLineupsPageData",
           "$lib/server/supabase.js:getLineupRatings"
         ],
         "file": "src/routes/lineups/+page.server.js",
         "pathParams": [],
         "route": "/lineups",
-        "signature": "load({ setHeaders })"
+        "signature": "load({ url, setHeaders })"
       },
       {
         "cache": {
@@ -538,6 +574,8 @@
     "src/routes/about/+page.svelte",
     "src/routes/api/active-players/+server.js",
     "src/routes/api/docs/+server.js",
+    "src/routes/api/img/[type]/[id]/+server.js",
+    "src/routes/api/internal/cache-bust/+server.js",
     "src/routes/api/longevity/+server.js",
     "src/routes/api/player/[id]/history/+server.js",
     "src/routes/api/player/[id]/longevity/+server.js",
@@ -593,11 +631,13 @@
     "tests/longevity-csv.test.js",
     "tests/longevity-table.test.js",
     "tests/mobile-table-scroll.test.js",
+    "tests/package-json-hygiene.test.js",
     "tests/player-page-server-load.test.js",
     "tests/player-search-contracts.test.js",
     "tests/player-search.test.js",
     "tests/request-sequencer.test.js",
     "tests/season-utils.test.js",
+    "tests/sticky-header-overflow.test.js",
     "tests/supabase-config.test.js",
     "tests/supabase-query-shape.test.js",
     "tests/team-page-loader-contracts.test.js",
@@ -698,6 +738,28 @@
         "queryParams": [],
         "returns": "public API contract document",
         "route": "/api/docs"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "returns": "JSON route payload",
+        "route": "/api/img/:type/:id"
+      },
+      {
+        "bodyFields": [
+          "tags"
+        ],
+        "methods": [
+          "POST"
+        ],
+        "pathParams": [],
+        "queryParams": [],
+        "returns": "JSON route payload",
+        "route": "/api/internal/cache-bust"
       },
       {
         "bodyFields": [],
@@ -870,7 +932,7 @@
       {
         "returns": "server-rendered page payload",
         "route": "/lineups",
-        "signature": "load({ setHeaders })"
+        "signature": "load({ url, setHeaders })"
       },
       {
         "returns": "full player profile payload",
@@ -959,6 +1021,10 @@
       {
         "exports": [
           {
+            "name": "clearAllCaches",
+            "signature": "clearAllCaches()"
+          },
+          {
             "name": "getActivePlayers",
             "signature": "getActivePlayers(options = {})"
           },
@@ -976,7 +1042,7 @@
           },
           {
             "name": "getLineupRatings",
-            "signature": "getLineupRatings()"
+            "signature": "getLineupRatings({ lineupSize = 5, minPoss = LINEUP_MIN_POSSESSIONS } = {})"
           },
           {
             "name": "getLongevityRows",

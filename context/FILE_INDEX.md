@@ -131,6 +131,7 @@ For implementation work, request or paste raw source for the files you expect to
 
 - `src/routes/api/active-players/+server.js` - API /api/active-players
 - `src/routes/api/docs/+server.js` - API /api/docs
+- `src/routes/api/img/[type]/[id]/+server.js` - API /api/img/:type/:id
 - `src/routes/api/internal/cache-bust/+server.js` - API /api/internal/cache-bust
 - `src/routes/api/longevity/+server.js` - API /api/longevity
 - `src/routes/api/player/[id]/history/+server.js` - API /api/player/:id/history
@@ -173,11 +174,13 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/longevity-csv.test.js` - test
 - `tests/longevity-table.test.js` - test
 - `tests/mobile-table-scroll.test.js` - test
+- `tests/package-json-hygiene.test.js` - test
 - `tests/player-page-server-load.test.js` - test
 - `tests/player-search-contracts.test.js` - test
 - `tests/player-search.test.js` - test
 - `tests/request-sequencer.test.js` - test
 - `tests/season-utils.test.js` - test
+- `tests/sticky-header-overflow.test.js` - test
 - `tests/supabase-config.test.js` - test
 - `tests/supabase-query-shape.test.js` - test
 - `tests/team-page-loader-contracts.test.js` - test

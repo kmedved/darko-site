@@ -77,6 +77,34 @@ test('normalizeLineupRow enforces a strict possessions threshold above 100', () 
     assert.notEqual(normalizeLineupRow(buildLineupRow({ min_season_poss: 101 })), null);
 });
 
+test('normalizeLineupRow respects custom minPoss option', () => {
+    assert.equal(normalizeLineupRow(buildLineupRow({ min_season_poss: 500 }), { minPoss: 500 }), null);
+    assert.notEqual(normalizeLineupRow(buildLineupRow({ min_season_poss: 501 }), { minPoss: 500 }), null);
+});
+
+test('normalizeLineupRow truncates to playerCount for 3-man lineups', () => {
+    const row = normalizeLineupRow(buildLineupRow(), { playerCount: 3 });
+
+    assert.equal(row.lineup_size, 3);
+    assert.equal(row.player_1, 'Player 1');
+    assert.equal(row.player_2, 'Player 2');
+    assert.equal(row.player_3, 'Player 3');
+    assert.equal(row.player_4, null);
+    assert.equal(row.player_5, null);
+    assert.equal(row.players.length, 3);
+    assert.equal(row.lineup_label, 'Player 1, Player 2, Player 3');
+});
+
+test('normalizeLineupRow truncates to playerCount for 2-man lineups', () => {
+    const row = normalizeLineupRow(buildLineupRow(), { playerCount: 2 });
+
+    assert.equal(row.lineup_size, 2);
+    assert.equal(row.players.length, 2);
+    assert.equal(row.player_3, null);
+    assert.equal(row.player_4, null);
+    assert.equal(row.player_5, null);
+});
+
 test('groupLineupRows prefers exact npi rows over raw duplicates during rollout', () => {
     const grouped = groupLineupRows([
         buildLineupRow({

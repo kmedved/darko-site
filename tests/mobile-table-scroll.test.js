@@ -8,7 +8,12 @@ const END_MARKER = '/* End touch/mobile scroll mode */';
 
 const TARGET_FILES = [
     'src/routes/standings/+page.svelte',
-    'src/routes/longevity/+page.svelte',
+    'src/routes/longevity/+page.svelte'
+];
+
+// lineups/+page.svelte is excluded: dynamic column counts make
+// nth-child column-hiding media queries impractical.
+const TOUCH_SCROLL_ONLY_FILES = [
     'src/routes/lineups/+page.svelte'
 ];
 
@@ -57,6 +62,29 @@ function extractMediaBlocks(contents, file) {
     return blocks;
 }
 
+function assertTouchScrollBlock(block, file) {
+    assert.match(block, /hover:\s*none/, `${file} should target touch devices without hover`);
+    assert.match(block, /pointer:\s*coarse/, `${file} should target coarse pointers`);
+    assert.match(block, /any-hover:\s*none/, `${file} should include the any-hover touch fallback`);
+    assert.match(block, /any-pointer:\s*coarse/, `${file} should include the any-pointer touch fallback`);
+    assert.match(block, /max-width:\s*1024px/, `${file} should support mobile landscape widths`);
+    assert.doesNotMatch(block, /@media\s*\(\s*max-width:\s*768px\s*\)/, `${file} should not use a bare <=768px touch fallback`);
+    assert.match(block, /\.table-wrapper\s*\{[\s\S]*overflow-x:\s*auto;/, `${file} should enable horizontal scrolling in touch/mobile mode`);
+    assert.match(block, /-webkit-overflow-scrolling:\s*touch;/, `${file} should enable momentum scrolling`);
+    assert.match(block, /table\s*\{[\s\S]*width:\s*max-content;[\s\S]*min-width:\s*100%;/, `${file} should size the table to create real overflow`);
+    assert.match(block, /th\s*\{[\s\S]*position:\s*static;/, `${file} should disable sticky headers in touch/mobile mode`);
+    assert.doesNotMatch(block, /nth-child\s*\([\s\S]*display:\s*none;/, `${file} should not hide columns in touch/mobile scroll mode`);
+}
+
+test('touch-scroll-only files have scroll block without column-hiding requirement', async () => {
+    for (const file of TOUCH_SCROLL_ONLY_FILES) {
+        const absolutePath = path.resolve(process.cwd(), file);
+        const contents = await fs.readFile(absolutePath, 'utf8');
+        const block = extractTouchScrollBlock(contents, file);
+        assertTouchScrollBlock(block, file);
+    }
+});
+
 test('touch/mobile table scroll mode enables horizontal scrolling without hiding columns', async () => {
     for (const file of TARGET_FILES) {
         const absolutePath = path.resolve(process.cwd(), file);
@@ -66,18 +94,7 @@ test('touch/mobile table scroll mode enables horizontal scrolling without hiding
             (mediaBlock) => /nth-child/.test(mediaBlock) && /display:\s*none;/.test(mediaBlock)
         );
 
-        assert.match(block, /hover:\s*none/, `${file} should target touch devices without hover`);
-        assert.match(block, /pointer:\s*coarse/, `${file} should target coarse pointers`);
-        assert.match(block, /any-hover:\s*none/, `${file} should include the any-hover touch fallback`);
-        assert.match(block, /any-pointer:\s*coarse/, `${file} should include the any-pointer touch fallback`);
-        assert.match(block, /max-width:\s*1024px/, `${file} should support mobile landscape widths`);
-        assert.doesNotMatch(block, /@media\s*\(\s*max-width:\s*768px\s*\)/, `${file} should not use a bare <=768px touch fallback`);
-        assert.match(block, /\.table-wrapper\s*\{[\s\S]*overflow-x:\s*auto;/, `${file} should enable horizontal scrolling in touch/mobile mode`);
-        assert.match(block, /-webkit-overflow-scrolling:\s*touch;/, `${file} should enable momentum scrolling`);
-        assert.match(block, /table\s*\{[\s\S]*width:\s*max-content;[\s\S]*min-width:\s*100%;/, `${file} should size the table to create real overflow`);
-        assert.match(block, /th\s*\{[\s\S]*position:\s*static;/, `${file} should disable sticky headers in touch/mobile mode`);
-        assert.doesNotMatch(block, /nth-child\s*\([\s\S]*display:\s*none;/, `${file} should not hide columns in touch/mobile scroll mode`);
-
+        assertTouchScrollBlock(block, file);
         assert.ok(columnHideBlocks.length > 0, `${file} should keep non-touch narrow-screen column fallbacks`);
 
         for (const mediaBlock of columnHideBlocks) {
