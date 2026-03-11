@@ -707,6 +707,7 @@ async function fetchLineupRatingsRows() {
             .from('lineup_ratings')
             .select(LINEUP_RATING_COLUMNS)
             .in('variant', LINEUP_QUERY_VARIANTS)
+            .eq('lineup_size', 5)
             .gt('min_season_poss', LINEUP_MIN_POSSESSIONS)
             .order('min_season_poss', { ascending: false })
             .range(page * pageSize, (page + 1) * pageSize - 1);
