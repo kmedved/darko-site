@@ -79,6 +79,13 @@ function invalidateCachePrefix(prefix) {
     }
 }
 
+/** Clear all in-memory caches. Returns the number of entries removed. */
+export function clearAllCaches() {
+    const count = cacheStore.size;
+    cacheStore.clear();
+    return count;
+}
+
 async function runCached(key, maxAgeMs, loader) {
     const cached = readCache(key, maxAgeMs);
     if (cached !== undefined) {
