@@ -145,10 +145,13 @@ export function normalizeLineupRow(row = {}) {
         return { name, id };
     });
 
+    const tmId = row?.tm_id != null && row.tm_id !== '' ? Number(row.tm_id) : null;
+
     return {
         row_key: `${variant}:${identity}`,
         variant,
         lineup_label: lineupLabel,
+        tm_id: Number.isFinite(tmId) ? tmId : null,
         team_name: teamNameFromId(row?.tm_id) ?? TEAM_PENDING_LABEL,
         possessions,
         net_pm: netPm,

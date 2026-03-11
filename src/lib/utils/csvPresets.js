@@ -263,7 +263,6 @@ export const lineupsCsvColumns = [
     { header: 'Def +/-', accessor: 'def_pm', format: formatSignedMetric },
     { header: 'Off Synergy', accessor: 'off_synergy', format: formatSignedMetric },
     { header: 'Def Synergy', accessor: 'def_synergy', format: formatSignedMetric },
-    { header: 'Lineup', accessor: 'lineup_label' },
     { header: 'Player 1', accessor: 'player_1', format: formatOrDash },
     { header: 'Player 2', accessor: 'player_2', format: formatOrDash },
     { header: 'Player 3', accessor: 'player_3', format: formatOrDash },

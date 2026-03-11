@@ -8,8 +8,12 @@
     let { data } = $props();
 
     const baseColumns = [
-        { key: 'lineup_label', label: 'Lineup', alignClass: 'lineup-col', type: 'text', dataType: 'text' },
         { key: 'team_name', label: 'Team', alignClass: 'team-col', type: 'text', dataType: 'text' },
+        { key: 'player_1', label: 'Player 1', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 0 },
+        { key: 'player_2', label: 'Player 2', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 1 },
+        { key: 'player_3', label: 'Player 3', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 2 },
+        { key: 'player_4', label: 'Player 4', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 3 },
+        { key: 'player_5', label: 'Player 5', alignClass: 'player-col', type: 'text', dataType: 'text', slotIndex: 4 },
         { key: 'possessions', label: 'Poss', alignClass: 'num', type: 'number', dataType: 'number' },
         { key: 'net_pm', label: 'Net +/-', alignClass: 'num', type: 'number', dataType: 'number' },
         { key: 'off_pm', label: 'Off +/-', alignClass: 'num', type: 'number', dataType: 'number' },
@@ -22,7 +26,11 @@
     ];
 
     const sortConfigs = {
-        lineup_label: { type: 'text' },
+        player_1: { type: 'text' },
+        player_2: { type: 'text' },
+        player_3: { type: 'text' },
+        player_4: { type: 'text' },
+        player_5: { type: 'text' },
         team_name: { type: 'text' },
         possessions: { type: 'number' },
         net_pm: { type: 'number' },
@@ -39,20 +47,32 @@
 
     const TEAM_PENDING_LABEL = 'Team pending';
 
+    const PLAYER_KEYS = ['player_1', 'player_2', 'player_3', 'player_4', 'player_5'];
+
     let selectedVariant = $derived(data.defaultVariant ?? 'pi');
     let sortColumn = $state('net_pm');
     let sortDirection = $state('desc');
     let columnFilters = $state({});
+    let playerFilter = $state('');
 
     let tableColumns = $derived(
         selectedVariant === 'pi' ? [...baseColumns, ...synergyColumns] : baseColumns
     );
 
+    /** Columns that participate in per-column filtering (excludes player slots). */
+    let filterableColumns = $derived(tableColumns.filter((c) => c.slotIndex == null));
+
     let selectedLineups = $derived(data.lineupsByVariant?.[selectedVariant] ?? []);
 
-    let filteredLineups = $derived.by(() =>
-        filterPlayers(selectedLineups, tableColumns, columnFilters)
-    );
+    let filteredLineups = $derived.by(() => {
+        const needle = playerFilter.trim().toLowerCase();
+        const afterPlayer = needle
+            ? selectedLineups.filter((row) =>
+                PLAYER_KEYS.some((k) => String(row[k] || '').toLowerCase().includes(needle))
+            )
+            : selectedLineups;
+        return filterPlayers(afterPlayer, filterableColumns, columnFilters);
+    });
 
     let sortedLineups = $derived.by(() =>
         getSortedRows(filteredLineups, {
@@ -80,7 +100,7 @@
         }
 
         sortColumn = column;
-        sortDirection = column === 'lineup_label' || column === 'team_name' ? 'asc' : 'desc';
+        sortDirection = sortConfigs[column]?.type === 'text' ? 'asc' : 'desc';
     }
 
     function sortGlyph(column) {
@@ -115,6 +135,14 @@
         }
 
         return row[column.key] ?? '—';
+    }
+
+    /** Abbreviate "Donovan Mitchell" → "D. Mitchell", leave single names alone. */
+    function abbrevName(name) {
+        if (!name) return '—';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length < 2) return name;
+        return `${parts[0][0]}. ${parts.slice(1).join(' ')}`;
     }
 
     function setFilter(column, value) {
@@ -202,7 +230,25 @@
                         {/each}
                     </tr>
                     <tr class="filter-row">
-                        {#each tableColumns as column (column.key)}
+                        <th class="team-col">
+                            <input
+                                type="text"
+                                value={columnFilters['team_name'] || ''}
+                                oninput={(event) => setFilter('team_name', event.currentTarget.value)}
+                                placeholder="All"
+                                aria-label="Filter Team"
+                            />
+                        </th>
+                        <th class="player-filter-col" colspan="5">
+                            <input
+                                type="text"
+                                value={playerFilter}
+                                oninput={(event) => (playerFilter = event.currentTarget.value)}
+                                placeholder="Filter players"
+                                aria-label="Filter players"
+                            />
+                        </th>
+                        {#each filterableColumns.filter(c => c.key !== 'team_name') as column (column.key)}
                             <th class={column.alignClass}>
                                 <input
                                     type="text"
@@ -227,20 +273,34 @@
                                     <td
                                         class="{column.alignClass} {isMetricColumn(column.key) ? metricToneClass(lineup[column.key]) : ''}"
                                     >
-                                        {#if column.key === 'lineup_label'}
-                                            <span class="lineup-label">
-                                                {#each lineup.players as p, i (p.id ?? `${p.name ?? 'Unknown'}-${i}`)}
-                                                    {#if i > 0}, {/if}
-                                                    {#if p.id}
-                                                        <a href="/player/{p.id}" class="player-link">{p.name ?? 'Unknown'}</a>
-                                                    {:else}
-                                                        {p.name ?? 'Unknown'}
-                                                    {/if}
-                                                {/each}
-                                            </span>
+                                        {#if column.slotIndex != null}
+                                            {@const p = lineup.players[column.slotIndex]}
+                                            {#if p?.id}
+                                                <a href="/player/{p.id}" class="player-cell-link">
+                                                    <img
+                                                        src="https://cdn.nba.com/headshots/nba/latest/260x190/{p.id}.png"
+                                                        alt=""
+                                                        class="player-headshot"
+                                                        loading="lazy"
+                                                    />
+                                                    <span>{abbrevName(p.name)}</span>
+                                                </a>
+                                            {:else}
+                                                {abbrevName(p?.name)}
+                                            {/if}
                                         {:else if column.key === 'team_name'}
                                             {#if lineup.team_name && lineup.team_name !== TEAM_PENDING_LABEL}
-                                                <a href="/team/{encodeURIComponent(lineup.team_name)}" class="team-link">{teamAbbr(lineup.team_name)}</a>
+                                                <a href="/team/{encodeURIComponent(lineup.team_name)}" class="team-cell-link">
+                                                    {#if lineup.tm_id}
+                                                        <img
+                                                            src="https://cdn.nba.com/logos/nba/{lineup.tm_id}/global/L/logo.svg"
+                                                            alt=""
+                                                            class="team-logo"
+                                                            loading="lazy"
+                                                        />
+                                                    {/if}
+                                                    <span>{teamAbbr(lineup.team_name)}</span>
+                                                </a>
                                             {:else}
                                                 <span class="team-placeholder">{lineup.team_name}</span>
                                             {/if}
@@ -451,7 +511,7 @@
         padding: 10px 12px;
         border-bottom: 1px solid var(--border-subtle);
         color: var(--text);
-        vertical-align: top;
+        vertical-align: middle;
     }
 
     .empty-row {
@@ -462,42 +522,67 @@
         font-size: 13px;
     }
 
-    .lineup-col {
-        width: 36%;
+    .player-col {
+        width: 150px;
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .player-filter-col {
+        text-align: left;
     }
 
     .team-col {
-        width: 14%;
+        width: 76px;
     }
 
     .num {
-        width: 9%;
+        width: 80px;
         text-align: right;
         font-family: var(--font-mono);
         font-size: 12px;
     }
 
-    .lineup-label {
-        display: block;
-        white-space: normal;
-        line-height: 1.35;
-    }
-
-    .player-link {
+    .player-cell-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         color: var(--text);
     }
 
-    .player-link:hover {
+    .player-cell-link:hover {
         color: var(--accent);
     }
 
-    .team-link {
+    .player-headshot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        object-fit: cover;
+        object-position: center top;
+        flex-shrink: 0;
+        background: var(--bg-elevated);
+    }
+
+    .team-cell-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         color: var(--text);
         font-weight: 500;
     }
 
-    .team-link:hover {
+    .team-cell-link:hover {
         color: var(--accent);
+    }
+
+    .team-logo {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        flex-shrink: 0;
     }
 
     .team-placeholder {
@@ -545,23 +630,24 @@
             position: static;
         }
 
-        .lineup-col,
+        .player-col,
         .team-col,
         .num {
             width: auto;
+            max-width: none;
         }
 
-        .lineup-label {
-            min-width: 24rem;
+        .player-col {
+            min-width: 8rem;
         }
     }
     /* End touch/mobile scroll mode */
 
-    @media (hover: hover) and (pointer: fine) and (max-width: 1180px) {
-        table th:nth-child(5),
-        table td:nth-child(5),
-        table th:nth-child(6),
-        table td:nth-child(6) {
+    @media (hover: hover) and (pointer: fine) and (max-width: 1400px) {
+        table th:nth-child(9),
+        table td:nth-child(9),
+        table th:nth-child(10),
+        table td:nth-child(10) {
             display: none;
         }
     }

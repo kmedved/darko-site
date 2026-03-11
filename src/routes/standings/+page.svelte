@@ -330,7 +330,7 @@
 
     .table-wrapper {
         margin-bottom: 32px;
-        overflow-x: auto;
+
     }
     .table-toolbar {
         display: flex;
@@ -500,6 +500,7 @@
         (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
         .table-wrapper {
             overflow-x: auto;
+    
             -webkit-overflow-scrolling: touch;
         }
 
