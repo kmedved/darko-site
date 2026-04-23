@@ -31,7 +31,6 @@
     --border: #2a2a2a;
     --border-subtle: #1e1e1e;
     --text: #e4e4ec;
-    --text: #e4e4ec;
     --text-secondary: #8b8ca0;
     --text-muted: #64657a;
     --accent: #3b82f6;
@@ -51,7 +50,6 @@
     --border: #e0d0b8;
     --border-subtle: #eddcc6;
     --text: #1a1408;
-    --text: #1a1408;
     --text-secondary: #4a3f2e;
     --text-muted: #7a6e5c;
     --accent: #2563eb;
@@ -70,7 +68,6 @@
     --bg-nav: #ffffff;
     --border: #d4d4d4;
     --border-subtle: #e5e5e5;
-    --text: #111111;
     --text: #111111;
     --text-secondary: #444444;
     --text-muted: #666666;
@@ -134,7 +131,6 @@ a:hover { color: var(--accent-hover); }
 /* ── Nav ────────────────────────────────────────────── */
 
 nav {
-    box-shadow: inset 0 -1px 0 var(--border);
     padding: 0;
     position: sticky;
     top: 0;
@@ -168,6 +164,7 @@ nav .container {
 nav .logo {
     display: inline-flex;
     align-items: center;
+    flex: 0 0 auto;
     height: 100%;
     margin-right: 32px;
 }
@@ -176,7 +173,6 @@ nav .logo {
     display: none;
     height: 80px;
     width: auto;
-    max-width: 100%;
     object-fit: contain;
 }
 
@@ -199,7 +195,6 @@ nav .links {
     align-items: center;
 }
 
-nav .links a,
 nav .links a {
     color: var(--text-muted);
     font-size: 13px;
@@ -218,7 +213,6 @@ nav .links a {
     cursor: pointer;
 }
 
-nav .links a:hover,
 nav .links a:hover {
     color: var(--text-secondary);
 }
@@ -576,7 +570,7 @@ nav .links a.active {
     position: absolute;
     top: calc(100% + 6px);
     right: 0;
-    min-width: 112px;
+    min-width: 136px;
     display: flex;
     flex-direction: column;
     background: var(--bg-elevated);
@@ -584,6 +578,14 @@ nav .links a.active {
     border-radius: var(--radius-sm);
     overflow: hidden;
     z-index: 45;
+}
+
+.chart-download-popover--context {
+    position: fixed;
+    right: auto;
+    min-width: 168px;
+    z-index: 1000;
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--text) 22%, transparent);
 }
 
 .chart-download-option {
@@ -602,6 +604,11 @@ nav .links a.active {
     background: var(--bg-hover);
 }
 
+.chart-download-option:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
 .chart-download-option + .chart-download-option {
     border-top: 1px solid var(--border-subtle);
 }
@@ -609,6 +616,16 @@ nav .links a.active {
 .chart-download-option:disabled {
     color: var(--text-muted);
     cursor: not-allowed;
+}
+
+.chart-download-error {
+    border-top: 1px solid var(--border-subtle);
+    color: var(--negative);
+    background: var(--negative-bg);
+    font-size: 11px;
+    line-height: 1.35;
+    padding: 8px 10px;
+    max-width: 220px;
 }
 
 /* ── Sparkline / Chart ───────────────────────────────── */

@@ -2,6 +2,8 @@ const PROJECTION_COLUMNS = Array.from({ length: 15 }, (_, index) => `p${index + 
 
 export const LONGEVITY_COLUMNS = [
     'player_name',
+    'team_name',
+    'position',
     'rookie_season',
     'career_games',
     'age',
@@ -33,6 +35,10 @@ export function formatLongevityDisplayValue(row, column) {
         return String(row.player_name ?? '');
     }
 
+    if (column === 'team_name' || column === 'position') {
+        return String(row[column] ?? '');
+    }
+
     if (column === 'rookie_season' || column === 'career_games') {
         const n = parseNumeric(row[column]);
         if (n === null) return '—';
@@ -44,7 +50,8 @@ export function formatLongevityDisplayValue(row, column) {
     }
 
     if (/^p\d+$/.test(column)) {
-        return `${formatFixed(row[column], 1)}%`;
+        const probability = formatFixed(row[column], 1);
+        return probability === '—' ? probability : `${probability}%`;
     }
 
     return String(row[column] ?? '');
@@ -93,6 +100,8 @@ export function paginateRows(rows = [], page = 1, pageSize = 20) {
 export function getLongevitySortConfig() {
     const config = {
         player_name: { type: 'text' },
+        team_name: { type: 'text' },
+        position: { type: 'text' },
         rookie_season: { type: 'number' },
         career_games: { type: 'number' },
         age: { type: 'number' },

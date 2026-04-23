@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import { resolveSupabaseConfig } from '$lib/utils/supabaseConfig.js';
+import { teamId as nbaTeamId } from '$lib/utils/teamAbbreviations.js';
 import {
     LINEUP_MIN_POSSESSIONS,
     LINEUP_QUERY_VARIANTS,
@@ -190,6 +191,10 @@ const PLAYERS_DIM_COLUMNS = [
     'rookie_season'
 ].join(', ');
 
+const TEAM_FALLBACK_LOOKBACK_DAYS = 370;
+const TEAM_FALLBACK_CHUNK_SIZE = 50;
+const TEAM_FALLBACK_ROWS_PER_PLAYER = 120;
+
 const LINEUP_RATING_COLUMNS = [
     'variant',
     'lineup_size',
@@ -259,13 +264,63 @@ function normalizePosition(pos) {
     return POSITION_MAP[pos] ?? pos;
 }
 
-function mergeWithPlayerDim(row, playerDim) {
+function normalizedTeamName(value) {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed || null;
+}
+
+function isRealTeamId(value) {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed > 0;
+}
+
+function resolveTeamId(row, teamName, teamFallback) {
+    if (isRealTeamId(row?.tm_id)) return row.tm_id;
+    if (teamFallback?.team_name && teamName === teamFallback.team_name && isRealTeamId(teamFallback.tm_id)) {
+        return teamFallback.tm_id;
+    }
+    const mappedTeamId = nbaTeamId(teamName);
+    if (isRealTeamId(mappedTeamId)) return mappedTeamId;
+    return row?.tm_id ?? null;
+}
+
+function mergeWithPlayerDim(row, playerDim, teamFallback) {
+    const teamName =
+        normalizedTeamName(row.team_name) ??
+        normalizedTeamName(playerDim?.current_team) ??
+        normalizedTeamName(teamFallback?.team_name);
+
     return {
         ...row,
         player_name: row.player_name ?? playerDim?.player_name ?? null,
-        team_name: row.team_name ?? playerDim?.current_team ?? null,
+        team_name: teamName,
+        tm_id: resolveTeamId(row, teamName, teamFallback),
         position: normalizePosition(row.position ?? playerDim?.position ?? null),
         rookie_season: row.rookie_season ?? playerDim?.rookie_season ?? null
+    };
+}
+
+function mergePlayerWithActiveSnapshot(player, active) {
+    return {
+        nba_id: player.nba_id,
+        player_name: player.player_name,
+        team_name: active?.team_name ?? player.current_team ?? null,
+        position: normalizePosition(active?.position ?? player.position ?? null),
+        dpm: active?.dpm ?? null,
+        o_dpm: active?.o_dpm ?? null,
+        d_dpm: active?.d_dpm ?? null,
+        box_dpm: active?.box_dpm ?? null,
+        box_odpm: active?.box_odpm ?? null,
+        box_ddpm: active?.box_ddpm ?? null,
+        on_off_dpm: active?.on_off_dpm ?? null,
+        bayes_rapm_total: active?.bayes_rapm_total ?? null,
+        tr_fg3_pct: active?.tr_fg3_pct ?? null,
+        tr_ft_pct: active?.tr_ft_pct ?? null,
+        x_minutes: active?.x_minutes ?? null,
+        x_pace: active?.x_pace ?? null,
+        x_pts_100: active?.x_pts_100 ?? null,
+        date: active?.date ?? null
     };
 }
 
@@ -287,6 +342,62 @@ async function getPlayersMapByIds(ids = []) {
         map.set(row.nba_id, row);
     }
     return map;
+}
+
+function chunkArray(values, size) {
+    const chunks = [];
+    for (let index = 0; index < values.length; index += size) {
+        chunks.push(values.slice(index, index + size));
+    }
+    return chunks;
+}
+
+function getLookbackStartDate(anchorDate, days) {
+    const parsed = new Date(anchorDate);
+    if (Number.isNaN(parsed.getTime())) return null;
+    parsed.setUTCDate(parsed.getUTCDate() - days);
+    return parsed.toISOString().slice(0, 10);
+}
+
+async function getLatestTeamMapByIds(ids = [], latestDate) {
+    const filteredIds = Array.from(
+        new Set((ids || []).filter((id) => Number.isInteger(id) && id > 0))
+    );
+    if (filteredIds.length === 0) {
+        return new Map();
+    }
+
+    const startDate = getLookbackStartDate(latestDate, TEAM_FALLBACK_LOOKBACK_DAYS);
+    const teamMap = new Map();
+
+    for (const chunk of chunkArray(filteredIds, TEAM_FALLBACK_CHUNK_SIZE)) {
+        let query = supabase
+            .from('player_ratings')
+            .select('nba_id, date, team_name, tm_id')
+            .in('nba_id', chunk)
+            .not('team_name', 'is', null)
+            .gt('tm_id', 0)
+            .order('date', { ascending: false })
+            .limit(chunk.length * TEAM_FALLBACK_ROWS_PER_PLAYER);
+
+        if (startDate) {
+            query = query.gte('date', startDate);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        for (const row of data || []) {
+            if (!teamMap.has(row.nba_id)) {
+                teamMap.set(row.nba_id, {
+                    team_name: normalizedTeamName(row.team_name),
+                    tm_id: row.tm_id
+                });
+            }
+        }
+    }
+
+    return teamMap;
 }
 
 async function getLatestActiveDate() {
@@ -346,7 +457,13 @@ export async function getActivePlayers(options = {}) {
 
         const ids = unique.map((row) => row.nba_id);
         const playersMap = await getPlayersMapByIds(ids);
-        let merged = unique.map((row) => mergeWithPlayerDim(row, playersMap.get(row.nba_id)));
+        const missingTeamIds = unique
+            .filter((row) => !normalizedTeamName(row.team_name) || !isRealTeamId(row.tm_id))
+            .map((row) => row.nba_id);
+        const teamMap = await getLatestTeamMapByIds(missingTeamIds, latestDate);
+        let merged = unique.map((row) =>
+            mergeWithPlayerDim(row, playersMap.get(row.nba_id), teamMap.get(row.nba_id))
+        );
 
         if (normalizedTeam) {
             merged = merged.filter((row) => {
@@ -410,29 +527,7 @@ export async function searchAllPlayers(searchTerm) {
 
         return (players || [])
             .filter((player) => Number.isInteger(player?.nba_id) && player.nba_id > 0)
-            .map((player) => {
-                const active = activeById.get(player.nba_id);
-                return {
-                    nba_id: player.nba_id,
-                    player_name: player.player_name,
-                    team_name: active?.team_name ?? player.current_team ?? null,
-                    position: normalizePosition(active?.position ?? player.position ?? null),
-                    dpm: active?.dpm ?? null,
-                    o_dpm: active?.o_dpm ?? null,
-                    d_dpm: active?.d_dpm ?? null,
-                    box_dpm: active?.box_dpm ?? null,
-                    box_odpm: active?.box_odpm ?? null,
-                    box_ddpm: active?.box_ddpm ?? null,
-                    on_off_dpm: active?.on_off_dpm ?? null,
-                    bayes_rapm_total: active?.bayes_rapm_total ?? null,
-                    tr_fg3_pct: active?.tr_fg3_pct ?? null,
-                    tr_ft_pct: active?.tr_ft_pct ?? null,
-                    x_minutes: active?.x_minutes ?? null,
-                    x_pace: active?.x_pace ?? null,
-                    x_pts_100: active?.x_pts_100 ?? null,
-                    date: active?.date ?? null
-                };
-            });
+            .map((player) => mergePlayerWithActiveSnapshot(player, activeById.get(player.nba_id)));
     });
 }
 
@@ -551,29 +646,7 @@ export async function getPlayersIndex() {
 
         const rows = allPlayers
             .filter((player) => Number.isInteger(player?.nba_id) && player.nba_id > 0)
-            .map((player) => {
-                const active = activeById.get(player.nba_id);
-                return {
-                    nba_id: player.nba_id,
-                    player_name: player.player_name,
-                    team_name: active?.team_name ?? player.current_team ?? null,
-                    position: normalizePosition(active?.position ?? player.position ?? null),
-                    dpm: active?.dpm ?? null,
-                    o_dpm: active?.o_dpm ?? null,
-                    d_dpm: active?.d_dpm ?? null,
-                    box_dpm: active?.box_dpm ?? null,
-                    box_odpm: active?.box_odpm ?? null,
-                    box_ddpm: active?.box_ddpm ?? null,
-                    on_off_dpm: active?.on_off_dpm ?? null,
-                    bayes_rapm_total: active?.bayes_rapm_total ?? null,
-                    tr_fg3_pct: active?.tr_fg3_pct ?? null,
-                    tr_ft_pct: active?.tr_ft_pct ?? null,
-                    x_minutes: active?.x_minutes ?? null,
-                    x_pace: active?.x_pace ?? null,
-                    x_pts_100: active?.x_pts_100 ?? null,
-                    date: active?.date ?? null
-                };
-            });
+            .map((player) => mergePlayerWithActiveSnapshot(player, activeById.get(player.nba_id)));
 
         rows.sort((a, b) => {
             const left = a.player_name || '';
@@ -605,6 +678,9 @@ export async function getLongevityRows(options = {}) {
             longevityRows.push({
                 nba_id: row.nba_id,
                 player_name: row.player_name,
+                team_name: row.team_name ?? null,
+                tm_id: row.tm_id ?? null,
+                position: normalizePosition(row.position ?? row.x_position ?? null),
                 rookie_season: row.rookie_season ?? null,
                 career_games: row.career_game_num ?? null,
                 age: row.age ?? null,
@@ -730,7 +806,7 @@ async function fetchLineupRatingsRows({ lineupSize = 5, minPoss = LINEUP_MIN_POS
 }
 
 export async function getLineupRatings({ lineupSize = 5, minPoss = LINEUP_MIN_POSSESSIONS } = {}) {
-    const key = cacheKey('lineupRatings', `size-${lineupSize}`);
+    const key = cacheKey('lineupRatings', `size-${lineupSize}:min-${minPoss}`);
     return runCached(key, CACHE_MS.lineupRatings, async () => {
         const rows = await fetchLineupRatingsRows({ lineupSize, minPoss });
         return groupLineupRows(rows, { minPoss, playerCount: lineupSize });

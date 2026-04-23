@@ -9,6 +9,8 @@ test('longevityCsvColumns includes required projection headers and accessors', (
 
     const requiredHeaders = [
         'Player',
+        'Team',
+        'Pos',
         'Rookie Season',
         'Career Games',
         'Age',
@@ -19,6 +21,8 @@ test('longevityCsvColumns includes required projection headers and accessors', (
 
     const requiredAccessors = [
         'player_name',
+        'team_name',
+        'position',
         'rookie_season',
         'career_games',
         'age',

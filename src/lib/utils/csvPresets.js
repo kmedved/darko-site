@@ -165,7 +165,7 @@ export const standingsCsvColumns = [
     { header: 'Current', accessor: 'Current' },
     { header: 'W', accessor: 'W', format: (v) => formatFixed(v, 1) },
     { header: 'L', accessor: 'L', format: (v) => formatFixed(v, 1) },
-    { header: 'SRS', accessor: 'SRS', format: (v) => formatFixed(v, 2) },
+    { header: 'Projected Rating', accessor: 'SRS', format: (v) => formatFixed(v, 2) },
     { header: 'Playoff%', accessor: 'Playoffs', format: (v) => formatFixed(v, 1) },
     { header: 'Win Conf%', accessor: 'Win Conf', format: (v) => formatFixed(v, 1) },
     { header: 'Win Finals%', accessor: 'Win Finals', format: (v) => formatFixed(v, 1) },
@@ -180,7 +180,7 @@ export const standingsExpandedCsvColumns = [
     { header: 'Current', accessor: 'Current' },
     { header: 'W', accessor: 'W', format: (v) => formatFixed(v, 1) },
     { header: 'L', accessor: 'L', format: (v) => formatFixed(v, 1) },
-    { header: 'SRS', accessor: 'SRS', format: (v) => formatFixed(v, 2) },
+    { header: 'Projected Rating', accessor: 'SRS', format: (v) => formatFixed(v, 2) },
     { header: 'Playoff%', accessor: 'Playoffs', format: (v) => formatFixed(v, 1) },
     { header: 'Win Conf%', accessor: 'Win Conf', format: (v) => formatFixed(v, 1) },
     { header: 'Win Finals%', accessor: 'Win Finals', format: (v) => formatFixed(v, 1) },
@@ -211,6 +211,8 @@ export const standingsExpandedCsvColumns = [
 
 export const longevityCsvColumns = [
     { header: 'Player', accessor: 'player_name' },
+    { header: 'Team', accessor: 'team_name', format: formatOrDash },
+    { header: 'Pos', accessor: 'position', format: formatOrDash },
     { header: 'Rookie Season', accessor: 'rookie_season', format: (v) => formatNullable(v) },
     { header: 'Career Games', accessor: 'career_games', format: (v) => formatNullable(v) },
     { header: 'Age', accessor: 'age', format: (v) => formatFixed(v, 1) },

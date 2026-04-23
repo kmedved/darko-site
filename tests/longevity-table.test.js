@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
     filterLongevityRows,
+    formatLongevityDisplayValue,
     paginateRows,
     resolveActiveLongevityPlayer
 } from '../src/lib/utils/longevityTable.js';
@@ -61,6 +62,11 @@ test('filterLongevityRows applies case-insensitive per-column filters against di
 
     assert.equal(filtered.length, 1);
     assert.equal(filtered[0].nba_id, 1);
+});
+
+test('formatLongevityDisplayValue only adds percent signs to numeric probabilities', () => {
+    assert.equal(formatLongevityDisplayValue({ p1: 97.6 }, 'p1'), '97.6%');
+    assert.equal(formatLongevityDisplayValue({ p1: null }, 'p1'), '—');
 });
 
 test('paginateRows returns the expected slice for a page', () => {

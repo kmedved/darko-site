@@ -244,7 +244,7 @@ export function buildPlayerTableSortConfig(columns) {
 }
 
 export const LEADERBOARD_COLUMNS = buildColumns(
-    ['_rank', 'player_name', ...STANDARD_LEADERBOARD_METRIC_KEYS],
+    ['_rank', 'player_name', 'team_name', ...STANDARD_LEADERBOARD_METRIC_KEYS],
     {
         sal_market_fixed: { label: '$ Value' },
         o_dpm: { label: 'Off' },

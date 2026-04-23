@@ -49,12 +49,12 @@ test('trajectories mobile layout keeps the chart column stretched to full width'
     assert.ok(mobileBlock, `${TARGET_FILE} should define a <=768px mobile media block`);
     assert.match(
         mobileBlock,
-        /\.trajectory-layout\s*\{[\s\S]*flex-direction:\s*column;/,
+        /\.trajectory-workspace\s*\{[\s\S]*grid-template-columns:\s*1fr;/,
         'mobile trajectories layout should stay stacked'
     );
     assert.match(
         mobileBlock,
-        /\.trajectory-layout\s*\{[\s\S]*align-items:\s*stretch;/,
+        /\.trajectory-workspace\s*\{[\s\S]*align-items:\s*stretch;/,
         'mobile trajectories layout should stretch children to full width'
     );
     assert.match(

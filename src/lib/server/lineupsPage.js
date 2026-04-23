@@ -1,6 +1,7 @@
 import {
     LINEUP_SIZE_CONFIG,
-    DEFAULT_LINEUP_SIZE
+    DEFAULT_LINEUP_SIZE,
+    VALID_LINEUP_SIZES
 } from './lineupRatings.js';
 
 export const LINEUPS_PAGE_CACHE = Object.freeze({
@@ -16,21 +17,62 @@ function normalizeLineupsByVariant(payload) {
     };
 }
 
+function resolveLineupSizeConfig(lineupSize) {
+    const parsedLineupSize = Number(lineupSize);
+    const resolvedLineupSize = LINEUP_SIZE_CONFIG[parsedLineupSize]
+        ? parsedLineupSize
+        : DEFAULT_LINEUP_SIZE;
+
+    return {
+        lineupSize: resolvedLineupSize,
+        config: LINEUP_SIZE_CONFIG[resolvedLineupSize] ?? LINEUP_SIZE_CONFIG[DEFAULT_LINEUP_SIZE]
+    };
+}
+
 export async function getLineupsPagePayload({
     loadLineupRatings,
     lineupSize = DEFAULT_LINEUP_SIZE
 }) {
-    const sizeConfig = LINEUP_SIZE_CONFIG[lineupSize] ?? LINEUP_SIZE_CONFIG[DEFAULT_LINEUP_SIZE];
+    const {
+        lineupSize: resolvedLineupSize,
+        config: sizeConfig
+    } = resolveLineupSizeConfig(lineupSize);
     const minPoss = sizeConfig.minPoss;
+    const sizePayloads = await Promise.all(
+        VALID_LINEUP_SIZES.map(async (size) => {
+            const config = LINEUP_SIZE_CONFIG[size] ?? LINEUP_SIZE_CONFIG[DEFAULT_LINEUP_SIZE];
+            const lineupsByVariant = normalizeLineupsByVariant(
+                await loadLineupRatings({ lineupSize: size, minPoss: config.minPoss })
+            );
 
-    const lineupsByVariant = normalizeLineupsByVariant(
-        await loadLineupRatings({ lineupSize, minPoss })
+            return {
+                lineupSize: size,
+                label: config.label,
+                minPoss: config.minPoss,
+                lineupsByVariant
+            };
+        })
     );
+    const lineupsBySize = Object.fromEntries(
+        sizePayloads.map((payload) => [payload.lineupSize, payload.lineupsByVariant])
+    );
+    const lineupsByVariant = lineupsBySize[resolvedLineupSize] ?? {
+        pi: [],
+        npi: []
+    };
+    const lineupSizeSummaries = sizePayloads.map((payload) => ({
+        lineupSize: payload.lineupSize,
+        label: payload.label,
+        minPoss: payload.minPoss,
+        piCount: payload.lineupsByVariant.pi.length,
+        npiCount: payload.lineupsByVariant.npi.length
+    }));
 
     return {
         lineupsByVariant,
+        lineupSizeSummaries,
         defaultVariant: 'pi',
-        lineupSize,
+        lineupSize: resolvedLineupSize,
         minPoss
     };
 }

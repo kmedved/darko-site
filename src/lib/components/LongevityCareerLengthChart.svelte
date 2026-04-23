@@ -63,8 +63,14 @@
         const data = getProbabilities(currentPlayer);
         if (!data.length) return;
 
-        const height = 290;
-        const margin = { top: 14, right: 20, bottom: 70, left: 62 };
+        const isMobile = width < 500;
+        const height = isMobile ? 260 : 290;
+        const margin = {
+            top: isMobile ? 24 : 28,
+            right: isMobile ? 12 : 20,
+            bottom: isMobile ? 56 : 70,
+            left: isMobile ? 46 : 62
+        };
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
         svg.attr('viewBox', `0 0 ${width} ${height}`);
@@ -72,31 +78,9 @@
         const x = d3.scaleLinear().domain([1, 12]).range([0, innerWidth]);
         const y = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]);
 
-        const cutoff = d3.max(data.filter((point) => point.value >= 75).map((point) => point.horizon)) || 0;
-
         const chartGroup = svg
             .append('g')
             .attr('transform', `translate(${margin.left}, ${margin.top})`);
-
-        if (cutoff > 0) {
-            chartGroup
-                .append('rect')
-                .attr('x', x(1))
-                .attr('y', 0)
-                .attr('width', Math.max(0, x(cutoff + 0.5) - x(1)))
-                .attr('height', innerHeight)
-                .attr('fill', 'var(--positive-bg)');
-        }
-
-        if (cutoff < 12) {
-            chartGroup
-                .append('rect')
-                .attr('x', x(Math.max(1, cutoff + 0.5)))
-                .attr('y', 0)
-                .attr('width', Math.max(0, x(12) - x(Math.max(1, cutoff + 0.5))))
-                .attr('height', innerHeight)
-                .attr('fill', 'var(--bg-hover)');
-        }
 
         chartGroup
             .append('g')
@@ -109,7 +93,12 @@
             )
             .call((group) => group.select('.domain').remove())
             .call((group) => group.selectAll('.tick line').attr('stroke', 'var(--border-subtle)'))
-            .call((group) => group.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '11px'));
+            .call((group) =>
+                group
+                    .selectAll('.tick text')
+                    .style('fill', 'var(--text-muted)')
+                    .attr('font-size', isMobile ? '10px' : '11px')
+            );
 
         const xAxis = chartGroup
             .append('g')
@@ -117,12 +106,19 @@
             .call(
                 d3
                     .axisBottom(x)
-                    .tickValues(d3.range(1, 13))
+                    .tickValues(isMobile ? [1, 3, 5, 7, 9, 11] : d3.range(1, 13))
                     .tickFormat((tick) => `+${tick}`)
             );
         xAxis.select('.domain').attr('stroke', 'var(--border)');
         xAxis.selectAll('.tick line').attr('stroke', 'var(--border-subtle)');
         xAxis.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '11px');
+
+        const areaGenerator = d3
+            .area()
+            .x((point) => x(point.horizon))
+            .y0(innerHeight)
+            .y1((point) => y(point.value))
+            .curve(d3.curveMonotoneX);
 
         const lineGenerator = d3
             .line()
@@ -133,8 +129,14 @@
         chartGroup
             .append('path')
             .datum(data)
+            .attr('fill', 'var(--positive-bg)')
+            .attr('d', areaGenerator);
+
+        chartGroup
+            .append('path')
+            .datum(data)
             .attr('fill', 'none')
-            .attr('stroke', 'var(--text)')
+            .attr('stroke', 'var(--accent)')
             .attr('stroke-width', 2.5)
             .attr('stroke-linecap', 'round')
             .attr('stroke-linejoin', 'round')
@@ -147,12 +149,27 @@
             .attr('cx', (point) => x(point.horizon))
             .attr('cy', (point) => y(point.value))
             .attr('r', 3.8)
-            .attr('fill', 'var(--text)');
+            .attr('fill', 'var(--accent)');
+
+        if (!isMobile) {
+            chartGroup
+                .selectAll('.point-label')
+                .data(data)
+                .join('text')
+                .attr('class', 'point-label')
+                .attr('x', (point) => x(point.horizon))
+                .attr('y', (point) => y(point.value) - 10)
+                .attr('text-anchor', 'middle')
+                .attr('fill', 'var(--text)')
+                .attr('font-size', '10px')
+                .attr('font-weight', '700')
+                .text((point) => `${point.value.toFixed(point.value >= 99.95 ? 0 : 1)}%`);
+        }
 
         chartGroup
             .append('text')
             .attr('x', innerWidth / 2)
-            .attr('y', innerHeight + 48)
+            .attr('y', innerHeight + (isMobile ? 42 : 48))
             .attr('text-anchor', 'middle')
             .attr('fill', 'var(--text)')
             .attr('font-size', '12px')
@@ -178,6 +195,8 @@
             {svgEl}
             captureRootEl={chartRootEl}
             filenameBase={exportFilenameBase}
+            buttonLabel="..."
+            buttonAriaLabel="Download roster probability chart"
         />
     </div>
     <div class="chart-shell">

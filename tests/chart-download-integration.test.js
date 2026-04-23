@@ -37,11 +37,11 @@ test('parent components pass filename context props to chart components', async 
     assert.match(teamDetail, /<SeedChart[\s\S]*\{teamName\}/, 'TeamDetailView should pass teamName to SeedChart');
 });
 
-test('ChartDownloadMenu quick export uses the chart surface and the existing PNG export path', async () => {
+test('ChartDownloadMenu context actions use the chart surface and shared image export paths', async () => {
     const menuPath = path.resolve(process.cwd(), 'src/lib/components/ChartDownloadMenu.svelte');
     const contents = await fs.readFile(menuPath, 'utf8');
 
-    assert.match(contents, /setupQuickChartExport/, 'ChartDownloadMenu should wire up quick export gestures');
+    assert.match(contents, /setupQuickChartExport/, 'ChartDownloadMenu should wire up chart context gestures');
     assert.match(
         contents,
         /const\s+interactionTargetEl\s*=\s*\$derived\(svgEl\?\.parentElement\s*\?\?\s*null\)/,
@@ -49,8 +49,24 @@ test('ChartDownloadMenu quick export uses the chart surface and the existing PNG
     );
     assert.match(
         contents,
-        /onQuickExport:\s*\(\)\s*=>\s*downloadChart\('png'\)/,
-        'quick export should reuse the PNG download action'
+        /onQuickExport:\s*\(_format,\s*event\)\s*=>\s*openContextMenu\(event\)/,
+        'chart context gestures should open the action menu'
     );
-    assert.match(contents, /await\s+exportChartImage\(/, 'quick export should continue to use the chart image export helper');
+    assert.match(contents, /await\s+exportChartImage\(/, 'downloads should continue to use the chart image export helper');
+    assert.match(
+        contents,
+        /actionError\s*=\s*error\?\.message\s*\|\|\s*'Chart download failed\.';/,
+        'download failures should be visible in the popup'
+    );
+    assert.match(contents, /await\s+copyChartImageToClipboard\(/, 'copy actions should use the clipboard export helper');
+});
+
+test('chart image export exposes a clipboard path through a PNG blob', async () => {
+    const exportPath = path.resolve(process.cwd(), 'src/lib/utils/chartImageExport.js');
+    const contents = await fs.readFile(exportPath, 'utf8');
+
+    assert.match(contents, /export\s+async\s+function\s+createChartImageBlob/, 'image export should expose blob creation');
+    assert.match(contents, /export\s+async\s+function\s+copyChartImageToClipboard/, 'image export should expose clipboard copy');
+    assert.match(contents, /new\s+ClipboardItem/, 'clipboard copy should write an image ClipboardItem');
+    assert.match(contents, /format:\s*'png'/, 'clipboard copy should render a PNG image');
 });

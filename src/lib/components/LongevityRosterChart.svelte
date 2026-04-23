@@ -38,7 +38,8 @@
 
     function renderChart(currentPlayer) {
         const width = chartRootEl?.clientWidth ?? 0;
-        const height = 290;
+        const isMobile = width < 500;
+        const height = isMobile ? 260 : 290;
 
         if (!width) {
             clearChart();
@@ -59,7 +60,12 @@
 
         if (!data.length) return;
 
-        const margin = { top: 14, right: 24, bottom: 68, left: 62 };
+        const margin = {
+            top: isMobile ? 18 : 24,
+            right: isMobile ? 12 : 24,
+            bottom: isMobile ? 58 : 68,
+            left: isMobile ? 46 : 62
+        };
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
         svg.attr('viewBox', `0 0 ${width} ${height}`);
@@ -83,15 +89,24 @@
 
         chartGroup
             .append('g')
-            .call(d3.axisLeft(y).ticks(6).tickSize(-innerWidth))
+            .call(d3.axisLeft(y).ticks(isMobile ? 4 : 6).tickSize(-innerWidth))
             .call((group) => group.select('.domain').remove())
             .call((group) => group.selectAll('.tick line').attr('stroke', 'var(--border-subtle)').attr('stroke-dasharray', '2,3'))
-            .call((group) => group.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '11px'));
+            .call((group) =>
+                group
+                    .selectAll('.tick text')
+                    .style('fill', 'var(--text-muted)')
+                    .attr('font-size', isMobile ? '10px' : '11px')
+            );
+
+        const xTickValues = isMobile
+            ? data.filter((_, index) => index % 2 === 0 || index === data.length - 1).map((point) => point.season_start)
+            : data.map((point) => point.season_start);
 
         const xAxis = chartGroup
             .append('g')
             .attr('transform', `translate(0, ${innerHeight})`)
-            .call(d3.axisBottom(x));
+            .call(d3.axisBottom(x).tickValues(xTickValues));
         xAxis.select('.domain').attr('stroke', 'var(--border)');
         xAxis.selectAll('.tick line').attr('stroke', 'var(--border)');
         xAxis
@@ -103,11 +118,25 @@
             .attr('dx', '-0.35em')
             .attr('dy', '0.55em');
 
+        const bandSize = Math.max(0.22, (yExtent[1] - yExtent[0]) * 0.12);
+        const bandGenerator = d3
+            .area()
+            .x((point) => x(point.season_start))
+            .y0((point) => y(point.projected_retirement_age - bandSize))
+            .y1((point) => y(point.projected_retirement_age + bandSize))
+            .curve(d3.curveMonotoneX);
+
         const lineGenerator = d3
             .line()
             .x((point) => x(point.season_start))
             .y((point) => y(point.projected_retirement_age))
             .curve(d3.curveMonotoneX);
+
+        chartGroup
+            .append('path')
+            .datum(data)
+            .attr('fill', 'var(--positive-bg)')
+            .attr('d', bandGenerator);
 
         chartGroup
             .append('path')
@@ -128,10 +157,25 @@
             .attr('r', 3.4)
             .attr('fill', 'var(--accent)');
 
+        if (!isMobile) {
+            chartGroup
+                .selectAll('.point-label')
+                .data(data)
+                .join('text')
+                .attr('class', 'point-label')
+                .attr('x', (point) => x(point.season_start))
+                .attr('y', (point) => y(point.projected_retirement_age) - 11)
+                .attr('text-anchor', 'middle')
+                .attr('fill', 'var(--text)')
+                .attr('font-size', '10px')
+                .attr('font-weight', '700')
+                .text((point) => point.projected_retirement_age.toFixed(1));
+        }
+
         chartGroup
             .append('text')
             .attr('x', innerWidth / 2)
-            .attr('y', innerHeight + 52)
+            .attr('y', innerHeight + (isMobile ? 44 : 52))
             .attr('text-anchor', 'middle')
             .attr('fill', 'var(--text)')
             .attr('font-size', '12px')
@@ -157,6 +201,8 @@
             {svgEl}
             captureRootEl={chartRootEl}
             filenameBase={exportFilenameBase}
+            buttonLabel="..."
+            buttonAriaLabel="Download retirement age chart"
         />
     </div>
     <div class="chart-shell">

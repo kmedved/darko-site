@@ -192,11 +192,10 @@ function downloadBlob(blob, filename) {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-export async function exportChartImage({
+export async function createChartImageBlob({
     svgEl,
     captureRootEl = null,
     format = 'png',
-    filenameBase = DEFAULT_BASENAME,
     scale = CHART_EXPORT_DEFAULT_SCALE
 } = {}) {
     if (!(svgEl instanceof SVGSVGElement)) {
@@ -239,13 +238,7 @@ export async function exportChartImage({
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-        const blob = await blobFromCanvas(canvas, normalizedFormat);
-        const filename = normalizeImageFilename({
-            filenameBase,
-            format: normalizedFormat
-        });
-
-        downloadBlob(blob, filename);
+        return await blobFromCanvas(canvas, normalizedFormat);
     } finally {
         restoreHiddenNodes();
 
@@ -253,4 +246,55 @@ export async function exportChartImage({
             URL.revokeObjectURL(svgUrl);
         }
     }
+}
+
+export async function exportChartImage({
+    svgEl,
+    captureRootEl = null,
+    format = 'png',
+    filenameBase = DEFAULT_BASENAME,
+    scale = CHART_EXPORT_DEFAULT_SCALE
+} = {}) {
+    const normalizedFormat = normalizeFormat(format);
+    const blob = await createChartImageBlob({
+        svgEl,
+        captureRootEl,
+        format: normalizedFormat,
+        scale
+    });
+    const filename = normalizeImageFilename({
+        filenameBase,
+        format: normalizedFormat
+    });
+
+    downloadBlob(blob, filename);
+}
+
+export async function copyChartImageToClipboard({
+    svgEl,
+    captureRootEl = null,
+    scale = CHART_EXPORT_DEFAULT_SCALE
+} = {}) {
+    if (
+        typeof navigator === 'undefined' ||
+        !navigator.clipboard ||
+        typeof navigator.clipboard.write !== 'function' ||
+        typeof ClipboardItem !== 'function'
+    ) {
+        throw new Error('Chart copy failed: image clipboard writes are not supported in this browser.');
+    }
+
+    const blobPromise = createChartImageBlob({
+        svgEl,
+        captureRootEl,
+        format: 'png',
+        scale
+    });
+
+    await navigator.clipboard.write([
+        new ClipboardItem({
+            // Keep clipboard.write in the direct click path while the PNG render resolves.
+            [MIME_BY_FORMAT.png]: blobPromise
+        })
+    ]);
 }

@@ -167,10 +167,12 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/csv-formatters.test.js` - test
 - `tests/d3-theme-colors.test.js` - test
 - `tests/leaderboard-export.test.js` - test
+- `tests/leaderboard-page-ui-guards.test.js` - test
 - `tests/legacy-leaderboard.test.js` - test
 - `tests/lineup-ratings.test.js` - test
 - `tests/lineups-csv.test.js` - test
 - `tests/lineups-page-loader.test.js` - test
+- `tests/lineups-page-ui-guards.test.js` - test
 - `tests/longevity-csv.test.js` - test
 - `tests/longevity-table.test.js` - test
 - `tests/mobile-table-scroll.test.js` - test
@@ -180,6 +182,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/player-search.test.js` - test
 - `tests/request-sequencer.test.js` - test
 - `tests/season-utils.test.js` - test
+- `tests/standings-page-ui-guards.test.js` - test
 - `tests/sticky-header-overflow.test.js` - test
 - `tests/supabase-config.test.js` - test
 - `tests/supabase-query-shape.test.js` - test
@@ -187,4 +190,5 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/team-route-utils.test.js` - test
 - `tests/team-route-wrappers.test.js` - test
 - `tests/trajectories-mobile-layout.test.js` - test
+- `tests/trajectories-url-sync.test.js` - test
 - `tests/wide-sticky-table-layout.test.js` - test
