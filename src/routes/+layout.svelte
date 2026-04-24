@@ -155,6 +155,18 @@
             <img src="/logo-light.png" alt="" class="logo-mark logo-mark--light" aria-hidden="true" />
             <img src="/darko-logo-white.png" alt="" class="logo-mark logo-mark--white" aria-hidden="true" />
         </a>
+        <div class="links desktop-links">
+            <a href="/" class:active={$page.url.pathname === '/'}>Active Leaderboard</a>
+            <a href="/standings" class:active={$page.url.pathname.startsWith('/standings')}>Standings</a>
+            <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Trajectories</a>
+            <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
+            <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
+            <a href="/scatterplot" class:active={$page.url.pathname === '/scatterplot'}>Scatterplot</a>
+            <a href="/compare" class:active={$page.url.pathname === '/compare'}>Compare</a>
+            <a href="/projections" class:active={$page.url.pathname === '/projections'}>Projections</a>
+            <a href="/rate" class:active={$page.url.pathname === '/rate'}>Rate a Player</a>
+            <a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
+        </div>
 		<div class="desktop-controls">
 			<div class="theme-slider" role="group" aria-label="Theme selector">
 				<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[0]}</span>
@@ -176,21 +188,7 @@
 					<option value={f}>{FONT_LABELS[i]}</option>
 				{/each}
 			</select>
-			<div class="links">
-				<a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
-			</div>
 		</div>
-        <div class="links desktop-links">
-            <a href="/" class:active={$page.url.pathname === '/'}>Active Leaderboard</a>
-            <a href="/standings" class:active={$page.url.pathname.startsWith('/standings')}>Standings</a>
-            <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Trajectories</a>
-            <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
-            <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
-            <a href="/scatterplot" class:active={$page.url.pathname === '/scatterplot'}>Scatterplot</a>
-            <a href="/compare" class:active={$page.url.pathname === '/compare'}>Compare</a>
-            <a href="/projections" class:active={$page.url.pathname === '/projections'}>Projections</a>
-            <a href="/rate" class:active={$page.url.pathname === '/rate'}>Rate a Player</a>
-        </div>
     </div>
 </nav>
 
@@ -257,7 +255,7 @@
 		align-items: center;
 		gap: 6px;
 		height: 42px;
-		margin-right: 20px;
+		margin-right: 0;
 	}
 
 	.theme-slider__icon {
@@ -322,7 +320,8 @@
 		font-family: var(--font-sans);
 		cursor: pointer;
 		outline: none;
-		margin-right: 12px;
+		margin-right: 0;
+		width: 96px;
 	}
 
 	.font-select:focus-visible {
@@ -438,9 +437,26 @@
 	.desktop-controls {
 		display: flex;
 		align-items: center;
+		flex: 0 0 auto;
+		gap: 10px;
+		margin-left: auto;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 1320px) {
+		.desktop-controls {
+			gap: 8px;
+		}
+
+		.theme-slider__input {
+			width: 58px;
+		}
+
+		.font-select {
+			width: 88px;
+		}
+	}
+
+	@media (max-width: 1180px) {
 		.mobile-menu-btn {
 			display: flex;
 		}
@@ -457,6 +473,24 @@
 			display: none;
 		}
 
+		:global(:root) {
+			--nav-sticky-offset: 56px;
+		}
+
+		:global(nav .container) {
+			gap: 10px;
+			height: 56px;
+			padding: 0 16px;
+		}
+
+		:global(.logo-mark) {
+			height: 48px;
+		}
+
+		:global(nav .logo) {
+			margin-right: auto;
+		}
+
 		.theme-slider {
 			margin-right: 10px;
 		}
@@ -467,6 +501,15 @@
 
 		.font-select {
 			margin-right: 6px;
+		}
+
+		.mobile-drawer-controls .theme-slider {
+			margin-right: 0;
+		}
+
+		.mobile-drawer-controls .font-select {
+			margin-right: 0;
+			width: 100%;
 		}
 	}
 	/* ── Footer ── */

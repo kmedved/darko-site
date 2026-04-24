@@ -57,3 +57,10 @@ test('chart components observe and measure their host element instead of the SVG
         );
     }
 });
+
+test('career length chart reserves room for its vertical axis label', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), 'src/lib/components/LongevityCareerLengthChart.svelte'), 'utf8');
+
+    assert.match(contents, /left:\s*isMobile\s*\?\s*58\s*:\s*78/, 'career length chart should keep enough left margin for the y-axis label');
+    assert.match(contents, /\.attr\('y',\s*isMobile\s*\?\s*-44\s*:\s*-56\)/, 'career length chart should offset the y-axis label inside the SVG viewBox');
+});

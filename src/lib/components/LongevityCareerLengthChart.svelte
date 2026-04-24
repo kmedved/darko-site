@@ -69,7 +69,7 @@
             top: isMobile ? 24 : 28,
             right: isMobile ? 12 : 20,
             bottom: isMobile ? 56 : 70,
-            left: isMobile ? 46 : 62
+            left: isMobile ? 58 : 78
         };
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
@@ -180,7 +180,7 @@
             .append('text')
             .attr('transform', 'rotate(-90)')
             .attr('x', -innerHeight / 2)
-            .attr('y', -44)
+            .attr('y', isMobile ? -44 : -56)
             .attr('text-anchor', 'middle')
             .attr('fill', 'var(--text-secondary)')
             .attr('font-size', '12px')

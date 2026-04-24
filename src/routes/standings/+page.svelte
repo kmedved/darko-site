@@ -645,19 +645,38 @@
 
     .summary-lock {
         width: 42px;
-        height: 48px;
+        height: 42px;
         display: block;
-        border: 2px solid var(--text-secondary);
-        clip-path: polygon(50% 0, 92% 22%, 84% 82%, 50% 100%, 16% 82%, 8% 22%);
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
+        color: var(--accent);
         position: relative;
     }
 
+    .summary-lock::before,
     .summary-lock::after {
         content: '';
         position: absolute;
-        inset: 18px 14px 12px;
+        display: block;
+    }
+
+    .summary-lock::before {
+        left: 12px;
+        top: 8px;
+        width: 18px;
+        height: 15px;
+        border: 2px solid currentColor;
+        border-bottom: 0;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .summary-lock::after {
+        left: 10px;
+        top: 20px;
+        width: 22px;
+        height: 16px;
         border-radius: 2px;
-        background: var(--text-secondary);
+        background: currentColor;
     }
 
     .summary-copy {

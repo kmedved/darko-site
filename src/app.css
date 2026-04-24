@@ -139,7 +139,7 @@ nav {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     box-shadow: 0 1px 0 var(--border), 0 4px 16px rgba(0,0,0,0.05);
-    overflow-x: hidden;
+    overflow-x: clip;
     overflow-y: visible;
 }
 
@@ -158,7 +158,7 @@ nav .container {
     display: flex;
     align-items: center;
     height: var(--nav-sticky-offset);
-    gap: 18px;
+    gap: 12px;
 }
 
 nav .logo {
@@ -166,7 +166,7 @@ nav .logo {
     align-items: center;
     flex: 0 0 auto;
     height: 100%;
-    margin-right: 32px;
+    margin-right: 6px;
 }
 
 .logo-mark {
@@ -195,11 +195,17 @@ nav .links {
     align-items: center;
 }
 
+nav .desktop-links {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+}
+
 nav .links a {
     color: var(--text-muted);
     font-size: 13px;
     font-weight: 500;
-    padding: 0 16px;
+    padding: 0 10px;
     display: flex;
     align-items: center;
     height: 100%;
@@ -211,6 +217,7 @@ nav .links a {
     transition: color 0.15s, border-color 0.15s;
     font-family: var(--font-sans);
     cursor: pointer;
+    white-space: nowrap;
 }
 
 nav .links a:hover {
@@ -220,6 +227,21 @@ nav .links a:hover {
 nav .links a.active {
     color: var(--text);
     border-bottom-color: var(--accent);
+}
+
+@media (max-width: 1320px) {
+    nav .container {
+        gap: 8px;
+    }
+
+    nav .logo {
+        margin-right: 0;
+    }
+
+    nav .links a {
+        font-size: 12px;
+        padding: 0 7px;
+    }
 }
 
 @media (max-width: 768px) {
