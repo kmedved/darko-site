@@ -3,7 +3,7 @@
     import LongevityCareerLengthChart from '$lib/components/LongevityCareerLengthChart.svelte';
     import { apiLongevity, apiPlayerLongevity } from '$lib/api.js';
     import { exportCsvRows, longevityCsvColumns } from '$lib/utils/csvPresets.js';
-    import { getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import {
         filterLongevityRows,
@@ -185,20 +185,12 @@
             });
     });
 
-    function sortGlyph(column) {
-        if (sortColumn !== column) return '↕';
-        return sortDirection === 'asc' ? '↑' : '↓';
-    }
-
     function toggleSort(column) {
-        if (sortColumn === column) {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            page = 1;
-            return;
-        }
-
-        sortColumn = column;
-        sortDirection = 'asc';
+        ({ sortColumn, sortDirection } = getNextSortState({
+            sortColumn,
+            sortDirection,
+            column
+        }));
         page = 1;
     }
 
@@ -528,7 +520,7 @@
                                     >
                                         {column.label}
                                         {#if column.sortable !== false}
-                                            <span class="sort-indicator">{sortGlyph(column.key)}</span>
+                                            <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
                                         {/if}
                                     </th>
                                 {/each}

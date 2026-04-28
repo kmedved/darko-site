@@ -13,7 +13,7 @@
         leaderboardSortConfig
     } from '$lib/utils/leaderboardColumns.js';
     import { filterPlayers } from '$lib/utils/legacyLeaderboard.js';
-    import { getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
@@ -181,18 +181,13 @@
         return `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')} Season`;
     }
 
-    function sortGlyph(column) {
-        if (sortColumn !== column) return '↕';
-        return sortDirection === 'asc' ? '↑' : '↓';
-    }
-
     function toggleSort(column) {
-        if (sortColumn === column) {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            return;
-        }
-        sortColumn = column;
-        sortDirection = textSortColumns.has(column) ? 'asc' : 'desc';
+        ({ sortColumn, sortDirection } = getNextSortState({
+            sortColumn,
+            sortDirection,
+            column,
+            defaultDirection: textSortColumns.has(column) ? 'asc' : 'desc'
+        }));
     }
 
     function metricClass(value) {
@@ -678,7 +673,7 @@
                     {:else}
                         <span>{column.label}</span>
                     {/if}
-                    <span class="sort-indicator">{sortGlyph(column.key)}</span>
+                    <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
                 </span>
             </th>
         {/each}

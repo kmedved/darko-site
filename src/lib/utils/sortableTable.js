@@ -44,6 +44,22 @@ function normalizeValue(value, type = 'text') {
     return String(value).toLowerCase().trim();
 }
 
+export function getSortGlyph(sortColumn, sortDirection, column) {
+    if (sortColumn !== column) return '↕';
+    return sortDirection === 'asc' ? '↑' : '↓';
+}
+
+export function getNextSortState({ sortColumn, sortDirection, column, defaultDirection = 'asc' }) {
+    if (sortColumn === column) {
+        return {
+            sortColumn,
+            sortDirection: sortDirection === 'asc' ? 'desc' : 'asc'
+        };
+    }
+
+    return { sortColumn: column, sortDirection: defaultDirection };
+}
+
 export function getSortedRows(rows, options = {}) {
     const {
         sortColumn = null,

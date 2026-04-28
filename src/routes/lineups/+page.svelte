@@ -1,7 +1,7 @@
 <script>
     import { goto } from '$app/navigation';
     import { exportCsvRows, formatFixed, formatSignedMetric, getLineupsCsvColumns } from '$lib/utils/csvPresets.js';
-    import { getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
 
     /** @type {import('./$types').PageProps} */
@@ -238,23 +238,13 @@
     function toggleSort(column) {
         if (!sortConfigs[column]) return;
 
-        if (sortColumn === column) {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            page = 1;
-            return;
-        }
-
-        sortColumn = column;
-        sortDirection = sortConfigs[column]?.type === 'text' ? 'asc' : 'desc';
+        ({ sortColumn, sortDirection } = getNextSortState({
+            sortColumn,
+            sortDirection,
+            column,
+            defaultDirection: sortConfigs[column]?.type === 'text' ? 'asc' : 'desc'
+        }));
         page = 1;
-    }
-
-    function sortGlyph(column) {
-        if (sortColumn !== column) {
-            return '↕';
-        }
-
-        return sortDirection === 'asc' ? '↑' : '↓';
     }
 
     function metricToneClass(value) {
@@ -621,7 +611,7 @@
                                                 {:else}
                                                     <button type="button" onclick={() => toggleSort(column.key)}>
                                                         <span>{column.label}</span>
-                                                        <span class="sort-indicator">{sortGlyph(column.key)}</span>
+                                                        <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
                                                     </button>
                                                 {/if}
                                             </th>

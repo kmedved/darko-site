@@ -5,7 +5,7 @@
         standingsExpandedCsvColumns,
         formatFixed
     } from '$lib/utils/csvPresets.js';
-    import { getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr, teamId } from '$lib/utils/teamAbbreviations.js';
 
     let { data } = $props();
@@ -278,18 +278,13 @@
         return classes.filter(Boolean).join(' ');
     }
 
-    function sortGlyph(column) {
-        if (sortColumn !== column) return '↕';
-        return sortDirection === 'asc' ? '↑' : '↓';
-    }
-
     function toggleSort(column) {
-        if (sortColumn === column) {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            return;
-        }
-        sortColumn = column;
-        sortDirection = column === 'Rk' || column === 'team_name' || column === 'Current' ? 'asc' : 'desc';
+        ({ sortColumn, sortDirection } = getNextSortState({
+            sortColumn,
+            sortDirection,
+            column,
+            defaultDirection: column === 'Rk' || column === 'team_name' || column === 'Current' ? 'asc' : 'desc'
+        }));
     }
 
     function exportStandingsCsv() {
@@ -409,7 +404,7 @@
                                                 aria-sort={sortColumn === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                                             >
                                                 <span>{column.label}</span>
-                                                <span class="sort-indicator">{sortGlyph(column.key)}</span>
+                                                <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
                                             </th>
                                         {/each}
                                     </tr>

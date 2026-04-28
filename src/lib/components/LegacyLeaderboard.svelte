@@ -1,5 +1,5 @@
 <script>
-    import { getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import {
         formatLeaderboardCell,
         getLeaderboardCellValue,
@@ -43,18 +43,13 @@
         })
     );
 
-    function sortGlyph(colKey) {
-        if (sortColumn !== colKey) return '↕';
-        return sortDirection === 'asc' ? '↑' : '↓';
-    }
-
     function toggleSort(colKey) {
-        if (sortColumn === colKey) {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            return;
-        }
-        sortColumn = colKey;
-        sortDirection = colKey === '_rank' || colKey === 'player_name' || colKey === 'team_name' ? 'asc' : 'desc';
+        ({ sortColumn, sortDirection } = getNextSortState({
+            sortColumn,
+            sortDirection,
+            column: colKey,
+            defaultDirection: colKey === '_rank' || colKey === 'player_name' || colKey === 'team_name' ? 'asc' : 'desc'
+        }));
     }
 
     function setFilter(colKey, value) {
@@ -100,7 +95,7 @@
                     {:else}
                         <span>{col.label}</span>
                     {/if}
-                    <span class="sort-indicator">{sortGlyph(col.key)}</span>
+                    <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, col.key)}</span>
                 </span>
             </th>
         {/each}

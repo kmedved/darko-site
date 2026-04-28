@@ -7,7 +7,7 @@
         formatSignedMetric,
         teamPlayersCsvColumns
     } from '$lib/utils/csvPresets.js';
-    import { getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
     import {
@@ -83,18 +83,12 @@
         'on_off_dpm'
     ]);
 
-    function sortGlyph(column) {
-        if (sortColumn !== column) return '↕';
-        return sortDirection === 'asc' ? '↑' : '↓';
-    }
-
     function toggleSort(column) {
-        if (sortColumn === column) {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            return;
-        }
-        sortColumn = column;
-        sortDirection = 'asc';
+        ({ sortColumn, sortDirection } = getNextSortState({
+            sortColumn,
+            sortDirection,
+            column
+        }));
     }
 
     function currentWins(currentStr) {
@@ -162,7 +156,7 @@
                     {:else}
                         <span>{column.label}</span>
                     {/if}
-                    <span class="sort-indicator">{sortGlyph(column.key)}</span>
+                    <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
                 </span>
             </th>
         {/each}
