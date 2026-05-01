@@ -1726,6 +1726,12 @@
             align-items: flex-start;
         }
 
+        .lineups-title-block h1,
+        .lineups-title-block p {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+        }
+
         .lineups-icon {
             width: 54px;
             height: 54px;
@@ -1745,6 +1751,14 @@
 
         .summary-card {
             min-height: 110px;
+            grid-template-columns: 54px minmax(0, 1fr);
+            padding: 14px;
+        }
+
+        .summary-copy small,
+        .summary-copy em {
+            white-space: normal;
+            overflow-wrap: anywhere;
         }
 
         .distribution-layout {

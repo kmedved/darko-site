@@ -6,6 +6,25 @@
 	const THEME_KEY = 'darko-theme';
 	const THEMES = ['black', 'dark', 'light', 'white'];
 	const THEME_ICONS = ['⚫', '🌙', '☀️', '⚪'];
+	const PRIMARY_NAV_ITEMS = [
+		{ href: '/', label: 'Active Leaderboard', match: (path) => path === '/' },
+		{ href: '/standings', label: 'Standings', match: (path) => path.startsWith('/standings') },
+		{ href: '/trajectories', label: 'Trajectories', match: (path) => path === '/trajectories' },
+		{ href: '/longevity', label: 'Longevity', match: (path) => path.startsWith('/longevity') },
+		{ href: '/lineups', label: 'Lineups', match: (path) => path === '/lineups' },
+		{ href: '/scatterplot', label: 'Scatterplot', match: (path) => path === '/scatterplot' }
+	];
+	const MORE_NAV_ITEMS = [
+		{ href: '/compare', label: 'Compare', match: (path) => path === '/compare' },
+		{ href: '/projections', label: 'Projections', match: (path) => path === '/projections' },
+		{ href: '/rate', label: 'Rate a Player', match: (path) => path === '/rate' },
+		{ href: '/about', label: 'About', match: (path) => path === '/about' }
+	];
+	const ALL_NAV_ITEMS = [...PRIMARY_NAV_ITEMS, ...MORE_NAV_ITEMS];
+	const DETAIL_PAGE_LABELS = [
+		{ label: 'Player Profile', match: (path) => path.startsWith('/player/') },
+		{ label: 'Team Profile', match: (path) => path.startsWith('/team/') }
+	];
 	let { children } = $props();
 
 	let theme = $state('white');
@@ -139,6 +158,19 @@
 	function handleFontChange(e) {
 		setFont(e.target.value);
 	}
+
+	function isNavItemActive(item, pathname) {
+		return item.match?.(pathname) ?? pathname === item.href;
+	}
+
+	function getCurrentPageLabel(pathname) {
+		return ALL_NAV_ITEMS.find((item) => isNavItemActive(item, pathname))?.label
+			?? DETAIL_PAGE_LABELS.find((item) => item.match(pathname))?.label
+			?? 'DARKO DPM';
+	}
+
+	const currentPageLabel = $derived(getCurrentPageLabel($page.url.pathname));
+	const moreMenuActive = $derived(MORE_NAV_ITEMS.some((item) => isNavItemActive(item, $page.url.pathname)));
 </script>
 
 <nav>
@@ -155,39 +187,52 @@
             <img src="/logo-light.png" alt="" class="logo-mark logo-mark--light" aria-hidden="true" />
             <img src="/darko-logo-white.png" alt="" class="logo-mark logo-mark--white" aria-hidden="true" />
         </a>
+		<span class="mobile-current-page">{currentPageLabel}</span>
         <div class="links desktop-links">
-            <a href="/" class:active={$page.url.pathname === '/'}>Active Leaderboard</a>
-            <a href="/standings" class:active={$page.url.pathname.startsWith('/standings')}>Standings</a>
-            <a href="/trajectories" class:active={$page.url.pathname === '/trajectories'}>Trajectories</a>
-            <a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')}>Longevity</a>
-            <a href="/lineups" class:active={$page.url.pathname === '/lineups'}>Lineups</a>
-            <a href="/scatterplot" class:active={$page.url.pathname === '/scatterplot'}>Scatterplot</a>
-            <a href="/compare" class:active={$page.url.pathname === '/compare'}>Compare</a>
-            <a href="/projections" class:active={$page.url.pathname === '/projections'}>Projections</a>
-            <a href="/rate" class:active={$page.url.pathname === '/rate'}>Rate a Player</a>
-            <a href="/about" class:active={$page.url.pathname === '/about'}>About</a>
+			{#each PRIMARY_NAV_ITEMS as item (item.href)}
+				<a href={item.href} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
+			{/each}
+			<details class="nav-more" class:active={moreMenuActive}>
+				<summary>More</summary>
+				<div class="nav-more-menu">
+					{#each MORE_NAV_ITEMS as item (item.href)}
+						<a href={item.href} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
+					{/each}
+				</div>
+			</details>
         </div>
 		<div class="desktop-controls">
-			<div class="theme-slider" role="group" aria-label="Theme selector">
-				<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[0]}</span>
-				<input
-					type="range"
-					min="0"
-					max="3"
-					step="1"
-					value={themeIndex}
-					oninput={handleSlider}
-					class="theme-slider__input"
-					aria-label="Theme"
-					aria-valuetext={theme}
-				/>
-				<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
-			</div>
-			<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font">
-				{#each FONTS as f, i (f)}
-					<option value={f}>{FONT_LABELS[i]}</option>
-				{/each}
-			</select>
+			<details class="display-menu">
+				<summary>Display</summary>
+				<div class="display-menu-panel">
+					<label class="display-control">
+						<span>Theme</span>
+						<div class="theme-slider" role="group" aria-label="Theme selector">
+							<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[0]}</span>
+							<input
+								type="range"
+								min="0"
+								max="3"
+								step="1"
+								value={themeIndex}
+								oninput={handleSlider}
+								class="theme-slider__input"
+								aria-label="Theme"
+								aria-valuetext={theme}
+							/>
+							<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
+						</div>
+					</label>
+					<label class="display-control">
+						<span>Font</span>
+						<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font">
+							{#each FONTS as f, i (f)}
+								<option value={f}>{FONT_LABELS[i]}</option>
+							{/each}
+						</select>
+					</label>
+				</div>
+			</details>
 		</div>
     </div>
 </nav>
@@ -199,16 +244,9 @@
 
 <div class="mobile-drawer" class:open={mobileMenuOpen}>
 	<div class="mobile-drawer-links">
-		<a href="/" class:active={$page.url.pathname === '/'} onclick={closeMobileMenu}>Active Leaderboard</a>
-		<a href="/standings" class:active={$page.url.pathname.startsWith('/standings')} onclick={closeMobileMenu}>Standings</a>
-		<a href="/trajectories" class:active={$page.url.pathname === '/trajectories'} onclick={closeMobileMenu}>Trajectories</a>
-		<a href="/longevity" class:active={$page.url.pathname.startsWith('/longevity')} onclick={closeMobileMenu}>Longevity</a>
-		<a href="/lineups" class:active={$page.url.pathname === '/lineups'} onclick={closeMobileMenu}>Lineups</a>
-		<a href="/scatterplot" class:active={$page.url.pathname === '/scatterplot'} onclick={closeMobileMenu}>Scatterplot</a>
-		<a href="/compare" class:active={$page.url.pathname === '/compare'} onclick={closeMobileMenu}>Compare</a>
-		<a href="/projections" class:active={$page.url.pathname === '/projections'} onclick={closeMobileMenu}>Projections</a>
-		<a href="/rate" class:active={$page.url.pathname === '/rate'} onclick={closeMobileMenu}>Rate a Player</a>
-		<a href="/about" class:active={$page.url.pathname === '/about'} onclick={closeMobileMenu}>About</a>
+		{#each ALL_NAV_ITEMS as item (item.href)}
+			<a href={item.href} class:active={isNavItemActive(item, $page.url.pathname)} onclick={closeMobileMenu}>{item.label}</a>
+		{/each}
 	</div>
 	<div class="mobile-drawer-controls">
 		<div class="theme-slider" role="group" aria-label="Theme selector">
@@ -328,6 +366,127 @@
 		border-color: var(--accent);
 	}
 
+	.mobile-current-page {
+		display: none;
+		min-width: 0;
+		color: var(--text);
+		font-size: 13px;
+		font-weight: 750;
+		line-height: 1.1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.nav-more,
+	.display-menu {
+		position: relative;
+		display: flex;
+		align-items: center;
+		height: 100%;
+	}
+
+	.nav-more summary,
+	.display-menu summary {
+		display: flex;
+		align-items: center;
+		height: 100%;
+		border-bottom: 2px solid transparent;
+		color: var(--text-muted);
+		cursor: pointer;
+		font-size: 13px;
+		font-weight: 500;
+		list-style: none;
+		padding: 0 10px;
+		transition: color 0.15s, border-color 0.15s;
+		white-space: nowrap;
+	}
+
+	.nav-more summary::-webkit-details-marker,
+	.display-menu summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.nav-more summary::after,
+	.display-menu summary::after {
+		content: '';
+		width: 0.45em;
+		height: 0.45em;
+		margin-left: 7px;
+		border-right: 1px solid currentColor;
+		border-bottom: 1px solid currentColor;
+		transform: translateY(-2px) rotate(45deg);
+	}
+
+	.nav-more summary:hover,
+	.display-menu summary:hover {
+		color: var(--text-secondary);
+	}
+
+	.nav-more.active summary,
+	.nav-more[open] summary,
+	.display-menu[open] summary {
+		color: var(--text);
+		border-bottom-color: var(--accent);
+	}
+
+	.nav-more-menu,
+	.display-menu-panel {
+		position: absolute;
+		top: calc(100% - 1px);
+		right: 0;
+		z-index: 220;
+		min-width: 178px;
+		padding: 8px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-surface);
+		box-shadow: 0 18px 44px color-mix(in srgb, var(--text) 12%, transparent);
+	}
+
+	.nav-more-menu {
+		display: grid;
+		gap: 2px;
+	}
+
+	.nav-more-menu a {
+		display: block;
+		height: auto;
+		border: 0;
+		border-radius: var(--radius-sm);
+		color: var(--text-secondary);
+		font-size: 13px;
+		padding: 9px 10px;
+	}
+
+	.nav-more-menu a:hover,
+	.nav-more-menu a.active {
+		background: var(--bg-elevated);
+		color: var(--text);
+	}
+
+	.display-menu-panel {
+		display: grid;
+		gap: 12px;
+		min-width: 220px;
+	}
+
+	.display-control {
+		display: grid;
+		gap: 6px;
+		color: var(--text-secondary);
+		font-size: 11px;
+		font-weight: 700;
+	}
+
+	.display-control .theme-slider {
+		height: auto;
+	}
+
+	.display-control .font-select {
+		width: 100%;
+	}
+
 	/* ── Hamburger menu button (mobile only) ── */
 	.mobile-menu-btn {
 		display: none;
@@ -374,7 +533,7 @@
 		position: fixed;
 		top: 0;
 		left: 0;
-		width: 280px;
+		width: min(320px, calc(100vw - 40px));
 		height: 100dvh;
 		background: var(--bg-surface);
 		border-right: 1px solid var(--border);
@@ -488,7 +647,12 @@
 		}
 
 		:global(nav .logo) {
-			margin-right: auto;
+			margin-right: 0;
+		}
+
+		.mobile-current-page {
+			display: block;
+			flex: 1 1 auto;
 		}
 
 		.theme-slider {
@@ -545,12 +709,19 @@
 
 	/* ── Shiny app banner ── */
 	.shiny-banner {
+		display: flex;
+		justify-content: center;
 		text-align: center;
 		padding: 8px 24px;
 		font-size: 12px;
 		color: var(--text-muted);
 		background: var(--bg-elevated);
 		border-bottom: 1px solid var(--border-subtle);
+	}
+
+	.shiny-banner span {
+		max-width: 100%;
+		overflow-wrap: anywhere;
 	}
 
 	.shiny-banner a {
@@ -561,6 +732,13 @@
 
 	.shiny-banner a:hover {
 		text-decoration: underline;
+	}
+
+	@media (max-width: 520px) {
+		.shiny-banner {
+			padding: 8px 16px;
+			text-align: left;
+		}
 	}
 
 </style>

@@ -6,6 +6,24 @@
 
 	let { data } = $props();
 
+	const STARTER_COMPARISONS = [
+		{
+			label: 'Jokic vs Wembanyama',
+			detail: 'Current top bigs',
+			href: '/compare?ids=203999,1641705'
+		},
+		{
+			label: 'Shai vs Luka',
+			detail: 'Primary creators',
+			href: '/compare?ids=1628983,1629029'
+		},
+		{
+			label: 'LeBron vs Durant',
+			detail: 'Long career arcs',
+			href: '/compare?ids=2544,201142'
+		}
+	];
+
 	let selectedPlayers = $state([]);
 	let loading = $state(false);
 	let error = $state(null);
@@ -104,6 +122,7 @@
 					type="button"
 					onclick={exportCompareCsv}
 					disabled={selectedPlayers.length === 0}
+					title={selectedPlayers.length === 0 ? 'Add a player to enable CSV export' : 'Download selected players as CSV'}
 				>
 					Download CSV
 				</button>
@@ -111,10 +130,10 @@
 		</div>
 	</div>
 
-	<div style="max-width: 420px; margin-bottom: 28px;">
+	<div class="compare-search-panel">
 		<PlayerSearch onSelect={addPlayer} exclude={excludeIds} />
 		{#if selectedPlayers.length > 0}
-			<div style="margin-top: 6px; font-size: 12px; color: var(--text-muted);">
+			<div class="compare-count">
 				{selectedPlayers.length}/4 players
 			</div>
 		{/if}
@@ -139,8 +158,94 @@
 			{/each}
 		</div>
 	{:else if !loading}
-		<div class="empty-state">
-			Search for players above to start comparing.
+		<div class="compare-empty-state">
+			<div class="empty-state">
+				<strong>Start with a player search or a ready-made comparison.</strong>
+				<span>Pick up to four players to see DPM, component ratings, and career history side by side.</span>
+			</div>
+			<div class="starter-comparison-grid" aria-label="Starter comparisons">
+				{#each STARTER_COMPARISONS as starter (starter.href)}
+					<a class="starter-comparison" href={starter.href}>
+						<strong>{starter.label}</strong>
+						<span>{starter.detail}</span>
+					</a>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </div>
+
+<style>
+	.compare-search-panel {
+		display: grid;
+		gap: 6px;
+		max-width: 420px;
+		margin-bottom: 28px;
+	}
+
+	.compare-count {
+		color: var(--text-muted);
+		font-size: 12px;
+	}
+
+	.compare-empty-state {
+		display: grid;
+		gap: 14px;
+		max-width: 720px;
+		margin: 0 auto;
+	}
+
+	.compare-empty-state .empty-state {
+		display: grid;
+		gap: 8px;
+		margin: 0;
+	}
+
+	.compare-empty-state .empty-state strong {
+		color: var(--text);
+		font-size: 15px;
+	}
+
+	.compare-empty-state .empty-state span {
+		color: var(--text-secondary);
+	}
+
+	.starter-comparison-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 10px;
+	}
+
+	.starter-comparison {
+		display: grid;
+		gap: 4px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-surface);
+		color: var(--text);
+		padding: 12px 14px;
+		transition: border-color 0.15s, background-color 0.15s;
+	}
+
+	.starter-comparison:hover {
+		border-color: var(--accent);
+		background: var(--bg-elevated);
+		color: var(--text);
+	}
+
+	.starter-comparison strong {
+		font-size: 13px;
+		font-weight: 850;
+	}
+
+	.starter-comparison span {
+		color: var(--text-secondary);
+		font-size: 12px;
+	}
+
+	@media (max-width: 720px) {
+		.starter-comparison-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

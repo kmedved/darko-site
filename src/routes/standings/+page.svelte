@@ -562,6 +562,7 @@
     }
 
     .standings-title-block > div:last-child {
+        flex: 1;
         min-width: 0;
     }
 
@@ -1265,6 +1266,12 @@
             align-items: flex-start;
         }
 
+        .standings-title-block h1,
+        .standings-title-block p {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+        }
+
         .standings-icon {
             width: 54px;
             height: 54px;
@@ -1280,6 +1287,16 @@
         .summary-card-grid,
         .standings-rail {
             grid-template-columns: 1fr;
+        }
+
+        .summary-card {
+            grid-template-columns: 54px minmax(0, 1fr);
+            padding: 14px;
+        }
+
+        .summary-copy strong,
+        .summary-copy small {
+            overflow-wrap: anywhere;
         }
 
         .standings-controls {

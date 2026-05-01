@@ -1557,15 +1557,39 @@
         .leaderboard-title-block p {
             font-size: 14px;
             line-height: 1.35;
-            max-width: 220px;
+            max-width: 100%;
         }
 
         h1 {
             font-size: 28px;
+            overflow-wrap: anywhere;
         }
 
         .leader-card-grid {
             grid-template-columns: 1fr;
+        }
+
+        .leader-card {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 74px;
+            padding: 16px 0 0 16px;
+        }
+
+        .leader-card-copy p,
+        .leader-player span,
+        .leader-player small {
+            overflow-wrap: anywhere;
+        }
+
+        .leader-photo {
+            width: 74px;
+            min-width: 0;
+        }
+
+        .leader-photo img {
+            width: 88px;
+            max-width: 100%;
+            transform: translateY(6px);
         }
 
         .leaderboard-controls {

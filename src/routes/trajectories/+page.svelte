@@ -26,6 +26,12 @@
 	let rangeFilterMax = $state(null);
 	let prevTalentType = $state('dpm');
 	let prevTimeScale = $state('games');
+	const STARTER_PLAYERS = [
+		{ nbaId: 203999, label: 'Nikola Jokic', detail: 'Modern peak big' },
+		{ nbaId: 1641705, label: 'Victor Wembanyama', detail: 'Early career rise' },
+		{ nbaId: 2544, label: 'LeBron James', detail: 'Full career arc' },
+		{ nbaId: 201939, label: 'Stephen Curry', detail: 'Shooting prime' }
+	];
 
 	$effect(() => {
 		if (talentType !== prevTalentType) {
@@ -731,6 +737,19 @@
 						onSelect={addPlayer}
 						exclude={excludeIds}
 					/>
+					<div class="trajectory-starter-grid" aria-label="Starter players">
+						{#each STARTER_PLAYERS as starter (starter.nbaId)}
+							<button
+								type="button"
+								class="trajectory-starter"
+								onclick={() => loadPlayerById(starter.nbaId)}
+								disabled={loading || selectedPlayers.some((p) => p.nba_id === starter.nbaId)}
+							>
+								<strong>{starter.label}</strong>
+								<span>{starter.detail}</span>
+							</button>
+						{/each}
+					</div>
 				</div>
 			</aside>
 
@@ -758,8 +777,20 @@
 							yMax={yAxisMax}
 						/>
 					{:else if !loading}
-						<div class="trajectory-message empty-state">
-							Search for players to view career trajectories.
+						<div class="trajectory-message empty-state trajectory-empty-state">
+							<strong>Start with a player search or one of the examples.</strong>
+							<span>Career charts appear here once at least one player is selected.</span>
+							<div class="trajectory-empty-actions" aria-label="Example trajectory players">
+								{#each STARTER_PLAYERS.slice(0, 3) as starter (starter.nbaId)}
+									<button
+										type="button"
+										onclick={() => loadPlayerById(starter.nbaId)}
+										disabled={loading}
+									>
+										{starter.label}
+									</button>
+								{/each}
+							</div>
 						</div>
 					{/if}
 				</section>
@@ -1087,6 +1118,87 @@
 		text-align: center;
 	}
 
+	.trajectory-empty-state {
+		display: grid;
+		gap: 10px;
+		max-width: 620px;
+		margin: 0 auto;
+	}
+
+	.trajectory-empty-state strong {
+		color: var(--text);
+		font-size: 15px;
+	}
+
+	.trajectory-empty-state span {
+		color: var(--text-secondary);
+	}
+
+	.trajectory-starter-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px;
+	}
+
+	.trajectory-starter,
+	.trajectory-empty-actions button {
+		appearance: none;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-surface);
+		color: var(--text);
+		cursor: pointer;
+		font-family: var(--font-sans);
+		text-align: left;
+		transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+	}
+
+	.trajectory-starter {
+		display: grid;
+		gap: 2px;
+		padding: 9px 10px;
+	}
+
+	.trajectory-starter:hover:not(:disabled),
+	.trajectory-empty-actions button:hover:not(:disabled) {
+		border-color: var(--accent);
+		background: var(--bg-elevated);
+	}
+
+	.trajectory-starter:disabled,
+	.trajectory-empty-actions button:disabled {
+		cursor: not-allowed;
+		opacity: 0.55;
+	}
+
+	.trajectory-starter strong {
+		font-size: 12px;
+		font-weight: 850;
+		line-height: 1.2;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.trajectory-starter span {
+		color: var(--text-secondary);
+		font-size: 11px;
+		line-height: 1.2;
+	}
+
+	.trajectory-empty-actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 8px;
+	}
+
+	.trajectory-empty-actions button {
+		padding: 8px 10px;
+		font-size: 12px;
+		font-weight: 800;
+	}
+
 	.error-msg {
 		border-color: color-mix(in srgb, var(--negative) 42%, var(--border));
 		background: var(--negative-bg);
@@ -1309,6 +1421,10 @@
 		}
 
 		.trajectory-stat-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.trajectory-starter-grid {
 			grid-template-columns: 1fr;
 		}
 	}

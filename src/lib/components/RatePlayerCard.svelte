@@ -64,6 +64,8 @@
         if (result.loserId === player?.nba_id) return -result.delta;
         return null;
     });
+
+    const actionLabel = $derived(chosen ? 'Selected' : disabled ? 'Voting...' : 'Vote for this player');
 </script>
 
 <button
@@ -125,6 +127,8 @@
         {/if}
     </div>
 
+    <div class="rate-card-action">{actionLabel}</div>
+
     {#if eloDelta !== null}
         <div class="rate-card-elo-result" class:elo-positive={eloDelta > 0} class:elo-negative={eloDelta < 0}>
             {eloDelta > 0 ? '+' : ''}{Math.round(eloDelta)} Elo
@@ -157,6 +161,12 @@
         border-color: var(--accent);
         background: var(--bg-elevated);
         transform: translateY(-2px);
+    }
+
+    .rate-card:focus-visible {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+        outline: none;
     }
 
     .rate-card:active:not(:disabled) {
@@ -242,6 +252,31 @@
         color: var(--text);
     }
 
+    .rate-card-action {
+        margin-top: 12px;
+        border: 1px solid color-mix(in srgb, var(--accent) 54%, var(--border));
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--accent) 9%, var(--bg-surface));
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 850;
+        line-height: 1;
+        padding: 8px 12px;
+        transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .rate-card:hover:not(:disabled) .rate-card-action {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--bg);
+    }
+
+    .rate-card.chosen .rate-card-action {
+        background: var(--positive-bg);
+        border-color: var(--positive);
+        color: var(--positive);
+    }
+
     .rate-card-elo-result {
         margin-top: 10px;
         font-family: var(--font-mono);
@@ -282,6 +317,16 @@
             width: 56px;
             height: 56px;
             font-size: 20px;
+        }
+
+        .rate-card-details {
+            gap: 6px 10px;
+        }
+
+        .rate-card-detail,
+        .detail-value {
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
     }
 </style>
