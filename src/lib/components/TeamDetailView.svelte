@@ -225,7 +225,7 @@
                     {#if sim}
                         <p>{sim.conference}ern Conference · Current: {sim.Current} · Projected: {formatFixed(sim.W)}-{formatFixed(sim.L)}</p>
                     {:else}
-                        <p>Current ratings for all active players on the team.</p>
+                        <p>Current ratings for all current-season players on the team.</p>
                     {/if}
                 </div>
             </div>
@@ -276,7 +276,7 @@
     {/if}
 
     {#if teamPlayers.length === 0}
-        <div class="empty-state">No active players found for {teamName}.</div>
+        <div class="empty-state">No current-season players found for {teamName}.</div>
     {:else}
         <h2 class="section-title">Players</h2>
         <div class="table-wrapper table-shell" bind:this={teamTableRoot}>

@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.14",
+  "arch_version": "0.1.16",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -445,7 +445,8 @@
     "query_limits": {
       "activePlayers": {
         "dedupeKey": "nba_id",
-        "lookbackDays": 7,
+        "inclusion": "current-season rows with positive possessions",
+        "seasonSource": "latest player_ratings season",
         "sortOrder": "dpm desc"
       },
       "comparePage": {
@@ -730,7 +731,7 @@
         "queryParams": [
           "team"
         ],
-        "returns": "current active roster snapshot",
+        "returns": "current-season player snapshot",
         "route": "/api/active-players"
       },
       {
@@ -772,7 +773,7 @@
         ],
         "pathParams": [],
         "queryParams": [],
-        "returns": "active-player longevity table",
+        "returns": "current-season player longevity table",
         "route": "/api/longevity"
       },
       {
@@ -924,7 +925,7 @@
     ],
     "pageLoaders": [
       {
-        "returns": "homepage active-player leaderboard",
+        "returns": "homepage current-season leaderboard",
         "route": "/",
         "signature": "load({ setHeaders })"
       },

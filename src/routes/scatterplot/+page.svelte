@@ -57,7 +57,7 @@
 <div class="container">
 	<div class="page-header">
 		<h1>Player scatterplot</h1>
-		<p>Compare any two stats across all active NBA players.</p>
+		<p>Compare any two stats across all current-season NBA players.</p>
 	</div>
 
 	<div class="scatterplot-layout">

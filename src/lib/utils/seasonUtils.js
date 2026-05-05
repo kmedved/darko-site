@@ -28,6 +28,15 @@ export function formatSeasonLabel(startYear) {
 }
 
 /**
+ * Format a season ending year as a label: 2026 => "2025-26"
+ */
+export function formatSeasonEndYearLabel(endYear) {
+	const parsed = Number.parseInt(endYear, 10);
+	if (!Number.isFinite(parsed)) return null;
+	return formatSeasonLabel(parsed - 1);
+}
+
+/**
  * Augment rows with _seasonX (fractional season position) and _seasonIndex.
  * _seasonIndex is the season start year (e.g. 2023 for 2023-24).
  * Points within a season are spread evenly between integer boundaries.

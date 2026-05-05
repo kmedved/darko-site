@@ -27,13 +27,41 @@ test('position rail enforces the displayed minimum games rule', async () => {
     );
 });
 
+test('leaderboard treats database season as ending year for display labels', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), LEADERBOARD_PAGE), 'utf8');
+    const start = contents.indexOf('function formatSeasonLabel(season)');
+    const end = contents.indexOf('function toggleSort(column)', start);
+
+    assert.ok(start >= 0 && end > start, 'leaderboard season formatter should be discoverable');
+    const formatterBlock = contents.slice(start, end);
+
+    assert.match(
+        contents,
+        /import\s+\{\s*formatSeasonEndYearLabel\s*\}\s+from '\$lib\/utils\/seasonUtils\.js';/,
+        'leaderboard should use the shared end-year season formatter'
+    );
+    assert.match(
+        formatterBlock,
+        /formatSeasonEndYearLabel\(season\)/,
+        'database season value 2026 should display as the 2025-26 season'
+    );
+    assert.doesNotMatch(
+        formatterBlock,
+        /startYear\s*\+\s*1|Number\.parseInt\(season,\s*10\)/,
+        'leaderboard should not reinterpret database season values as start years'
+    );
+});
+
 test('desktop navigation keeps primary links together ahead of display controls', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), LAYOUT_FILE), 'utf8');
     const navLinks = contents.match(/<div class="links desktop-links">([\s\S]*?)<\/div>\s*<div class="desktop-controls">/);
+    const moreNavItems = contents.match(/const MORE_NAV_ITEMS = \[([\s\S]*?)\];/);
 
     assert.ok(navLinks, 'desktop links should render before theme/font controls');
-    assert.match(navLinks[1], /href="\/rate"/, 'Rate a Player should be in the desktop nav group');
-    assert.match(navLinks[1], /href="\/about"/, 'About should be in the desktop nav group');
+    assert.ok(moreNavItems, 'overflow desktop nav items should be declared');
+    assert.match(navLinks[1], /MORE_NAV_ITEMS/, 'desktop links should include the overflow nav group');
+    assert.match(moreNavItems[1], /href:\s*'\/rate'/, 'Rate a Player should be in the desktop nav group');
+    assert.match(moreNavItems[1], /href:\s*'\/about'/, 'About should be in the desktop nav group');
 });
 
 test('desktop navigation switches to drawer before links can overflow', async () => {

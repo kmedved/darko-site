@@ -16,6 +16,7 @@
     import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
+    import { formatSeasonEndYearLabel } from '$lib/utils/seasonUtils.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
@@ -176,9 +177,8 @@
     }
 
     function formatSeasonLabel(season) {
-        const startYear = Number.parseInt(season, 10);
-        if (!Number.isFinite(startYear)) return `${season} Season`;
-        return `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')} Season`;
+        const label = formatSeasonEndYearLabel(season);
+        return label ? `${label} Season` : `${season} Season`;
     }
 
     function toggleSort(column) {
@@ -442,7 +442,7 @@
             <div class="empty-state">No players are currently available.</div>
         {:else}
             <div class="leaderboard-workspace">
-                <section class="leaderboard-table-panel" aria-label="Active player leaderboard">
+                <section class="leaderboard-table-panel" aria-label="Current-season player leaderboard">
                     <div class="leaderboard-controls">
                         <div class="control-field">
                             <select
@@ -578,7 +578,7 @@
                             </div>
                             <span class="insight-info" title={`${activeSeasonLabel}, ${activeTeamFilter === 'all' ? 'all teams' : teamAbbr(activeTeamFilter)}`}>i</span>
                         </div>
-                        <svg class="distribution-chart" viewBox="0 0 320 170" role="img" aria-label={`Distribution of active player ${selectedDistributionMetric.label}`}>
+                        <svg class="distribution-chart" viewBox="0 0 320 170" role="img" aria-label={`Distribution of current-season player ${selectedDistributionMetric.label}`}>
                             <line x1="0" y1="138" x2="320" y2="138" />
                             <line x1="0" y1="96" x2="320" y2="96" />
                             <line x1="0" y1="54" x2="320" y2="54" />

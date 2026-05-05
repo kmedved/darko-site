@@ -2,7 +2,7 @@ Paste this first.
 Pair with one `context/COMPRESSED_*.md` bundle for guided context, or with `context/FILE_INDEX.md` for oracle workflows.
 For implementation tasks, also paste raw source of the files you expect to edit.
 
-Architecture sync version: 0.1.14
+Architecture sync version: 0.1.16
 Archetype: Service / App | Secondary: Data / Workflow / Pipeline | Topology: single-unit | Policy B: only shipped/runtime behavior changes bump version.
 
 ## TL;DR
@@ -13,7 +13,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 
 | Surface | Route(s) | Backend path | Cache / mode | Notes |
 |---|---|---|---|---|
-| Homepage leaderboard | `/` | `getActivePlayers()` | edge 3600s / swr 86400s | Active roster snapshot ranked by DPM. |
+| Homepage leaderboard | `/` | `getActivePlayers()` | edge 3600s / swr 86400s | Current-season player snapshot ranked by DPM. |
 | Player detail | `/player/:nbaId` | `loadPlayerPageData()` + `getFullPlayerHistory()` | edge 3600s / swr 86400s | Full history is SSR-first. |
 | Compare | `/compare?ids=` | `loadComparePageData()` | uncached page loader | Dedupes IDs, preserves order, max 4 players. |
 | Standings / team detail | `/standings`, `/standings/:slug`, `/team/:team` | `getConferenceStandings()`, `getTeamPageData()` | edge 3600s / swr 86400s | Dual team-detail URL surfaces share one payload builder. |
@@ -25,7 +25,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 - `/player/:nbaId` always loads full history server-side and turns an empty result into HTTP 404. (`src/lib/server/playerPage.js`, `tests/player-page-server-load.test.js`)
 - `/compare?ids=` dedupes IDs, preserves first-seen order, and stops at four players. (`src/lib/server/comparePage.js`, `tests/compare-page-server-load.test.js`)
 - `/api/player/:id/history` defaults to 1000 rows, caps bounded requests at 2000, and only enters paginated full-history mode when `full=1`. (`src/routes/api/player/[id]/history/+server.js`, `src/lib/server/supabase.js`)
-- `getActivePlayers()` uses the latest active date, a 7-day lookback, dedupes by `nba_id`, and sorts by DPM descending before any page/API consumes it. (`src/lib/server/supabase.js`)
+- `getActivePlayers()` uses the latest `player_ratings.season`, includes only players with positive possessions in that season, dedupes by `nba_id`, and sorts by DPM descending before any page/API consumes it. (`src/lib/server/supabase.js`)
 - Only `/api/rate/vote` writes state, and it must pass same-origin checks before calling the Supabase RPC. (`src/lib/server/eloSecurity.js`, `src/lib/server/eloService.js`)
 - Wide-table horizontal scroll is touch/mobile-only; sticky headers remain a desktop behavior. (`AGENTS.md`, `tests/mobile-table-scroll.test.js`, `tests/wide-sticky-table-layout.test.js`)
 - Both team detail URLs are thin wrappers over the shared team payload/view pipeline. (`src/routes/team/[team]/+page.server.js`, `src/routes/standings/[slug]/+page.server.js`, `tests/team-route-wrappers.test.js`)
@@ -45,10 +45,10 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 
 | Route | Methods | Inputs | Returns |
 |---|---|---|---|
-| `/api/active-players` | `GET` | query: team | current active roster snapshot |
+| `/api/active-players` | `GET` | query: team | current-season player snapshot |
 | `/api/img/:type/:id` | `GET` | none | JSON route payload |
 | `/api/internal/cache-bust` | `POST` | body: tags | JSON route payload |
-| `/api/longevity` | `GET` | none | active-player longevity table |
+| `/api/longevity` | `GET` | none | current-season player longevity table |
 | `/api/player/:id/history` | `GET` | query: full, limit | bounded or full career history |
 | `/api/player/:id/longevity` | `GET` | path: id | player longevity trajectory |
 | `/api/players-index` | `GET` | none | full player index |
@@ -63,7 +63,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 
 | Route | Signature | Returns |
 |---|---|---|
-| `/` | `load({ setHeaders })` | homepage active-player leaderboard |
+| `/` | `load({ setHeaders })` | homepage current-season leaderboard |
 | `/compare` | `load({ url })` | preloaded compare cards from `?ids=` |
 | `/lineups` | `load({ url, setHeaders })` | server-rendered page payload |
 | `/player/:nbaId` | `load({ params, setHeaders })` | full player profile payload |
@@ -103,10 +103,10 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 
 ## Core Abstractions
 
-- `Active player snapshot` - latest deduped `player_ratings` row per active NBA player, merged with `players` metadata.
+- `Active player snapshot` - latest deduped `player_ratings` row per player with positive possessions in the current NBA season, merged with `players` metadata.
 - `Full player history` - chronological career rows, capped and flagged when the API enters explicit full-history mode.
-- `Team page payload` - `{ teamName, players, sim, winDist }` assembled from active roster, season simulation, and win-distribution tables.
-- `Longevity row / trajectory` - retirement-age and survival-probability projections for active players or one player over time.
+- `Team page payload` - `{ teamName, players, sim, winDist }` assembled from current-season team players, season simulation, and win-distribution tables.
+- `Longevity row / trajectory` - retirement-age and survival-probability projections for current-season players or one player over time.
 - `Elo vote result` - one write transaction plus an immediately refreshed next comparison pair.
 - `Edge cache policy` - shared cache header contract applied to all read-heavy loaders and API endpoints.
 

@@ -194,6 +194,7 @@ const PLAYERS_DIM_COLUMNS = [
 const TEAM_FALLBACK_LOOKBACK_DAYS = 370;
 const TEAM_FALLBACK_CHUNK_SIZE = 50;
 const TEAM_FALLBACK_ROWS_PER_PLAYER = 120;
+const CURRENT_SEASON_PAGE_SIZE = 1_000;
 
 const LINEUP_RATING_COLUMNS = [
     'variant',
@@ -400,63 +401,107 @@ async function getLatestTeamMapByIds(ids = [], latestDate) {
     return teamMap;
 }
 
-async function getLatestActiveDate() {
-    const key = cacheKey('latestActiveDate', 'active');
+async function getLatestActiveSeason() {
+    const key = cacheKey('latestActiveSeason', 'active');
     return runCached(key, CACHE_MS.activePlayers, async () => {
         const { data, error } = await supabase
             .from('player_ratings')
-            .select('date')
-            .eq('active_roster', 1)
-            .order('date', { ascending: false })
+            .select('season')
+            .not('season', 'is', null)
+            .order('season', { ascending: false })
             .limit(1);
 
         if (error) throw error;
-        return data?.[0]?.date ?? null;
+        const season = Number.parseInt(data?.[0]?.season, 10);
+        return Number.isFinite(season) ? season : null;
     });
 }
 
+async function getCurrentSeasonPlayerDimsByIds(season, ids = []) {
+    const filteredIds = Array.from(
+        new Set((ids || []).filter((id) => Number.isInteger(id) && id > 0))
+    );
+    if (!season || filteredIds.length === 0) {
+        return new Map();
+    }
+
+    const map = new Map();
+    for (const chunk of chunkArray(filteredIds, TEAM_FALLBACK_CHUNK_SIZE)) {
+        const { data, error } = await supabase
+            .from('players')
+            .select(PLAYERS_DIM_COLUMNS)
+            .eq('season', season)
+            .in('nba_id', chunk);
+
+        if (error) throw error;
+
+        for (const row of data || []) {
+            if (Number.isInteger(row?.nba_id) && row.nba_id > 0) {
+                map.set(row.nba_id, row);
+            }
+        }
+    }
+
+    return map;
+}
+
+async function getLatestCurrentSeasonRatingRows(season) {
+    const latestById = new Map();
+    const playedIds = new Set();
+    let page = 0;
+
+    while (true) {
+        const { data, error } = await supabase
+            .from('player_ratings')
+            .select(RATING_COLUMNS)
+            .eq('season', season)
+            .gt('poss', 0)
+            .order('date', { ascending: false })
+            .range(
+                page * CURRENT_SEASON_PAGE_SIZE,
+                (page + 1) * CURRENT_SEASON_PAGE_SIZE - 1
+            );
+
+        if (error) throw error;
+
+        for (const row of data || []) {
+            const id = row?.nba_id;
+            if (!Number.isInteger(id) || id <= 0) continue;
+
+            if (!latestById.has(id)) {
+                latestById.set(id, row);
+            }
+
+            const poss = Number.parseFloat(row?.poss);
+            if (Number.isFinite(poss) && poss > 0) {
+                playedIds.add(id);
+            }
+        }
+
+        if (!data || data.length < CURRENT_SEASON_PAGE_SIZE) break;
+        page += 1;
+    }
+
+    return Array.from(playedIds, (id) => latestById.get(id)).filter(Boolean);
+}
+
 /**
- * Get all active players — most recent row per player from the last 7 days.
- * Uses a date range and deduplicates per nba_id to handle cases where
- * the data pipeline updates teams at different times.
+ * Get all active players — defined as players who played in the current NBA season.
+ * Uses the latest season value and returns the most recent positive-possession row per player.
  */
 export async function getActivePlayers(options = {}) {
     const normalizedTeam = (options.teamName || '').trim();
     const key = cacheKey('activePlayers', normalizedTeam || 'all');
     return runCached(key, CACHE_MS.activePlayers, async () => {
-        const latestDate = await getLatestActiveDate();
-        if (!latestDate) {
+        const latestSeason = await getLatestActiveSeason();
+        if (!latestSeason) {
             return [];
         }
 
-        // Use a 7-day window back from the latest date to capture all players
-        const latest = new Date(latestDate);
-        const weekAgo = new Date(latest);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const weekAgoStr = weekAgo.toISOString().slice(0, 10);
-
-        const { data, error } = await supabase
-            .from('player_ratings')
-            .select(RATING_COLUMNS)
-            .eq('active_roster', 1)
-            .gte('date', weekAgoStr)
-            .order('date', { ascending: false })
-            .limit(10_000);
-
-        if (error) throw error;
-
-        // Keep only the most recent row per player
-        const seen = new Set();
-        const unique = [];
-        for (const row of data || []) {
-            if (!seen.has(row.nba_id)) {
-                seen.add(row.nba_id);
-                unique.push(row);
-            }
-        }
-
+        const unique = await getLatestCurrentSeasonRatingRows(latestSeason);
         const ids = unique.map((row) => row.nba_id);
-        const playersMap = await getPlayersMapByIds(ids);
+        const playersMap = await getCurrentSeasonPlayerDimsByIds(latestSeason, ids);
+        const latestDate = unique[0]?.date ?? null;
         const missingTeamIds = unique
             .filter((row) => !normalizedTeamName(row.team_name) || !isRealTeamId(row.tm_id))
             .map((row) => row.nba_id);

@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { computeSeasonX, getSeasonStartYear } from '../src/lib/utils/seasonUtils.js';
+import {
+    computeSeasonX,
+    formatSeasonEndYearLabel,
+    getSeasonStartYear
+} from '../src/lib/utils/seasonUtils.js';
 
 
 test('getSeasonStartYear returns season start year for valid inputs', () => {
@@ -41,4 +45,10 @@ test('computeSeasonX skips rows with invalid dates and annotates valid rows', ()
     assert.equal(Number.isFinite(result[0]._seasonX), true);
     assert.equal(Number.isFinite(result[1]._seasonX), true);
     assert.equal(Number.isFinite(result[2]._seasonX), true);
+});
+
+test('formatSeasonEndYearLabel formats database season values as NBA season labels', () => {
+    assert.equal(formatSeasonEndYearLabel(2026), '2025-26');
+    assert.equal(formatSeasonEndYearLabel('2025'), '2024-25');
+    assert.equal(formatSeasonEndYearLabel('not-a-season'), null);
 });

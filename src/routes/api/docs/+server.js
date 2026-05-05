@@ -37,7 +37,7 @@ export async function GET({ setHeaders }) {
                 path: '/api/active-players',
                 method: 'GET',
                 description:
-                    'All active NBA players with current DPM ratings, projected box-score stats, salary valuations, and longevity estimates. Returns ~500 rows, one per active player, sorted by DPM descending.',
+                    'All players who played in the current NBA season with current DPM ratings, projected box-score stats, salary valuations, and longevity estimates. Returns one row per current-season player, sorted by DPM descending.',
                 params: {
                     query: {
                         team: {
@@ -136,10 +136,10 @@ export async function GET({ setHeaders }) {
                 path: '/api/longevity',
                 method: 'GET',
                 description:
-                    'Longevity projections for all active players. Includes estimated retirement age, years remaining, and survival probabilities for the next 1-15 seasons.',
+                    'Longevity projections for all current-season players. Includes estimated retirement age, years remaining, and survival probabilities for the next 1-15 seasons.',
                 params: {},
                 response:
-                    'Array of player longevity objects (~500 rows). Each includes: nba_id, player_name, rookie_season, career_games, age, est_retirement_age, years_remaining, p1-p15 (survival probabilities as percentages 0-100).',
+                    'Array of current-season player longevity objects. Each includes: nba_id, player_name, rookie_season, career_games, age, est_retirement_age, years_remaining, p1-p15 (survival probabilities as percentages 0-100).',
                 cache: '1 hour edge, 24h stale-while-revalidate'
             },
             {
@@ -177,7 +177,7 @@ export async function GET({ setHeaders }) {
                     }
                 },
                 response:
-                    '{ teamName, players: [...], sim: {...} | null, winDist: [...] }. players: active roster with full rating columns. sim: season simulation data (wins, losses, playoff odds). winDist: array of { wins, probability } for win distribution chart.',
+                    '{ teamName, players: [...], sim: {...} | null, winDist: [...] }. players: current-season team players with full rating columns. sim: season simulation data (wins, losses, playoff odds). winDist: array of { wins, probability } for win distribution chart.',
                 cache: '1 hour edge, 24h stale-while-revalidate'
             },
             {

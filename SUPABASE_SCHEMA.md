@@ -46,7 +46,7 @@ Built by `build_supabase_tables.py` which left-joins six source files on `(nba_i
 |---|---|---|---|---|
 | 1 | nba_id | bigint | spm | Player NBA ID |
 | 2 | date | timestamp without time zone | spm | Game date |
-| 3 | season | real | spm | e.g. 2026.0 |
+| 3 | season | real | spm | NBA season ending year, e.g. 2026.0 for 2025-26 |
 | 4 | team_name | text | spm | Team abbreviation |
 | 5 | tm_id | bigint | spm | Team NBA ID |
 | 6 | future_game | integer | spm | 1 = projected future game |
@@ -141,7 +141,7 @@ Dimension table. One row per player.
 | 9 | country | text | |
 | 10 | current_team | text | Team on most recent spm date |
 | 11 | active_roster | smallint | Status on most recent spm date |
-| 12 | season | real | Season of most recent spm date |
+| 12 | season | real | NBA season ending year for most recent spm date |
 | 13 | rookie_season | double precision | First NBA season (from survivorship) |
 
 ---
@@ -256,7 +256,7 @@ Comma-joined string of all 69 fetched `player_ratings` column names (66 original
 
 | Function | Queries | Returns | Used by |
 |---|---|---|---|
-| `getActivePlayers()` | `player_ratings` with RATING_COLUMNS, `active_roster=1`, last 7 days, deduped to latest row per player. Merges with `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
+| `getActivePlayers()` | Finds the latest `player_ratings.season`, reads current-season `player_ratings` rows with RATING_COLUMNS and `poss > 0`, and dedupes to the latest positive-possession row per player. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
 | `getPlayersIndex()` | `players` with explicit `PLAYERS_DIM_COLUMNS`, merged with `getActivePlayers()`. **Hardcodes output fields** — does NOT pass through survivorship, projections, or RAPM columns. | Array of player objects (subset of fields) | Player search/index pages |
 | `getLongevityRows()` | Calls `getActivePlayers()`, maps DB columns to frontend-aliased keys | Array with aliased longevity fields | `/api/longevity` |
 | `getLongevityTrajectory(id)` | `player_ratings` filtered to one player, maps to chart fields | Array of trajectory points | `/api/player/[id]/longevity` |
@@ -379,7 +379,7 @@ Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at
 
 **All source parquet files must cover the same date range.** The build script left-joins everything onto `spm_outputs` by `(nba_id, date)`. If any source file lags behind, those columns will be null for all dates beyond that file's max date.
 
-`getActivePlayers()` always returns the most recent row per player (within the last 7 days). If that row has null survivorship/projections/RAPM because the source file was stale at build time, the entire column appears empty on the site — even though older rows in the DB have the data.
+`getActivePlayers()` always returns the most recent positive-possession row per player in the latest season. If that row has null survivorship/projections/RAPM because the source file was stale at build time, the entire column appears empty on the site — even though older rows in the DB have the data.
 
 **Debugging null columns on the site:**
 1. Check max dates of all source parquet files — they should match `spm_outputs`
