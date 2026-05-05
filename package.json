@@ -7,7 +7,7 @@
     "build": "node node_modules/vite/bin/vite.js build",
     "preview": "node node_modules/vite/bin/vite.js preview",
     "test": "node --test",
-    "check": "node node_modules/svelte-check/bin/svelte-check",
+    "check": "node node_modules/@sveltejs/kit/svelte-kit.js sync && node node_modules/svelte-check/bin/svelte-check --tsconfig ./jsconfig.json",
     "validate": "npm run test && npm run check && npm run build",
     "context:sync": "node scripts/generate_repo_architecture_sync.js",
     "context:build": "node scripts/build_context_bundle.js",
