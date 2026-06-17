@@ -539,6 +539,7 @@
     "src/lib/components/TrajectoryChart.svelte",
     "src/lib/components/WinDistChart.svelte",
     "src/lib/data/longevityScaffold.js",
+    "src/lib/server/activePlayersCache.js",
     "src/lib/server/cacheHeaders.js",
     "src/lib/server/comparePage.js",
     "src/lib/server/eloSecurity.js",
@@ -640,6 +641,7 @@
     "tests/player-search.test.js",
     "tests/request-sequencer.test.js",
     "tests/season-utils.test.js",
+    "tests/server-error-logging.test.js",
     "tests/standings-page-ui-guards.test.js",
     "tests/sticky-header-overflow.test.js",
     "tests/supabase-config.test.js",
@@ -678,6 +680,7 @@
       ],
       "tests": [
         "client:api",
+        "platform:hooks",
         "server:helpers",
         "tooling:context",
         "ui:utils"
@@ -692,6 +695,9 @@
         "routes:pages",
         "tests",
         "ui:components"
+      ],
+      "platform:hooks": [
+        "tests"
       ],
       "server:data": [
         "routes:api",

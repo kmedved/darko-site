@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 import {
     ACTIVE_PLAYERS_CACHE_TTL_MS,
@@ -89,4 +91,16 @@ test('apiActivePlayers evicts failed requests from the cache', async (t) => {
 
     assert.equal(fetchCalls, 2);
     assert.deepEqual(data, [{ nba_id: 15 }]);
+});
+
+test('/api/active-players keeps Vercel duration headroom for cold cache loads', async () => {
+    const routePath = path.resolve(process.cwd(), 'src/routes/api/active-players/+server.js');
+    const contents = await fs.readFile(routePath, 'utf8');
+
+    assert.match(contents, /@type \{import\('@sveltejs\/adapter-vercel'\)\.Config\}/);
+    assert.match(contents, /regions:\s*\['pdx1'\]/);
+    assert.match(contents, /maxDuration:\s*60/);
+    assert.match(contents, /getActivePlayers\(team \? \{ teamName: team \} : \{\}\)/);
+    assert.doesNotMatch(contents, /throw error\(500/);
+    assert.doesNotMatch(contents, /catch\s*\(/);
 });

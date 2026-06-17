@@ -5,7 +5,8 @@ import { VALID_LINEUP_SIZES, DEFAULT_LINEUP_SIZE } from '$lib/server/lineupRatin
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
-    regions: ['pdx1']
+    regions: ['pdx1'],
+    maxDuration: 60
 };
 
 /** @type {import('./$types').PageServerLoad} */

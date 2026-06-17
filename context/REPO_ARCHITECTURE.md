@@ -117,7 +117,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 - `routes:pages` -> `client:api`, `ui:components`, `ui:utils`
 - `server:data` -> `server:helpers`, `ui:utils`
 - `server:helpers` -> `server:data`
-- `tests` -> `client:api`, `server:helpers`, `tooling:context`, `ui:utils`
+- `tests` -> `client:api`, `platform:hooks`, `server:helpers`, `tooling:context`, `ui:utils`
 - `ui:components` -> `client:api`, `ui:utils`
 
 High-fan-in reverse edges:

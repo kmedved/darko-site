@@ -7,6 +7,7 @@ import {
     LINEUP_QUERY_VARIANTS,
     groupLineupRows
 } from './lineupRatings.js';
+import { createActivePlayersAccessor } from './activePlayersCache.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -489,36 +490,35 @@ async function getLatestCurrentSeasonRatingRows(season) {
  * Get all active players — defined as players who played in the current NBA season.
  * Uses the latest season value and returns the most recent positive-possession row per player.
  */
-export async function getActivePlayers(options = {}) {
-    const normalizedTeam = (options.teamName || '').trim();
-    const key = cacheKey('activePlayers', normalizedTeam || 'all');
-    return runCached(key, CACHE_MS.activePlayers, async () => {
-        const latestSeason = await getLatestActiveSeason();
-        if (!latestSeason) {
-            return [];
-        }
+async function loadAllActivePlayers() {
+    const latestSeason = await getLatestActiveSeason();
+    if (!latestSeason) {
+        return [];
+    }
 
-        const unique = await getLatestCurrentSeasonRatingRows(latestSeason);
-        const ids = unique.map((row) => row.nba_id);
-        const playersMap = await getCurrentSeasonPlayerDimsByIds(latestSeason, ids);
-        const latestDate = unique[0]?.date ?? null;
-        const missingTeamIds = unique
-            .filter((row) => !normalizedTeamName(row.team_name) || !isRealTeamId(row.tm_id))
-            .map((row) => row.nba_id);
-        const teamMap = await getLatestTeamMapByIds(missingTeamIds, latestDate);
-        let merged = unique.map((row) =>
-            mergeWithPlayerDim(row, playersMap.get(row.nba_id), teamMap.get(row.nba_id))
-        );
+    const unique = await getLatestCurrentSeasonRatingRows(latestSeason);
+    const ids = unique.map((row) => row.nba_id);
+    const playersMap = await getCurrentSeasonPlayerDimsByIds(latestSeason, ids);
+    const latestDate = unique[0]?.date ?? null;
+    const missingTeamIds = unique
+        .filter((row) => !normalizedTeamName(row.team_name) || !isRealTeamId(row.tm_id))
+        .map((row) => row.nba_id);
+    const teamMap = await getLatestTeamMapByIds(missingTeamIds, latestDate);
+    const merged = unique.map((row) =>
+        mergeWithPlayerDim(row, playersMap.get(row.nba_id), teamMap.get(row.nba_id))
+    );
 
-        if (normalizedTeam) {
-            merged = merged.filter((row) => {
-                const rowTeam = String(row.team_name || '').trim();
-                return rowTeam === normalizedTeam;
-            });
-        }
+    return sortByDpmDesc(merged);
+}
 
-        return sortByDpmDesc(merged);
-    });
+const getCachedActivePlayers = createActivePlayersAccessor({
+    loadAllActivePlayers,
+    runCached,
+    maxAgeMs: CACHE_MS.activePlayers
+});
+
+export function getActivePlayers(options = {}) {
+    return getCachedActivePlayers(options);
 }
 
 /**

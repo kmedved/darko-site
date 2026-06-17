@@ -1,11 +1,12 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 
 import { getActivePlayers } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
-    regions: ['pdx1']
+    regions: ['pdx1'],
+    maxDuration: 60
 };
 
 export async function GET({ url, setHeaders }) {
@@ -17,10 +18,6 @@ export async function GET({ url, setHeaders }) {
 
     const team = url.searchParams.get('team')?.trim() || '';
 
-    try {
-        const players = await getActivePlayers(team ? { teamName: team } : {});
-        return json(players);
-    } catch (e) {
-        throw error(500, e?.message || 'Failed to load active players');
-    }
+    const players = await getActivePlayers(team ? { teamName: team } : {});
+    return json(players);
 }
