@@ -67,6 +67,7 @@ For implementation work, request or paste raw source for the files you expect to
 
 ## src/lib/server
 
+- `src/lib/server/activePlayersCache.js` - server helper
 - `src/lib/server/cacheHeaders.js` - server helper
 - `src/lib/server/comparePage.js` - server helper
 - `src/lib/server/eloSecurity.js` - server helper
@@ -182,6 +183,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/player-search.test.js` - test
 - `tests/request-sequencer.test.js` - test
 - `tests/season-utils.test.js` - test
+- `tests/server-error-logging.test.js` - test
 - `tests/standings-page-ui-guards.test.js` - test
 - `tests/sticky-header-overflow.test.js` - test
 - `tests/supabase-config.test.js` - test

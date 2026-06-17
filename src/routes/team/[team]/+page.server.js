@@ -3,7 +3,8 @@ import { decodeTeamParam } from '$lib/utils/teamRouteUtils.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
-    regions: ['pdx1']
+    regions: ['pdx1'],
+    maxDuration: 60
 };
 
 export async function load({ params, setHeaders }) {
