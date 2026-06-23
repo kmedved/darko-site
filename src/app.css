@@ -15,6 +15,7 @@
     --positive-bg: rgba(52, 211, 153, 0.08);
     --negative: #f87171;
     --negative-bg: rgba(248, 113, 113, 0.08);
+    --logo-image: url('/logo-white-nav.png');
     --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-mono: 'DM Mono', 'SF Mono', 'Consolas', monospace;
     --radius: 10px;
@@ -39,6 +40,7 @@
     --positive-bg: rgba(52, 211, 153, 0.08);
     --negative: #f87171;
     --negative-bg: rgba(248, 113, 113, 0.08);
+    --logo-image: url('/logo-black-nav.png');
 }
 
 :root[data-theme='light'] {
@@ -58,6 +60,7 @@
     --positive-bg: rgba(22, 163, 74, 0.08);
     --negative: #dc2626;
     --negative-bg: rgba(220, 38, 38, 0.08);
+    --logo-image: url('/logo-light-nav.png');
 }
 
 :root[data-theme='white'] {
@@ -77,13 +80,12 @@
     --positive-bg: rgba(22, 163, 74, 0.08);
     --negative: #dc2626;
     --negative-bg: rgba(220, 38, 38, 0.08);
+    --logo-image: url('/logo-white-nav.png');
 }
 
-/* Each theme gets its own logo variant; hide all by default via .logo-mark { display:none } */
-:root[data-theme='black'] .logo-mark--black { display: block; }
-:root[data-theme='dark']  .logo-mark--dark  { display: block; }
-:root[data-theme='light'] .logo-mark--light { display: block; }
-:root[data-theme='white'] .logo-mark--white { display: block; }
+:root[data-theme='dark'] {
+    --logo-image: url('/logo-dark-nav.png');
+}
 
 /* ── Font overrides ──────────────────────────────────── */
 
@@ -170,10 +172,13 @@ nav .logo {
 }
 
 .logo-mark {
-    display: none;
+    display: block;
     height: 80px;
-    width: auto;
-    object-fit: contain;
+    width: 80px;
+    background-image: var(--logo-image);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
 }
 
 .sr-only {
@@ -260,6 +265,7 @@ nav .links a.active {
 
     .logo-mark {
         height: 48px;
+        width: 48px;
     }
 
     nav .logo {

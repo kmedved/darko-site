@@ -1,3 +1,138 @@
 {
-    "framework": "sveltekit"
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "framework": "sveltekit",
+    "headers": [
+        {
+            "source": "/logo-black-nav.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/logo-white-nav.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/logo-dark-nav.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/logo-light-nav.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/favicon.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/darko-logo-black.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/darko-logo-white.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/logo-dark.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/logo-light.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "has": [
+                {
+                    "type": "header",
+                    "key": "user-agent",
+                    "value": ".*amazon-Quick-on-behalf-of-587baa65.*"
+                }
+            ],
+            "mitigate": {
+                "action": "deny"
+            }
+        }
+    ]
 }

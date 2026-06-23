@@ -182,10 +182,7 @@
 		</button>
 		<a href="/" class="logo" aria-label="DARKO DPM">
             <span class="sr-only">DARKO DPM</span>
-            <img src="/darko-logo-black.png" alt="" class="logo-mark logo-mark--black" aria-hidden="true" />
-            <img src="/logo-dark.png" alt="" class="logo-mark logo-mark--dark" aria-hidden="true" />
-            <img src="/logo-light.png" alt="" class="logo-mark logo-mark--light" aria-hidden="true" />
-            <img src="/darko-logo-white.png" alt="" class="logo-mark logo-mark--white" aria-hidden="true" />
+            <span class="logo-mark" aria-hidden="true"></span>
         </a>
 		<span class="mobile-current-page">{currentPageLabel}</span>
         <div class="links desktop-links">
@@ -644,6 +641,7 @@
 
 		:global(.logo-mark) {
 			height: 48px;
+			width: 48px;
 		}
 
 		:global(nav .logo) {

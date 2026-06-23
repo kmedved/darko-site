@@ -10,8 +10,9 @@ const CONTENT_TYPE = {
 	logo: 'image/svg+xml'
 };
 
+const BROWSER_CACHE_HEADER = 'public, max-age=86400';
 /** Edge-cache for 7 days, allow stale for 30 days while revalidating. */
-const CACHE_HEADER = 'public, s-maxage=604800, stale-while-revalidate=2592000';
+const EDGE_CACHE_HEADER = 'public, max-age=604800, stale-while-revalidate=2592000';
 
 /** @type {import('./$types').RequestHandler} */
 export async function GET({ params }) {
@@ -38,7 +39,8 @@ export async function GET({ params }) {
 	return new Response(body, {
 		headers: {
 			'Content-Type': CONTENT_TYPE[type],
-			'Cache-Control': CACHE_HEADER
+			'Cache-Control': BROWSER_CACHE_HEADER,
+			'Vercel-CDN-Cache-Control': EDGE_CACHE_HEADER
 		}
 	});
 }

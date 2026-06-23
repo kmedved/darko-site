@@ -1,5 +1,12 @@
-import { redirect } from '@sveltejs/kit';
+const CACHE_HEADER = 'public, max-age=31536000, immutable';
 
 export function GET() {
-	throw redirect(307, '/darko-logo-black.png');
+	return new Response(null, {
+		status: 308,
+		headers: {
+			Location: '/favicon.png',
+			'Cache-Control': CACHE_HEADER,
+			'Vercel-CDN-Cache-Control': CACHE_HEADER
+		}
+	});
 }
