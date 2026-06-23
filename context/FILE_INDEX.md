@@ -151,6 +151,9 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260303_002_harden_elo_vote_path.sql` - Supabase SQL migration.
 - `supabase/migrations/20260305_001_secure_elo_vote_and_rate_limits.sql` - Supabase SQL migration.
 - `supabase/migrations/20260306_001_simplify_elo_permissions.sql` - Supabase SQL migration.
+- `supabase/migrations/20260529_001_lock_public_read_tables.sql` - Supabase SQL migration.
+- `supabase/migrations/20260616_001_lock_public_fact_tables.sql` - Supabase SQL migration.
+- `supabase/migrations/20260617_001_restore_service_role_elo_vote_path.sql` - Supabase SQL migration.
 
 ## tests
 
@@ -167,6 +170,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/context-framework.test.js` - test
 - `tests/csv-formatters.test.js` - test
 - `tests/d3-theme-colors.test.js` - test
+- `tests/elo-vote-service-wrapper.test.js` - test
 - `tests/leaderboard-export.test.js` - test
 - `tests/leaderboard-page-ui-guards.test.js` - test
 - `tests/legacy-leaderboard.test.js` - test
@@ -188,6 +192,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/sticky-header-overflow.test.js` - test
 - `tests/supabase-config.test.js` - test
 - `tests/supabase-query-shape.test.js` - test
+- `tests/supabase-rls-migration.test.js` - test
 - `tests/team-page-loader-contracts.test.js` - test
 - `tests/team-route-utils.test.js` - test
 - `tests/team-route-wrappers.test.js` - test

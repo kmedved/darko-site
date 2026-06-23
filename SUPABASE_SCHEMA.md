@@ -127,6 +127,7 @@ Dimension table. One row per player.
 - **Rows:** ~5,347
 - **Update strategy:** TRUNCATE + reload every run
 - **Source:** `supabase_tables/players.parq`, built from `player_master_crosswalk.csv` + latest row per player from `spm_outputs` + `rookie_season` from `nba_survivorship`
+- **RLS:** Enabled by `supabase/migrations/20260529_001_lock_public_read_tables.sql`; `anon` and `authenticated` keep `SELECT` only.
 
 | # | Column | Postgres type | Notes |
 |---|---|---|---|
@@ -153,6 +154,7 @@ Season simulation results. One row per team.
 - **Rows:** 30
 - **Update strategy:** TRUNCATE + reload every run
 - **Source:** `calculated_data/season_sim.csv`
+- **RLS:** Enabled by `supabase/migrations/20260529_001_lock_public_read_tables.sql`; `anon` and `authenticated` keep `SELECT` only for standings/team pages.
 
 | # | Column | Postgres type | Notes |
 |---|---|---|---|
@@ -203,6 +205,7 @@ Win probability distribution. One row per team per win count.
 - **Rows:** ~525 (30 teams × ~17–18 win buckets)
 - **Update strategy:** TRUNCATE + reload every run
 - **Source:** `calculated_data/win_distribution.parq`
+- **RLS:** Enabled by `supabase/migrations/20260529_001_lock_public_read_tables.sql`; `anon` and `authenticated` keep `SELECT` only for team win-distribution charts.
 
 | # | Column | Postgres type | Notes |
 |---|---|---|---|
@@ -220,6 +223,7 @@ Five-man lineup ratings used by the `/lineups` page. One row per lineup variant.
 
 - **Rows:** varies by upload
 - **Update strategy:** reloads with the lineup upload pipeline
+- **RLS:** Enabled by `supabase/migrations/20260616_001_lock_public_fact_tables.sql`; `anon` and `authenticated` keep `SELECT` only for the `/lineups` page.
 - **Frontend note:** `/lineups` reads `team_name` when present and falls back to `"Team pending"` while that column is rolling out.
 - **Variant note:** `variant='pi'` stays PI; `variant='raw'` and `variant='npi'` are both normalized into the NPI bucket on the frontend during the upload transition.
 
@@ -248,6 +252,14 @@ Five-man lineup ratings used by the `/lineups` page. One row per lineup variant.
 
 All Supabase queries go through `src/lib/server/supabase.js`. Key patterns:
 
+### Public table access and RLS
+
+The Supabase Security Advisor check `rls_disabled_in_public` flagged `public.season_sim`, `public.win_distribution`, and `public.players` on 2026-05-29, then `public.player_ratings` and `public.lineup_ratings` on 2026-06-16. The site intentionally exposes these analytics tables for reads through the anon Supabase client, but public clients should not be able to insert, update, delete, or truncate them.
+
+`supabase/migrations/20260529_001_lock_public_read_tables.sql` and `supabase/migrations/20260616_001_lock_public_fact_tables.sql` enable RLS on those tables, recreate stable public-read `SELECT` policies, revoke all table privileges from `public`, `anon`, and `authenticated`, then grant `SELECT` back only to `anon` and `authenticated`. Data upload/reload jobs should continue to use `service_role` or the direct Postgres maintenance connection.
+
+Elo voting remains the only write path. `supabase/migrations/20260617_001_restore_service_role_elo_vote_path.sql` keeps `elo_ratings` and `elo_votes` readable to public clients, revokes public execution of `record_elo_vote`, and leaves vote writes to the SvelteKit `/api/rate/vote` wrapper using `SUPABASE_SERVICE_ROLE_KEY`.
+
 ### RATING_COLUMNS
 
 Comma-joined string of all 69 fetched `player_ratings` column names (66 original + `sal_market_fixed`, `actual_salary`, `surplus_value`), used by `getActivePlayers()` and `getPlayerHistory()` in `.select(RATING_COLUMNS)`. If you add a column to the DB, you must also add it here or it won't be fetched. Note: 3 salary columns (`game_value`, `wins_pg`, `warp`) exist in the DB but are not in RATING_COLUMNS since they aren't displayed on the frontend.
@@ -261,6 +273,8 @@ Comma-joined string of all 69 fetched `player_ratings` column names (66 original
 | `getLongevityRows()` | Calls `getActivePlayers()`, maps DB columns to frontend-aliased keys | Array with aliased longevity fields | `/api/longevity` |
 | `getLongevityTrajectory(id)` | `player_ratings` filtered to one player, maps to chart fields | Array of trajectory points | `/api/player/[id]/longevity` |
 | `getLineupRatings()` | `lineup_ratings` with explicit projection, `min_season_poss > 100`, variants in `('pi', 'raw', 'npi')`. Retries without `team_name` if the column is not available yet, drops rows missing `total_*_rating`, and normalizes `raw` + `npi` into the NPI bucket. | `{ pi: LineupRow[], npi: LineupRow[] }` | `/lineups` |
+| `getConferenceStandings()` / `getTeamSimulation()` | `season_sim` with public read-only RLS. Conference standings filter by `conference`; team pages filter by `team_name`. | Standings/team simulation rows | `/standings`, team pages |
+| `getTeamWinDistribution()` | `win_distribution` with public read-only RLS, filtered by `team_name` and ordered by `wins`. | Team win-distribution rows | Team pages |
 
 ### Helper functions
 
@@ -359,10 +373,10 @@ Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at
 
 | Table | `full_reload=True` (default for player_ratings) | `full_reload=False` | Fresh (table missing) |
 |---|---|---|---|
-| `players` | TRUNCATE + reload (CASCADE to elo_ratings) | same | CREATE + bulk load + PK |
+| `players` | TRUNCATE + reload (CASCADE to elo_ratings) | same | CREATE + bulk load + PK + read-only RLS via darko-site migration |
 | `player_ratings` | DROP + CREATE + bulk load + indexes + RLS | DELETE current season + INSERT (atomic) | CREATE + bulk load + indexes + RLS |
-| `season_sim` | TRUNCATE + reload | same | CREATE + bulk load |
-| `win_distribution` | TRUNCATE + reload | same | CREATE + bulk load |
+| `season_sim` | TRUNCATE + reload | same | CREATE + bulk load + read-only RLS via darko-site migration |
+| `win_distribution` | TRUNCATE + reload | same | CREATE + bulk load + read-only RLS via darko-site migration |
 
 **Indexes created on `player_ratings`:**
 - `pk_player_ratings PRIMARY KEY (nba_id, date)`
