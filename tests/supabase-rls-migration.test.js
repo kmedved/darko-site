@@ -11,7 +11,8 @@ const migration = [
     '20260710_001_add_wowy_ratings.sql',
     '20260710_002_add_active_player_snapshot_rpc.sql',
     '20260710_003_add_latest_player_teams_rpc.sql',
-    '20260710_004_add_latest_team_index.sql'
+    '20260710_004_add_latest_team_index.sql',
+    '20260710_005_add_historical_leaderboard_snapshot_rpcs.sql'
 ]
     .map((filename) =>
         readFileSync(join(__dirname, '..', 'supabase', 'migrations', filename), 'utf8')
@@ -87,5 +88,21 @@ test('latest-team RPC is invoker-safe and read-only for public roles', () => {
     assert.match(
         migration,
         /grant execute on function public\.get_latest_player_teams\(bigint\[\], date\)\s+to anon, authenticated, service_role;/
+    );
+});
+
+test('historical leaderboard RPCs are invoker-safe and use opening rosters', () => {
+    assert.match(migration, /function public\.get_leaderboard_seasons\(\)/);
+    assert.match(migration, /function public\.get_season_start_player_ratings\(p_season integer\)/);
+    assert.match(migration, /with team_openers as/);
+    assert.match(migration, /min\(pr\.date\) as opening_date/);
+    assert.match(migration, /security invoker/);
+    assert.match(
+        migration,
+        /grant execute on function public\.get_leaderboard_seasons\(\)\s+to anon, authenticated, service_role;/
+    );
+    assert.match(
+        migration,
+        /grant execute on function public\.get_season_start_player_ratings\(integer\)\s+to anon, authenticated, service_role;/
     );
 });

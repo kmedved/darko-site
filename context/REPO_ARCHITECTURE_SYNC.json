@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.23",
+  "arch_version": "0.1.24",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -359,12 +359,14 @@
         "dataSources": [
           "$lib/server/cacheHeaders.js:setEdgeCache",
           "$lib/server/playerViews.js:projectPlayers",
-          "$lib/server/supabase.js:getActivePlayers"
+          "$lib/server/supabase.js:getActivePlayers",
+          "$lib/server/supabase.js:getLeaderboardSeasons",
+          "$lib/server/supabase.js:getSeasonStartPlayers"
         ],
         "file": "src/routes/+page.server.js",
         "pathParams": [],
         "route": "/",
-        "signature": "load({ setHeaders })"
+        "signature": "load({ url, setHeaders })"
       },
       {
         "cache": {
@@ -673,6 +675,7 @@
     "supabase/migrations/20260710_002_add_active_player_snapshot_rpc.sql",
     "supabase/migrations/20260710_003_add_latest_player_teams_rpc.sql",
     "supabase/migrations/20260710_004_add_latest_team_index.sql",
+    "supabase/migrations/20260710_005_add_historical_leaderboard_snapshot_rpcs.sql",
     "svelte.config.js",
     "tests/api-active-players-cache.test.js",
     "tests/api-player-history.test.js",
@@ -1029,9 +1032,9 @@
     ],
     "pageLoaders": [
       {
-        "returns": "homepage current-season leaderboard",
+        "returns": "homepage Current or `?season=YYYY` opening-roster leaderboard",
         "route": "/",
-        "signature": "load({ setHeaders })"
+        "signature": "load({ url, setHeaders })"
       },
       {
         "returns": "preloaded compare cards from `?ids=`",
@@ -1158,6 +1161,10 @@
             "signature": "getFullPlayerTrajectoryHistory(nbaId, options = {})"
           },
           {
+            "name": "getLeaderboardSeasons",
+            "signature": "getLeaderboardSeasons()"
+          },
+          {
             "name": "getLineupRatings",
             "signature": "getLineupRatings({ lineupSize = 5, minPoss = LINEUP_MIN_POSSESSIONS } = {})"
           },
@@ -1184,6 +1191,10 @@
           {
             "name": "getRandomPair",
             "signature": "getRandomPair()"
+          },
+          {
+            "name": "getSeasonStartPlayers",
+            "signature": "getSeasonStartPlayers(season)"
           },
           {
             "name": "getTeamLineups",

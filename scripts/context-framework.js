@@ -19,6 +19,7 @@ export const REPO_CLASSIFICATION = Object.freeze({
 
 export const CORE_ABSTRACTIONS = Object.freeze([
     '`Active player snapshot` - latest deduped `player_ratings` row per active-roster player in the current NBA season, including future projection rows, merged with `players` metadata.',
+    '`Season-start leaderboard snapshot` - opening-game roster rows for every team in a selected historical season, merged with player names and sorted by DPM.',
     '`Full player history` - chronological career rows, capped and flagged when the API enters explicit full-history mode.',
     '`Team page payload` - `{ teamName, players, sim, winDist }` assembled from current-season team players, season simulation, and win-distribution tables.',
     '`Longevity row / trajectory` - retirement-age and survival-probability projections for current-season players or one player over time.',
@@ -31,6 +32,7 @@ export const CRITICAL_INVARIANTS = Object.freeze([
     '`/compare?ids=` dedupes IDs, preserves first-seen order, and stops at four players. (`src/lib/server/comparePage.js`, `tests/compare-page-server-load.test.js`)',
     '`/api/player/:id/history` defaults to 1000 rows, caps bounded requests at 2000, and only enters paginated full-history mode when `full=1`. (`src/routes/api/player/[id]/history/+server.js`, `src/lib/server/supabase.js`)',
     '`getActivePlayers()` uses the latest `player_ratings.season`, includes active-roster rows in that season, dedupes by `nba_id` to the latest row including future projections, and sorts by DPM descending before any page/API consumes it. (`src/lib/server/supabase.js`)',
+    '`/` defaults to the Current snapshot; `?season=YYYY` loads that season’s opening-roster snapshot, where YYYY is the database season-ending year. (`src/routes/+page.server.js`, `src/lib/server/supabase.js`)',
     'Only `/api/rate/vote` writes state, and it must pass same-origin checks before calling the Supabase RPC. (`src/lib/server/eloSecurity.js`, `src/lib/server/eloService.js`)',
     'Wide-table horizontal scroll is touch/mobile-only; sticky headers remain a desktop behavior. (`AGENTS.md`, `tests/mobile-table-scroll.test.js`, `tests/wide-sticky-table-layout.test.js`)',
     'Both team detail URLs are thin wrappers over the shared team payload/view pipeline. (`src/routes/team/[team]/+page.server.js`, `src/routes/standings/[slug]/+page.server.js`, `tests/team-route-wrappers.test.js`)'
@@ -723,7 +725,7 @@ function getApiRouteSummary(route) {
 }
 
 function getPageLoaderSummary(route) {
-    if (route === '/') return 'homepage current-season leaderboard';
+    if (route === '/') return 'homepage Current or `?season=YYYY` opening-roster leaderboard';
     if (route === '/compare') return 'preloaded compare cards from `?ids=`';
     if (route === '/player/:nbaId') return 'full player profile payload';
     if (route === '/standings') return 'east/west standings split';
@@ -1100,7 +1102,7 @@ export function renderArchitectureDoc(syncArtifact) {
         '',
         '| Surface | Route(s) | Backend path | Cache / mode | Notes |',
         '|---|---|---|---|---|',
-        '| Homepage leaderboard | `/` | `getActivePlayers()` | edge 3600s / swr 86400s | Current-season player snapshot ranked by DPM. |',
+        '| Homepage leaderboard | `/`, `/?season=YYYY` | `getActivePlayers()`, `getSeasonStartPlayers()` | edge 3600s / swr 86400s | Current snapshot by default; historical views use each team’s opening roster. |',
         '| Player detail | `/player/:nbaId` | `loadPlayerPageData()` + `getFullPlayerHistory()` | edge 3600s / swr 86400s | Full history is SSR-first. |',
         '| Compare | `/compare?ids=` | `loadComparePageData()` | uncached page loader | Dedupes IDs, preserves order, max 4 players. |',
         '| Standings / team detail | `/standings`, `/standings/:slug`, `/team/:team` | `getConferenceStandings()`, `getTeamPageData()` | edge 3600s / swr 86400s | Dual team-detail URL surfaces share one payload builder. |',

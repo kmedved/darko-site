@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const LEADERBOARD_PAGE = 'src/routes/+page.svelte';
+const LEADERBOARD_PAGE_SERVER = 'src/routes/+page.server.js';
 const LAYOUT_FILE = 'src/routes/+layout.svelte';
 const APP_CSS_FILE = 'src/app.css';
 
@@ -50,6 +51,22 @@ test('leaderboard treats database season as ending year for display labels', asy
         /startYear\s*\+\s*1|Number\.parseInt\(season,\s*10\)/,
         'leaderboard should not reinterpret database season values as start years'
     );
+});
+
+test('leaderboard defaults to Current and loads historical snapshots from the URL', async () => {
+    const [page, server] = await Promise.all([
+        fs.readFile(path.resolve(process.cwd(), LEADERBOARD_PAGE), 'utf8'),
+        fs.readFile(path.resolve(process.cwd(), LEADERBOARD_PAGE_SERVER), 'utf8')
+    ]);
+
+    assert.match(page, /import \{ goto \} from '\$app\/navigation';/);
+    assert.match(page, /<option value="current">Current<\/option>/);
+    assert.match(page, /goto\(`\/\$\{suffix\}`, \{ keepFocus: true \}\)/);
+    assert.match(page, /data\.selectedSeason === null/);
+    assert.match(server, /url\.searchParams\.get\('season'\)/);
+    assert.match(server, /getLeaderboardSeasons\(\)/);
+    assert.match(server, /getSeasonStartPlayers\(selectedSeason\)/);
+    assert.match(server, /seasons\.includes\(requestedSeason\)/);
 });
 
 test('leaderboard renders one page while retaining the full filtered result set', async () => {

@@ -102,6 +102,27 @@ test('active players are selected from latest current-season active-roster proje
     assert.doesNotMatch(activePlayersBlock, /weekAgo|gte\('date'/);
 });
 
+test('historical leaderboard snapshots use dedicated cached RPCs', async () => {
+    const absolutePath = path.resolve(process.cwd(), SUPABASE_FILE);
+    const contents = await fs.readFile(absolutePath, 'utf8');
+    const seasonsStart = contents.indexOf('export async function getLeaderboardSeasons()');
+    const snapshotStart = contents.indexOf('export async function getSeasonStartPlayers(season)');
+    const historyStart = contents.indexOf('/**\n * Get a single player\'s history', snapshotStart);
+
+    assert.ok(seasonsStart >= 0, 'historical season helper should be discoverable');
+    assert.ok(snapshotStart >= 0 && historyStart > snapshotStart, 'snapshot helper should be discoverable');
+
+    const seasonsBlock = contents.slice(seasonsStart, snapshotStart);
+    const snapshotBlock = contents.slice(snapshotStart, historyStart);
+    assert.match(seasonsBlock, /CACHE_MS\.leaderboardSeasons/);
+    assert.match(seasonsBlock, /\.rpc\('get_leaderboard_seasons'\)/);
+    assert.match(snapshotBlock, /CACHE_MS\.seasonStartPlayers/);
+    assert.match(snapshotBlock, /\.rpc\('get_season_start_player_ratings'/);
+    assert.match(snapshotBlock, /getPlayersMapByIds\(rows\.map/);
+    assert.match(snapshotBlock, /mergeWithPlayerDim/);
+    assert.match(snapshotBlock, /sortByDpmDesc/);
+});
+
 test('concurrent team-filtered active players share one all-player load', async () => {
     const players = [
         { nba_id: 1, team_name: 'Boston Celtics' },

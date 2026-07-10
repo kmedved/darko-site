@@ -425,6 +425,9 @@ Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at
 - `idx_ratings_date (date DESC)`
 - `idx_ratings_season (season)`
 - `idx_ratings_nba_id (nba_id)`
+- `idx_ratings_active_latest (season DESC, active_roster, nba_id, date DESC)`
+- `idx_ratings_leaderboard_team_opener (season, team_name, date ASC)`
+- `idx_ratings_player_team_latest (nba_id, date DESC) INCLUDE (team_name, tm_id)` for valid team rows
 - Row Level Security: `allow_public_read` policy for SELECT
 
 **Connection:** Uses `SUPABASE_PG_DSN` env var, falling back to `fixed_data/supabase_secret.json`.
@@ -441,6 +444,8 @@ uploader, so indexes, grants, constraints, and RLS survive publication.
 **All source parquet files must cover the same date range.** The build script left-joins everything onto `spm_outputs` by `(nba_id, date)`. If any source file lags behind, those columns will be null for all dates beyond that file's max date.
 
 `getActivePlayers()` always returns the most recent active-roster row per player in the latest season, including `future_game = 1` projection rows. If that row has null survivorship/projections/RAPM because the source file was stale at build time, the entire column appears empty on the site — even though older rows in the DB have the data.
+
+The homepage's historical leaderboard uses `get_season_start_player_ratings(p_season)`. It takes the first game date for each team in the selected season and returns the roster rows from those opening games, so a selected `2013` snapshot represents the start of 2012-13 rather than players who joined later that year. `get_leaderboard_seasons()` returns the available season-ending years for that selector.
 
 **Debugging null columns on the site:**
 1. Check max dates of all source parquet files — they should match `spm_outputs`

@@ -161,6 +161,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260710_002_add_active_player_snapshot_rpc.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_003_add_latest_player_teams_rpc.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_004_add_latest_team_index.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_005_add_historical_leaderboard_snapshot_rpcs.sql` - Supabase SQL migration.
 
 ## tests
 

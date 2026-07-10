@@ -28,6 +28,8 @@ const MAX_CACHE_ENTRIES = 300;
 
 const CACHE_MS = {
     activePlayers: 60_000,
+    leaderboardSeasons: 3_600_000,
+    seasonStartPlayers: 3_600_000,
     playersIndex: 300_000,
     playerCurrent: 60_000,
     playerHistory: 300_000,
@@ -541,6 +543,52 @@ const getCachedActivePlayers = createActivePlayersAccessor({
 
 export function getActivePlayers(options = {}) {
     return getCachedActivePlayers(options);
+}
+
+/**
+ * Get every season represented in the player-ratings history, newest first.
+ * The database stores NBA season end years, so 2013 represents 2012-13.
+ */
+export async function getLeaderboardSeasons() {
+    const key = cacheKey('leaderboardSeasons', 'all');
+    return runCached(key, CACHE_MS.leaderboardSeasons, async () => {
+        const { data, error } = await supabase.rpc('get_leaderboard_seasons');
+        if (error) throw error;
+
+        return Array.from(
+            new Set(
+                (Array.isArray(data) ? data : [])
+                    .map((season) => Number.parseInt(season, 10))
+                    .filter((season) => Number.isInteger(season))
+            )
+        ).sort((a, b) => b - a);
+    });
+}
+
+/**
+ * Get the opening-roster snapshot for a historical NBA season. Each team is
+ * represented by the player_ratings rows on its first game date, rather than
+ * admitting players who joined later in the season.
+ */
+export async function getSeasonStartPlayers(season) {
+    const seasonEndYear = Number.parseInt(season, 10);
+    if (!Number.isInteger(seasonEndYear)) {
+        throw new TypeError(`Invalid season end year: ${season}`);
+    }
+
+    const key = cacheKey('seasonStartPlayers', seasonEndYear);
+    return runCached(key, CACHE_MS.seasonStartPlayers, async () => {
+        const { data, error } = await supabase.rpc('get_season_start_player_ratings', {
+            p_season: seasonEndYear
+        });
+        if (error) throw error;
+
+        const rows = Array.isArray(data) ? data : [];
+        const playersMap = await getPlayersMapByIds(rows.map((row) => row?.nba_id));
+        return sortByDpmDesc(
+            rows.map((row) => mergeWithPlayerDim(row, playersMap.get(row.nba_id)))
+        );
+    });
 }
 
 /**

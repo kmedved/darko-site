@@ -1,4 +1,5 @@
 <script>
+    import { goto } from '$app/navigation';
     import {
         exportCsvRows,
         leaderboardCsvColumns,
@@ -27,7 +28,6 @@
     let sortDirection = $state('desc');
     let searchQuery = $state('');
     let teamFilter = $state('all');
-    let seasonFilter = $state('');
     let leaderboardPage = $state(1);
     let positionView = $state('all');
     let distributionMetric = $state('dpm');
@@ -64,30 +64,19 @@
         { key: 'x_ft_pct', label: 'FT%', kind: 'percent' }
     ];
 
-    const seasonOptions = $derived.by(() => {
-        const seasons = [];
-        for (const player of players) {
-            if (player?.season !== null && player?.season !== undefined) {
-                const season = String(player.season);
-                if (!seasons.includes(season)) seasons.push(season);
-            }
-        }
-        return seasons.sort((a, b) => Number.parseInt(b, 10) - Number.parseInt(a, 10));
-    });
-
-    const activeSeason = $derived(seasonFilter || seasonOptions[0] || '');
-    const activeSeasonLabel = $derived(
-        activeSeason ? formatSeasonLabel(activeSeason) : 'Current season'
+    const seasonOptions = $derived(data.seasons || []);
+    const activeSeason = $derived(
+        data.selectedSeason === null || data.selectedSeason === undefined
+            ? 'current'
+            : String(data.selectedSeason)
     );
-
-    const seasonPlayers = $derived.by(() => {
-        if (!activeSeason) return players;
-        return players.filter((player) => String(player?.season) === activeSeason);
-    });
+    const activeSeasonLabel = $derived(
+        activeSeason === 'current' ? 'Current' : formatSeasonLabel(activeSeason)
+    );
 
     const teamOptions = $derived.by(() => {
         const teams = [];
-        for (const player of seasonPlayers) {
+        for (const player of players) {
             if (player?.team_name && !teams.includes(player.team_name)) {
                 teams.push(player.team_name);
             }
@@ -100,8 +89,8 @@
     );
 
     const teamScopedPlayers = $derived.by(() => {
-        if (activeTeamFilter === 'all') return seasonPlayers;
-        return seasonPlayers.filter((player) => player?.team_name === activeTeamFilter);
+        if (activeTeamFilter === 'all') return players;
+        return players.filter((player) => player?.team_name === activeTeamFilter);
     });
 
     const filteredPlayers = $derived.by(() =>
@@ -197,6 +186,12 @@
     function formatSeasonLabel(season) {
         const label = formatSeasonEndYearLabel(season);
         return label ? `${label} Season` : `${season} Season`;
+    }
+
+    function selectSeason(event) {
+        const season = event.currentTarget.value;
+        const suffix = season === 'current' ? '' : `?season=${encodeURIComponent(season)}`;
+        goto(`/${suffix}`, { keepFocus: true });
     }
 
     function toggleSort(column) {
@@ -458,24 +453,21 @@
         </section>
 
         {#if players.length === 0}
-            <div class="empty-state">No players are currently available.</div>
+            <div class="empty-state">No players are available for {activeSeasonLabel.toLowerCase()}.</div>
         {:else}
             <div class="leaderboard-workspace">
-                <section class="leaderboard-table-panel" aria-label="Current-season player leaderboard">
+                <section class="leaderboard-table-panel" aria-label={`${activeSeasonLabel} player leaderboard`}>
                     <div class="leaderboard-controls">
                         <div class="control-field">
                             <select
                                 id="season-filter"
                                 value={activeSeason}
-                                onchange={(event) => {
-                                    seasonFilter = event.currentTarget.value;
-                                    teamFilter = 'all';
-                                    leaderboardPage = 1;
-                                }}
+                                onchange={selectSeason}
                                 aria-label="Season"
                             >
+                                <option value="current">Current</option>
                                 {#each seasonOptions as season (season)}
-                                    <option value={season}>{formatSeasonLabel(season)}</option>
+                                    <option value={String(season)}>{formatSeasonLabel(season)}</option>
                                 {/each}
                             </select>
                         </div>
@@ -628,7 +620,7 @@
                             </div>
                             <span class="insight-info" title={`${activeSeasonLabel}, ${activeTeamFilter === 'all' ? 'all teams' : teamAbbr(activeTeamFilter)}`}>i</span>
                         </div>
-                        <svg class="distribution-chart" viewBox="0 0 320 170" role="img" aria-label={`Distribution of current-season player ${selectedDistributionMetric.label}`}>
+                        <svg class="distribution-chart" viewBox="0 0 320 170" role="img" aria-label={`Distribution of ${activeSeasonLabel.toLowerCase()} player ${selectedDistributionMetric.label}`}>
                             <line x1="0" y1="138" x2="320" y2="138" />
                             <line x1="0" y1="96" x2="320" y2="96" />
                             <line x1="0" y1="54" x2="320" y2="54" />
