@@ -9,7 +9,31 @@ async function fetchJson(path) {
 }
 
 const activePlayersPromiseCache = new Map();
+const playerHistoryPromiseCache = new Map();
 export const ACTIVE_PLAYERS_CACHE_TTL_MS = 5 * 60 * 1000;
+const PLAYER_HISTORY_CACHE_MAX_ENTRIES = 24;
+
+function fetchJsonCached(path, cache, ttlMs) {
+    const now = Date.now();
+    for (const [key, entry] of cache) {
+        if (entry.expiresAt <= now) cache.delete(key);
+    }
+
+    const cached = cache.get(path);
+    if (cached && cached.expiresAt > now) return cached.promise;
+    if (cached) cache.delete(path);
+
+    while (cache.size >= PLAYER_HISTORY_CACHE_MAX_ENTRIES) {
+        cache.delete(cache.keys().next().value);
+    }
+
+    const promise = fetchJson(path).catch((error) => {
+        cache.delete(path);
+        throw error;
+    });
+    cache.set(path, { promise, expiresAt: now + ttlMs });
+    return promise;
+}
 
 export async function apiPlayerHistory(
     nbaId,
@@ -29,7 +53,11 @@ export async function apiPlayerHistory(
     if (view) qs.set('view', String(view));
 
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
-    const payload = await fetchJson(`/api/player/${id}/history${suffix}`);
+    const payload = await fetchJsonCached(
+        `/api/player/${id}/history${suffix}`,
+        playerHistoryPromiseCache,
+        ACTIVE_PLAYERS_CACHE_TTL_MS
+    );
 
     if (!full) {
         if (Array.isArray(payload)) return payload;
@@ -66,7 +94,11 @@ export async function apiWowyPlayerHistory(nbaId, { includeMetadata = false } = 
         throw new Error(`Invalid nba_id: ${nbaId}`);
     }
 
-    const payload = await fetchJson(`/api/player/${id}/wowy-history`);
+    const payload = await fetchJsonCached(
+        `/api/player/${id}/wowy-history`,
+        playerHistoryPromiseCache,
+        ACTIVE_PLAYERS_CACHE_TTL_MS
+    );
     if (includeMetadata) {
         if (payload && typeof payload === 'object' && !Array.isArray(payload)) return payload;
         return { rows: Array.isArray(payload) ? payload : [], truncated: false, maxRows: null };
@@ -115,6 +147,7 @@ export function apiActivePlayers({ team, view } = {}) {
 
 export function __resetApiCachesForTests() {
     activePlayersPromiseCache.clear();
+    playerHistoryPromiseCache.clear();
 }
 
 export function apiPlayersIndex() {

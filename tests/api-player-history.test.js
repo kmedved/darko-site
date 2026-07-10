@@ -1,8 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { apiPlayerHistory, apiWowyPlayerHistory, apiWowyPublication } from '../src/lib/api.js';
+import {
+    __resetApiCachesForTests,
+    apiPlayerHistory,
+    apiWowyPlayerHistory,
+    apiWowyPublication
+} from '../src/lib/api.js';
 
+test.afterEach(() => __resetApiCachesForTests());
 
 test('apiPlayerHistory full mode returns rows array by default when API returns metadata object', async (t) => {
     const originalFetch = globalThis.fetch;
@@ -96,6 +102,52 @@ test('apiWowyPlayerHistory returns the complete server-assembled career array', 
     assert.equal(requestedPath, '/api/player/2544/wowy-history');
     assert.equal(rows.length, 2);
     assert.equal(rows[1].career_game_num, 1923);
+});
+
+test('player histories share successful in-flight and recent requests', async (t) => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    let requests = 0;
+    globalThis.fetch = async () => {
+        requests += 1;
+        return {
+            ok: true,
+            json: async () => ({ rows: [{ nba_id: 2544 }], truncated: false, maxRows: 5000 })
+        };
+    };
+
+    const [first, second] = await Promise.all([
+        apiPlayerHistory(2544, { full: true, view: 'trajectory' }),
+        apiPlayerHistory(2544, { full: true, view: 'trajectory' })
+    ]);
+    const third = await apiPlayerHistory(2544, { full: true, view: 'trajectory' });
+
+    assert.equal(requests, 1);
+    assert.deepEqual(first, second);
+    assert.deepEqual(second, third);
+});
+
+test('player history cache evicts old careers instead of growing without bound', async (t) => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    let requests = 0;
+    globalThis.fetch = async () => {
+        requests += 1;
+        return { ok: true, json: async () => [] };
+    };
+
+    for (let nbaId = 1; nbaId <= 25; nbaId += 1) {
+        await apiPlayerHistory(nbaId);
+    }
+    await apiPlayerHistory(1);
+
+    assert.equal(requests, 26);
 });
 
 test('apiWowyPublication reads the public freshness record', async (t) => {

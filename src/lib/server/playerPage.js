@@ -36,7 +36,7 @@ export async function loadPlayerPageData({
 
     return {
         nbaId,
-        playerInfo: historyRows.at(-1) ?? null,
+        playerInfo: payload?.playerInfo ?? historyRows.at(-1) ?? null,
         historyRows,
         historyMeta: {
             truncated: Boolean(payload?.truncated),

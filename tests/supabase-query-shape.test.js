@@ -47,6 +47,24 @@ test('trajectory projections omit unused heavyweight fields', async () => {
     assert.doesNotMatch(wowyBlock, /'game_id'|'exposure'/);
 });
 
+test('player profile history projects chart fields instead of full production rows', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), SUPABASE_FILE), 'utf8');
+    const start = contents.indexOf('const PLAYER_PROFILE_RATING_COLUMNS');
+    const end = contents.indexOf("].join(', ');", start);
+    const block = contents.slice(start, end);
+
+    for (const required of ['dpm', 'box_odpm', 'tr_fg3_pct', 'sal_market_fixed']) {
+        assert.match(block, new RegExp(`'${required}'`));
+    }
+    for (const unused of ['poss', 'rapm_exposure', 'projected_years_remaining', 'actual_salary', 's12']) {
+        assert.doesNotMatch(block, new RegExp(`'${unused}'`));
+    }
+    assert.match(contents, /getFullPlayerProfileHistory/);
+    assert.match(contents, /cachePrefix: 'fullPlayerProfileHistory'/);
+    assert.match(contents, /mergePlayerDim: false/);
+    assert.match(contents, /getPlayerHistory\(nbaId, 1\)/);
+});
+
 test('active players are selected from latest current-season active-roster projections', async () => {
     const absolutePath = path.resolve(process.cwd(), SUPABASE_FILE);
     const contents = await fs.readFile(absolutePath, 'utf8');

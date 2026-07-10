@@ -28,6 +28,7 @@
     let searchQuery = $state('');
     let teamFilter = $state('all');
     let seasonFilter = $state('');
+    let leaderboardPage = $state(1);
     let positionView = $state('all');
     let distributionMetric = $state('dpm');
     let standardTableRoot = $state(null);
@@ -38,6 +39,7 @@
     let standardHeaderTable = $state(null);
 
     const TOP_POSITION_MIN_GAMES = 20;
+    const LEADERBOARD_PAGE_SIZE = 50;
     const players = $derived(data.players || []);
     const playerColumns = LEADERBOARD_COLUMNS;
     const textSortColumns = new Set(['_rank', 'player_name', 'team_name', 'position']);
@@ -115,6 +117,22 @@
             sortConfigs: leaderboardSortConfig
         })
     );
+    const leaderboardPageCount = $derived(
+        Math.max(1, Math.ceil(sortedPlayers.length / LEADERBOARD_PAGE_SIZE))
+    );
+    const activeLeaderboardPage = $derived(
+        Math.min(leaderboardPage, leaderboardPageCount)
+    );
+    const visibleLeaderboardPlayers = $derived.by(() => {
+        const start = (activeLeaderboardPage - 1) * LEADERBOARD_PAGE_SIZE;
+        return sortedPlayers.slice(start, start + LEADERBOARD_PAGE_SIZE);
+    });
+    const leaderboardRangeStart = $derived(
+        sortedPlayers.length === 0 ? 0 : (activeLeaderboardPage - 1) * LEADERBOARD_PAGE_SIZE + 1
+    );
+    const leaderboardRangeEnd = $derived(
+        Math.min(activeLeaderboardPage * LEADERBOARD_PAGE_SIZE, sortedPlayers.length)
+    );
 
     const leaderCards = $derived.by(() => [
         buildLeaderCard(teamScopedPlayers, 'Best DPM', 'dpm'),
@@ -188,6 +206,7 @@
             column,
             defaultDirection: textSortColumns.has(column) ? 'asc' : 'desc'
         }));
+        leaderboardPage = 1;
     }
 
     function metricClass(value) {
@@ -451,6 +470,7 @@
                                 onchange={(event) => {
                                     seasonFilter = event.currentTarget.value;
                                     teamFilter = 'all';
+                                    leaderboardPage = 1;
                                 }}
                                 aria-label="Season"
                             >
@@ -464,7 +484,10 @@
                             <select
                                 id="team-filter"
                                 value={activeTeamFilter}
-                                onchange={(event) => (teamFilter = event.currentTarget.value)}
+                                onchange={(event) => {
+                                    teamFilter = event.currentTarget.value;
+                                    leaderboardPage = 1;
+                                }}
                                 aria-label="Team"
                             >
                                 <option value="all">All Teams</option>
@@ -480,7 +503,10 @@
                                     id="player-search"
                                     type="search"
                                     value={searchQuery}
-                                    oninput={(event) => (searchQuery = event.currentTarget.value)}
+                                    oninput={(event) => {
+                                        searchQuery = event.currentTarget.value;
+                                        leaderboardPage = 1;
+                                    }}
                                     placeholder="Search players..."
                                     aria-label="Search players"
                                 />
@@ -519,10 +545,11 @@
                                             <td class="empty-row" colspan={playerColumns.length}>No matching players.</td>
                                         </tr>
                                     {:else}
-                                        {#each sortedPlayers as player, index (player.nba_id)}
+                                        {#each visibleLeaderboardPlayers as player, index (player.nba_id)}
                                             <tr>
                                                 {#each playerColumns as column (column.key)}
-                                                    {@const value = getLeaderboardCellValue(player, column, index)}
+                                                    {@const globalIndex = (activeLeaderboardPage - 1) * LEADERBOARD_PAGE_SIZE + index}
+                                                    {@const value = getLeaderboardCellValue(player, column, globalIndex)}
                                                     {#if column.key === 'player_name'}
                                                         <td class={cellClass(column, value)}>
                                                             <a class="player-link" href="/player/{player.nba_id}">
@@ -558,6 +585,29 @@
                             </table>
                         </div>
                     </div>
+                    {#if sortedPlayers.length > LEADERBOARD_PAGE_SIZE}
+                        <nav class="leaderboard-pagination" aria-label="Leaderboard pagination">
+                            <button
+                                type="button"
+                                aria-label="Previous leaderboard page"
+                                disabled={activeLeaderboardPage <= 1}
+                                onclick={() => (leaderboardPage = Math.max(1, activeLeaderboardPage - 1))}
+                            >
+                                ‹
+                            </button>
+                            <span>
+                                {leaderboardRangeStart}–{leaderboardRangeEnd} of {sortedPlayers.length}
+                            </span>
+                            <button
+                                type="button"
+                                aria-label="Next leaderboard page"
+                                disabled={activeLeaderboardPage >= leaderboardPageCount}
+                                onclick={() => (leaderboardPage = Math.min(leaderboardPageCount, activeLeaderboardPage + 1))}
+                            >
+                                ›
+                            </button>
+                        </nav>
+                    {/if}
                 </section>
 
                 <aside class="insight-rail" aria-label="Leaderboard insights">
@@ -962,6 +1012,40 @@
         font-size: 13px;
         font-weight: 800;
         white-space: nowrap;
+    }
+
+    .leaderboard-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin-top: 12px;
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 750;
+    }
+
+    .leaderboard-pagination button {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-surface);
+        color: var(--text);
+        font-size: 22px;
+        line-height: 1;
+    }
+
+    .leaderboard-pagination button:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .leaderboard-pagination button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
     }
 
     .table-wrapper {

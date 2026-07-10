@@ -214,6 +214,34 @@ const TRAJECTORY_RATING_COLUMNS = [
     'sal_market_fixed'
 ].join(', ');
 
+// Player profiles chart complete careers, but snapshot-only metadata and
+// longevity projections are loaded once rather than repeated for every game.
+const PLAYER_PROFILE_RATING_COLUMNS = [
+    'nba_id',
+    'date',
+    'team_name',
+    'tm_id',
+    'dpm',
+    'o_dpm',
+    'd_dpm',
+    'box_dpm',
+    'box_odpm',
+    'box_ddpm',
+    'on_off_dpm',
+    'age',
+    'bayes_rapm_total',
+    'x_minutes',
+    'x_pace',
+    'x_pts_100',
+    'x_ast_100',
+    'x_fg_pct',
+    'x_fg3_pct',
+    'x_ft_pct',
+    'tr_fg3_pct',
+    'tr_ft_pct',
+    'sal_market_fixed'
+].join(', ');
+
 const PLAYERS_DIM_COLUMNS = [
     'nba_id',
     'player_name',
@@ -580,7 +608,8 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
         : MAX_FULL_HISTORY_ROWS;
     const columns = options.columns || RATING_COLUMNS;
     const cachePrefix = options.cachePrefix || 'fullPlayerHistory';
-    const key = cacheKey(cachePrefix, `${nbaId}:${maxRows}`);
+    const mergePlayerDim = options.mergePlayerDim !== false;
+    const key = cacheKey(cachePrefix, `${nbaId}:${maxRows}:${mergePlayerDim ? 'merged' : 'raw'}`);
     return runCached(key, CACHE_MS.fullPlayerHistory, async () => {
         let allData = [];
         let page = 0;
@@ -625,6 +654,10 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
             truncated = (extraRows || []).length > 0;
         }
 
+        if (!mergePlayerDim) {
+            return { rows: allData, truncated, maxRows };
+        }
+
         const playersMap = await getPlayersMapByIds([nbaId]);
         const playerDim = playersMap.get(nbaId);
         return {
@@ -642,6 +675,23 @@ export function getFullPlayerTrajectoryHistory(nbaId, options = {}) {
         columns: TRAJECTORY_RATING_COLUMNS,
         cachePrefix: 'fullPlayerTrajectoryHistory'
     });
+}
+
+/** Get the complete career projection used by the player profile charts. */
+export async function getFullPlayerProfileHistory(nbaId, options = {}) {
+    const [history, latestRows] = await Promise.all([
+        getFullPlayerHistory(nbaId, {
+            ...options,
+            columns: PLAYER_PROFILE_RATING_COLUMNS,
+            cachePrefix: 'fullPlayerProfileHistory',
+            mergePlayerDim: false
+        }),
+        getPlayerHistory(nbaId, 1)
+    ]);
+    return {
+        ...history,
+        playerInfo: latestRows.at(-1) ?? null
+    };
 }
 
 /**

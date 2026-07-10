@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.20",
+  "arch_version": "0.1.21",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -409,7 +409,7 @@
           "$lib/server/cacheHeaders.js:setEdgeCache",
           "$lib/server/playerPage.js:loadPlayerPageData",
           "$lib/server/supabase.js:MAX_FULL_HISTORY_ROWS",
-          "$lib/server/supabase.js:getFullPlayerHistory"
+          "$lib/server/supabase.js:getFullPlayerProfileHistory"
         ],
         "file": "src/routes/player/[nbaId]/+page.server.js",
         "pathParams": [
@@ -1148,6 +1148,10 @@
           {
             "name": "getFullPlayerHistory",
             "signature": "getFullPlayerHistory(nbaId, options = {})"
+          },
+          {
+            "name": "getFullPlayerProfileHistory",
+            "signature": "getFullPlayerProfileHistory(nbaId, options = {})"
           },
           {
             "name": "getFullPlayerTrajectoryHistory",

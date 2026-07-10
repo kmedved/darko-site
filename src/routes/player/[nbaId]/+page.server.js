@@ -1,6 +1,6 @@
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 import { loadPlayerPageData } from '$lib/server/playerPage.js';
-import { getFullPlayerHistory, MAX_FULL_HISTORY_ROWS } from '$lib/server/supabase.js';
+import { getFullPlayerProfileHistory, MAX_FULL_HISTORY_ROWS } from '$lib/server/supabase.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -14,7 +14,7 @@ export async function load({ params, setHeaders }) {
         setHeaders,
         setCacheHeaders: setEdgeCache,
         loadFullHistory: (nbaId) =>
-            getFullPlayerHistory(nbaId, {
+            getFullPlayerProfileHistory(nbaId, {
                 maxRows: MAX_FULL_HISTORY_ROWS
             })
     });

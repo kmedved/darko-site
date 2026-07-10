@@ -64,3 +64,21 @@ test('player page load returns playerInfo, historyRows, and historyMeta', async 
         maxRows: 5000
     });
 });
+
+test('player page load prefers separately loaded snapshot metadata', async () => {
+    const historyRows = [{ nba_id: 7, date: '2025-01-01', dpm: 1 }];
+    const playerInfo = { nba_id: 7, date: '2025-01-01', dpm: 1, player_name: 'Test Player', s1: 90 };
+
+    const result = await loadPlayerPageData({
+        nbaIdParam: '7',
+        loadFullHistory: async () => ({
+            rows: historyRows,
+            playerInfo,
+            truncated: false,
+            maxRows: 5000
+        })
+    });
+
+    assert.equal(result.playerInfo, playerInfo);
+    assert.equal(result.historyRows, historyRows);
+});

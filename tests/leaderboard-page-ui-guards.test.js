@@ -52,6 +52,16 @@ test('leaderboard treats database season as ending year for display labels', asy
     );
 });
 
+test('leaderboard renders one page while retaining the full filtered result set', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), LEADERBOARD_PAGE), 'utf8');
+
+    assert.match(contents, /const LEADERBOARD_PAGE_SIZE = 50;/);
+    assert.match(contents, /sortedPlayers\.slice\(start, start \+ LEADERBOARD_PAGE_SIZE\)/);
+    assert.match(contents, /#each visibleLeaderboardPlayers as player/);
+    assert.match(contents, /of \{sortedPlayers\.length\}/);
+    assert.match(contents, /buildLeaderboardCsvRows\(sortedPlayers\)/);
+});
+
 test('desktop navigation keeps primary links together ahead of display controls', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), LAYOUT_FILE), 'utf8');
     const navLinks = contents.match(/<div class="links desktop-links">([\s\S]*?)<\/div>\s*<div class="desktop-controls">/);
