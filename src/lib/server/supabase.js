@@ -186,6 +186,34 @@ const RATING_COLUMNS = [
     'actual_salary'
 ].join(', ');
 
+// The Trajectories page needs complete careers but only its selectable metrics.
+// Keeping this projection narrow avoids shipping the production table's modeling fields.
+const TRAJECTORY_RATING_COLUMNS = [
+    'nba_id',
+    'date',
+    'season',
+    'team_name',
+    'tm_id',
+    'dpm',
+    'o_dpm',
+    'd_dpm',
+    'box_dpm',
+    'box_odpm',
+    'box_ddpm',
+    'on_off_dpm',
+    'age',
+    'career_game_num',
+    'bayes_rapm_total',
+    'x_minutes',
+    'x_pace',
+    'x_pts_100',
+    'x_ast_100',
+    'x_fg_pct',
+    'x_fg3_pct',
+    'x_ft_pct',
+    'sal_market_fixed'
+].join(', ');
+
 const PLAYERS_DIM_COLUMNS = [
     'nba_id',
     'player_name',
@@ -196,15 +224,13 @@ const PLAYERS_DIM_COLUMNS = [
 
 const WOWY_RATING_COLUMNS = [
     'nba_id',
-    'game_id',
     'date',
     'season',
     'career_game_num',
     'age',
     'wowy_rapm',
     'wowy_orapm',
-    'wowy_drapm',
-    'exposure'
+    'wowy_drapm'
 ].join(', ');
 
 const TEAM_FALLBACK_LOOKBACK_DAYS = 370;
@@ -595,7 +621,9 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
     const maxRows = Number.isInteger(options.maxRows) && options.maxRows > 0
         ? options.maxRows
         : MAX_FULL_HISTORY_ROWS;
-    const key = cacheKey('fullPlayerHistory', `${nbaId}:${maxRows}`);
+    const columns = options.columns || RATING_COLUMNS;
+    const cachePrefix = options.cachePrefix || 'fullPlayerHistory';
+    const key = cacheKey(cachePrefix, `${nbaId}:${maxRows}`);
     return runCached(key, CACHE_MS.fullPlayerHistory, async () => {
         let allData = [];
         let page = 0;
@@ -606,7 +634,7 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
         while (allData.length < maxRows) {
             const { data, error } = await supabase
                 .from('player_ratings')
-                .select(RATING_COLUMNS)
+                .select(columns)
                 .eq('nba_id', nbaId)
                 .order('date', { ascending: true })
                 .range(page * pageSize, (page + 1) * pageSize - 1);
@@ -647,6 +675,15 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
             truncated,
             maxRows
         };
+    });
+}
+
+/** Get the complete career projection used only by the Trajectories page. */
+export function getFullPlayerTrajectoryHistory(nbaId, options = {}) {
+    return getFullPlayerHistory(nbaId, {
+        ...options,
+        columns: TRAJECTORY_RATING_COLUMNS,
+        cachePrefix: 'fullPlayerTrajectoryHistory'
     });
 }
 

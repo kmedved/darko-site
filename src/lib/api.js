@@ -11,7 +11,10 @@ async function fetchJson(path) {
 const activePlayersPromiseCache = new Map();
 export const ACTIVE_PLAYERS_CACHE_TTL_MS = 5 * 60 * 1000;
 
-export async function apiPlayerHistory(nbaId, { limit, full = false, includeMetadata = false } = {}) {
+export async function apiPlayerHistory(
+    nbaId,
+    { limit, full = false, includeMetadata = false, view = null } = {}
+) {
     const id = Number.parseInt(nbaId, 10);
     if (!Number.isInteger(id) || id <= 0) {
         throw new Error(`Invalid nba_id: ${nbaId}`);
@@ -23,6 +26,7 @@ export async function apiPlayerHistory(nbaId, { limit, full = false, includeMeta
     } else if (limit) {
         qs.set('limit', String(limit));
     }
+    if (view) qs.set('view', String(view));
 
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     const payload = await fetchJson(`/api/player/${id}/history${suffix}`);

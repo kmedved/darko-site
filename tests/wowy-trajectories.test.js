@@ -20,6 +20,7 @@ test('Trajectories exposes all three WOWY metrics and keeps histories separate',
     }
     assert.match(contents, /wowyRows:\s*\[\]/);
     assert.match(contents, /apiWowyPlayerHistory/);
+	assert.match(contents, /apiPlayerHistory\(nbaId, \{ full: true, view: 'trajectory' \}\)/);
     assert.match(contents, /isWowyMetric \? computeSeasonXFromEndYear\(rows\) : computeSeasonX\(rows\)/);
 	assert.match(
 		contents,

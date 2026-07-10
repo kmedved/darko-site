@@ -2,7 +2,7 @@ Paste this first.
 Pair with one `context/COMPRESSED_*.md` bundle for guided context, or with `context/FILE_INDEX.md` for oracle workflows.
 For implementation tasks, also paste raw source of the files you expect to edit.
 
-Architecture sync version: 0.1.18
+Architecture sync version: 0.1.19
 Archetype: Service / App | Secondary: Data / Workflow / Pipeline | Topology: single-unit | Policy B: only shipped/runtime behavior changes bump version.
 
 ## TL;DR
@@ -49,7 +49,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | `/api/img/:type/:id` | `GET` | none | JSON route payload |
 | `/api/internal/cache-bust` | `POST` | body: tags | JSON route payload |
 | `/api/longevity` | `GET` | none | current-season player longevity table |
-| `/api/player/:id/history` | `GET` | query: full, limit | bounded or full career history |
+| `/api/player/:id/history` | `GET` | query: full, limit, view | bounded or full career history |
 | `/api/player/:id/longevity` | `GET` | path: id | player longevity trajectory |
 | `/api/player/:id/wowy-history` | `GET` | path: id | JSON route payload |
 | `/api/players-index` | `GET` | none | full player index |
@@ -80,7 +80,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 |---|---|
 | `apiActivePlayers` | `apiActivePlayers({ team } = {})` |
 | `apiLongevity` | `apiLongevity()` |
-| `apiPlayerHistory` | `apiPlayerHistory(nbaId, { limit, full = false, includeMetadata = false } = {})` |
+| `apiPlayerHistory` | `apiPlayerHistory(nbaId, { limit, full = false, includeMetadata = false, view = null } = {})` |
 | `apiPlayerLongevity` | `apiPlayerLongevity(nbaId)` |
 | `apiPlayersIndex` | `apiPlayersIndex()` |
 | `apiRateLeaderboard` | `apiRateLeaderboard(limit = 50)` |

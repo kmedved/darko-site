@@ -28,6 +28,25 @@ test('supabase rating column projection includes actual_salary', async () => {
     assert.match(contents, RATING_COLUMNS_INCLUDE_ACTUAL_SALARY);
 });
 
+test('trajectory projections omit unused heavyweight fields', async () => {
+    const absolutePath = path.resolve(process.cwd(), SUPABASE_FILE);
+    const contents = await fs.readFile(absolutePath, 'utf8');
+    const trajectoryStart = contents.indexOf('const TRAJECTORY_RATING_COLUMNS');
+    const trajectoryEnd = contents.indexOf("].join(', ');", trajectoryStart);
+    const wowyStart = contents.indexOf('const WOWY_RATING_COLUMNS');
+    const wowyEnd = contents.indexOf("].join(', ');", wowyStart);
+    const trajectoryBlock = contents.slice(trajectoryStart, trajectoryEnd);
+    const wowyBlock = contents.slice(wowyStart, wowyEnd);
+
+    for (const required of ['dpm', 'o_dpm', 'd_dpm', 'career_game_num', 'sal_market_fixed']) {
+        assert.match(trajectoryBlock, new RegExp(`'${required}'`));
+    }
+    for (const unused of ['projected_years_remaining', 'actual_salary', "'s15'"]) {
+        assert.doesNotMatch(trajectoryBlock, new RegExp(unused));
+    }
+    assert.doesNotMatch(wowyBlock, /'game_id'|'exposure'/);
+});
+
 test('active players are selected from latest current-season active-roster projections', async () => {
     const absolutePath = path.resolve(process.cwd(), SUPABASE_FILE);
     const contents = await fs.readFile(absolutePath, 'utf8');

@@ -51,6 +51,25 @@ test('apiPlayerHistory full mode can return metadata when includeMetadata is ena
     assert.deepEqual(metadata, payload);
 });
 
+test('apiPlayerHistory requests the narrow trajectory projection explicitly', async (t) => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    let requestedPath = '';
+    globalThis.fetch = async (path) => {
+        requestedPath = String(path);
+        return {
+            ok: true,
+            json: async () => ({ rows: [], truncated: false, maxRows: 5000 })
+        };
+    };
+
+    await apiPlayerHistory(2544, { full: true, view: 'trajectory' });
+    assert.equal(requestedPath, '/api/player/2544/history?full=1&view=trajectory');
+});
+
 test('apiWowyPlayerHistory returns the complete server-assembled career array', async (t) => {
     const originalFetch = globalThis.fetch;
     t.after(() => {

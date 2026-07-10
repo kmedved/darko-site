@@ -464,7 +464,7 @@
 		const request = (async () => {
 			const rows = kind === 'wowy'
 				? await apiWowyPlayerHistory(nbaId)
-				: await apiPlayerHistory(nbaId, { full: true });
+				: await apiPlayerHistory(nbaId, { full: true, view: 'trajectory' });
 			const first = rows[0];
 			selectedPlayers = selectedPlayers.map((entry) =>
 				entry.nba_id === nbaId

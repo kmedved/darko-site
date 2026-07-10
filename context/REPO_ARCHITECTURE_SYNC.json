@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.18",
+  "arch_version": "0.1.19",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -114,6 +114,7 @@
           "$lib/server/cacheHeaders.js:setEdgeCache",
           "$lib/server/supabase.js:MAX_FULL_HISTORY_ROWS",
           "$lib/server/supabase.js:getFullPlayerHistory",
+          "$lib/server/supabase.js:getFullPlayerTrajectoryHistory",
           "$lib/server/supabase.js:getPlayerHistory"
         ],
         "file": "src/routes/api/player/[id]/history/+server.js",
@@ -125,7 +126,8 @@
         ],
         "queryParams": [
           "full",
-          "limit"
+          "limit",
+          "view"
         ],
         "route": "/api/player/:id/history",
         "writesState": false
@@ -846,7 +848,8 @@
         ],
         "queryParams": [
           "full",
-          "limit"
+          "limit",
+          "view"
         ],
         "returns": "bounded or full career history",
         "route": "/api/player/:id/history"
@@ -982,7 +985,7 @@
       },
       {
         "name": "apiPlayerHistory",
-        "signature": "apiPlayerHistory(nbaId, { limit, full = false, includeMetadata = false } = {})"
+        "signature": "apiPlayerHistory(nbaId, { limit, full = false, includeMetadata = false, view = null } = {})"
       },
       {
         "name": "apiPlayerLongevity",
@@ -1134,6 +1137,10 @@
           {
             "name": "getFullPlayerHistory",
             "signature": "getFullPlayerHistory(nbaId, options = {})"
+          },
+          {
+            "name": "getFullPlayerTrajectoryHistory",
+            "signature": "getFullPlayerTrajectoryHistory(nbaId, options = {})"
           },
           {
             "name": "getLineupRatings",

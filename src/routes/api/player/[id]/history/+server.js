@@ -1,6 +1,11 @@
 import { error, json } from '@sveltejs/kit';
 
-import { MAX_FULL_HISTORY_ROWS, getFullPlayerHistory, getPlayerHistory } from '$lib/server/supabase.js';
+import {
+    MAX_FULL_HISTORY_ROWS,
+    getFullPlayerHistory,
+    getFullPlayerTrajectoryHistory,
+    getPlayerHistory
+} from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
@@ -25,6 +30,7 @@ export async function GET({ params, url, setHeaders }) {
     // - bounded limit max is 2000 for non-full requests
     // - full=1 opts into explicit full-history mode via paginated fetch
     const full = url.searchParams.get('full') === '1';
+    const trajectory = url.searchParams.get('view') === 'trajectory';
     const limitParam = url.searchParams.get('limit');
     const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : 1000;
     const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? parsedLimit : 1000;
@@ -32,7 +38,10 @@ export async function GET({ params, url, setHeaders }) {
 
     try {
         if (full) {
-            const fullHistory = await getFullPlayerHistory(nbaId, { maxRows: MAX_FULL_HISTORY_ROWS });
+            const historyLoader = trajectory
+                ? getFullPlayerTrajectoryHistory
+                : getFullPlayerHistory;
+            const fullHistory = await historyLoader(nbaId, { maxRows: MAX_FULL_HISTORY_ROWS });
             return json(fullHistory);
         }
 
