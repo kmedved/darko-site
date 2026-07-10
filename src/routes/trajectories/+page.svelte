@@ -510,7 +510,7 @@
 		}
 	}
 
-	async function preloadPlayersById(idList) {
+	async function preloadPlayersById(idList, historyKind = null) {
 		if (!Array.isArray(idList) || idList.length === 0) return;
 		const uniqueIds = [...new Set(
 			idList
@@ -519,7 +519,7 @@
 		)];
 		for (const nbaId of uniqueIds) addPlayerShell({ nba_id: nbaId });
 
-		const kind = isWowyMetric ? 'wowy' : 'darko';
+		const kind = historyKind ?? (isWowyMetric ? 'wowy' : 'darko');
 		const results = await Promise.allSettled(uniqueIds.map((nbaId) => loadHistory(nbaId, kind)));
 		for (const [index, result] of results.entries()) {
 			if (result.status === 'rejected') {
@@ -531,12 +531,22 @@
 	// Load players from URL params on mount
 	$effect(() => {
 		if (initialLoadDone) return;
+		const requestedMetric = $page.url.searchParams.get('metric');
+		const requestedScale = $page.url.searchParams.get('scale');
+		if (talentTypes.some((option) => option.key === requestedMetric)) {
+			talentType = requestedMetric;
+		}
+		if (timeScaleOptions.some((option) => option.key === requestedScale)) {
+			timeScale = requestedScale;
+		}
+
+		const initialKind = WOWY_METRICS.has(talentType) ? 'wowy' : 'darko';
 		const ids = $page.url.searchParams.get('ids');
 		if (ids) {
 			const idList = ids.split(',');
-			preloadPlayersById(idList);
+			preloadPlayersById(idList, initialKind);
 		} else {
-			loadRandomPlayer();
+			loadRandomPlayer(initialKind);
 		}
 		initialLoadDone = true;
 	});
@@ -548,17 +558,35 @@
 		if (isWowyMetric) void loadWowyPublication();
 	});
 
-	// Sync selected player IDs to URL
+	// Sync selected player IDs and chart controls to URL
 	$effect(() => {
 		if (!initialLoadDone || loading) return;
 		const ids = selectedPlayers.map((p) => p.nba_id).join(',');
 		const currentIds = $page.url.searchParams.get('ids') || '';
-		if (ids !== currentIds) {
+		const desiredMetric = talentType === 'dpm' ? null : talentType;
+		const desiredScale = timeScale === 'games' ? null : timeScale;
+		const currentMetric = $page.url.searchParams.get('metric');
+		const currentScale = $page.url.searchParams.get('scale');
+		if (
+			ids !== currentIds ||
+			desiredMetric !== currentMetric ||
+			desiredScale !== currentScale
+		) {
 			const url = new URL($page.url);
 			if (ids) {
 				url.searchParams.set('ids', ids);
 			} else {
 				url.searchParams.delete('ids');
+			}
+			if (desiredMetric) {
+				url.searchParams.set('metric', desiredMetric);
+			} else {
+				url.searchParams.delete('metric');
+			}
+			if (desiredScale) {
+				url.searchParams.set('scale', desiredScale);
+			} else {
+				url.searchParams.delete('scale');
 			}
 			goto(`${url.pathname}${url.search}`, { replaceState: true, keepFocus: true });
 		}
@@ -579,7 +607,7 @@
 		}
 	}
 
-	async function loadRandomPlayer() {
+	async function loadRandomPlayer(historyKind = null) {
 		pendingLoads += 1;
 		error = null;
 		try {
@@ -592,7 +620,7 @@
 			const randomIndex = Math.floor(Math.random() * players.length);
 			const randomPlayer = players[randomIndex];
 			if (addPlayerShell(randomPlayer)) {
-				const kind = isWowyMetric ? 'wowy' : 'darko';
+				const kind = historyKind ?? (isWowyMetric ? 'wowy' : 'darko');
 				await loadHistory(randomPlayer.nba_id, kind);
 			}
 		} catch (err) {
