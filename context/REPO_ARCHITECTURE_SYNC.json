@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.24",
+  "arch_version": "0.1.25",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -676,6 +676,7 @@
     "supabase/migrations/20260710_003_add_latest_player_teams_rpc.sql",
     "supabase/migrations/20260710_004_add_latest_team_index.sql",
     "supabase/migrations/20260710_005_add_historical_leaderboard_snapshot_rpcs.sql",
+    "supabase/migrations/20260710_006_add_player_search_snapshot_rpc.sql",
     "svelte.config.js",
     "tests/api-active-players-cache.test.js",
     "tests/api-player-history.test.js",
@@ -707,6 +708,7 @@
     "tests/player-search.test.js",
     "tests/player-views.test.js",
     "tests/request-sequencer.test.js",
+    "tests/search-player-route.test.js",
     "tests/season-utils.test.js",
     "tests/server-error-logging.test.js",
     "tests/standings-page-ui-guards.test.js",
