@@ -269,10 +269,6 @@
 	</div>
 </div>
 
-<div class="shiny-banner">
-	<span>Looking for the original DARKO shiny app? <a href="https://apanalytics.shinyapps.io/DARKO/" target="_blank" rel="noopener">Go here →</a></span>
-</div>
-
 <main>
     {@render children()}
 </main>
@@ -702,40 +698,6 @@
 			flex-direction: column;
 			gap: 8px;
 			text-align: center;
-		}
-	}
-
-	/* ── Shiny app banner ── */
-	.shiny-banner {
-		display: flex;
-		justify-content: center;
-		text-align: center;
-		padding: 8px 24px;
-		font-size: 12px;
-		color: var(--text-muted);
-		background: var(--bg-elevated);
-		border-bottom: 1px solid var(--border-subtle);
-	}
-
-	.shiny-banner span {
-		max-width: 100%;
-		overflow-wrap: anywhere;
-	}
-
-	.shiny-banner a {
-		color: var(--accent);
-		text-decoration: none;
-		font-weight: 500;
-	}
-
-	.shiny-banner a:hover {
-		text-decoration: underline;
-	}
-
-	@media (max-width: 520px) {
-		.shiny-banner {
-			padding: 8px 16px;
-			text-align: left;
 		}
 	}
 
