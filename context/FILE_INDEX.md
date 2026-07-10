@@ -128,6 +128,8 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/team/[team]/+page.server.js` - load /team/:team
 - `src/routes/team/[team]/+page.svelte` - page /team/:team
 - `src/routes/trajectories/+page.svelte` - page /trajectories
+- `src/routes/wowy/+page.server.js` - load /wowy
+- `src/routes/wowy/+page.svelte` - page /wowy
 
 ## src/routes/api
 
@@ -163,6 +165,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260710_004_add_latest_team_index.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_005_add_historical_leaderboard_snapshot_rpcs.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_006_add_player_search_snapshot_rpc.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_007_add_active_wowy_leaderboard_rpc.sql` - Supabase SQL migration.
 
 ## tests
 
@@ -210,4 +213,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/trajectories-mobile-layout.test.js` - test
 - `tests/trajectories-url-sync.test.js` - test
 - `tests/wide-sticky-table-layout.test.js` - test
+- `tests/wowy-leaderboard-csv.test.js` - test
+- `tests/wowy-leaderboard-data.test.js` - test
+- `tests/wowy-leaderboard-page.test.js` - test
 - `tests/wowy-trajectories.test.js` - test

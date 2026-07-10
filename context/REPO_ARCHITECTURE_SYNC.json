@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.25",
+  "arch_version": "0.1.26",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -482,6 +482,23 @@
         ],
         "route": "/team/:team",
         "signature": "load({ params, setHeaders })"
+      },
+      {
+        "cache": {
+          "edgeSMaxAge": 300,
+          "sie": 86400,
+          "swr": 3600,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:getActiveWowyPlayers",
+          "$lib/server/supabase.js:getWowyPublication"
+        ],
+        "file": "src/routes/wowy/+page.server.js",
+        "pathParams": [],
+        "route": "/wowy",
+        "signature": "load({ setHeaders })"
       }
     ],
     "persistence_surface": {
@@ -664,6 +681,8 @@
     "src/routes/team/[team]/+page.server.js",
     "src/routes/team/[team]/+page.svelte",
     "src/routes/trajectories/+page.svelte",
+    "src/routes/wowy/+page.server.js",
+    "src/routes/wowy/+page.svelte",
     "supabase/migrations/20260303_001_enable_players_rls.sql",
     "supabase/migrations/20260303_002_harden_elo_vote_path.sql",
     "supabase/migrations/20260305_001_secure_elo_vote_and_rate_limits.sql",
@@ -677,6 +696,7 @@
     "supabase/migrations/20260710_004_add_latest_team_index.sql",
     "supabase/migrations/20260710_005_add_historical_leaderboard_snapshot_rpcs.sql",
     "supabase/migrations/20260710_006_add_player_search_snapshot_rpc.sql",
+    "supabase/migrations/20260710_007_add_active_wowy_leaderboard_rpc.sql",
     "svelte.config.js",
     "tests/api-active-players-cache.test.js",
     "tests/api-player-history.test.js",
@@ -722,6 +742,9 @@
     "tests/trajectories-mobile-layout.test.js",
     "tests/trajectories-url-sync.test.js",
     "tests/wide-sticky-table-layout.test.js",
+    "tests/wowy-leaderboard-csv.test.js",
+    "tests/wowy-leaderboard-data.test.js",
+    "tests/wowy-leaderboard-page.test.js",
     "tests/wowy-trajectories.test.js",
     "vite.config.js"
   ],
@@ -1072,6 +1095,11 @@
         "returns": "legacy team detail wrapper payload",
         "route": "/team/:team",
         "signature": "load({ params, setHeaders })"
+      },
+      {
+        "returns": "server-rendered page payload",
+        "route": "/wowy",
+        "signature": "load({ setHeaders })"
       }
     ],
     "sharedServer": [
@@ -1141,6 +1169,10 @@
           {
             "name": "getActivePlayers",
             "signature": "getActivePlayers(options = {})"
+          },
+          {
+            "name": "getActiveWowyPlayers",
+            "signature": "getActiveWowyPlayers()"
           },
           {
             "name": "getConferenceStandings",

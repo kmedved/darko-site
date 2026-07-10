@@ -28,6 +28,7 @@ const MAX_CACHE_ENTRIES = 300;
 
 const CACHE_MS = {
     activePlayers: 60_000,
+    activeWowyPlayers: 300_000,
     leaderboardSeasons: 3_600_000,
     seasonStartPlayers: 3_600_000,
     playersIndex: 300_000,
@@ -304,6 +305,22 @@ function sortByDpmDesc(rows = []) {
         });
 }
 
+function sortByWowyRapmDesc(rows = []) {
+    return rows
+        .slice()
+        .sort((a, b) => {
+            const left = Number.parseFloat(a?.wowy_rapm);
+            const right = Number.parseFloat(b?.wowy_rapm);
+            if (!Number.isFinite(left) && !Number.isFinite(right)) {
+                return String(a?.player_name || '').localeCompare(String(b?.player_name || ''));
+            }
+            if (!Number.isFinite(left)) return 1;
+            if (!Number.isFinite(right)) return -1;
+            if (right !== left) return right - left;
+            return String(a?.player_name || '').localeCompare(String(b?.player_name || ''));
+        });
+}
+
 function firstFiniteNumber(...values) {
     for (const value of values) {
         const parsed = Number.parseFloat(value);
@@ -543,6 +560,43 @@ const getCachedActivePlayers = createActivePlayersAccessor({
 
 export function getActivePlayers(options = {}) {
     return getCachedActivePlayers(options);
+}
+
+/**
+ * Get the latest observed WOWY rating for every player on the current DARKO
+ * active roster. Identity and team metadata come from the current roster
+ * snapshot; players without a played-game WOWY observation are not returned.
+ */
+export async function getActiveWowyPlayers() {
+    const key = cacheKey('activeWowyPlayers', 'current');
+    return runCached(key, CACHE_MS.activeWowyPlayers, async () => {
+        const { data, error } = await supabase.rpc('get_active_wowy_player_ratings');
+        if (error) throw error;
+
+        const rows = (Array.isArray(data) ? data : [])
+            .map((row) => {
+                const nbaId = Number(row?.nba_id);
+                if (!Number.isInteger(nbaId) || nbaId <= 0) return null;
+
+                const teamName = normalizedTeamName(row.team_name);
+                return {
+                    nba_id: nbaId,
+                    player_name: row.player_name ?? null,
+                    team_name: teamName,
+                    tm_id: resolveTeamId(row, teamName),
+                    position: normalizePosition(row.position ?? null),
+                    wowy_rapm: row.wowy_rapm ?? null,
+                    wowy_orapm: row.wowy_orapm ?? null,
+                    wowy_drapm: row.wowy_drapm ?? null,
+                    exposure: row.exposure ?? null,
+                    date: row.date ?? null,
+                    career_game_num: row.career_game_num ?? null
+                };
+            })
+            .filter(Boolean);
+
+        return sortByWowyRapmDesc(rows);
+    });
 }
 
 /**

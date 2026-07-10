@@ -152,6 +152,14 @@ Singleton freshness and provenance row for the public WOWY table. `id` is constr
 It records the publication ID, composite/output hashes, data-through date and season, counts, and
 publication timestamp. The Trajectories page uses `season_through` for its freshness label.
 
+### Active WOWY leaderboard snapshot
+
+`get_active_wowy_player_ratings()` is a security-invoker RPC added by
+`supabase/migrations/20260710_007_add_active_wowy_leaderboard_rpc.sql`. It derives the current
+active roster from the latest `player_ratings` season, keeps current roster identity/team/position,
+and uses a per-player latest-row lookup in `wowy_ratings` for the observed RAPM values. Active
+players without a WOWY observation are omitted.
+
 ---
 
 ### players
@@ -304,6 +312,7 @@ Comma-joined string of all 69 fetched `player_ratings` column names (66 original
 | Function | Queries | Returns | Used by |
 |---|---|---|---|
 | `getActivePlayers()` | Finds the latest `player_ratings.season`, reads current-season `player_ratings` rows with RATING_COLUMNS and `active_roster = 1`, and dedupes to the latest row per player. This includes `future_game = 1` projection rows, which are the current DARKO snapshot. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
+| `getActiveWowyPlayers()` | Calls `get_active_wowy_player_ratings()`, normalizes team IDs/positions, and caches the compact current-active snapshot for five minutes. | One current-identity row per active player with a latest observed WOWY RAPM row | `/wowy` |
 | `getPlayersIndex()` | `players` with explicit `PLAYERS_DIM_COLUMNS`, merged with `getActivePlayers()`. **Hardcodes output fields** — does NOT pass through survivorship, projections, or RAPM columns. | Array of player objects (subset of fields) | Player search/index pages |
 | `getLongevityRows()` | Calls `getActivePlayers()`, maps DB columns to frontend-aliased keys | Array with aliased longevity fields | `/api/longevity` |
 | `getLongevityTrajectory(id)` | `player_ratings` filtered to one player, maps to chart fields | Array of trajectory points | `/api/player/[id]/longevity` |
@@ -407,13 +416,13 @@ Joins six source parquet files into two Supabase-ready tables using Polars lazy 
 
 **Validation:** Asserts no duplicate `(nba_id, date)` rows and that row count equals the base table after all joins.
 
-### `upload_to_supabase.py` — Upload to Supabase Postgres
+### `1_historic_darko/push_website.py` — Upload to Supabase Postgres
 
 Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at 50,000 rows with `tqdm` progress.
 
 **Upload modes per table:**
 
-| Table | `full_reload=True` (default for player_ratings) | `full_reload=False` | Fresh (table missing) |
+| Table | `full_reload=True` | `full_reload=False` | Fresh (table missing) |
 |---|---|---|---|
 | `players` | TRUNCATE + reload (CASCADE to elo_ratings) | same | CREATE + bulk load + PK + read-only RLS via darko-site migration |
 | `player_ratings` | DROP + CREATE + bulk load + indexes + RLS | DELETE current season + INSERT (atomic) | CREATE + bulk load + indexes + RLS |
@@ -428,7 +437,8 @@ Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at
 - `idx_ratings_active_latest (season DESC, active_roster, nba_id, date DESC)`
 - `idx_ratings_leaderboard_team_opener (season, team_name, date ASC)`
 - `idx_ratings_player_team_latest (nba_id, date DESC) INCLUDE (team_name, tm_id)` for valid team rows
-- Row Level Security: `allow_public_read` policy for SELECT
+- Read-only RLS plus `SELECT` grants for `anon` and `authenticated`
+- Invoker-safe RPCs restored after every fresh/full rebuild: `get_active_player_ratings`, `get_latest_player_teams`, `get_leaderboard_seasons`, `get_season_start_player_ratings`, `get_latest_player_search_ratings`, and `get_active_wowy_player_ratings`. This is required because `DROP TABLE ... CASCADE` removes dependent functions.
 
 **Connection:** Uses `SUPABASE_PG_DSN` env var, falling back to `fixed_data/supabase_secret.json`.
 

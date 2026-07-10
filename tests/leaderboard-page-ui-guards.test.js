@@ -91,6 +91,18 @@ test('desktop navigation keeps primary links together ahead of display controls'
     assert.match(moreNavItems[1], /href:\s*'\/about'/, 'About should be in the desktop nav group');
 });
 
+test('WOWY RAPM is a primary navigation destination', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), LAYOUT_FILE), 'utf8');
+    const primaryNavItems = contents.match(/const PRIMARY_NAV_ITEMS = \[([\s\S]*?)\];/);
+
+    assert.ok(primaryNavItems, 'primary desktop nav items should be declared');
+    assert.match(
+        primaryNavItems[1],
+        /\{ href: '\/wowy', label: 'WOWY RAPM', match: \(path\) => path === '\/wowy' \}/,
+        'WOWY RAPM should have an exact-match top-level navigation link'
+    );
+});
+
 test('desktop navigation switches to drawer before links can overflow', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), LAYOUT_FILE), 'utf8');
     const drawerBreakpoint = contents.match(/@media\s*\(max-width:\s*1180px\)\s*\{[\s\S]*?\.desktop-links\s*\{[\s\S]*?display:\s*none\s*!important;/);

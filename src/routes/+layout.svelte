@@ -8,6 +8,7 @@
 	const THEME_ICONS = ['⚫', '🌙', '☀️', '⚪'];
 	const PRIMARY_NAV_ITEMS = [
 		{ href: '/', label: 'Active Leaderboard', match: (path) => path === '/' },
+		{ href: '/wowy', label: 'WOWY RAPM', match: (path) => path === '/wowy' },
 		{ href: '/standings', label: 'Standings', match: (path) => path.startsWith('/standings') },
 		{ href: '/trajectories', label: 'Trajectories', match: (path) => path === '/trajectories' },
 		{ href: '/longevity', label: 'Longevity', match: (path) => path.startsWith('/longevity') },

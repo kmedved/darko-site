@@ -133,6 +133,19 @@ export const leaderboardCsvColumns = [
     { header: 'Surplus Value', accessor: 'surplus_value', format: formatSignedMillions }
 ];
 
+export const wowyLeaderboardCsvColumns = [
+    { header: '#', accessor: 'rank' },
+    { header: 'Player', accessor: 'player_name' },
+    { header: 'Team', accessor: 'team_name' },
+    { header: 'Pos', accessor: 'position', format: formatOrDash },
+    { header: 'WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
+    { header: 'WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
+    { header: 'WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
+    { header: 'Exposure', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
+    { header: 'Sample Games', accessor: 'career_game_num', format: (value) => formatFixed(value, 0) },
+    { header: 'As of', accessor: 'date', format: formatOrDash }
+];
+
 export const compareCsvColumns = [
     { header: 'Player', accessor: 'player_name' },
     { header: 'Team', accessor: 'team_name' },
