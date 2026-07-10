@@ -65,6 +65,19 @@ test('player profile history projects chart fields instead of full production ro
     assert.match(contents, /getPlayerHistory\(nbaId, 1\)/);
 });
 
+test('player name search decorates only matched IDs', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), SUPABASE_FILE), 'utf8');
+    const start = contents.indexOf('export async function searchAllPlayers(searchTerm)');
+    const end = contents.indexOf('/**\n * Get a player\'s complete career history', start);
+    const block = contents.slice(start, end);
+
+    assert.ok(start >= 0 && end > start, 'player search helper should be discoverable');
+    assert.match(block, /\.limit\(15\)/);
+    assert.match(block, /\.rpc\(\s*'get_latest_player_search_ratings'/);
+    assert.match(block, /p_ids: validPlayers\.map/);
+    assert.doesNotMatch(block, /getActivePlayers\(/);
+});
+
 test('active players are selected from latest current-season active-roster projections', async () => {
     const absolutePath = path.resolve(process.cwd(), SUPABASE_FILE);
     const contents = await fs.readFile(absolutePath, 'utf8');

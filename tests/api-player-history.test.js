@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
     __resetApiCachesForTests,
     apiPlayerHistory,
+    apiSearchPlayers,
     apiWowyPlayerHistory,
     apiWowyPublication
 } from '../src/lib/api.js';
@@ -164,4 +165,24 @@ test('apiWowyPublication reads the public freshness record', async (t) => {
         season_through: 2026,
         data_through: '2026-06-13'
     });
+});
+
+test('API helpers extract structured error messages instead of exposing JSON text', async (t) => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+    globalThis.fetch = async () => ({
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        text: async () => JSON.stringify({
+            message: 'Player search is temporarily unavailable. Please try again.'
+        })
+    });
+
+    await assert.rejects(
+        () => apiSearchPlayers('Dyson Daniels'),
+        { message: 'Player search is temporarily unavailable. Please try again.' }
+    );
 });

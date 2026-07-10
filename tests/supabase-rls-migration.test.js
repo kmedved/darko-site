@@ -12,7 +12,8 @@ const migration = [
     '20260710_002_add_active_player_snapshot_rpc.sql',
     '20260710_003_add_latest_player_teams_rpc.sql',
     '20260710_004_add_latest_team_index.sql',
-    '20260710_005_add_historical_leaderboard_snapshot_rpcs.sql'
+    '20260710_005_add_historical_leaderboard_snapshot_rpcs.sql',
+    '20260710_006_add_player_search_snapshot_rpc.sql'
 ]
     .map((filename) =>
         readFileSync(join(__dirname, '..', 'supabase', 'migrations', filename), 'utf8')
@@ -104,5 +105,15 @@ test('historical leaderboard RPCs are invoker-safe and use opening rosters', () 
     assert.match(
         migration,
         /grant execute on function public\.get_season_start_player_ratings\(integer\)\s+to anon, authenticated, service_role;/
+    );
+});
+
+test('player-search snapshot RPC is invoker-safe and limited to matched IDs', () => {
+    assert.match(migration, /function public\.get_latest_player_search_ratings\(p_ids bigint\[\]\)/);
+    assert.match(migration, /where pr\.nba_id = any\(p_ids\)/);
+    assert.match(migration, /select distinct on \(pr\.nba_id\)/);
+    assert.match(
+        migration,
+        /grant execute on function public\.get_latest_player_search_ratings\(bigint\[\]\)\s+to anon, authenticated, service_role;/
     );
 });

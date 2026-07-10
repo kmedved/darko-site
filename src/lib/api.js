@@ -1,7 +1,16 @@
 async function fetchJson(path) {
     const response = await fetch(path);
     if (!response.ok) {
-        const message = (await response.text().catch(() => response.statusText)) || `Request failed (${response.status})`;
+        const body = await response.text().catch(() => '');
+        let message = body || response.statusText || `Request failed (${response.status})`;
+        if (body) {
+            try {
+                const payload = JSON.parse(body);
+                message = payload?.message || payload?.error || message;
+            } catch {
+                // Keep non-JSON response text as the error message.
+            }
+        }
         throw new Error(message);
     }
 

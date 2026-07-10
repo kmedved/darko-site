@@ -623,26 +623,34 @@ export async function searchAllPlayers(searchTerm) {
 
     const key = cacheKey('searchPlayers', normalizedTerm);
     return runCached(key, CACHE_MS.searchPlayers, async () => {
-        const [{ data: players, error }, activePlayers] = await Promise.all([
-            supabase
-                .from('players')
-                .select(PLAYERS_DIM_COLUMNS)
-                .ilike('player_name', `%${normalizedTerm}%`)
-                .order('player_name', { ascending: true })
-                .limit(15),
-            getActivePlayers()
-        ]);
+        const { data: players, error } = await supabase
+            .from('players')
+            .select(PLAYERS_DIM_COLUMNS)
+            .ilike('player_name', `%${normalizedTerm}%`)
+            .order('player_name', { ascending: true })
+            .limit(15);
 
         if (error) throw error;
 
-        const activeById = new Map();
-        for (const row of activePlayers || []) {
-            activeById.set(row.nba_id, row);
+        const validPlayers = (players || []).filter(
+            (player) => Number.isInteger(player?.nba_id) && player.nba_id > 0
+        );
+        if (validPlayers.length === 0) return [];
+
+        const { data: snapshots, error: snapshotError } = await supabase.rpc(
+            'get_latest_player_search_ratings',
+            { p_ids: validPlayers.map((player) => player.nba_id) }
+        );
+        if (snapshotError) throw snapshotError;
+
+        const snapshotById = new Map();
+        for (const row of Array.isArray(snapshots) ? snapshots : []) {
+            snapshotById.set(row.nba_id, row);
         }
 
-        return (players || [])
-            .filter((player) => Number.isInteger(player?.nba_id) && player.nba_id > 0)
-            .map((player) => mergePlayerWithActiveSnapshot(player, activeById.get(player.nba_id)));
+        return validPlayers.map((player) =>
+            mergePlayerWithActiveSnapshot(player, snapshotById.get(player.nba_id))
+        );
     });
 }
 
