@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const migration = [
     '20260529_001_lock_public_read_tables.sql',
-    '20260616_001_lock_public_fact_tables.sql'
+    '20260616_001_lock_public_fact_tables.sql',
+    '20260710_001_add_wowy_ratings.sql'
 ]
     .map((filename) =>
         readFileSync(join(__dirname, '..', 'supabase', 'migrations', filename), 'utf8')
@@ -19,7 +20,9 @@ const publicReadTables = [
     'season_sim',
     'win_distribution',
     'player_ratings',
-    'lineup_ratings'
+    'lineup_ratings',
+    'wowy_ratings',
+    'wowy_publication'
 ];
 
 test('RLS migration enables row level security for advisor-flagged public tables', () => {
@@ -54,6 +57,10 @@ test('RLS migration preserves anon/authenticated read access only', () => {
     assert.match(
         migration,
         /grant select\s+on table public\.player_ratings, public\.lineup_ratings\s+to anon, authenticated;/
+    );
+    assert.match(
+        migration,
+        /grant select\s+on table public\.wowy_ratings, public\.wowy_publication\s+to anon, authenticated;/
     );
     for (const role of ['anon', 'authenticated']) {
         assert.doesNotMatch(

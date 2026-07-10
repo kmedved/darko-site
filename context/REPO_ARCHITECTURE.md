@@ -2,7 +2,7 @@ Paste this first.
 Pair with one `context/COMPRESSED_*.md` bundle for guided context, or with `context/FILE_INDEX.md` for oracle workflows.
 For implementation tasks, also paste raw source of the files you expect to edit.
 
-Architecture sync version: 0.1.17
+Architecture sync version: 0.1.18
 Archetype: Service / App | Secondary: Data / Workflow / Pipeline | Topology: single-unit | Policy B: only shipped/runtime behavior changes bump version.
 
 ## TL;DR
@@ -25,7 +25,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 - `/player/:nbaId` always loads full history server-side and turns an empty result into HTTP 404. (`src/lib/server/playerPage.js`, `tests/player-page-server-load.test.js`)
 - `/compare?ids=` dedupes IDs, preserves first-seen order, and stops at four players. (`src/lib/server/comparePage.js`, `tests/compare-page-server-load.test.js`)
 - `/api/player/:id/history` defaults to 1000 rows, caps bounded requests at 2000, and only enters paginated full-history mode when `full=1`. (`src/routes/api/player/[id]/history/+server.js`, `src/lib/server/supabase.js`)
-- `getActivePlayers()` uses the latest `player_ratings.season`, includes only players with positive possessions in that season, dedupes by `nba_id`, and sorts by DPM descending before any page/API consumes it. (`src/lib/server/supabase.js`)
+- `getActivePlayers()` uses the latest `player_ratings.season`, includes active-roster rows in that season, dedupes by `nba_id` to the latest row including future projections, and sorts by DPM descending before any page/API consumes it. (`src/lib/server/supabase.js`)
 - Only `/api/rate/vote` writes state, and it must pass same-origin checks before calling the Supabase RPC. (`src/lib/server/eloSecurity.js`, `src/lib/server/eloService.js`)
 - Wide-table horizontal scroll is touch/mobile-only; sticky headers remain a desktop behavior. (`AGENTS.md`, `tests/mobile-table-scroll.test.js`, `tests/wide-sticky-table-layout.test.js`)
 - Both team detail URLs are thin wrappers over the shared team payload/view pipeline. (`src/routes/team/[team]/+page.server.js`, `src/routes/standings/[slug]/+page.server.js`, `tests/team-route-wrappers.test.js`)
@@ -51,6 +51,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | `/api/longevity` | `GET` | none | current-season player longevity table |
 | `/api/player/:id/history` | `GET` | query: full, limit | bounded or full career history |
 | `/api/player/:id/longevity` | `GET` | path: id | player longevity trajectory |
+| `/api/player/:id/wowy-history` | `GET` | path: id | JSON route payload |
 | `/api/players-index` | `GET` | none | full player index |
 | `/api/rate/leaderboard` | `GET` | query: limit | Elo leaderboard |
 | `/api/rate/pair` | `GET` | none | random Elo comparison pair |
@@ -58,6 +59,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | `/api/search-players` | `GET` | query: q | typeahead search results |
 | `/api/standings` | `GET` | query: conference | conference standings payload |
 | `/api/standings/:slug` | `GET` | path: slug | team detail payload |
+| `/api/wowy-publication` | `GET` | none | JSON route payload |
 
 ### Page Loaders
 
@@ -103,7 +105,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 
 ## Core Abstractions
 
-- `Active player snapshot` - latest deduped `player_ratings` row per player with positive possessions in the current NBA season, merged with `players` metadata.
+- `Active player snapshot` - latest deduped `player_ratings` row per active-roster player in the current NBA season, including future projection rows, merged with `players` metadata.
 - `Full player history` - chronological career rows, capped and flagged when the API enters explicit full-history mode.
 - `Team page payload` - `{ teamName, players, sim, winDist }` assembled from current-season team players, season simulation, and win-distribution tables.
 - `Longevity row / trajectory` - retirement-age and survival-probability projections for current-season players or one player over time.

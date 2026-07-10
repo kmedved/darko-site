@@ -56,6 +56,26 @@ export async function apiPlayerHistory(nbaId, { limit, full = false, includeMeta
     return [];
 }
 
+export async function apiWowyPlayerHistory(nbaId, { includeMetadata = false } = {}) {
+    const id = Number.parseInt(nbaId, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new Error(`Invalid nba_id: ${nbaId}`);
+    }
+
+    const payload = await fetchJson(`/api/player/${id}/wowy-history`);
+    if (includeMetadata) {
+        if (payload && typeof payload === 'object' && !Array.isArray(payload)) return payload;
+        return { rows: Array.isArray(payload) ? payload : [], truncated: false, maxRows: null };
+    }
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.rows)) return payload.rows;
+    return [];
+}
+
+export function apiWowyPublication() {
+    return fetchJson('/api/wowy-publication');
+}
+
 export function apiActivePlayers({ team } = {}) {
     const normalizedTeam = typeof team === 'string' ? team.trim() : '';
     const cacheKey = normalizedTeam || '__all__';

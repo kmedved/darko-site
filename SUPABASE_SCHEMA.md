@@ -119,6 +119,41 @@ Built by `build_supabase_tables.py` which left-joins six source files on `(nba_i
 
 ---
 
+### wowy_ratings
+
+Synthetic WOWY RAPM history for the Trajectories page. One row per mapped player appearance from
+the 1979-80 season onward, including postseason games and with no exposure minimum.
+
+- **Primary key:** `(nba_id, game_id)`
+- **Unique constraints:** `(nba_id, date)`, `(nba_id, career_game_num)`
+- **Indexes:** `(nba_id, date)`, `(nba_id, career_game_num)`, `season`
+- **Rows at launch:** 1,161,172 across 3,820 players
+- **Update strategy:** validated staging COPY followed by transactional table replacement
+- **Source:** `33_wowy_rapm/reports/publication/wowy_player_game.parquet`
+- **RLS:** Read-only for `anon` and `authenticated` via
+  `supabase/migrations/20260710_001_add_wowy_ratings.sql`.
+
+| Column | Postgres type | Notes |
+|---|---|---|
+| nba_id | bigint | Canonical NBA player ID |
+| game_id | text | Canonical model game ID |
+| date | date | Same-date postgame rating date |
+| season | integer | NBA season ending year |
+| career_game_num | integer | Sample-relative played-game number, starting at 1 |
+| age | double precision | Player age on game date |
+| wowy_rapm | double precision | Synthetic total RAPM |
+| wowy_orapm | double precision | Synthetic offensive RAPM |
+| wowy_drapm | double precision | Synthetic defensive RAPM; positive is better defense |
+| exposure | double precision | Model exposure at the snapshot |
+
+### wowy_publication
+
+Singleton freshness and provenance row for the public WOWY table. `id` is constrained to `1`.
+It records the publication ID, composite/output hashes, data-through date and season, counts, and
+publication timestamp. The Trajectories page uses `season_through` for its freshness label.
+
+---
+
 ### players
 
 Dimension table. One row per player.
@@ -256,7 +291,7 @@ All Supabase queries go through `src/lib/server/supabase.js`. Key patterns:
 
 The Supabase Security Advisor check `rls_disabled_in_public` flagged `public.season_sim`, `public.win_distribution`, and `public.players` on 2026-05-29, then `public.player_ratings` and `public.lineup_ratings` on 2026-06-16. The site intentionally exposes these analytics tables for reads through the anon Supabase client, but public clients should not be able to insert, update, delete, or truncate them.
 
-`supabase/migrations/20260529_001_lock_public_read_tables.sql` and `supabase/migrations/20260616_001_lock_public_fact_tables.sql` enable RLS on those tables, recreate stable public-read `SELECT` policies, revoke all table privileges from `public`, `anon`, and `authenticated`, then grant `SELECT` back only to `anon` and `authenticated`. Data upload/reload jobs should continue to use `service_role` or the direct Postgres maintenance connection.
+`supabase/migrations/20260529_001_lock_public_read_tables.sql`, `supabase/migrations/20260616_001_lock_public_fact_tables.sql`, and `supabase/migrations/20260710_001_add_wowy_ratings.sql` enable RLS on those tables, recreate stable public-read `SELECT` policies, revoke all table privileges from `public`, `anon`, and `authenticated`, then grant `SELECT` back only to `anon` and `authenticated`. Data upload/reload jobs should continue to use `service_role` or the direct Postgres maintenance connection.
 
 Elo voting remains the only write path. `supabase/migrations/20260617_001_restore_service_role_elo_vote_path.sql` keeps `elo_ratings` and `elo_votes` readable to public clients, revokes public execution of `record_elo_vote`, and leaves vote writes to the SvelteKit `/api/rate/vote` wrapper using `SUPABASE_SERVICE_ROLE_KEY`.
 
@@ -268,10 +303,12 @@ Comma-joined string of all 69 fetched `player_ratings` column names (66 original
 
 | Function | Queries | Returns | Used by |
 |---|---|---|---|
-| `getActivePlayers()` | Finds the latest `player_ratings.season`, reads current-season `player_ratings` rows with RATING_COLUMNS and `poss > 0`, and dedupes to the latest positive-possession row per player. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
+| `getActivePlayers()` | Finds the latest `player_ratings.season`, reads current-season `player_ratings` rows with RATING_COLUMNS and `active_roster = 1`, and dedupes to the latest row per player. This includes `future_game = 1` projection rows, which are the current DARKO snapshot. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
 | `getPlayersIndex()` | `players` with explicit `PLAYERS_DIM_COLUMNS`, merged with `getActivePlayers()`. **Hardcodes output fields** — does NOT pass through survivorship, projections, or RAPM columns. | Array of player objects (subset of fields) | Player search/index pages |
 | `getLongevityRows()` | Calls `getActivePlayers()`, maps DB columns to frontend-aliased keys | Array with aliased longevity fields | `/api/longevity` |
 | `getLongevityTrajectory(id)` | `player_ratings` filtered to one player, maps to chart fields | Array of trajectory points | `/api/player/[id]/longevity` |
+| `getWowyPlayerHistory(id)` | Paginates `wowy_ratings` in 1,000-row ranges, orders by `career_game_num`, and merges player metadata | `{ rows, truncated, maxRows }` | `/api/player/[id]/wowy-history`, Trajectories |
+| `getWowyPublication()` | Reads singleton `wowy_publication` row | Publication freshness/provenance | `/api/wowy-publication`, Trajectories |
 | `getLineupRatings()` | `lineup_ratings` with explicit projection, `min_season_poss > 100`, variants in `('pi', 'raw', 'npi')`. Retries without `team_name` if the column is not available yet, drops rows missing `total_*_rating`, and normalizes `raw` + `npi` into the NPI bucket. | `{ pi: LineupRow[], npi: LineupRow[] }` | `/lineups` |
 | `getConferenceStandings()` / `getTeamSimulation()` | `season_sim` with public read-only RLS. Conference standings filter by `conference`; team pages filter by `team_name`. | Standings/team simulation rows | `/standings`, team pages |
 | `getTeamWinDistribution()` | `win_distribution` with public read-only RLS, filtered by `team_name` and ordered by `wins`. | Team win-distribution rows | Team pages |
@@ -308,6 +345,8 @@ All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. 
 | lineupRatings | 60s |
 | playerCurrent | 60s |
 | playerHistory | 5min |
+| wowyPlayerHistory | 30min |
+| wowyPublication | 5min |
 
 ### API routes
 
@@ -315,12 +354,15 @@ All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. 
 |---|---|---|
 | `/api/longevity` | `getLongevityRows({ activeOnly: true })` | Main longevity table |
 | `/api/player/[id]/longevity` | `getLongevityTrajectory(nbaId)` | Single player trajectory chart. Queries `player_ratings` for all rows for one player, keeps the **last** row per season (latest date), maps `x_retirement_age_cal` (fallback `x_retirement_age`) → `projected_retirement_age` (rounded to 1 decimal). Output: `[{ season_start, season_start_year, projected_retirement_age }]` |
+| `/api/player/[id]/wowy-history` | `getWowyPlayerHistory(nbaId)` | Complete chronological synthetic WOWY history; fails rather than truncating at the 3,000-row safety cap |
+| `/api/wowy-publication` | `getWowyPublication()` | Current public WOWY hashes, counts, and data-through metadata |
 
 ### Data limits and fetch policy
 
 | Area | Current behavior | Cap | Notes |
 |---|---|---:|---|
 | Player history API (`/api/player/[id]/history`) | `limit` defaults to `1000`; bounded to max `2000`; `full=1` enables full history path | 2000 (bounded) | Full history path is explicit and uses paginated fetch through `getFullPlayerHistory(...)`. |
+| WOWY history API (`/api/player/[id]/wowy-history`) | Always returns the complete server-assembled career; Supabase pagination stays internal | 3000 | Verified launch maximum is 1,923 rows; truncation is an error. |
 | Profile page (`/player/[nbaId]`) | Uses `apiPlayerHistory(..., { full: true })` | none (explicit opt-in path) | Profile now opts into full history by design. |
 | Compare page history (`/compare`) | Calls `apiPlayerHistory(..., { limit: 300 })` | 300 | Preview mode kept for responsiveness. |
 | Player card history (`PlayerCard`) | Calls `apiPlayerHistory(..., { limit: 200 })` | 200 | Small sparkline-focused view, intentionally bounded. |
@@ -387,13 +429,18 @@ Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at
 
 **Connection:** Uses `SUPABASE_PG_DSN` env var, falling back to `fixed_data/supabase_secret.json`.
 
+The model-owned `33_wowy_rapm/scripts/publish_wowy_site.py` independently validates the certified
+WOWY manifest, COPY-loads a temporary staging table, verifies keys/counts/date coverage, and replaces
+`wowy_ratings` plus `wowy_publication` in one transaction. It never uses the generic drop/recreate
+uploader, so indexes, grants, constraints, and RLS survive publication.
+
 ---
 
 ## Pipeline Freshness Requirements
 
 **All source parquet files must cover the same date range.** The build script left-joins everything onto `spm_outputs` by `(nba_id, date)`. If any source file lags behind, those columns will be null for all dates beyond that file's max date.
 
-`getActivePlayers()` always returns the most recent positive-possession row per player in the latest season. If that row has null survivorship/projections/RAPM because the source file was stale at build time, the entire column appears empty on the site — even though older rows in the DB have the data.
+`getActivePlayers()` always returns the most recent active-roster row per player in the latest season, including `future_game = 1` projection rows. If that row has null survivorship/projections/RAPM because the source file was stale at build time, the entire column appears empty on the site — even though older rows in the DB have the data.
 
 **Debugging null columns on the site:**
 1. Check max dates of all source parquet files — they should match `spm_outputs`

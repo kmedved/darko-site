@@ -137,6 +137,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/api/longevity/+server.js` - API /api/longevity
 - `src/routes/api/player/[id]/history/+server.js` - API /api/player/:id/history
 - `src/routes/api/player/[id]/longevity/+server.js` - API /api/player/:id/longevity
+- `src/routes/api/player/[id]/wowy-history/+server.js` - API /api/player/:id/wowy-history
 - `src/routes/api/players-index/+server.js` - API /api/players-index
 - `src/routes/api/rate/leaderboard/+server.js` - API /api/rate/leaderboard
 - `src/routes/api/rate/pair/+server.js` - API /api/rate/pair
@@ -144,6 +145,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/api/search-players/+server.js` - API /api/search-players
 - `src/routes/api/standings/+server.js` - API /api/standings
 - `src/routes/api/standings/[slug]/+server.js` - API /api/standings/:slug
+- `src/routes/api/wowy-publication/+server.js` - API /api/wowy-publication
 
 ## supabase/migrations
 
@@ -154,6 +156,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260529_001_lock_public_read_tables.sql` - Supabase SQL migration.
 - `supabase/migrations/20260616_001_lock_public_fact_tables.sql` - Supabase SQL migration.
 - `supabase/migrations/20260617_001_restore_service_role_elo_vote_path.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_001_add_wowy_ratings.sql` - Supabase SQL migration.
 
 ## tests
 
@@ -199,3 +202,4 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/trajectories-mobile-layout.test.js` - test
 - `tests/trajectories-url-sync.test.js` - test
 - `tests/wide-sticky-table-layout.test.js` - test
+- `tests/wowy-trajectories.test.js` - test

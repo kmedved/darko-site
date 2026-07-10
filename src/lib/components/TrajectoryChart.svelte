@@ -39,7 +39,10 @@
 		'on_off_ddpm',
 		'bayes_rapm_total',
 		'bayes_rapm_off',
-		'bayes_rapm_def'
+		'bayes_rapm_def',
+		'wowy_rapm',
+		'wowy_orapm',
+		'wowy_drapm'
 	]);
 
 	const TIME_LABELS = {
@@ -313,7 +316,11 @@
 				.attr('font-size', '13px')
 				.attr('font-weight', '600')
 				.style('fill', 'var(--text)')
-				.text(`DARKO ${getMetricDisplayLabel(talentType)}`);
+				.text(
+					talentType.startsWith('wowy_')
+						? getMetricDisplayLabel(talentType)
+						: `DARKO ${getMetricDisplayLabel(talentType)}`
+				);
 
 		// Chart title
 		svg.append('text')

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { apiPlayerHistory } from '../src/lib/api.js';
+import { apiPlayerHistory, apiWowyPlayerHistory, apiWowyPublication } from '../src/lib/api.js';
 
 
 test('apiPlayerHistory full mode returns rows array by default when API returns metadata object', async (t) => {
@@ -49,4 +49,48 @@ test('apiPlayerHistory full mode can return metadata when includeMetadata is ena
     const metadata = await apiPlayerHistory(9, { full: true, includeMetadata: true });
 
     assert.deepEqual(metadata, payload);
+});
+
+test('apiWowyPlayerHistory returns the complete server-assembled career array', async (t) => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    let requestedPath = '';
+    globalThis.fetch = async (path) => {
+        requestedPath = String(path);
+        return {
+            ok: true,
+            json: async () => ({
+                rows: [
+                    { nba_id: 2544, career_game_num: 1 },
+                    { nba_id: 2544, career_game_num: 1923 }
+                ],
+                truncated: false,
+                maxRows: 3000
+            })
+        };
+    };
+
+    const rows = await apiWowyPlayerHistory(2544);
+    assert.equal(requestedPath, '/api/player/2544/wowy-history');
+    assert.equal(rows.length, 2);
+    assert.equal(rows[1].career_game_num, 1923);
+});
+
+test('apiWowyPublication reads the public freshness record', async (t) => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+    globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => ({ season_through: 2026, data_through: '2026-06-13' })
+    });
+
+    assert.deepEqual(await apiWowyPublication(), {
+        season_through: 2026,
+        data_through: '2026-06-13'
+    });
 });

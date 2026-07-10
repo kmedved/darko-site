@@ -32,6 +32,8 @@ const CACHE_MS = {
     playerCurrent: 60_000,
     playerHistory: 300_000,
     fullPlayerHistory: 1_800_000,
+    wowyPlayerHistory: 1_800_000,
+    wowyPublication: 300_000,
     searchPlayers: 120_000,
     longevityRows: 300_000,
     longevityTrajectory: 600_000,
@@ -192,6 +194,19 @@ const PLAYERS_DIM_COLUMNS = [
     'rookie_season'
 ].join(', ');
 
+const WOWY_RATING_COLUMNS = [
+    'nba_id',
+    'game_id',
+    'date',
+    'season',
+    'career_game_num',
+    'age',
+    'wowy_rapm',
+    'wowy_orapm',
+    'wowy_drapm',
+    'exposure'
+].join(', ');
+
 const TEAM_FALLBACK_LOOKBACK_DAYS = 370;
 const TEAM_FALLBACK_CHUNK_SIZE = 50;
 const TEAM_FALLBACK_ROWS_PER_PLAYER = 120;
@@ -221,6 +236,7 @@ const LINEUP_RATING_COLUMNS = [
 ].join(', ');
 
 export const MAX_FULL_HISTORY_ROWS = 5_000;
+export const MAX_WOWY_HISTORY_ROWS = 3_000;
 
 function sortByDpmDesc(rows = []) {
     return rows
@@ -448,7 +464,6 @@ async function getCurrentSeasonPlayerDimsByIds(season, ids = []) {
 
 async function getLatestCurrentSeasonRatingRows(season) {
     const latestById = new Map();
-    const playedIds = new Set();
     let page = 0;
 
     while (true) {
@@ -456,7 +471,7 @@ async function getLatestCurrentSeasonRatingRows(season) {
             .from('player_ratings')
             .select(RATING_COLUMNS)
             .eq('season', season)
-            .gt('poss', 0)
+            .eq('active_roster', 1)
             .order('date', { ascending: false })
             .range(
                 page * CURRENT_SEASON_PAGE_SIZE,
@@ -472,23 +487,19 @@ async function getLatestCurrentSeasonRatingRows(season) {
             if (!latestById.has(id)) {
                 latestById.set(id, row);
             }
-
-            const poss = Number.parseFloat(row?.poss);
-            if (Number.isFinite(poss) && poss > 0) {
-                playedIds.add(id);
-            }
         }
 
         if (!data || data.length < CURRENT_SEASON_PAGE_SIZE) break;
         page += 1;
     }
 
-    return Array.from(playedIds, (id) => latestById.get(id)).filter(Boolean);
+    return Array.from(latestById.values()).filter(Boolean);
 }
 
 /**
- * Get all active players — defined as players who played in the current NBA season.
- * Uses the latest season value and returns the most recent positive-possession row per player.
+ * Get all active players — defined as current-roster players in the current NBA season.
+ * Uses the latest season value and returns the most recent row per player, including
+ * future projection rows.
  */
 async function loadAllActivePlayers() {
     const latestSeason = await getLatestActiveSeason();
@@ -636,6 +647,83 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
             truncated,
             maxRows
         };
+    });
+}
+
+/**
+ * Get one player's complete synthetic WOWY history in chronological order.
+ * Supabase range pagination is a server-side transport detail; callers receive one career array.
+ */
+export async function getWowyPlayerHistory(nbaId, options = {}) {
+    const maxRows = Number.isInteger(options.maxRows) && options.maxRows > 0
+        ? options.maxRows
+        : MAX_WOWY_HISTORY_ROWS;
+    const key = cacheKey('wowyPlayerHistory', `${nbaId}:${maxRows}`);
+    return runCached(key, CACHE_MS.wowyPlayerHistory, async () => {
+        let allData = [];
+        let page = 0;
+        const pageSize = 1_000;
+        let truncated = false;
+        let lastPageSize = 0;
+
+        while (allData.length < maxRows) {
+            const { data, error } = await supabase
+                .from('wowy_ratings')
+                .select(WOWY_RATING_COLUMNS)
+                .eq('nba_id', nbaId)
+                .order('career_game_num', { ascending: true })
+                .range(page * pageSize, (page + 1) * pageSize - 1);
+
+            if (error) throw error;
+            const rows = data || [];
+            lastPageSize = rows.length;
+            const remaining = maxRows - allData.length;
+            if (rows.length > remaining) {
+                allData = allData.concat(rows.slice(0, remaining));
+                truncated = true;
+                break;
+            }
+            allData = allData.concat(rows);
+            if (rows.length < pageSize) break;
+            page += 1;
+        }
+
+        if (!truncated && allData.length === maxRows && lastPageSize === pageSize) {
+            const nextOffset = page * pageSize;
+            const { data: extraRows, error: extraError } = await supabase
+                .from('wowy_ratings')
+                .select('nba_id')
+                .eq('nba_id', nbaId)
+                .order('career_game_num', { ascending: true })
+                .range(nextOffset, nextOffset);
+
+            if (extraError) throw extraError;
+            truncated = (extraRows || []).length > 0;
+        }
+
+        const playersMap = await getPlayersMapByIds([nbaId]);
+        const playerDim = playersMap.get(nbaId);
+        return {
+            rows: allData.map((row) => mergeWithPlayerDim(row, playerDim)),
+            truncated,
+            maxRows
+        };
+    });
+}
+
+/** Get the metadata row describing the currently published WOWY artifact. */
+export async function getWowyPublication() {
+    return runCached('wowyPublication:current', CACHE_MS.wowyPublication, async () => {
+        const { data, error } = await supabase
+            .from('wowy_publication')
+            .select(
+                'publication_id, composite_sha256, output_sha256, data_through, season_through, row_count, player_count, published_at'
+            )
+            .eq('id', 1)
+            .maybeSingle();
+
+        if (error) throw error;
+        return data || null;
     });
 }
 

@@ -42,9 +42,24 @@ export function formatSeasonEndYearLabel(endYear) {
  * Points within a season are spread evenly between integer boundaries.
  */
 export function computeSeasonX(rows) {
+	return computeSeasonXWithResolver(rows, (row) => getSeasonStartYear(row?.date));
+}
+
+/**
+ * Augment rows using an explicit NBA season-ending year.
+ * This avoids date-cutoff errors for delayed seasons such as the 2019-20 Bubble.
+ */
+export function computeSeasonXFromEndYear(rows) {
+	return computeSeasonXWithResolver(rows, (row) => {
+		const endYear = Number.parseInt(row?.season, 10);
+		return Number.isInteger(endYear) ? endYear - 1 : null;
+	});
+}
+
+function computeSeasonXWithResolver(rows, resolveSeasonStartYear) {
 	const seasons = new Map();
 	for (const row of rows || []) {
-		const sy = getSeasonStartYear(row?.date);
+		const sy = resolveSeasonStartYear(row);
 		if (!Number.isInteger(sy)) continue;
 		if (!seasons.has(sy)) seasons.set(sy, []);
 		seasons.get(sy).push(row);

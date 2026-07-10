@@ -28,7 +28,7 @@ test('supabase rating column projection includes actual_salary', async () => {
     assert.match(contents, RATING_COLUMNS_INCLUDE_ACTUAL_SALARY);
 });
 
-test('active players are selected by current-season playing time rather than roster flags', async () => {
+test('active players are selected from latest current-season active-roster projections', async () => {
     const absolutePath = path.resolve(process.cwd(), SUPABASE_FILE);
     const contents = await fs.readFile(absolutePath, 'utf8');
     const start = contents.indexOf('async function loadAllActivePlayers()');
@@ -47,14 +47,14 @@ test('active players are selected by current-season playing time rather than ros
     assert.match(activePlayersBlock, /getLatestActiveSeason\(\)/);
     assert.match(activePlayersBlock, /getLatestCurrentSeasonRatingRows\(latestSeason\)/);
     assert.match(activePlayersBlock, /getCurrentSeasonPlayerDimsByIds\(latestSeason, ids\)/);
-    assert.match(ratingRowsBlock, /\.gt\('poss', 0\)/);
-    assert.match(ratingRowsBlock, /const playedIds = new Set\(\);/);
-    assert.match(ratingRowsBlock, /Number\.parseFloat\(row\?\.poss\)/);
-    assert.match(ratingRowsBlock, /Number\.isFinite\(poss\) && poss > 0/);
-    assert.match(ratingRowsBlock, /playedIds\.add\(id\)/);
-    assert.match(ratingRowsBlock, /Array\.from\(playedIds/);
+    assert.match(ratingRowsBlock, /\.eq\('active_roster', 1\)/);
+    assert.match(ratingRowsBlock, /\.order\('date', \{ ascending: false \}\)/);
+    assert.match(ratingRowsBlock, /latestById\.set\(id, row\)/);
+    assert.match(ratingRowsBlock, /Array\.from\(latestById\.values\(\)\)/);
+    assert.doesNotMatch(ratingRowsBlock, /\.gt\('poss', 0\)/);
+    assert.doesNotMatch(ratingRowsBlock, /playedIds|Number\.parseFloat\(row\?\.poss\)/);
     assert.doesNotMatch(activePlayersBlock, /getCurrentSeasonPlayerDims\(latestSeason\)|currentSeasonPlayers/);
-    assert.doesNotMatch(activePlayersBlock, /weekAgo|gte\('date'|eq\('active_roster', 1\)/);
+    assert.doesNotMatch(activePlayersBlock, /weekAgo|gte\('date'/);
 });
 
 test('concurrent team-filtered active players share one all-player load', async () => {

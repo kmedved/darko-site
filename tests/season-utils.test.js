@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
     computeSeasonX,
+    computeSeasonXFromEndYear,
     formatSeasonEndYearLabel,
     getSeasonStartYear
 } from '../src/lib/utils/seasonUtils.js';
@@ -51,4 +52,16 @@ test('formatSeasonEndYearLabel formats database season values as NBA season labe
     assert.equal(formatSeasonEndYearLabel(2026), '2025-26');
     assert.equal(formatSeasonEndYearLabel('2025'), '2024-25');
     assert.equal(formatSeasonEndYearLabel('not-a-season'), null);
+});
+
+test('WOWY season positions use the exported finals year for Bubble games', () => {
+    const rows = computeSeasonXFromEndYear([
+        { date: '2020-08-01', season: 2020, game_id: 'bubble' },
+        { date: '2020-12-23', season: 2021, game_id: 'next-season' }
+    ]);
+
+    assert.equal(rows[0]._seasonIndex, 2019);
+    assert.equal(rows[0]._seasonLabel, '2019-20');
+    assert.equal(rows[1]._seasonIndex, 2020);
+    assert.equal(rows[1]._seasonLabel, '2020-21');
 });

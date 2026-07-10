@@ -1,8 +1,19 @@
 <script>
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import TrajectoryChart from '$lib/components/TrajectoryChart.svelte';
-	import { apiPlayerHistory, apiActivePlayers } from '$lib/api.js';
-	import { computeSeasonX, getSeasonStartYear, formatSeasonLabel } from '$lib/utils/seasonUtils.js';
+	import {
+		apiPlayerHistory,
+		apiActivePlayers,
+		apiWowyPlayerHistory,
+		apiWowyPublication
+	} from '$lib/api.js';
+	import {
+		computeSeasonX,
+		computeSeasonXFromEndYear,
+		getSeasonStartYear,
+		formatSeasonLabel,
+		formatSeasonEndYearLabel
+	} from '$lib/utils/seasonUtils.js';
 	import {
 		formatFixed,
 		formatMillions,
@@ -26,6 +37,9 @@
 	let rangeFilterMax = $state(null);
 	let prevTalentType = $state('dpm');
 	let prevTimeScale = $state('games');
+	let wowyPublication = $state(null);
+	let wowyPublicationRequested = false;
+	const historyLoads = new Map();
 	const STARTER_PLAYERS = [
 		{ nbaId: 203999, label: 'Nikola Jokic', detail: 'Modern peak big' },
 		{ nbaId: 1641705, label: 'Victor Wembanyama', detail: 'Early career rise' },
@@ -96,8 +110,12 @@
 		'on_off_ddpm',
 		'bayes_rapm_total',
 		'bayes_rapm_off',
-		'bayes_rapm_def'
+		'bayes_rapm_def',
+		'wowy_rapm',
+		'wowy_orapm',
+		'wowy_drapm'
 	]);
+	const WOWY_METRICS = new Set(['wowy_rapm', 'wowy_orapm', 'wowy_drapm']);
 
 	const ROLLING_WINDOW_SIZE = 10;
 
@@ -157,6 +175,9 @@
 		{ key: 'box_ddpm', label: 'Box D-DPM' },
 		{ key: 'on_off_dpm', label: 'On/Off DPM' },
 		{ key: 'bayes_rapm_total', label: 'RAPM' },
+		{ key: 'wowy_rapm', label: 'WOWY RAPM' },
+		{ key: 'wowy_orapm', label: 'WOWY O-RAPM' },
+		{ key: 'wowy_drapm', label: 'WOWY D-RAPM' },
 		{ key: 'x_pts_100', label: 'Pts per 100' },
 		{ key: 'x_ast_100', label: 'Ast per 100' },
 		{ key: 'x_fg_pct', label: 'FG%' },
@@ -174,13 +195,29 @@
 	];
 
 	const selectedMetricLabel = $derived(getMetricDisplayLabel(talentType));
-	const chartTitle = $derived(`DARKO Career ${selectedMetricLabel} Progression`);
+	const isWowyMetric = $derived(WOWY_METRICS.has(talentType));
+	const chartTitle = $derived(
+		isWowyMetric
+			? `Career ${selectedMetricLabel} Progression`
+			: `DARKO Career ${selectedMetricLabel} Progression`
+	);
+	const wowyPublicationLabel = $derived(
+		wowyPublication?.season_through
+			? `Data through ${formatSeasonEndYearLabel(wowyPublication.season_through)}`
+			: null
+	);
+
+	function rowsForPlayer(player) {
+		return isWowyMetric ? (player.wowyRows || []) : (player.rows || []);
+	}
 
 	const availableSeasons = $derived.by(() => {
 		const years = new Set();
 		for (const p of selectedPlayers) {
-			for (const row of p.rows) {
-				const y = getSeasonStartYear(row.date);
+			for (const row of rowsForPlayer(p)) {
+				const y = isWowyMetric
+					? Number.parseInt(row.season, 10) - 1
+					: getSeasonStartYear(row.date);
 				if (y != null) years.add(y);
 			}
 		}
@@ -193,17 +230,21 @@
 
 	const showRangeFilter = $derived(
 		selectedPlayers.length > 0 &&
-		(timeScale === 'seasons' ? availableSeasons.length > 1 : selectedPlayers.some((p) => p.rows.length > 0))
+		(timeScale === 'seasons'
+			? availableSeasons.length > 1
+			: selectedPlayers.some((p) => rowsForPlayer(p).length > 0))
 	);
 
 	const chartData = $derived(
 		selectedPlayers.map((p) => {
-			let rows = p.rows;
+			let rows = rowsForPlayer(p);
 			if (rangeFilterMin != null || rangeFilterMax != null) {
 				rows = rows.filter((row) => {
 					let val;
 					if (timeScale === 'seasons') {
-						val = getSeasonStartYear(row.date);
+						val = isWowyMetric
+							? Number.parseInt(row.season, 10) - 1
+							: getSeasonStartYear(row.date);
 					} else if (timeScale === 'age') {
 						val = Number.parseFloat(row.age);
 					} else {
@@ -216,11 +257,12 @@
 				});
 			}
 			if (timeScale === 'seasons') {
-				rows = computeSeasonX(rows);
+				rows = isWowyMetric ? computeSeasonXFromEndYear(rows) : computeSeasonX(rows);
 			}
 			return { ...p, rows };
 		})
 	);
+	const hasChartRows = $derived(chartData.some((player) => player.rows.length > 0));
 
 	const excludeIds = $derived(selectedPlayers.map((p) => p.nba_id));
 	const metricPoints = $derived.by(() => buildMetricPoints(chartData));
@@ -387,61 +429,102 @@
 		];
 	}
 
+	function addPlayerShell(player) {
+		const nbaId = Number.parseInt(player?.nba_id ?? player?.nbaId, 10);
+		if (!Number.isInteger(nbaId) || nbaId <= 0) return false;
+		if (selectedPlayers.some((entry) => entry.nba_id === nbaId)) return false;
+
+		selectedPlayers = [
+			...selectedPlayers,
+			{
+				nba_id: nbaId,
+				player_name: player?.player_name || player?.label || `Player ${nbaId}`,
+				team_name: player?.team_name || null,
+				color: getPlayerColor(selectedPlayers.length),
+				rows: [],
+				darkoLoaded: false,
+				wowyRows: [],
+				wowyLoaded: false
+			}
+		];
+		return true;
+	}
+
+	async function loadHistory(nbaId, kind) {
+		const player = selectedPlayers.find((entry) => entry.nba_id === nbaId);
+		if (!player) return [];
+		const loadedKey = kind === 'wowy' ? 'wowyLoaded' : 'darkoLoaded';
+		const rowsKey = kind === 'wowy' ? 'wowyRows' : 'rows';
+		if (player[loadedKey]) return player[rowsKey] || [];
+
+		const requestKey = `${kind}:${nbaId}`;
+		if (historyLoads.has(requestKey)) return historyLoads.get(requestKey);
+
+		pendingLoads += 1;
+		const request = (async () => {
+			const rows = kind === 'wowy'
+				? await apiWowyPlayerHistory(nbaId)
+				: await apiPlayerHistory(nbaId, { full: true });
+			const first = rows[0];
+			selectedPlayers = selectedPlayers.map((entry) =>
+				entry.nba_id === nbaId
+					? {
+						...entry,
+						[rowsKey]: rows,
+						[loadedKey]: true,
+						player_name: first?.player_name || entry.player_name,
+						team_name: first?.team_name || entry.team_name
+					}
+					: entry
+			);
+			return rows;
+		})().finally(() => {
+			historyLoads.delete(requestKey);
+			pendingLoads = Math.max(0, pendingLoads - 1);
+		});
+		historyLoads.set(requestKey, request);
+		return request;
+	}
+
+	async function ensureSelectedHistories(kind) {
+		const playersToLoad = selectedPlayers.filter((player) =>
+			kind === 'wowy' ? !player.wowyLoaded : !player.darkoLoaded
+		);
+		if (playersToLoad.length === 0) return;
+
+		const results = await Promise.allSettled(
+			playersToLoad.map((player) => loadHistory(player.nba_id, kind))
+		);
+		const failed = results.find((result) => result.status === 'rejected');
+		if (failed) error = failed.reason?.message || `Failed to load ${kind.toUpperCase()} history`;
+	}
+
+	async function loadWowyPublication() {
+		if (wowyPublicationRequested) return;
+		wowyPublicationRequested = true;
+		try {
+			wowyPublication = await apiWowyPublication();
+		} catch (publicationError) {
+			wowyPublicationRequested = false;
+			error = publicationError?.message || 'Failed to load WOWY publication metadata';
+		}
+	}
+
 	async function preloadPlayersById(idList) {
 		if (!Array.isArray(idList) || idList.length === 0) return;
-
 		const uniqueIds = [...new Set(
 			idList
 				.map((id) => Number.parseInt(id, 10))
 				.filter((id) => Number.isInteger(id) && id > 0)
 		)];
-		if (uniqueIds.length === 0) return;
+		for (const nbaId of uniqueIds) addPlayerShell({ nba_id: nbaId });
 
-		pendingLoads += uniqueIds.length;
-		error = null;
-
-		try {
-			const results = await Promise.allSettled(
-				uniqueIds.map((id) => apiPlayerHistory(id, { full: true }))
-			);
-
-			const additions = [];
-			for (const [index, result] of results.entries()) {
-				const nbaId = uniqueIds[index];
-				if (result.status !== 'fulfilled') {
-					error = error || result.reason?.message || `Failed to load player ${nbaId}`;
-					continue;
-				}
-
-				const rows = result.value || [];
-				if (rows.length === 0) {
-					error = error || `No history found for player ${nbaId}`;
-					continue;
-				}
-
-				const colorIndex = selectedPlayers.length + additions.length;
-				additions.push({
-					nba_id: nbaId,
-					player_name: rows[0].player_name,
-					team_name: rows[0].team_name,
-					color: getPlayerColor(colorIndex),
-					rows
-				});
+		const kind = isWowyMetric ? 'wowy' : 'darko';
+		const results = await Promise.allSettled(uniqueIds.map((nbaId) => loadHistory(nbaId, kind)));
+		for (const [index, result] of results.entries()) {
+			if (result.status === 'rejected') {
+				error = error || result.reason?.message || `Failed to load player ${uniqueIds[index]}`;
 			}
-
-			if (additions.length > 0) {
-				const merged = [...selectedPlayers];
-				const seenIds = new Set(merged.map((player) => player.nba_id));
-				for (const player of additions) {
-					if (!seenIds.has(player.nba_id)) {
-						seenIds.add(player.nba_id);
-						merged.push(player);
-					}
-				}
-				selectedPlayers = merged;
-			}
-		} finally {
-			pendingLoads = Math.max(0, pendingLoads - uniqueIds.length);
 		}
 	}
 
@@ -456,6 +539,13 @@
 			loadRandomPlayer();
 		}
 		initialLoadDone = true;
+	});
+
+	$effect(() => {
+		if (!initialLoadDone) return;
+		const kind = isWowyMetric ? 'wowy' : 'darko';
+		void ensureSelectedHistories(kind);
+		if (isWowyMetric) void loadWowyPublication();
 	});
 
 	// Sync selected player IDs to URL
@@ -475,33 +565,17 @@
 	});
 
 	async function loadPlayerById(nbaId) {
-		if (selectedPlayers.some((p) => p.nba_id === nbaId)) return;
-
-		const colorIndex = selectedPlayers.length;
-		const color = getPlayerColor(colorIndex);
-
-		pendingLoads += 1;
+		const starter = STARTER_PLAYERS.find((player) => player.nbaId === nbaId);
+		if (!addPlayerShell({ nba_id: nbaId, label: starter?.label })) return;
 		error = null;
 		try {
-			const rows = await apiPlayerHistory(nbaId, { full: true });
+			const kind = isWowyMetric ? 'wowy' : 'darko';
+			const rows = await loadHistory(nbaId, kind);
 			if (rows.length === 0) {
-				error = `No history found for player ${nbaId}`;
-				return;
+				error = `No ${selectedMetricLabel} history found for player ${nbaId}`;
 			}
-			selectedPlayers = [
-				...selectedPlayers,
-				{
-					nba_id: nbaId,
-					player_name: rows[0].player_name,
-					team_name: rows[0].team_name,
-					color,
-					rows
-				}
-			];
 		} catch (err) {
 			error = err.message;
-		} finally {
-			pendingLoads = Math.max(0, pendingLoads - 1);
 		}
 	}
 
@@ -517,7 +591,10 @@
 
 			const randomIndex = Math.floor(Math.random() * players.length);
 			const randomPlayer = players[randomIndex];
-			await loadPlayerById(randomPlayer.nba_id);
+			if (addPlayerShell(randomPlayer)) {
+				const kind = isWowyMetric ? 'wowy' : 'darko';
+				await loadHistory(randomPlayer.nba_id, kind);
+			}
 		} catch (err) {
 			error = err.message;
 		} finally {
@@ -526,34 +603,16 @@
 	}
 
 	async function addPlayer(player) {
-		if (selectedPlayers.some((p) => p.nba_id === player.nba_id)) return;
-
-		const colorIndex = selectedPlayers.length;
-		const color = getPlayerColor(colorIndex);
-
-		pendingLoads += 1;
+		if (!addPlayerShell(player)) return;
 		error = null;
-
 		try {
-			const rows = await apiPlayerHistory(player.nba_id, { full: true });
+			const kind = isWowyMetric ? 'wowy' : 'darko';
+			const rows = await loadHistory(player.nba_id, kind);
 			if (rows.length === 0) {
-				error = `No history found for player ${player.nba_id}`;
-				return;
+				error = `No ${selectedMetricLabel} history found for ${player.player_name}`;
 			}
-			selectedPlayers = [
-				...selectedPlayers,
-				{
-					nba_id: player.nba_id,
-					player_name: player.player_name,
-					team_name: player.team_name,
-					color,
-					rows
-				}
-			];
 		} catch (err) {
 			error = err.message;
-		} finally {
-			pendingLoads = Math.max(0, pendingLoads - 1);
 		}
 	}
 
@@ -620,6 +679,9 @@
 							<option value={tt.key}>{tt.label}</option>
 						{/each}
 					</select>
+					{#if isWowyMetric && wowyPublicationLabel}
+						<div class="metric-freshness">{wowyPublicationLabel}</div>
+					{/if}
 				</div>
 
 				<div class="control-group">
@@ -767,7 +829,7 @@
 						</div>
 					{/if}
 
-					{#if selectedPlayers.length > 0}
+					{#if selectedPlayers.length > 0 && hasChartRows}
 						<TrajectoryChart
 							players={chartData}
 							{timeScale}
@@ -776,6 +838,10 @@
 							yMin={yAxisMin}
 							yMax={yAxisMax}
 						/>
+					{:else if selectedPlayers.length > 0 && !loading}
+						<div class="trajectory-message empty-state trajectory-empty-state">
+							<strong>No {selectedMetricLabel} history is available for the selected players.</strong>
+						</div>
 					{:else if !loading}
 						<div class="trajectory-message empty-state trajectory-empty-state">
 							<strong>Start with a player search or one of the examples.</strong>
@@ -795,7 +861,7 @@
 					{/if}
 				</section>
 
-				{#if selectedPlayers.length > 0}
+				{#if selectedPlayers.length > 0 && hasChartRows}
 					<section class="trajectory-stat-grid" aria-label="Trajectory summary">
 						{#each trajectoryStats as card (card.label)}
 							<article class="trajectory-stat-card {card.tone}">
@@ -947,6 +1013,13 @@
 		letter-spacing: 0;
 		margin-bottom: 9px;
 		color: var(--text);
+	}
+
+	.metric-freshness {
+		margin-top: 7px;
+		font-size: 12px;
+		font-weight: 650;
+		color: var(--text-muted);
 	}
 
 	.radio-stack {

@@ -18,7 +18,7 @@ export const REPO_CLASSIFICATION = Object.freeze({
 });
 
 export const CORE_ABSTRACTIONS = Object.freeze([
-    '`Active player snapshot` - latest deduped `player_ratings` row per player with positive possessions in the current NBA season, merged with `players` metadata.',
+    '`Active player snapshot` - latest deduped `player_ratings` row per active-roster player in the current NBA season, including future projection rows, merged with `players` metadata.',
     '`Full player history` - chronological career rows, capped and flagged when the API enters explicit full-history mode.',
     '`Team page payload` - `{ teamName, players, sim, winDist }` assembled from current-season team players, season simulation, and win-distribution tables.',
     '`Longevity row / trajectory` - retirement-age and survival-probability projections for current-season players or one player over time.',
@@ -30,7 +30,7 @@ export const CRITICAL_INVARIANTS = Object.freeze([
     '`/player/:nbaId` always loads full history server-side and turns an empty result into HTTP 404. (`src/lib/server/playerPage.js`, `tests/player-page-server-load.test.js`)',
     '`/compare?ids=` dedupes IDs, preserves first-seen order, and stops at four players. (`src/lib/server/comparePage.js`, `tests/compare-page-server-load.test.js`)',
     '`/api/player/:id/history` defaults to 1000 rows, caps bounded requests at 2000, and only enters paginated full-history mode when `full=1`. (`src/routes/api/player/[id]/history/+server.js`, `src/lib/server/supabase.js`)',
-    '`getActivePlayers()` uses the latest `player_ratings.season`, includes only players with positive possessions in that season, dedupes by `nba_id`, and sorts by DPM descending before any page/API consumes it. (`src/lib/server/supabase.js`)',
+    '`getActivePlayers()` uses the latest `player_ratings.season`, includes active-roster rows in that season, dedupes by `nba_id` to the latest row including future projections, and sorts by DPM descending before any page/API consumes it. (`src/lib/server/supabase.js`)',
     'Only `/api/rate/vote` writes state, and it must pass same-origin checks before calling the Supabase RPC. (`src/lib/server/eloSecurity.js`, `src/lib/server/eloService.js`)',
     'Wide-table horizontal scroll is touch/mobile-only; sticky headers remain a desktop behavior. (`AGENTS.md`, `tests/mobile-table-scroll.test.js`, `tests/wide-sticky-table-layout.test.js`)',
     'Both team detail URLs are thin wrappers over the shared team payload/view pipeline. (`src/routes/team/[team]/+page.server.js`, `src/routes/standings/[slug]/+page.server.js`, `tests/team-route-wrappers.test.js`)'
@@ -683,7 +683,7 @@ async function collectQueryLimits(rootDir) {
     return sortValue({
         activePlayers: {
             seasonSource: supabaseSource.includes('getLatestActiveSeason') ? 'latest player_ratings season' : 'unknown',
-            inclusion: supabaseSource.includes('poss > 0') ? 'current-season rows with positive possessions' : 'unknown',
+            inclusion: supabaseSource.includes(".eq('active_roster', 1)") ? 'current-season active-roster rows, including future projections' : 'unknown',
             dedupeKey: 'nba_id',
             sortOrder: 'dpm desc'
         },
