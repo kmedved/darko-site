@@ -17,7 +17,7 @@
         loading = true;
         error = null;
 
-        apiActivePlayers()
+        apiActivePlayers({ view: 'search' })
             .then(data => {
                 if (cancelled) return;
                 allPlayers = Array.isArray(data) ? data : [];

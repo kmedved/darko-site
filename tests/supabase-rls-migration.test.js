@@ -8,7 +8,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const migration = [
     '20260529_001_lock_public_read_tables.sql',
     '20260616_001_lock_public_fact_tables.sql',
-    '20260710_001_add_wowy_ratings.sql'
+    '20260710_001_add_wowy_ratings.sql',
+    '20260710_002_add_active_player_snapshot_rpc.sql',
+    '20260710_003_add_latest_player_teams_rpc.sql',
+    '20260710_004_add_latest_team_index.sql'
 ]
     .map((filename) =>
         readFileSync(join(__dirname, '..', 'supabase', 'migrations', filename), 'utf8')
@@ -68,4 +71,21 @@ test('RLS migration preserves anon/authenticated read access only', () => {
             new RegExp(`for\\s+(insert|update|delete|all)\\s+to\\s+[^;]*\\b${role}\\b`, 'i')
         );
     }
+});
+
+test('active-player snapshot RPC is invoker-safe and read-only for public roles', () => {
+    assert.match(migration, /function public\.get_active_player_ratings\(p_season integer\)/);
+    assert.match(migration, /security invoker/);
+    assert.match(
+        migration,
+        /grant execute on function public\.get_active_player_ratings\(integer\)\s+to anon, authenticated, service_role;/
+    );
+});
+
+test('latest-team RPC is invoker-safe and read-only for public roles', () => {
+    assert.match(migration, /function public\.get_latest_player_teams\(/);
+    assert.match(
+        migration,
+        /grant execute on function public\.get_latest_player_teams\(bigint\[\], date\)\s+to anon, authenticated, service_role;/
+    );
 });

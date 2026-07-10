@@ -113,9 +113,9 @@
 
 	async function loadActivePlayersWithRetry() {
 		try {
-			return await apiActivePlayers();
+			return await apiActivePlayers({ view: 'percentiles' });
 		} catch {
-			return await apiActivePlayers();
+			return await apiActivePlayers({ view: 'percentiles' });
 		}
 	}
 

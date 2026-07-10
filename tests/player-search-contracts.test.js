@@ -7,7 +7,7 @@ test('PlayerSearch keeps the active-player data source and shared presentation l
     const file = path.resolve(process.cwd(), 'src/lib/components/PlayerSearch.svelte');
     const contents = await fs.readFile(file, 'utf8');
 
-    assert.match(contents, /apiActivePlayers/, 'PlayerSearch should still use active-player data');
+    assert.match(contents, /apiActivePlayers\(\{ view: 'search' \}\)/, 'PlayerSearch should use the lightweight active-player view');
     assert.match(contents, /PlayerSearchField/, 'PlayerSearch should reuse the shared search field');
 });
 

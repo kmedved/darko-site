@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.19",
+  "arch_version": "0.1.20",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -12,6 +12,8 @@
         },
         "dataSources": [
           "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/playerViews.js:ACTIVE_PLAYER_VIEWS",
+          "$lib/server/playerViews.js:projectPlayers",
           "$lib/server/supabase.js:getActivePlayers"
         ],
         "file": "src/routes/api/active-players/+server.js",
@@ -20,7 +22,8 @@
         ],
         "pathParams": [],
         "queryParams": [
-          "team"
+          "team",
+          "view"
         ],
         "route": "/api/active-players",
         "writesState": false
@@ -355,6 +358,7 @@
         },
         "dataSources": [
           "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/playerViews.js:projectPlayers",
           "$lib/server/supabase.js:getActivePlayers"
         ],
         "file": "src/routes/+page.server.js",
@@ -423,6 +427,7 @@
         },
         "dataSources": [
           "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/playerViews.js:projectPlayers",
           "$lib/server/supabase.js:getActivePlayers"
         ],
         "file": "src/routes/scatterplot/+page.server.js",
@@ -492,7 +497,7 @@
     "query_limits": {
       "activePlayers": {
         "dedupeKey": "nba_id",
-        "inclusion": "current-season active-roster rows, including future projections",
+        "inclusion": "unknown",
         "seasonSource": "latest player_ratings season",
         "sortOrder": "dpm desc"
       },
@@ -594,6 +599,7 @@
     "src/lib/server/lineupRatings.js",
     "src/lib/server/lineupsPage.js",
     "src/lib/server/playerPage.js",
+    "src/lib/server/playerViews.js",
     "src/lib/server/supabase.js",
     "src/lib/server/teamPage.js",
     "src/lib/utils/chartImageExport.js",
@@ -664,6 +670,9 @@
     "supabase/migrations/20260616_001_lock_public_fact_tables.sql",
     "supabase/migrations/20260617_001_restore_service_role_elo_vote_path.sql",
     "supabase/migrations/20260710_001_add_wowy_ratings.sql",
+    "supabase/migrations/20260710_002_add_active_player_snapshot_rpc.sql",
+    "supabase/migrations/20260710_003_add_latest_player_teams_rpc.sql",
+    "supabase/migrations/20260710_004_add_latest_team_index.sql",
     "svelte.config.js",
     "tests/api-active-players-cache.test.js",
     "tests/api-player-history.test.js",
@@ -693,6 +702,7 @@
     "tests/player-page-server-load.test.js",
     "tests/player-search-contracts.test.js",
     "tests/player-search.test.js",
+    "tests/player-views.test.js",
     "tests/request-sequencer.test.js",
     "tests/season-utils.test.js",
     "tests/server-error-logging.test.js",
@@ -791,7 +801,8 @@
         ],
         "pathParams": [],
         "queryParams": [
-          "team"
+          "team",
+          "view"
         ],
         "returns": "current-season player snapshot",
         "route": "/api/active-players"
@@ -977,7 +988,7 @@
       },
       {
         "name": "apiActivePlayers",
-        "signature": "apiActivePlayers({ team } = {})"
+        "signature": "apiActivePlayers({ team, view } = {})"
       },
       {
         "name": "apiLongevity",

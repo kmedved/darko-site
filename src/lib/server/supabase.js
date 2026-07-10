@@ -234,9 +234,6 @@ const WOWY_RATING_COLUMNS = [
 ].join(', ');
 
 const TEAM_FALLBACK_LOOKBACK_DAYS = 370;
-const TEAM_FALLBACK_CHUNK_SIZE = 50;
-const TEAM_FALLBACK_ROWS_PER_PLAYER = 120;
-const CURRENT_SEASON_PAGE_SIZE = 1_000;
 
 const LINEUP_RATING_COLUMNS = [
     'variant',
@@ -388,14 +385,6 @@ async function getPlayersMapByIds(ids = []) {
     return map;
 }
 
-function chunkArray(values, size) {
-    const chunks = [];
-    for (let index = 0; index < values.length; index += size) {
-        chunks.push(values.slice(index, index + size));
-    }
-    return chunks;
-}
-
 function getLookbackStartDate(anchorDate, days) {
     const parsed = new Date(anchorDate);
     if (Number.isNaN(parsed.getTime())) return null;
@@ -412,33 +401,18 @@ async function getLatestTeamMapByIds(ids = [], latestDate) {
     }
 
     const startDate = getLookbackStartDate(latestDate, TEAM_FALLBACK_LOOKBACK_DAYS);
+    const { data, error } = await supabase.rpc('get_latest_player_teams', {
+        p_ids: filteredIds,
+        p_start_date: startDate
+    });
+    if (error) throw error;
+
     const teamMap = new Map();
-
-    for (const chunk of chunkArray(filteredIds, TEAM_FALLBACK_CHUNK_SIZE)) {
-        let query = supabase
-            .from('player_ratings')
-            .select('nba_id, date, team_name, tm_id')
-            .in('nba_id', chunk)
-            .not('team_name', 'is', null)
-            .gt('tm_id', 0)
-            .order('date', { ascending: false })
-            .limit(chunk.length * TEAM_FALLBACK_ROWS_PER_PLAYER);
-
-        if (startDate) {
-            query = query.gte('date', startDate);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        for (const row of data || []) {
-            if (!teamMap.has(row.nba_id)) {
-                teamMap.set(row.nba_id, {
-                    team_name: normalizedTeamName(row.team_name),
-                    tm_id: row.tm_id
-                });
-            }
-        }
+    for (const row of Array.isArray(data) ? data : []) {
+        teamMap.set(row.nba_id, {
+            team_name: normalizedTeamName(row.team_name),
+            tm_id: row.tm_id
+        });
     }
 
     return teamMap;
@@ -468,20 +442,18 @@ async function getCurrentSeasonPlayerDimsByIds(season, ids = []) {
         return new Map();
     }
 
+    const { data, error } = await supabase
+        .from('players')
+        .select(PLAYERS_DIM_COLUMNS)
+        .eq('season', season);
+
+    if (error) throw error;
+
+    const requestedIds = new Set(filteredIds);
     const map = new Map();
-    for (const chunk of chunkArray(filteredIds, TEAM_FALLBACK_CHUNK_SIZE)) {
-        const { data, error } = await supabase
-            .from('players')
-            .select(PLAYERS_DIM_COLUMNS)
-            .eq('season', season)
-            .in('nba_id', chunk);
-
-        if (error) throw error;
-
-        for (const row of data || []) {
-            if (Number.isInteger(row?.nba_id) && row.nba_id > 0) {
-                map.set(row.nba_id, row);
-            }
+    for (const row of data || []) {
+        if (requestedIds.has(row?.nba_id)) {
+            map.set(row.nba_id, row);
         }
     }
 
@@ -489,37 +461,12 @@ async function getCurrentSeasonPlayerDimsByIds(season, ids = []) {
 }
 
 async function getLatestCurrentSeasonRatingRows(season) {
-    const latestById = new Map();
-    let page = 0;
+    const { data, error } = await supabase.rpc('get_active_player_ratings', {
+        p_season: season
+    });
 
-    while (true) {
-        const { data, error } = await supabase
-            .from('player_ratings')
-            .select(RATING_COLUMNS)
-            .eq('season', season)
-            .eq('active_roster', 1)
-            .order('date', { ascending: false })
-            .range(
-                page * CURRENT_SEASON_PAGE_SIZE,
-                (page + 1) * CURRENT_SEASON_PAGE_SIZE - 1
-            );
-
-        if (error) throw error;
-
-        for (const row of data || []) {
-            const id = row?.nba_id;
-            if (!Number.isInteger(id) || id <= 0) continue;
-
-            if (!latestById.has(id)) {
-                latestById.set(id, row);
-            }
-        }
-
-        if (!data || data.length < CURRENT_SEASON_PAGE_SIZE) break;
-        page += 1;
-    }
-
-    return Array.from(latestById.values()).filter(Boolean);
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
 }
 
 /**
@@ -536,9 +483,19 @@ async function loadAllActivePlayers() {
     const unique = await getLatestCurrentSeasonRatingRows(latestSeason);
     const ids = unique.map((row) => row.nba_id);
     const playersMap = await getCurrentSeasonPlayerDimsByIds(latestSeason, ids);
-    const latestDate = unique[0]?.date ?? null;
+    const latestDate = unique.reduce(
+        (latest, row) => (!latest || row?.date > latest ? row.date : latest),
+        null
+    );
     const missingTeamIds = unique
-        .filter((row) => !normalizedTeamName(row.team_name) || !isRealTeamId(row.tm_id))
+        .filter((row) => {
+            const currentTeam = normalizedTeamName(
+                row.team_name ?? playersMap.get(row.nba_id)?.current_team
+            );
+            return !currentTeam || (
+                !isRealTeamId(row.tm_id) && !isRealTeamId(nbaTeamId(currentTeam))
+            );
+        })
         .map((row) => row.nba_id);
     const teamMap = await getLatestTeamMapByIds(missingTeamIds, latestDate);
     const merged = unique.map((row) =>

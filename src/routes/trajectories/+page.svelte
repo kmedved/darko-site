@@ -583,7 +583,7 @@
 		pendingLoads += 1;
 		error = null;
 		try {
-			const players = await apiActivePlayers();
+			const players = await apiActivePlayers({ view: 'random' });
 			if (players.length === 0) {
 				error = 'No players available for random selection.';
 				return;

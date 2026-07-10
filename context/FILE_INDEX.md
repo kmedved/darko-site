@@ -75,6 +75,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/server/lineupRatings.js` - server helper
 - `src/lib/server/lineupsPage.js` - server helper
 - `src/lib/server/playerPage.js` - server helper
+- `src/lib/server/playerViews.js` - server helper
 - `src/lib/server/supabase.js` - Supabase query layer, in-memory caches, and Elo RPC access.
 - `src/lib/server/teamPage.js` - server helper
 
@@ -157,6 +158,9 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260616_001_lock_public_fact_tables.sql` - Supabase SQL migration.
 - `supabase/migrations/20260617_001_restore_service_role_elo_vote_path.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_001_add_wowy_ratings.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_002_add_active_player_snapshot_rpc.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_003_add_latest_player_teams_rpc.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_004_add_latest_team_index.sql` - Supabase SQL migration.
 
 ## tests
 
@@ -188,6 +192,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/player-page-server-load.test.js` - test
 - `tests/player-search-contracts.test.js` - test
 - `tests/player-search.test.js` - test
+- `tests/player-views.test.js` - test
 - `tests/request-sequencer.test.js` - test
 - `tests/season-utils.test.js` - test
 - `tests/server-error-logging.test.js` - test

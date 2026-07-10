@@ -1,4 +1,5 @@
 import { getActivePlayers } from '$lib/server/supabase.js';
+import { projectPlayers } from '$lib/server/playerViews.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
@@ -13,7 +14,7 @@ export async function load({ setHeaders }) {
 		sie: 86400
 	});
 
-	const players = await getActivePlayers();
+	const players = projectPlayers(await getActivePlayers(), 'scatterplot');
 
 	return { players };
 }

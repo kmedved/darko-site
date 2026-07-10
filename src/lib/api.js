@@ -80,9 +80,10 @@ export function apiWowyPublication() {
     return fetchJson('/api/wowy-publication');
 }
 
-export function apiActivePlayers({ team } = {}) {
+export function apiActivePlayers({ team, view } = {}) {
     const normalizedTeam = typeof team === 'string' ? team.trim() : '';
-    const cacheKey = normalizedTeam || '__all__';
+    const normalizedView = typeof view === 'string' ? view.trim() : '';
+    const cacheKey = `${normalizedTeam || '__all__'}:${normalizedView || 'full'}`;
     const cached = activePlayersPromiseCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
         return cached.promise;
@@ -95,6 +96,9 @@ export function apiActivePlayers({ team } = {}) {
     const qs = new URLSearchParams();
     if (normalizedTeam) {
         qs.set('team', normalizedTeam);
+    }
+    if (normalizedView) {
+        qs.set('view', normalizedView);
     }
 
     const suffix = qs.toString() ? `?${qs.toString()}` : '';

@@ -93,6 +93,29 @@ test('apiActivePlayers evicts failed requests from the cache', async (t) => {
     assert.deepEqual(data, [{ nba_id: 15 }]);
 });
 
+test('apiActivePlayers keeps lightweight views in separate client caches', async (t) => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+        __resetApiCachesForTests();
+    });
+
+    const paths = [];
+    globalThis.fetch = async (path) => {
+        paths.push(String(path));
+        return { ok: true, json: async () => [] };
+    };
+
+    await apiActivePlayers({ view: 'search' });
+    await apiActivePlayers({ view: 'percentiles' });
+    await apiActivePlayers({ view: 'search' });
+
+    assert.deepEqual(paths, [
+        '/api/active-players?view=search',
+        '/api/active-players?view=percentiles'
+    ]);
+});
+
 test('/api/active-players keeps Vercel duration headroom for cold cache loads', async () => {
     const routePath = path.resolve(process.cwd(), 'src/routes/api/active-players/+server.js');
     const contents = await fs.readFile(routePath, 'utf8');
