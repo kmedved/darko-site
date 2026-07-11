@@ -1,4 +1,5 @@
 import { downloadCsv } from './csv.js';
+import { formatSeasonEndYearLabel } from './seasonUtils.js';
 
 const DASH = '\u2014';
 
@@ -33,6 +34,10 @@ function formatListOrDash(value) {
         return items.length > 0 ? items.join(' / ') : DASH;
     }
     return formatOrDash(value);
+}
+
+function formatSeasonEndYearOrDash(value) {
+    return formatSeasonEndYearLabel(value) || DASH;
 }
 
 export function formatNullable(value, fallback = DASH) {
@@ -170,6 +175,21 @@ export const wowyOpeningGameLeaderboardCsvColumns = [
 export const wowyHistoricalLeaderboardCsvColumns = [
     { header: '#', accessor: 'rank' },
     { header: 'Player', accessor: 'player_name' },
+    { header: 'Team Codes', accessor: 'team_codes', format: formatListOrDash },
+    { header: 'Teams', accessor: 'team_names', format: formatListOrDash },
+    { header: 'Avg WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
+    { header: 'Avg WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
+    { header: 'Avg WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
+    { header: 'Avg Exposure', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
+    { header: 'Games', accessor: 'season_games', format: (value) => formatFixed(value, 0) },
+    { header: 'First Game', accessor: 'first_date', format: formatOrDash },
+    { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
+];
+
+export const wowyAllTimeLeaderboardCsvColumns = [
+    { header: '#', accessor: 'rank' },
+    { header: 'Player', accessor: 'player_name' },
+    { header: 'Season', accessor: 'season', format: formatSeasonEndYearOrDash },
     { header: 'Team Codes', accessor: 'team_codes', format: formatListOrDash },
     { header: 'Teams', accessor: 'team_names', format: formatListOrDash },
     { header: 'Avg WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },

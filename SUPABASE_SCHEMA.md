@@ -196,6 +196,24 @@ the guarded manual activation operation, `get_wowy_leaderboard_seasons()` and
 `get_wowy_season_player_ratings(p_season)` source only the season-average table and return
 `snapshot_context = 'season-average'`.
 
+### All-time WOWY season leaderboard
+
+`supabase/migrations/20260710_012_add_wowy_all_time_season_leaderboard.sql` adds
+`get_wowy_all_time_player_seasons()`, an invoker-safe RPC over the activated
+`wowy_season_player_averages` publication. Because 012 can run before the manual operation creates
+its marker table, its narrow `is_wowy_season_average_activated()` helper first checks the catalog,
+then dynamically verifies marker `id = 1`. The helper is security-definer only to keep that marker
+private under RLS; the leaderboard RPC itself remains security-invoker and returns `[]` without
+reading the average table until certification succeeds. The `/wowy` loader treats that empty gated
+response as a temporary Current view rather than showing an empty default page.
+
+After activation, it returns at most the 100 highest raw, unweighted player-season WOWY RAPM
+averages—there is no minutes, exposure, recency, or game-count cutoff. The ranking is deterministic:
+`wowy_rapm DESC`, then season end year descending, then canonical NBA ID ascending. Each row
+includes the ordinal `leaderboard_rank`, season end year, player name, all historical team
+provenance, the three unweighted RAPM averages, exposure, date range, and contributing-game count.
+It leaves the current-active and selected-season RPC contracts unchanged.
+
 | Column | Postgres type | Notes |
 |---|---|---|
 | season, nba_id | integer, bigint | Primary key; NBA season ending year and canonical player ID |
@@ -358,6 +376,7 @@ Comma-joined string of all 69 fetched `player_ratings` column names (66 original
 |---|---|---|---|
 | `getActivePlayers()` | Finds the latest `player_ratings.season`, reads current-season `player_ratings` rows with RATING_COLUMNS and `active_roster = 1`, and dedupes to the latest row per player. This includes `future_game = 1` projection rows, which are the current DARKO snapshot. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
 | `getActiveWowyPlayers()` | Calls `get_active_wowy_player_ratings()`, normalizes team IDs/positions, and caches the compact current-active snapshot for five minutes. | One current-identity row per active player with a latest observed WOWY RAPM row | `/wowy` |
+| `getWowyAllTimePlayers()` | Calls `get_wowy_all_time_player_seasons()`, preserves its database-owned deterministic top-100 order for one hour, and does not cache an empty pre-activation response. | At most 100 all-time player-season rows with unweighted WOWY averages, ordinal rank, season, and historical teams | `/wowy` default |
 | `getWowyLeaderboardSeasons()` | Calls `get_wowy_leaderboard_seasons()` and caches the season list for one hour. | All published historical season end years (1980 onward) | `/wowy` |
 | `getWowySeasonPlayers(season)` | Calls `get_wowy_season_player_ratings(p_season)`, preserves chronological historical team arrays, and caches the selected season for five minutes. | One player-season row with unweighted WOWY means, historical teams, date range, and game count | `/wowy?season=YYYY` |
 | `getPlayersIndex()` | `players` with explicit `PLAYERS_DIM_COLUMNS`, merged with `getActivePlayers()`. **Hardcodes output fields** — does NOT pass through survivorship, projections, or RAPM columns. | Array of player objects (subset of fields) | Player search/index pages |

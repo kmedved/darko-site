@@ -10,10 +10,11 @@ async function read(file) {
     return fs.readFile(path.resolve(process.cwd(), file), 'utf8');
 }
 
-test('WOWY leaderboard loader supports Current and URL-selected historical seasons', async () => {
+test('WOWY leaderboard loader defaults to all time and supports Current and URL-selected seasons', async () => {
     const contents = await read(WOWY_PAGE_SERVER);
 
     assert.match(contents, /getActiveWowyPlayers/);
+    assert.match(contents, /getWowyAllTimePlayers/);
     assert.match(contents, /getWowyLeaderboardSeasons/);
     assert.match(contents, /getWowyPublication/);
     assert.match(contents, /getWowySeasonPlayers/);
@@ -21,26 +22,54 @@ test('WOWY leaderboard loader supports Current and URL-selected historical seaso
     assert.match(contents, /Promise\.all\(\[\s*getWowyLeaderboardSeasons\(\),\s*getWowyPublication\(\)/s);
     assert.match(contents, /url\.searchParams\.get\('season'\)/);
     assert.match(contents, /seasons\.includes\(requestedSeason\)/);
+    assert.match(contents, /url\.searchParams\.get\('view'\) === 'current'/);
+    assert.match(contents, /requestedSeasonValue\.trim\(\) === 'current'/);
+    assert.match(contents, /let selectedView = selectedSeason !== null/);
+    assert.match(contents, /'all-time'/);
+    assert.match(contents, /getWowyAllTimePlayers\(\)/);
+    assert.match(contents, /getActiveWowyPlayers\(\)/);
     assert.match(contents, /getWowySeasonPlayers\(selectedSeason\)/);
+    assert.match(contents, /let isActivationFallback = false;/);
+    assert.match(contents, /if \(players\.length === 0\)/);
+    assert.match(contents, /selectedView = 'current';/);
+    assert.match(contents, /isActivationFallback = true;/);
+    assert.match(contents, /if \(isActivationFallback\) \{[\s\S]*'cache-control': 'no-store'/);
+    assert.match(contents, /if \(isActivationFallback\) \{[\s\S]*'cdn-cache-control': 'no-store'/);
+    assert.match(contents, /if \(isActivationFallback\) \{[\s\S]*'vercel-cdn-cache-control': 'no-store'/);
+    assert.match(contents, /\} else \{\s*setEdgeCache\(setHeaders, \{/);
+    assert.match(contents, /return \{ players, publication, seasons, selectedSeason, selectedView \}/);
     assert.match(contents, /setEdgeCache\(/);
     assert.match(contents, /edgeSMaxAge:\s*300/);
     assert.match(contents, /swr:\s*3600/);
 });
 
-test('WOWY leaderboard presents Current observations and derives historical semantics from row context', async () => {
+test('WOWY leaderboard defaults to the all-time top 100 and preserves Current and season semantics', async () => {
     const contents = await read(WOWY_PAGE);
 
     assert.match(contents, /import \{ goto \} from '\$app\/navigation';/);
     assert.match(contents, /formatSeasonEndYearLabel/);
+    assert.match(contents, /data\.selectedView === 'all-time'/);
+    assert.match(contents, /const hasAllTimeRanks/);
+    assert.match(contents, /return hasAllTimeRanks \? 'all-time' : 'current';/);
+    assert.match(contents, /const isAllTimeView/);
+    assert.match(contents, /The 100 highest unweighted WOWY RAPM player-seasons of all time/);
+    assert.match(contents, /The 100 highest single-season WOWY RAPM averages/);
+    assert.match(contents, /All-time top 100 seasons/);
+    assert.match(contents, /raw, simple, unweighted average across published WOWY games/);
+    assert.match(contents, /no sample or exposure cutoff/);
+    assert.match(contents, /current season can move as new games are published/);
+    assert.match(contents, /<option value="all-time">All time<\/option>/);
     assert.match(contents, /Latest observed/);
-    assert.match(contents, /activeSeason === 'current'[\s\S]*Latest observed WOWY RAPM ratings for current active NBA players/);
+    assert.match(contents, /isCurrentView[\s\S]*Latest observed WOWY RAPM ratings for current active NBA players/);
     assert.match(contents, /Unweighted season-average WOWY RAPM ratings for NBA players/);
     assert.match(contents, /does not use DARKO projection rows/);
     assert.match(contents, /Current active players/);
     assert.match(contents, /<option value="current">Current<\/option>/);
     assert.match(contents, /id="wowy-season-filter"/);
     assert.match(contents, /data\.selectedSeason === null/);
-    assert.match(contents, /goto\(`\/wowy\$\{suffix\}`, \{ keepFocus: true \}\)/);
+    assert.match(contents, /selection === 'all-time'/);
+    assert.match(contents, /\?view=current/);
+    assert.match(contents, /goto\(`\/wowy\$\{suffix\}`, \{[\s\S]*keepFocus: true,[\s\S]*invalidateAll: selection === 'all-time'[\s\S]*\}\);/);
     assert.match(contents, /historicalSnapshotContext/);
     assert.match(contents, /getWowyHistoricalSnapshotContext\(players, isHistoricalSeason\)/);
     assert.match(contents, /isWowySeasonAverageContext\(historicalSnapshotContext\)/);
@@ -65,6 +94,13 @@ test('WOWY leaderboard presents Current observations and derives historical sema
     assert.match(contents, /exposure/);
     assert.match(contents, /career_game_num/);
     assert.match(contents, /season_games/);
+    assert.match(contents, /leaderboard_rank/);
+    assert.match(contents, /allTimeRank\(player, fallbackRank\)/);
+    assert.match(contents, /function playerRowKey\(player\)/);
+    assert.match(contents, /\{#each visiblePlayers as player, index \(playerRowKey\(player\)\)\}/);
+    assert.match(contents, /formatPlayerSeason\(player\)/);
+    assert.match(contents, /allTimeTableColumns/);
+    assert.match(contents, /label: 'Season'/);
     assert.match(contents, /last_date/);
     assert.match(contents, /Avg WOWY RAPM/);
     assert.match(contents, /Last game/);
@@ -80,28 +116,40 @@ test('WOWY leaderboard presents Current observations and derives historical sema
 
 test('WOWY leaderboard supports sorting, filtering, complete CSV export, and mobile table access', async () => {
     const contents = await read(WOWY_PAGE);
+    const desktopColumnsStart = contents.indexOf('@media (hover: hover) and (pointer: fine) and (max-width: 980px)');
     const touchStart = contents.indexOf('/* Touch/mobile scroll mode */');
     const touchEnd = contents.indexOf('/* End touch/mobile scroll mode */');
 
     assert.match(contents, /getNextSortState/);
     assert.match(contents, /getSortedRows/);
     assert.match(contents, /aria-sort=\{sortColumn === column\.key/);
-    assert.match(contents, /const nextIsCurrent = season === 'current';/);
-    assert.match(contents, /const sharedHistoricalSortColumns = new Set/);
-    assert.match(contents, /const switchesCurrentView = nextIsCurrent !== \(activeSeason === 'current'\);/);
-    assert.match(contents, /!nextIsCurrent && !sharedHistoricalSortColumns\.has\(sortColumn\)/);
-    assert.match(contents, /if \(switchesCurrentView \|\| hasIncompatibleHistoricalSort\)/);
+    assert.match(contents, /const seasonSortColumns = new Set/);
+    assert.match(contents, /const allTimeSortColumns = new Set\(\[\.\.\.seasonSortColumns, 'season'\]\)/);
+    assert.match(contents, /const currentSortColumns = new Set/);
+    assert.match(contents, /const supportedSortColumns = nextView === 'all-time'/);
+    assert.match(contents, /if \(!supportedSortColumns\.has\(sortColumn\)\)/);
     assert.match(contents, /sortColumn = 'wowy_rapm';/);
     assert.match(contents, /sortDirection = 'desc';/);
     assert.match(contents, /setTeamFilter/);
     assert.match(contents, /setSearchQuery/);
-    assert.match(contents, /sortedPlayers\.map\(\(player, index\) => \(\{ \.\.\.player, rank: index \+ 1 \}\)\)/);
+    assert.match(contents, /sortedPlayers\.map\(\(player, index\) => \(\{/);
+    assert.match(contents, /rank: isAllTimeView \? allTimeRank\(player, index \+ 1\) : index \+ 1/);
+    assert.match(contents, /wowyAllTimeLeaderboardCsvColumns/);
     assert.match(contents, /wowyLeaderboardCsvColumns/);
     assert.match(contents, /wowyHistoricalLeaderboardCsvColumns/);
     assert.match(contents, /wowyOpeningGameLeaderboardCsvColumns/);
-    assert.match(contents, /activeSeason === 'current'[\s\S]*wowyLeaderboardCsvColumns[\s\S]*isSeasonAverageHistory[\s\S]*wowyHistoricalLeaderboardCsvColumns[\s\S]*wowyOpeningGameLeaderboardCsvColumns/);
+    assert.match(contents, /isAllTimeView[\s\S]*wowyAllTimeLeaderboardCsvColumns[\s\S]*isCurrentView[\s\S]*wowyLeaderboardCsvColumns[\s\S]*isSeasonAverageHistory[\s\S]*wowyHistoricalLeaderboardCsvColumns[\s\S]*wowyOpeningGameLeaderboardCsvColumns/);
     assert.match(contents, /isSeasonAverageHistory \? 'season-average' : 'opening-game'/);
+    assert.match(contents, /class:wowy-table--all-time=\{isAllTimeView\}/);
+    assert.ok(desktopColumnsStart >= 0 && touchStart > desktopColumnsStart, 'page should define desktop column priorities');
     assert.ok(touchStart >= 0 && touchEnd > touchStart, 'page should define a touch-table mode');
+
+    const desktopColumnsBlock = contents.slice(desktopColumnsStart, touchStart);
+    assert.match(desktopColumnsBlock, /\.wowy-table:not\(\.wowy-table--all-time\) th:nth-child\(7\)/);
+    assert.match(desktopColumnsBlock, /\.wowy-table:not\(\.wowy-table--all-time\) th:nth-child\(8\)/);
+    assert.match(desktopColumnsBlock, /\.wowy-table--all-time th:nth-child\(8\)/);
+    assert.match(desktopColumnsBlock, /\.wowy-table--all-time th:nth-child\(9\)/);
+    assert.doesNotMatch(desktopColumnsBlock, /\.wowy-table--all-time th:nth-child\(7\)/);
 
     const touchBlock = contents.slice(touchStart, touchEnd);
     assert.match(touchBlock, /hover:\s*none/);

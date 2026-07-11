@@ -171,6 +171,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260710_009_optimize_wowy_season_list_rpc.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_010_add_wowy_season_opening_snapshots.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_011_add_wowy_season_player_averages.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_012_add_wowy_all_time_season_leaderboard.sql` - Supabase SQL migration.
 
 ## tests
 

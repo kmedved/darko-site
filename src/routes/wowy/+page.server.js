@@ -1,5 +1,6 @@
 import {
     getActiveWowyPlayers,
+    getWowyAllTimePlayers,
     getWowyLeaderboardSeasons,
     getWowyPublication,
     getWowySeasonPlayers
@@ -13,23 +14,58 @@ export const config = {
 };
 
 export async function load({ url, setHeaders }) {
-    setEdgeCache(setHeaders, {
-        edgeSMaxAge: 300,
-        swr: 3600,
-        sie: 86400
-    });
-
     const [seasons, publication] = await Promise.all([
         getWowyLeaderboardSeasons(),
         getWowyPublication()
     ]);
-    const requestedSeason = parseSeasonEndYear(url.searchParams.get('season'));
+    const requestedSeasonValue = url.searchParams.get('season');
+    const requestedSeason = parseSeasonEndYear(requestedSeasonValue);
     const selectedSeason = seasons.includes(requestedSeason) ? requestedSeason : null;
-    const players = selectedSeason === null
-        ? await getActiveWowyPlayers()
-        : await getWowySeasonPlayers(selectedSeason);
+    const requestedCurrent =
+        url.searchParams.get('view') === 'current' ||
+        (typeof requestedSeasonValue === 'string' && requestedSeasonValue.trim() === 'current');
+    let selectedView = selectedSeason !== null
+        ? 'season'
+        : requestedCurrent
+            ? 'current'
+            : 'all-time';
+    let players;
+    let isActivationFallback = false;
 
-    return { players, publication, seasons, selectedSeason };
+    if (selectedView === 'season') {
+        players = await getWowySeasonPlayers(selectedSeason);
+    } else if (selectedView === 'current') {
+        players = await getActiveWowyPlayers();
+    } else {
+        players = await getWowyAllTimePlayers();
+
+        // Migration 012 deliberately returns no all-time rows until the
+        // separate manual certification operation has committed its marker.
+        // Keep the normal page useful during that safe intermediate state.
+        if (players.length === 0) {
+            selectedView = 'current';
+            players = await getActiveWowyPlayers();
+            isActivationFallback = true;
+        }
+    }
+
+    if (isActivationFallback) {
+        // This same URL must retry after certification rather than serving a
+        // stale Current fallback from the browser or any CDN layer.
+        setHeaders({
+            'cache-control': 'no-store',
+            'cdn-cache-control': 'no-store',
+            'vercel-cdn-cache-control': 'no-store'
+        });
+    } else {
+        setEdgeCache(setHeaders, {
+            edgeSMaxAge: 300,
+            swr: 3600,
+            sie: 86400
+        });
+    }
+
+    return { players, publication, seasons, selectedSeason, selectedView };
 }
 
 function parseSeasonEndYear(value) {

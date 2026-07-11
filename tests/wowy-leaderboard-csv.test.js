@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+    wowyAllTimeLeaderboardCsvColumns,
     wowyHistoricalLeaderboardCsvColumns,
     wowyLeaderboardCsvColumns,
     wowyOpeningGameLeaderboardCsvColumns
@@ -122,4 +123,46 @@ test('historical WOWY CSV preserves multi-team provenance and season-average con
         (column) => column.accessor === 'team_codes'
     );
     assert.equal(teamCodes.format(['MIA', 'LAL']), 'MIA / LAL');
+});
+
+test('all-time WOWY CSV preserves the official rank and player-season context', () => {
+    assert.deepEqual(
+        wowyAllTimeLeaderboardCsvColumns.map((column) => column.header),
+        [
+            '#',
+            'Player',
+            'Season',
+            'Team Codes',
+            'Teams',
+            'Avg WOWY RAPM',
+            'Avg WOWY O-RAPM',
+            'Avg WOWY D-RAPM',
+            'Avg Exposure',
+            'Games',
+            'First Game',
+            'Last Game'
+        ]
+    );
+    assert.deepEqual(
+        wowyAllTimeLeaderboardCsvColumns.map((column) => column.accessor),
+        [
+            'rank',
+            'player_name',
+            'season',
+            'team_codes',
+            'team_names',
+            'wowy_rapm',
+            'wowy_orapm',
+            'wowy_drapm',
+            'exposure',
+            'season_games',
+            'first_date',
+            'last_date'
+        ]
+    );
+
+    const season = wowyAllTimeLeaderboardCsvColumns.find(
+        (column) => column.accessor === 'season'
+    );
+    assert.equal(season.format(1981), '1980-81');
 });

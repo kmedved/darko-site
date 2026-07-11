@@ -29,6 +29,7 @@ const MAX_CACHE_ENTRIES = 300;
 const CACHE_MS = {
     activePlayers: 60_000,
     activeWowyPlayers: 300_000,
+    wowyAllTimePlayers: 3_600_000,
     wowyLeaderboardSeasons: 3_600_000,
     wowySeasonPlayers: 300_000,
     leaderboardSeasons: 3_600_000,
@@ -430,6 +431,8 @@ function normalizeWowyLeaderboardRows(data) {
             const nbaId = Number(row?.nba_id);
             if (!Number.isInteger(nbaId) || nbaId <= 0) return null;
 
+            const season = Number(row?.season);
+            const leaderboardRank = Number(row?.leaderboard_rank);
             const snapshotContext = normalizedTeamName(row?.snapshot_context);
             const isHistoricalSeasonSummary =
                 snapshotContext === 'opening-game' || snapshotContext === 'season-average';
@@ -443,6 +446,11 @@ function normalizeWowyLeaderboardRows(data) {
 
             return {
                 nba_id: nbaId,
+                season: Number.isInteger(season) && season >= 1980 ? season : null,
+                leaderboard_rank:
+                    Number.isInteger(leaderboardRank) && leaderboardRank > 0
+                        ? leaderboardRank
+                        : null,
                 player_name: row.player_name ?? null,
                 team_name: teamName,
                 team_code: teamCode ?? teamCodes[0] ?? null,
@@ -674,6 +682,30 @@ export async function getActiveWowyPlayers() {
 
         return sortByWowyRapmDesc(enriched);
     });
+}
+
+/**
+ * Get the fixed top 100 all-time unweighted WOWY player-season averages.
+ * The database owns the deterministic ranking and chronological team
+ * provenance, so do not re-sort these rows in the helper.
+ */
+export async function getWowyAllTimePlayers() {
+    const key = cacheKey('wowyAllTimePlayers', 'top-100');
+    const rows = await runCached(key, CACHE_MS.wowyAllTimePlayers, async () => {
+        const { data, error } = await supabase.rpc('get_wowy_all_time_player_seasons');
+        if (error) throw error;
+
+        return normalizeWowyLeaderboardRows(data);
+    });
+
+    // The RPC intentionally returns [] until the manual publication
+    // certification marker exists. Do not preserve that pre-activation state
+    // for the normal all-time cache lifetime after the marker is written.
+    if (rows.length === 0) {
+        cacheStore.delete(key);
+    }
+
+    return rows;
 }
 
 /**

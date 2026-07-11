@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.28",
+  "arch_version": "0.1.29",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -485,14 +485,12 @@
       },
       {
         "cache": {
-          "edgeSMaxAge": 300,
-          "sie": 86400,
-          "swr": 3600,
-          "type": "edge"
+          "type": "no-store"
         },
         "dataSources": [
           "$lib/server/cacheHeaders.js:setEdgeCache",
           "$lib/server/supabase.js:getActiveWowyPlayers",
+          "$lib/server/supabase.js:getWowyAllTimePlayers",
           "$lib/server/supabase.js:getWowyLeaderboardSeasons",
           "$lib/server/supabase.js:getWowyPublication",
           "$lib/server/supabase.js:getWowySeasonPlayers"
@@ -704,6 +702,7 @@
     "supabase/migrations/20260710_009_optimize_wowy_season_list_rpc.sql",
     "supabase/migrations/20260710_010_add_wowy_season_opening_snapshots.sql",
     "supabase/migrations/20260710_011_add_wowy_season_player_averages.sql",
+    "supabase/migrations/20260710_012_add_wowy_all_time_season_leaderboard.sql",
     "svelte.config.js",
     "tests/api-active-players-cache.test.js",
     "tests/api-player-history.test.js",
@@ -1253,6 +1252,10 @@
           {
             "name": "getTeamWinDistribution",
             "signature": "getTeamWinDistribution(teamName)"
+          },
+          {
+            "name": "getWowyAllTimePlayers",
+            "signature": "getWowyAllTimePlayers()"
           },
           {
             "name": "getWowyLeaderboardSeasons",

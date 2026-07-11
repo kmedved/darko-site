@@ -35,6 +35,16 @@ const seasonAverageMigration = readFileSync(
     ),
     'utf8'
 );
+const allTimeSeasonMigration = readFileSync(
+    join(
+        __dirname,
+        '..',
+        'supabase',
+        'migrations',
+        '20260710_012_add_wowy_all_time_season_leaderboard.sql'
+    ),
+    'utf8'
+);
 const seasonAverageActivationOperation = readFileSync(
     join(
         __dirname,
@@ -134,11 +144,96 @@ test('historical WOWY rows preserve season context without current-team fallback
     assert.match(normalizer, /snapshotContext === 'opening-game' \|\| snapshotContext === 'season-average'/);
     assert.match(normalizer, /team_codes:/);
     assert.match(normalizer, /team_names:/);
+    assert.match(normalizer, /season:/);
+    assert.match(normalizer, /leaderboard_rank:/);
     assert.match(normalizer, /season_games:/);
     assert.match(normalizer, /first_date:/);
     assert.match(normalizer, /last_date:/);
     assert.match(normalizer, /tm_id: isHistoricalSeasonSummary \? null : resolveTeamId/);
     assert.match(normalizer, /position: isHistoricalSeasonSummary \? null : normalizePosition/);
+});
+
+test('all-time WOWY leaderboard uses the fixed top 100 unweighted player-season averages', () => {
+    assert.match(
+        allTimeSeasonMigration,
+        /function public\.is_wowy_season_average_activated\(\)/
+    );
+    assert.match(allTimeSeasonMigration, /returns boolean/);
+    assert.match(allTimeSeasonMigration, /language plpgsql/);
+    assert.match(allTimeSeasonMigration, /security definer/);
+    assert.match(allTimeSeasonMigration, /to_regclass\('public\.wowy_season_average_activation'\)/);
+    assert.match(allTimeSeasonMigration, /execute \$query\$/);
+    assert.match(
+        allTimeSeasonMigration,
+        /from public\.wowy_season_average_activation as activation/
+    );
+    assert.match(
+        allTimeSeasonMigration,
+        /revoke all on function public\.is_wowy_season_average_activated\(\) from public;/
+    );
+    assert.match(
+        allTimeSeasonMigration,
+        /grant execute on function public\.is_wowy_season_average_activated\(\)\s+to anon, authenticated, service_role;/
+    );
+    assert.match(
+        allTimeSeasonMigration,
+        /function public\.get_wowy_all_time_player_seasons\(\)/
+    );
+    assert.match(allTimeSeasonMigration, /returns jsonb/);
+    assert.match(allTimeSeasonMigration, /language plpgsql/);
+    assert.match(allTimeSeasonMigration, /security invoker/);
+    assert.match(allTimeSeasonMigration, /set search_path = ''/);
+    assert.match(allTimeSeasonMigration, /from public\.wowy_season_player_averages as averages/);
+    assert.match(allTimeSeasonMigration, /left join public\.players as players/);
+    assert.match(allTimeSeasonMigration, /row_number\(\) over/);
+    assert.match(allTimeSeasonMigration, /averages\.wowy_rapm desc/);
+    assert.match(allTimeSeasonMigration, /averages\.season desc/);
+    assert.match(allTimeSeasonMigration, /averages\.nba_id/);
+    assert.match(allTimeSeasonMigration, /as leaderboard_rank/);
+    assert.match(allTimeSeasonMigration, /limit 100/);
+    assert.match(allTimeSeasonMigration, /averages\.team_codes/);
+    assert.match(allTimeSeasonMigration, /averages\.team_names/);
+    assert.match(allTimeSeasonMigration, /averages\.first_date/);
+    assert.match(allTimeSeasonMigration, /averages\.last_date/);
+    assert.match(allTimeSeasonMigration, /averages\.season_games/);
+    assert.match(allTimeSeasonMigration, /'season-average'::text as snapshot_context/);
+    assert.match(allTimeSeasonMigration, /null::integer as tm_id/);
+    assert.match(allTimeSeasonMigration, /null::text as position/);
+    assert.match(allTimeSeasonMigration, /null::integer as career_game_num/);
+    assert.doesNotMatch(allTimeSeasonMigration, /public\.wowy_ratings/);
+    assert.doesNotMatch(allTimeSeasonMigration, /public\.player_ratings/);
+    assert.doesNotMatch(allTimeSeasonMigration, /public\.wowy_season_opening_snapshots/);
+    assert.doesNotMatch(allTimeSeasonMigration, /get_wowy_leaderboard_seasons/);
+    assert.doesNotMatch(allTimeSeasonMigration, /get_wowy_season_player_ratings/);
+    assert.match(
+        allTimeSeasonMigration,
+        /revoke all on function public\.get_wowy_all_time_player_seasons\(\) from public;/
+    );
+    assert.match(
+        allTimeSeasonMigration,
+        /grant execute on function public\.get_wowy_all_time_player_seasons\(\)\s+to anon, authenticated, service_role;/
+    );
+
+    const allTimeFunctionStart = allTimeSeasonMigration.indexOf(
+        'create or replace function public.get_wowy_all_time_player_seasons()'
+    );
+    const allTimeFunctionEnd = allTimeSeasonMigration.indexOf(
+        'revoke all on function public.get_wowy_all_time_player_seasons()',
+        allTimeFunctionStart
+    );
+    assert.ok(
+        allTimeFunctionStart >= 0 && allTimeFunctionEnd > allTimeFunctionStart,
+        'all-time WOWY RPC should be discoverable'
+    );
+    const allTimeFunction = allTimeSeasonMigration.slice(allTimeFunctionStart, allTimeFunctionEnd);
+    const gate = 'if not public.is_wowy_season_average_activated() then';
+    assert.match(allTimeFunction, /security invoker/);
+    assert.match(allTimeFunction, /return '\[\]'::jsonb/);
+    assert.ok(
+        allTimeFunction.indexOf(gate) <
+            allTimeFunction.indexOf('from public.wowy_season_player_averages as averages'),
+        'the certification gate must run before the all-time RPC reads season averages'
+    );
 });
 
 test('opening-game WOWY publication artifact preserves historical team context', () => {
@@ -301,4 +396,19 @@ test('historical WOWY helpers cache season options and selected-season snapshots
     assert.match(playersHelper, /p_season: seasonEndYear/);
     assert.match(playersHelper, /normalizeWowyLeaderboardRows\(data\)/);
     assert.match(playersHelper, /sortByWowyRapmDesc/);
+});
+
+test('all-time WOWY helper preserves the database-owned top-100 ranking', () => {
+    const start = supabaseHelper.indexOf('export async function getWowyAllTimePlayers()');
+    const end = supabaseHelper.indexOf('export async function getWowyLeaderboardSeasons()', start);
+    assert.ok(start >= 0 && end > start, 'all-time WOWY helper should be discoverable');
+
+    const helper = supabaseHelper.slice(start, end);
+    assert.match(helper, /CACHE_MS\.wowyAllTimePlayers/);
+    assert.match(helper, /cacheKey\('wowyAllTimePlayers', 'top-100'\)/);
+    assert.match(helper, /\.rpc\('get_wowy_all_time_player_seasons'\)/);
+    assert.match(helper, /normalizeWowyLeaderboardRows\(data\)/);
+    assert.match(helper, /if \(rows\.length === 0\)/);
+    assert.match(helper, /cacheStore\.delete\(key\)/);
+    assert.doesNotMatch(helper, /sortByWowyRapmDesc/);
 });
