@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 
 import {
     wowyHistoricalLeaderboardCsvColumns,
-    wowyLeaderboardCsvColumns
+    wowyLeaderboardCsvColumns,
+    wowyOpeningGameLeaderboardCsvColumns
 } from '../src/lib/utils/csvPresets.js';
 
 test('WOWY leaderboard CSV uses the current-active observed-rating schema', () => {
@@ -50,9 +51,9 @@ test('WOWY leaderboard CSV preserves signed ratings and model exposure', () => {
     assert.equal(sampleGames.format(82), '82');
 });
 
-test('historical WOWY CSV preserves historical team codes and opening-game context', () => {
+test('opening-game WOWY CSV retains the snapshot schema during the migration window', () => {
     assert.deepEqual(
-        wowyHistoricalLeaderboardCsvColumns.map((column) => column.header),
+        wowyOpeningGameLeaderboardCsvColumns.map((column) => column.header),
         [
             '#',
             'Player',
@@ -67,7 +68,7 @@ test('historical WOWY CSV preserves historical team codes and opening-game conte
         ]
     );
     assert.deepEqual(
-        wowyHistoricalLeaderboardCsvColumns.map((column) => column.accessor),
+        wowyOpeningGameLeaderboardCsvColumns.map((column) => column.accessor),
         [
             'rank',
             'player_name',
@@ -81,4 +82,44 @@ test('historical WOWY CSV preserves historical team codes and opening-game conte
             'date'
         ]
     );
+});
+
+test('historical WOWY CSV preserves multi-team provenance and season-average context', () => {
+    assert.deepEqual(
+        wowyHistoricalLeaderboardCsvColumns.map((column) => column.header),
+        [
+            '#',
+            'Player',
+            'Team Codes',
+            'Teams',
+            'Avg WOWY RAPM',
+            'Avg WOWY O-RAPM',
+            'Avg WOWY D-RAPM',
+            'Avg Exposure',
+            'Games',
+            'First Game',
+            'Last Game'
+        ]
+    );
+    assert.deepEqual(
+        wowyHistoricalLeaderboardCsvColumns.map((column) => column.accessor),
+        [
+            'rank',
+            'player_name',
+            'team_codes',
+            'team_names',
+            'wowy_rapm',
+            'wowy_orapm',
+            'wowy_drapm',
+            'exposure',
+            'season_games',
+            'first_date',
+            'last_date'
+        ]
+    );
+
+    const teamCodes = wowyHistoricalLeaderboardCsvColumns.find(
+        (column) => column.accessor === 'team_codes'
+    );
+    assert.equal(teamCodes.format(['MIA', 'LAL']), 'MIA / LAL');
 });

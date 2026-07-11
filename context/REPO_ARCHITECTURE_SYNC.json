@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.27",
+  "arch_version": "0.1.28",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -644,6 +644,7 @@
     "src/lib/utils/teamAbbreviations.js",
     "src/lib/utils/teamRouteUtils.js",
     "src/lib/utils/wideStickyTable.js",
+    "src/lib/utils/wowySeasonContext.js",
     "src/routes/+layout.svelte",
     "src/routes/+page.server.js",
     "src/routes/+page.svelte",
@@ -702,6 +703,7 @@
     "supabase/migrations/20260710_008_add_wowy_season_leaderboard_rpc.sql",
     "supabase/migrations/20260710_009_optimize_wowy_season_list_rpc.sql",
     "supabase/migrations/20260710_010_add_wowy_season_opening_snapshots.sql",
+    "supabase/migrations/20260710_011_add_wowy_season_player_averages.sql",
     "svelte.config.js",
     "tests/api-active-players-cache.test.js",
     "tests/api-player-history.test.js",
@@ -750,6 +752,7 @@
     "tests/wowy-leaderboard-csv.test.js",
     "tests/wowy-leaderboard-data.test.js",
     "tests/wowy-leaderboard-page.test.js",
+    "tests/wowy-season-context.test.js",
     "tests/wowy-trajectories.test.js",
     "vite.config.js"
   ],

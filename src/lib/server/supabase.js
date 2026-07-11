@@ -360,6 +360,18 @@ function normalizedTeamName(value) {
     return trimmed || null;
 }
 
+function normalizedTeamList(value) {
+    const values = Array.isArray(value) ? value : [value];
+    const unique = new Set();
+
+    for (const item of values) {
+        const normalized = normalizedTeamName(item);
+        if (normalized) unique.add(normalized);
+    }
+
+    return [...unique];
+}
+
 function isRealTeamId(value) {
     const parsed = Number.parseInt(value, 10);
     return Number.isInteger(parsed) && parsed > 0;
@@ -419,26 +431,39 @@ function normalizeWowyLeaderboardRows(data) {
             if (!Number.isInteger(nbaId) || nbaId <= 0) return null;
 
             const snapshotContext = normalizedTeamName(row?.snapshot_context);
-            const isOpeningGameSnapshot = snapshotContext === 'opening-game';
+            const isHistoricalSeasonSummary =
+                snapshotContext === 'opening-game' || snapshotContext === 'season-average';
             const teamName = normalizedTeamName(row.team_name);
             const teamCode = normalizedTeamName(row.team_code);
+            const teamCodes = normalizedTeamList(row.team_codes);
+            const teamNames = normalizedTeamList(row.team_names);
+
+            if (teamCodes.length === 0 && teamCode) teamCodes.push(teamCode);
+            if (teamNames.length === 0 && teamName) teamNames.push(teamName);
+
             return {
                 nba_id: nbaId,
                 player_name: row.player_name ?? null,
                 team_name: teamName,
-                team_code: teamCode,
-                // Historic opening-game rows deliberately do not receive a
-                // current NBA team ID or position fallback. Those values
-                // would make a past team look like a current team in the UI.
-                tm_id: isOpeningGameSnapshot ? null : resolveTeamId(row, teamName),
-                position: isOpeningGameSnapshot ? null : normalizePosition(row.position ?? null),
+                team_code: teamCode ?? teamCodes[0] ?? null,
+                team_codes: teamCodes,
+                team_names: teamNames,
+                team_sort_label: (teamCodes.length > 0 ? teamCodes : teamNames).join(' / '),
+                // Historical rows deliberately do not receive a current NBA
+                // team ID or position fallback. Those values would make a
+                // past team look like a current team in the UI.
+                tm_id: isHistoricalSeasonSummary ? null : resolveTeamId(row, teamName),
+                position: isHistoricalSeasonSummary ? null : normalizePosition(row.position ?? null),
                 snapshot_context: snapshotContext,
                 wowy_rapm: row.wowy_rapm ?? null,
                 wowy_orapm: row.wowy_orapm ?? null,
                 wowy_drapm: row.wowy_drapm ?? null,
                 exposure: row.exposure ?? null,
                 date: row.date ?? null,
-                career_game_num: row.career_game_num ?? null
+                career_game_num: row.career_game_num ?? null,
+                season_games: row.season_games ?? null,
+                first_date: row.first_date ?? null,
+                last_date: row.last_date ?? null
             };
         })
         .filter(Boolean);
@@ -671,7 +696,7 @@ export async function getWowyLeaderboardSeasons() {
     });
 }
 
-/** Get each historical WOWY opening-game snapshot. */
+/** Get each historical WOWY per-player season-average summary. */
 export async function getWowySeasonPlayers(season) {
     const seasonEndYear = Number.parseInt(season, 10);
     if (!Number.isInteger(seasonEndYear)) {

@@ -27,6 +27,14 @@ export function formatOrDash(value) {
     return value || DASH;
 }
 
+function formatListOrDash(value) {
+    if (Array.isArray(value)) {
+        const items = value.filter((item) => typeof item === 'string' && item.trim());
+        return items.length > 0 ? items.join(' / ') : DASH;
+    }
+    return formatOrDash(value);
+}
+
 export function formatNullable(value, fallback = DASH) {
     return value ?? fallback;
 }
@@ -146,7 +154,7 @@ export const wowyLeaderboardCsvColumns = [
     { header: 'As of', accessor: 'date', format: formatOrDash }
 ];
 
-export const wowyHistoricalLeaderboardCsvColumns = [
+export const wowyOpeningGameLeaderboardCsvColumns = [
     { header: '#', accessor: 'rank' },
     { header: 'Player', accessor: 'player_name' },
     { header: 'Team Code', accessor: 'team_code', format: formatOrDash },
@@ -157,6 +165,20 @@ export const wowyHistoricalLeaderboardCsvColumns = [
     { header: 'Exposure', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
     { header: 'Sample Games', accessor: 'career_game_num', format: (value) => formatFixed(value, 0) },
     { header: 'Opening Game', accessor: 'date', format: formatOrDash }
+];
+
+export const wowyHistoricalLeaderboardCsvColumns = [
+    { header: '#', accessor: 'rank' },
+    { header: 'Player', accessor: 'player_name' },
+    { header: 'Team Codes', accessor: 'team_codes', format: formatListOrDash },
+    { header: 'Teams', accessor: 'team_names', format: formatListOrDash },
+    { header: 'Avg WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
+    { header: 'Avg WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
+    { header: 'Avg WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
+    { header: 'Avg Exposure', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
+    { header: 'Games', accessor: 'season_games', format: (value) => formatFixed(value, 0) },
+    { header: 'First Game', accessor: 'first_date', format: formatOrDash },
+    { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
 ];
 
 export const compareCsvColumns = [

@@ -161,30 +161,49 @@ and uses a per-player latest-row lookup in `wowy_ratings` for the observed RAPM 
 players without a WOWY observation are omitted. The server helper fills placeholder current-team
 metadata from `get_latest_player_teams()` before rendering.
 
-### Historical WOWY leaderboard snapshots
+### Historical WOWY leaderboard season averages
 
-`supabase/migrations/20260710_010_add_wowy_season_opening_snapshots.sql` makes the `/wowy`
-historical selector all-era: 1980 through the latest published season. It supersedes the
-1996-97-only `player_ratings` proxy used by migrations 008 and 009. The model-owned
-`wowy_season_opening_snapshots` table contains one observed player snapshot for every player who
-appeared in each team's first game of a season. Ratings are the model's same-game observation,
-so this is explicitly an **opening-game snapshot**, not a pre-tipoff value or a complete active
-roster. Players recorded as inactive/DNP in the source are not represented.
+`supabase/migrations/20260710_011_add_wowy_season_player_averages.sql` provisions the all-era
+`wowy_season_player_averages` table, one row per player-season. Its WOWY RAPM, O-RAPM, D-RAPM,
+and exposure values are the **unweighted arithmetic mean** of every certified player-game
+observation published for that player in the selected NBA season; they are not a single-game
+snapshot and are not exposure- or minutes-weighted.
 
-Historical `team_code` and `team_name` come from the BBRef game source and season-bounded team
-crosswalk, rather than current DARKO team metadata. This preserves defunct and relocated
-franchises such as Seattle, New Jersey, Kansas City, and Washington correctly. The historical
-RPC deliberately returns no current `tm_id` or position, preventing an old team from receiving a
-modern logo/link. `get_wowy_leaderboard_seasons()` derives the selector from the snapshot table;
-`get_wowy_season_player_ratings(p_season)` returns the selected all-era opening-game rows.
+This is an intentional two-phase publication: apply 011, run the checked model publisher, deploy
+the context-aware `/wowy` UI, then explicitly run the manual operation
+`supabase/operations/20260710_activate_wowy_season_player_averages.sql`. That operation owns its
+own transaction. The UI reads `snapshot_context`, so it truthfully presents opening-game rows
+until the cutover and averages afterward. The manual operation fails closed unless the average table covers every
+contiguous published WOWY season from 1980 through the current source maximum, and every
+`(season, nba_id)` group matches the raw player-game source on row presence, game count, first and
+last game dates, and unweighted RAPM/O-RAPM/D-RAPM/exposure means. It records that verified
+cutover in the private singleton `wowy_season_average_activation` table, then redirects the
+historical `/wowy` RPCs from migration 010's opening-game artifact to season averages. Keeping
+this data-dependent activation outside the replayable migration chain prevents an empty or
+partial table from breaking a normal migration run or later ratings-table rebuild.
+
+Historical team data comes from the BBRef game source and season-bounded team crosswalk, rather
+than current DARKO team metadata. This preserves defunct and relocated franchises such as Seattle,
+New Jersey, Kansas City, and Washington correctly. A traded player's `team_code` and `team_name`
+are slash-joined historical display labels in chronological first-seen order, never a claim that
+the average belongs to only one stint. The paired `team_codes` and `team_names` arrays preserve
+each individual team for filters and provenance. The historical RPC returns no current `tm_id` or
+position, preventing an old team from receiving a modern logo/link; `date` is a compatibility
+alias for `last_date`, while seasonal UI should use the explicit date range and game count.
+
+Migration 010's `wowy_season_opening_snapshots` table remains a model publication artifact. After
+the guarded manual activation operation, `get_wowy_leaderboard_seasons()` and
+`get_wowy_season_player_ratings(p_season)` source only the season-average table and return
+`snapshot_context = 'season-average'`.
 
 | Column | Postgres type | Notes |
 |---|---|---|
 | season, nba_id | integer, bigint | Primary key; NBA season ending year and canonical player ID |
-| team_code, team_name | text | Historical BBRef code and historical franchise name at the opening game |
-| opening_date, game_id | date, text | The team's first source game of the selected season |
-| wowy_rapm, wowy_orapm, wowy_drapm, exposure | double precision | Certified same-game WOWY observation |
-| career_game_num | integer | The player's published WOWY sample-relative game number |
+| team_code, team_name | text | Slash-joined historical display labels in first-seen chronological order |
+| team_codes, team_names | text[] | Paired individual historical team codes/names, in the same chronological order |
+| first_date, last_date | date | First and last published WOWY observations included in the season average |
+| season_games | integer | Number of published player-game observations in the unweighted average |
+| wowy_rapm, wowy_orapm, wowy_drapm, exposure | double precision | Certified unweighted player-season means |
 
 ---
 
@@ -340,7 +359,7 @@ Comma-joined string of all 69 fetched `player_ratings` column names (66 original
 | `getActivePlayers()` | Finds the latest `player_ratings.season`, reads current-season `player_ratings` rows with RATING_COLUMNS and `active_roster = 1`, and dedupes to the latest row per player. This includes `future_game = 1` projection rows, which are the current DARKO snapshot. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
 | `getActiveWowyPlayers()` | Calls `get_active_wowy_player_ratings()`, normalizes team IDs/positions, and caches the compact current-active snapshot for five minutes. | One current-identity row per active player with a latest observed WOWY RAPM row | `/wowy` |
 | `getWowyLeaderboardSeasons()` | Calls `get_wowy_leaderboard_seasons()` and caches the season list for one hour. | All published historical season end years (1980 onward) | `/wowy` |
-| `getWowySeasonPlayers(season)` | Calls `get_wowy_season_player_ratings(p_season)`, preserves historical team codes, and caches the selected season for five minutes. | Players who appeared in each team's first game, with same-game WOWY values | `/wowy?season=YYYY` |
+| `getWowySeasonPlayers(season)` | Calls `get_wowy_season_player_ratings(p_season)`, preserves chronological historical team arrays, and caches the selected season for five minutes. | One player-season row with unweighted WOWY means, historical teams, date range, and game count | `/wowy?season=YYYY` |
 | `getPlayersIndex()` | `players` with explicit `PLAYERS_DIM_COLUMNS`, merged with `getActivePlayers()`. **Hardcodes output fields** — does NOT pass through survivorship, projections, or RAPM columns. | Array of player objects (subset of fields) | Player search/index pages |
 | `getLongevityRows()` | Calls `getActivePlayers()`, maps DB columns to frontend-aliased keys | Array with aliased longevity fields | `/api/longevity` |
 | `getLongevityTrajectory(id)` | `player_ratings` filtered to one player, maps to chart fields | Array of trajectory points | `/api/player/[id]/longevity` |
@@ -469,7 +488,7 @@ Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at
 - `idx_ratings_leaderboard_team_opener (season, team_name, date ASC)`
 - `idx_ratings_player_team_latest (nba_id, date DESC) INCLUDE (team_name, tm_id)` for valid team rows
 - Read-only RLS plus `SELECT` grants for `anon` and `authenticated`
-- Invoker-safe player-rating RPCs restored after every fresh/full rebuild: `get_active_player_ratings`, `get_latest_player_teams`, `get_leaderboard_seasons`, `get_season_start_player_ratings`, `get_latest_player_search_ratings`, and `get_active_wowy_player_ratings`. `get_wowy_leaderboard_seasons` and `get_wowy_season_player_ratings` are also kept in sync there, but their all-era source is the independent `wowy_season_opening_snapshots` table, so they survive a `player_ratings` rebuild.
+- Invoker-safe player-rating RPCs restored after every fresh/full rebuild: `get_active_player_ratings`, `get_latest_player_teams`, `get_leaderboard_seasons`, `get_season_start_player_ratings`, `get_latest_player_search_ratings`, and `get_active_wowy_player_ratings`. `get_wowy_leaderboard_seasons` and `get_wowy_season_player_ratings` are also kept in sync there, but their all-era source is the independent `wowy_season_player_averages` table, so they survive a `player_ratings` rebuild.
 
 **Connection:** Uses `SUPABASE_PG_DSN` env var, falling back to `fixed_data/supabase_secret.json`.
 

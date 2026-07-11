@@ -102,6 +102,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/utils/teamAbbreviations.js` - util
 - `src/lib/utils/teamRouteUtils.js` - util
 - `src/lib/utils/wideStickyTable.js` - util
+- `src/lib/utils/wowySeasonContext.js` - util
 
 ## src/routes
 
@@ -169,6 +170,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260710_008_add_wowy_season_leaderboard_rpc.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_009_optimize_wowy_season_list_rpc.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_010_add_wowy_season_opening_snapshots.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_011_add_wowy_season_player_averages.sql` - Supabase SQL migration.
 
 ## tests
 
@@ -219,4 +221,5 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/wowy-leaderboard-csv.test.js` - test
 - `tests/wowy-leaderboard-data.test.js` - test
 - `tests/wowy-leaderboard-page.test.js` - test
+- `tests/wowy-season-context.test.js` - test
 - `tests/wowy-trajectories.test.js` - test
