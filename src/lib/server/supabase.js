@@ -29,6 +29,8 @@ const MAX_CACHE_ENTRIES = 300;
 const CACHE_MS = {
     activePlayers: 60_000,
     activeWowyPlayers: 300_000,
+    wowyLeaderboardSeasons: 3_600_000,
+    wowySeasonPlayers: 300_000,
     leaderboardSeasons: 3_600_000,
     seasonStartPlayers: 3_600_000,
     playersIndex: 300_000,
@@ -389,6 +391,59 @@ function mergeWithPlayerDim(row, playerDim, teamFallback) {
     };
 }
 
+function mergeWithActiveWowyTeamFallback(row, teamFallback) {
+    const teamName = normalizedTeamName(row?.team_name);
+    const hasResolvableTeam =
+        isRealTeamId(row?.tm_id) ||
+        isRealTeamId(nbaTeamId(teamName));
+
+    if (!hasResolvableTeam && normalizedTeamName(teamFallback?.team_name)) {
+        return mergeWithPlayerDim(
+            {
+                ...row,
+                team_name: teamFallback.team_name,
+                tm_id: teamFallback.tm_id
+            },
+            null,
+            teamFallback
+        );
+    }
+
+    return mergeWithPlayerDim(row, null, teamFallback);
+}
+
+function normalizeWowyLeaderboardRows(data) {
+    return (Array.isArray(data) ? data : [])
+        .map((row) => {
+            const nbaId = Number(row?.nba_id);
+            if (!Number.isInteger(nbaId) || nbaId <= 0) return null;
+
+            const snapshotContext = normalizedTeamName(row?.snapshot_context);
+            const isOpeningGameSnapshot = snapshotContext === 'opening-game';
+            const teamName = normalizedTeamName(row.team_name);
+            const teamCode = normalizedTeamName(row.team_code);
+            return {
+                nba_id: nbaId,
+                player_name: row.player_name ?? null,
+                team_name: teamName,
+                team_code: teamCode,
+                // Historic opening-game rows deliberately do not receive a
+                // current NBA team ID or position fallback. Those values
+                // would make a past team look like a current team in the UI.
+                tm_id: isOpeningGameSnapshot ? null : resolveTeamId(row, teamName),
+                position: isOpeningGameSnapshot ? null : normalizePosition(row.position ?? null),
+                snapshot_context: snapshotContext,
+                wowy_rapm: row.wowy_rapm ?? null,
+                wowy_orapm: row.wowy_orapm ?? null,
+                wowy_drapm: row.wowy_drapm ?? null,
+                exposure: row.exposure ?? null,
+                date: row.date ?? null,
+                career_game_num: row.career_game_num ?? null
+            };
+        })
+        .filter(Boolean);
+}
+
 function mergePlayerWithActiveSnapshot(player, active) {
     return {
         nba_id: player.nba_id,
@@ -573,29 +628,64 @@ export async function getActiveWowyPlayers() {
         const { data, error } = await supabase.rpc('get_active_wowy_player_ratings');
         if (error) throw error;
 
-        const rows = (Array.isArray(data) ? data : [])
-            .map((row) => {
-                const nbaId = Number(row?.nba_id);
-                if (!Number.isInteger(nbaId) || nbaId <= 0) return null;
+        const rows = normalizeWowyLeaderboardRows(data);
 
-                const teamName = normalizedTeamName(row.team_name);
-                return {
-                    nba_id: nbaId,
-                    player_name: row.player_name ?? null,
-                    team_name: teamName,
-                    tm_id: resolveTeamId(row, teamName),
-                    position: normalizePosition(row.position ?? null),
-                    wowy_rapm: row.wowy_rapm ?? null,
-                    wowy_orapm: row.wowy_orapm ?? null,
-                    wowy_drapm: row.wowy_drapm ?? null,
-                    exposure: row.exposure ?? null,
-                    date: row.date ?? null,
-                    career_game_num: row.career_game_num ?? null
-                };
+        const missingTeamIds = rows
+            .filter((row) => {
+                const currentTeam = normalizedTeamName(row.team_name);
+                return !currentTeam || (
+                    !isRealTeamId(row.tm_id) && !isRealTeamId(nbaTeamId(currentTeam))
+                );
             })
-            .filter(Boolean);
+            .map((row) => row.nba_id);
 
-        return sortByWowyRapmDesc(rows);
+        // A player's last observed WOWY game is not a roster snapshot. When the
+        // active projection row has placeholder team metadata, use the latest
+        // valid team record without constraining it to that observed-game date.
+        const teamMap = await getLatestTeamMapByIds(missingTeamIds);
+        const enriched = rows.map((row) =>
+            mergeWithActiveWowyTeamFallback(row, teamMap.get(row.nba_id))
+        );
+
+        return sortByWowyRapmDesc(enriched);
+    });
+}
+
+/**
+ * Get the historical WOWY seasons. The database stores NBA season end years,
+ * so 2013 represents 2012-13.
+ */
+export async function getWowyLeaderboardSeasons() {
+    const key = cacheKey('wowyLeaderboardSeasons', 'all');
+    return runCached(key, CACHE_MS.wowyLeaderboardSeasons, async () => {
+        const { data, error } = await supabase.rpc('get_wowy_leaderboard_seasons');
+        if (error) throw error;
+
+        return Array.from(
+            new Set(
+                (Array.isArray(data) ? data : [])
+                    .map((season) => Number.parseInt(season, 10))
+                    .filter((season) => Number.isInteger(season))
+            )
+        ).sort((a, b) => b - a);
+    });
+}
+
+/** Get each historical WOWY opening-game snapshot. */
+export async function getWowySeasonPlayers(season) {
+    const seasonEndYear = Number.parseInt(season, 10);
+    if (!Number.isInteger(seasonEndYear)) {
+        throw new TypeError(`Invalid WOWY season end year: ${season}`);
+    }
+
+    const key = cacheKey('wowySeasonPlayers', seasonEndYear);
+    return runCached(key, CACHE_MS.wowySeasonPlayers, async () => {
+        const { data, error } = await supabase.rpc('get_wowy_season_player_ratings', {
+            p_season: seasonEndYear
+        });
+        if (error) throw error;
+
+        return sortByWowyRapmDesc(normalizeWowyLeaderboardRows(data));
     });
 }
 

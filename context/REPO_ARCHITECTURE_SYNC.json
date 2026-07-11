@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.26",
+  "arch_version": "0.1.27",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -493,12 +493,14 @@
         "dataSources": [
           "$lib/server/cacheHeaders.js:setEdgeCache",
           "$lib/server/supabase.js:getActiveWowyPlayers",
-          "$lib/server/supabase.js:getWowyPublication"
+          "$lib/server/supabase.js:getWowyLeaderboardSeasons",
+          "$lib/server/supabase.js:getWowyPublication",
+          "$lib/server/supabase.js:getWowySeasonPlayers"
         ],
         "file": "src/routes/wowy/+page.server.js",
         "pathParams": [],
         "route": "/wowy",
-        "signature": "load({ setHeaders })"
+        "signature": "load({ url, setHeaders })"
       }
     ],
     "persistence_surface": {
@@ -697,6 +699,9 @@
     "supabase/migrations/20260710_005_add_historical_leaderboard_snapshot_rpcs.sql",
     "supabase/migrations/20260710_006_add_player_search_snapshot_rpc.sql",
     "supabase/migrations/20260710_007_add_active_wowy_leaderboard_rpc.sql",
+    "supabase/migrations/20260710_008_add_wowy_season_leaderboard_rpc.sql",
+    "supabase/migrations/20260710_009_optimize_wowy_season_list_rpc.sql",
+    "supabase/migrations/20260710_010_add_wowy_season_opening_snapshots.sql",
     "svelte.config.js",
     "tests/api-active-players-cache.test.js",
     "tests/api-player-history.test.js",
@@ -1099,7 +1104,7 @@
       {
         "returns": "server-rendered page payload",
         "route": "/wowy",
-        "signature": "load({ setHeaders })"
+        "signature": "load({ url, setHeaders })"
       }
     ],
     "sharedServer": [
@@ -1247,12 +1252,20 @@
             "signature": "getTeamWinDistribution(teamName)"
           },
           {
+            "name": "getWowyLeaderboardSeasons",
+            "signature": "getWowyLeaderboardSeasons()"
+          },
+          {
             "name": "getWowyPlayerHistory",
             "signature": "getWowyPlayerHistory(nbaId, options = {})"
           },
           {
             "name": "getWowyPublication",
             "signature": "getWowyPublication()"
+          },
+          {
+            "name": "getWowySeasonPlayers",
+            "signature": "getWowySeasonPlayers(season)"
           },
           {
             "name": "MAX_FULL_HISTORY_ROWS",

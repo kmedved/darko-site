@@ -384,14 +384,13 @@
 	.display-menu summary {
 		display: flex;
 		align-items: center;
-		height: 100%;
 		border-bottom: 2px solid transparent;
 		color: var(--text-muted);
 		cursor: pointer;
 		font-size: 13px;
 		font-weight: 500;
 		list-style: none;
-		padding: 0 10px;
+		padding: 8px 10px 9px;
 		transition: color 0.15s, border-color 0.15s;
 		white-space: nowrap;
 	}

@@ -10,23 +10,46 @@ async function read(file) {
     return fs.readFile(path.resolve(process.cwd(), file), 'utf8');
 }
 
-test('WOWY leaderboard loader fetches current ratings and publication freshness in parallel', async () => {
+test('WOWY leaderboard loader supports Current and URL-selected historical seasons', async () => {
     const contents = await read(WOWY_PAGE_SERVER);
 
     assert.match(contents, /getActiveWowyPlayers/);
+    assert.match(contents, /getWowyLeaderboardSeasons/);
     assert.match(contents, /getWowyPublication/);
-    assert.match(contents, /Promise\.all\(\[\s*getActiveWowyPlayers\(\),\s*getWowyPublication\(\)/s);
+    assert.match(contents, /getWowySeasonPlayers/);
+    assert.match(contents, /load\(\{ url, setHeaders \}\)/);
+    assert.match(contents, /Promise\.all\(\[\s*getWowyLeaderboardSeasons\(\),\s*getWowyPublication\(\)/s);
+    assert.match(contents, /url\.searchParams\.get\('season'\)/);
+    assert.match(contents, /seasons\.includes\(requestedSeason\)/);
+    assert.match(contents, /getWowySeasonPlayers\(selectedSeason\)/);
     assert.match(contents, /setEdgeCache\(/);
     assert.match(contents, /edgeSMaxAge:\s*300/);
     assert.match(contents, /swr:\s*3600/);
 });
 
-test('WOWY leaderboard presents observed current-active ratings and trajectory links', async () => {
+test('WOWY leaderboard presents season-filterable observed ratings and trajectory links', async () => {
     const contents = await read(WOWY_PAGE);
 
+    assert.match(contents, /import \{ goto \} from '\$app\/navigation';/);
+    assert.match(contents, /formatSeasonEndYearLabel/);
     assert.match(contents, /Latest observed/);
+    assert.match(contents, /activeSeason === 'current'[\s\S]*Latest observed WOWY RAPM ratings for current active NBA players/);
+    assert.match(contents, /Opening-game snapshot WOWY RAPM ratings for NBA players/);
     assert.match(contents, /does not use DARKO projection rows/);
     assert.match(contents, /Current active players/);
+    assert.match(contents, /<option value="current">Current<\/option>/);
+    assert.match(contents, /id="wowy-season-filter"/);
+    assert.match(contents, /data\.selectedSeason === null/);
+    assert.match(contents, /goto\(`\/wowy\$\{suffix\}`, \{ keepFocus: true \}\)/);
+    assert.match(contents, /Opening-game snapshot RAPM/);
+    assert.match(contents, /Each row is a player who appeared in their team’s first game of \{activeSeasonLabel\}/);
+    assert.match(contents, /Opening-game snapshot/);
+    assert.match(contents, /snapshot_context/);
+    assert.match(contents, /team_code/);
+    assert.match(contents, /isHistoricalTeamSnapshot/);
+    assert.match(contents, /teamFilterValue/);
+    assert.match(contents, /teamOptionLabel/);
+    assert.match(contents, /if \(isHistoricalTeamSnapshot\(player\)\)/);
     assert.match(contents, /wowy_rapm/);
     assert.match(contents, /wowy_orapm/);
     assert.match(contents, /wowy_drapm/);
@@ -34,7 +57,10 @@ test('WOWY leaderboard presents observed current-active ratings and trajectory l
     assert.match(contents, /career_game_num/);
     assert.match(contents, /publication\.data_through/);
     assert.match(contents, /\/trajectories\?ids=\$\{encodeURIComponent\(player\.nba_id\)\}&metric=wowy_rapm/);
-    assert.doesNotMatch(contents, /start of (?:the )?season/i);
+    assert.doesNotMatch(contents, /Final observed/i);
+    assert.doesNotMatch(contents, /opening roster/i);
+    assert.doesNotMatch(contents, /before that team’s opening game/i);
+    assert.doesNotMatch(contents, /Observed leaders|leaderCards|buildLeaderCard|wowy-leader-/);
 });
 
 test('WOWY leaderboard supports sorting, filtering, complete CSV export, and mobile table access', async () => {
@@ -49,6 +75,8 @@ test('WOWY leaderboard supports sorting, filtering, complete CSV export, and mob
     assert.match(contents, /setSearchQuery/);
     assert.match(contents, /sortedPlayers\.map\(\(player, index\) => \(\{ \.\.\.player, rank: index \+ 1 \}\)\)/);
     assert.match(contents, /wowyLeaderboardCsvColumns/);
+    assert.match(contents, /wowyHistoricalLeaderboardCsvColumns/);
+    assert.match(contents, /activeSeason === 'current'[\s\S]*wowyLeaderboardCsvColumns[\s\S]*wowyHistoricalLeaderboardCsvColumns/);
     assert.ok(touchStart >= 0 && touchEnd > touchStart, 'page should define a touch-table mode');
 
     const touchBlock = contents.slice(touchStart, touchEnd);

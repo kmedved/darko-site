@@ -1,11 +1,14 @@
 <script>
+    import { goto } from '$app/navigation';
     import {
         exportCsvRows,
         formatFixed,
         formatSignedMetric,
+        wowyHistoricalLeaderboardCsvColumns,
         wowyLeaderboardCsvColumns
     } from '$lib/utils/csvPresets.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
+    import { formatSeasonEndYearLabel } from '$lib/utils/seasonUtils.js';
     import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
@@ -69,20 +72,38 @@
 
     const players = $derived(data.players || []);
     const publication = $derived(data.publication || null);
+    const seasonOptions = $derived(data.seasons || []);
+    const activeSeason = $derived(
+        data.selectedSeason === null || data.selectedSeason === undefined
+            ? 'current'
+            : String(data.selectedSeason)
+    );
+    const activeSeasonLabel = $derived(
+        activeSeason === 'current' ? 'Current' : formatSeasonLabel(activeSeason)
+    );
     const teamOptions = $derived.by(() => {
-        const teams = new Set();
+        const teams = new Map();
         for (const player of players) {
-            if (player?.team_name) teams.add(player.team_name);
+            const value = teamFilterValue(player);
+            if (!value || teams.has(value)) continue;
+
+            teams.set(value, {
+                value,
+                label: teamOptionLabel(player),
+                title: teamOptionTitle(player)
+            });
         }
-        return [...teams].sort((left, right) => teamAbbr(left).localeCompare(teamAbbr(right)));
+        return [...teams.values()].sort((left, right) => left.label.localeCompare(right.label));
     });
     const activeTeamFilter = $derived(
-        teamFilter === 'all' || teamOptions.includes(teamFilter) ? teamFilter : 'all'
+        teamFilter === 'all' || teamOptions.some((team) => team.value === teamFilter)
+            ? teamFilter
+            : 'all'
     );
     const teamScopedPlayers = $derived.by(() =>
         activeTeamFilter === 'all'
             ? players
-            : players.filter((player) => player?.team_name === activeTeamFilter)
+            : players.filter((player) => teamFilterValue(player) === activeTeamFilter)
     );
     const filteredPlayers = $derived.by(() => {
         const query = searchQuery.trim().toLocaleLowerCase();
@@ -92,6 +113,8 @@
             const searchable = [
                 player?.player_name,
                 player?.team_name,
+                player?.team_code,
+                teamDisplayLabel(player),
                 teamAbbr(player?.team_name),
                 player?.position
             ].join(' ').toLocaleLowerCase();
@@ -115,38 +138,20 @@
         sortedPlayers.length === 0 ? 0 : (activeLeaderboardPage - 1) * PAGE_SIZE + 1
     );
     const rangeEnd = $derived(Math.min(activeLeaderboardPage * PAGE_SIZE, sortedPlayers.length));
-    const leaderCards = $derived.by(() => [
-        buildLeaderCard('Total impact', 'wowy_rapm', 'WOWY RAPM', true),
-        buildLeaderCard('Offensive impact', 'wowy_orapm', 'WOWY O-RAPM'),
-        buildLeaderCard('Defensive impact', 'wowy_drapm', 'WOWY D-RAPM')
-    ]);
     const freshnessLabel = $derived(
         publication?.data_through
             ? `Data through ${formatObservedDate(publication.data_through)}`
             : 'Latest published observations'
     );
+    const viewStatusDetail = $derived(
+        activeSeason === 'current'
+            ? freshnessLabel
+            : "Opening-game snapshot of players who appeared in their teams' first games."
+    );
 
     function toNumber(value) {
         const number = Number.parseFloat(value);
         return Number.isFinite(number) ? number : null;
-    }
-
-    function buildLeaderCard(label, metric, metricLabel, featured = false) {
-        const leader = players.reduce((best, player) => {
-            const value = toNumber(player?.[metric]);
-            if (value === null) return best;
-            if (!best || value > best.value) return { player, value };
-            return best;
-        }, null);
-
-        return {
-            label,
-            metric,
-            metricLabel,
-            featured,
-            player: leader?.player ?? null,
-            value: leader?.value ?? null
-        };
     }
 
     function toggleSort(column) {
@@ -167,6 +172,20 @@
     function setSearchQuery(value) {
         searchQuery = value;
         leaderboardPage = 1;
+    }
+
+    function formatSeasonLabel(season) {
+        const label = formatSeasonEndYearLabel(season);
+        return label ? `${label} Season` : `${season} Season`;
+    }
+
+    function selectSeason(event) {
+        const season = event.currentTarget.value;
+        teamFilter = 'all';
+        searchQuery = '';
+        leaderboardPage = 1;
+        const suffix = season === 'current' ? '' : `?season=${encodeURIComponent(season)}`;
+        goto(`/wowy${suffix}`, { keepFocus: true });
     }
 
     function formatObservedDate(value) {
@@ -205,12 +224,44 @@
         return `/trajectories?ids=${encodeURIComponent(player.nba_id)}&metric=wowy_rapm`;
     }
 
+    function isHistoricalTeamSnapshot(player) {
+        return activeSeason !== 'current' || player?.snapshot_context === 'opening-game';
+    }
+
+    function teamFilterValue(player) {
+        if (isHistoricalTeamSnapshot(player)) {
+            return player?.team_code || player?.team_name || '';
+        }
+        return player?.team_name || '';
+    }
+
+    function teamDisplayLabel(player) {
+        if (isHistoricalTeamSnapshot(player)) {
+            return player?.team_code || player?.team_name || '—';
+        }
+        return teamAbbr(player?.team_name) || '—';
+    }
+
+    function teamOptionLabel(player) {
+        const code = teamDisplayLabel(player);
+        const name = player?.team_name;
+        return isHistoricalTeamSnapshot(player) && name && name !== code
+            ? `${code} — ${name}`
+            : code;
+    }
+
+    function teamOptionTitle(player) {
+        return isHistoricalTeamSnapshot(player) ? player?.team_name || undefined : undefined;
+    }
+
     function teamLogoUrl(player) {
+        if (isHistoricalTeamSnapshot(player)) return null;
         const teamId = Number.parseInt(player?.tm_id, 10);
         return Number.isInteger(teamId) && teamId > 0 ? `/api/img/logo/${teamId}` : null;
     }
 
     function teamUrl(player) {
+        if (isHistoricalTeamSnapshot(player)) return null;
         return player?.team_name ? `/team/${encodeURIComponent(player.team_name)}` : null;
     }
 
@@ -219,10 +270,15 @@
     }
 
     function exportPlayersCsv() {
+        const seasonFileLabel = activeSeason === 'current'
+            ? 'current-active'
+            : `${formatSeasonEndYearLabel(activeSeason) ?? activeSeason}-opening-game`;
         exportCsvRows({
             rows: sortedPlayers.map((player, index) => ({ ...player, rank: index + 1 })),
-            columns: wowyLeaderboardCsvColumns,
-            filename: 'darko-wowy-rapm-current-active.csv'
+            columns: activeSeason === 'current'
+                ? wowyLeaderboardCsvColumns
+                : wowyHistoricalLeaderboardCsvColumns,
+            filename: `darko-wowy-rapm-${seasonFileLabel}.csv`
         });
     }
 </script>
@@ -231,7 +287,9 @@
     <title>WOWY RAPM — DARKO</title>
     <meta
         name="description"
-        content="Latest observed WOWY RAPM ratings for current active NBA players."
+        content={activeSeason === 'current'
+            ? 'Latest observed WOWY RAPM ratings for current active NBA players.'
+            : 'Opening-game snapshot WOWY RAPM ratings for NBA players.'}
     />
 </svelte:head>
 
@@ -254,12 +312,16 @@
                     </div>
                     <div>
                         <h1 id="wowy-title">WOWY RAPM</h1>
-                        <p class="wowy-subtitle">Synthetic game-level RAPM for current active players.</p>
+                        <p class="wowy-subtitle">
+                            {activeSeason === 'current'
+                                ? 'Synthetic game-level RAPM for current active players.'
+                                : `Opening-game snapshot RAPM for ${activeSeasonLabel}.`}
+                        </p>
                     </div>
                 </div>
                 <div class="wowy-status">
-                    <strong>Latest observed</strong>
-                    <span>{freshnessLabel}</span>
+                    <strong>{activeSeason === 'current' ? 'Latest observed' : 'Opening-game snapshot'}</strong>
+                    <span>{viewStatusDetail}</span>
                 </div>
                 <p class="wowy-projection-note">Observed player-game ratings only. This page does not use DARKO projection rows.</p>
             </div>
@@ -267,61 +329,33 @@
             <aside class="wowy-method" aria-label="How to read WOWY RAPM">
                 <p class="wowy-method-label">Reading the table</p>
                 <p>{getMetricDefinition('wowy_rapm')}</p>
-                <p>Each player row is dated to that player’s most recent observed game; team and position reflect the current DARKO roster.</p>
+                <p>
+                    {#if activeSeason === 'current'}
+                        Each player row is dated to that player’s most recent observed game; team and position reflect the current DARKO roster.
+                    {:else}
+                        Each row is a player who appeared in their team’s first game of {activeSeasonLabel}. Historical team codes and names reflect that opening-game snapshot.
+                    {/if}
+                </p>
                 <a href="/trajectories?metric=wowy_rapm">Explore career WOWY trajectories <span aria-hidden="true">→</span></a>
             </aside>
         </section>
-
-        {#if players.length > 0}
-            <section class="wowy-leader-section" aria-label="Observed WOWY leaders">
-                <div class="wowy-section-heading">
-                    <p>Observed leaders</p>
-                    <span>Current active roster</span>
-                </div>
-                <div class="wowy-leader-grid">
-                    {#each leaderCards as card (card.metric)}
-                        <article class={`wowy-leader-card ${card.featured ? 'wowy-leader-card--featured' : ''}`}>
-                            <div class="wowy-leader-card-topline">
-                                <span>{card.label}</span>
-                                <small>{card.metricLabel}</small>
-                            </div>
-                            {#if card.player}
-                                <strong class={metricTone(card.value)}>{formatSignedMetric(card.value)}</strong>
-                                <a
-                                    class="wowy-leader-player"
-                                    href={playerTrajectoryUrl(card.player)}
-                                    aria-label={`Open ${playerName(card.player)}'s WOWY RAPM trajectory`}
-                                >
-                                    {#if teamLogoUrl(card.player)}
-                                        <span class="wowy-team-mark">
-                                            <img src={teamLogoUrl(card.player)} alt="" loading="lazy" onerror={hideBrokenImage} />
-                                        </span>
-                                    {/if}
-                                    <span>
-                                        {playerName(card.player)}
-                                        <small>{teamAbbr(card.player.team_name)}{card.player.position ? ` · ${card.player.position}` : ''}</small>
-                                    </span>
-                                </a>
-                            {:else}
-                                <strong class="metric-muted">—</strong>
-                                <span class="wowy-leader-player wowy-leader-player--empty">No observed rating</span>
-                            {/if}
-                        </article>
-                    {/each}
-                </div>
-            </section>
-        {/if}
 
         <section class="wowy-table-panel" aria-labelledby="wowy-table-title">
             <div class="wowy-table-heading">
                 <div>
                     <p class="wowy-eyebrow">Leaderboard</p>
-                    <h2 id="wowy-table-title">Current active players</h2>
+                    <h2 id="wowy-table-title">
+                        {activeSeason === 'current' ? 'Current active players' : `${activeSeasonLabel} opening-game snapshot`}
+                    </h2>
                     <p>
                         {#if sortedPlayers.length === 0}
-                            No current active players match these filters.
+                            No players match this season and these filters.
                         {:else}
-                            Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} players with an observed WOWY rating.
+                            {#if activeSeason === 'current'}
+                                Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} current active players with an observed WOWY rating.
+                            {:else}
+                                Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} players who appeared in their teams’ first games.
+                            {/if}
                         {/if}
                     </p>
                 </div>
@@ -336,6 +370,20 @@
             </div>
 
             <div class="wowy-controls">
+                <label class="wowy-control-field" for="wowy-season-filter">
+                    <span class="sr-only">Season</span>
+                    <select
+                        id="wowy-season-filter"
+                        value={activeSeason}
+                        onchange={selectSeason}
+                    >
+                        <option value="current">Current</option>
+                        {#each seasonOptions as season (season)}
+                            <option value={String(season)}>{formatSeasonLabel(season)}</option>
+                        {/each}
+                    </select>
+                </label>
+
                 <label class="wowy-control-field" for="wowy-team-filter">
                     <span class="sr-only">Filter by team</span>
                     <select
@@ -344,8 +392,8 @@
                         onchange={(event) => setTeamFilter(event.currentTarget.value)}
                     >
                         <option value="all">All teams</option>
-                        {#each teamOptions as team (team)}
-                            <option value={team}>{teamAbbr(team)}</option>
+                        {#each teamOptions as team (team.value)}
+                            <option value={team.value} title={team.title}>{team.label}</option>
                         {/each}
                     </select>
                 </label>
@@ -404,7 +452,7 @@
                         {#if visiblePlayers.length === 0}
                             <tr>
                                 <td class="wowy-empty-row" colspan={tableColumns.length}>
-                                    No players match the selected team and search terms.
+                                    No players match the selected season, team, and search terms.
                                 </td>
                             </tr>
                         {:else}
@@ -423,7 +471,18 @@
                                         </a>
                                     </td>
                                     <td>
-                                        {#if teamUrl(player)}
+                                        {#if isHistoricalTeamSnapshot(player)}
+                                            {#if teamDisplayLabel(player) !== '—'}
+                                                <span class="wowy-historical-team" title={player.team_name || undefined}>
+                                                    <span>{teamDisplayLabel(player)}</span>
+                                                    {#if player.team_name && player.team_name !== teamDisplayLabel(player)}
+                                                        <small>{player.team_name}</small>
+                                                    {/if}
+                                                </span>
+                                            {:else}
+                                                <span class="metric-muted">—</span>
+                                            {/if}
+                                        {:else if teamUrl(player)}
                                             <a class="wowy-team-link" href={teamUrl(player)} title={player.team_name}>
                                                 <span class="wowy-team-mark">
                                                     {#if teamLogoUrl(player)}
@@ -478,7 +537,11 @@
             {/if}
 
             <p class="wowy-table-note">
-                Exposure is shown without a cutoff. Sample games include the available WOWY regular-season and postseason appearances.
+                {#if activeSeason === 'current'}
+                    Exposure is shown without a cutoff. Sample games include the available WOWY regular-season and postseason appearances.
+                {:else}
+                    This opening-game snapshot includes players who appeared in their teams’ first games. Exposure and sample games are shown at that snapshot.
+                {/if}
             </p>
         </section>
     </div>
@@ -530,8 +593,7 @@
     }
 
     .wowy-eyebrow,
-    .wowy-method-label,
-    .wowy-section-heading p {
+    .wowy-method-label {
         color: var(--accent);
         font-family: var(--font-mono);
         font-size: 10px;
@@ -656,105 +718,6 @@
         color: var(--accent-hover);
     }
 
-    .wowy-leader-section {
-        display: grid;
-        gap: 10px;
-    }
-
-    .wowy-section-heading {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 0 2px;
-    }
-
-    .wowy-section-heading span {
-        color: var(--text-muted);
-        font-size: 12px;
-    }
-
-    .wowy-leader-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
-        gap: 12px;
-    }
-
-    .wowy-leader-card {
-        min-width: 0;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-sm);
-        background: var(--bg-surface);
-        box-shadow: 0 12px 28px color-mix(in srgb, var(--text) 7%, transparent);
-        padding: 16px 18px;
-    }
-
-    .wowy-leader-card--featured {
-        border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
-        background: color-mix(in srgb, var(--accent) 6%, var(--bg-surface));
-    }
-
-    .wowy-leader-card-topline {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 750;
-        line-height: 1.2;
-    }
-
-    .wowy-leader-card-topline small {
-        color: var(--text-muted);
-        font-family: var(--font-mono);
-        font-size: 10px;
-        letter-spacing: 0.04em;
-        text-align: right;
-        text-transform: uppercase;
-    }
-
-    .wowy-leader-card > strong {
-        display: block;
-        margin-top: 15px;
-        font-family: var(--font-mono);
-        font-size: 29px;
-        letter-spacing: -0.04em;
-        line-height: 1;
-    }
-
-    .wowy-leader-player {
-        display: inline-flex;
-        align-items: center;
-        min-width: 0;
-        gap: 9px;
-        margin-top: 13px;
-        color: var(--text);
-        font-size: 14px;
-        font-weight: 800;
-    }
-
-    .wowy-leader-player:hover {
-        color: var(--accent);
-    }
-
-    .wowy-leader-player > span:last-child {
-        min-width: 0;
-    }
-
-    .wowy-leader-player small {
-        display: block;
-        margin-top: 1px;
-        color: var(--text-secondary);
-        font-family: var(--font-mono);
-        font-size: 10px;
-        font-weight: 700;
-    }
-
-    .wowy-leader-player--empty {
-        color: var(--text-muted);
-        font-size: 12px;
-    }
-
     .wowy-team-mark {
         width: 26px;
         height: 26px;
@@ -831,7 +794,7 @@
 
     .wowy-controls {
         display: grid;
-        grid-template-columns: minmax(145px, 170px) minmax(240px, 1fr);
+        grid-template-columns: minmax(145px, 170px) minmax(145px, 170px) minmax(240px, 1fr);
         gap: 10px;
         margin-bottom: 14px;
     }
@@ -1046,6 +1009,28 @@
         height: 21px;
     }
 
+    .wowy-historical-team {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 2px;
+        max-width: 180px;
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.15;
+    }
+
+    .wowy-historical-team small {
+        overflow: hidden;
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .metric-positive {
         color: var(--positive) !important;
     }
@@ -1155,9 +1140,6 @@
             padding-left: 0;
         }
 
-        .wowy-leader-grid {
-            grid-template-columns: 1fr;
-        }
     }
 
     @media (max-width: 680px) {

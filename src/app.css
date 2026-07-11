@@ -210,10 +210,10 @@ nav .links a {
     color: var(--text-muted);
     font-size: 13px;
     font-weight: 500;
-    padding: 0 10px;
+    /* Keep the active indicator with its label, rather than at the nav baseline. */
+    padding: 8px 10px 9px;
     display: flex;
     align-items: center;
-    height: 100%;
     border-bottom: 2px solid transparent;
     border-top: none;
     border-left: none;
@@ -245,7 +245,7 @@ nav .links a.active {
 
     nav .links a {
         font-size: 12px;
-        padding: 0 7px;
+        padding: 8px 7px 9px;
     }
 }
 

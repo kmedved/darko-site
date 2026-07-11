@@ -166,6 +166,9 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260710_005_add_historical_leaderboard_snapshot_rpcs.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_006_add_player_search_snapshot_rpc.sql` - Supabase SQL migration.
 - `supabase/migrations/20260710_007_add_active_wowy_leaderboard_rpc.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_008_add_wowy_season_leaderboard_rpc.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_009_optimize_wowy_season_list_rpc.sql` - Supabase SQL migration.
+- `supabase/migrations/20260710_010_add_wowy_season_opening_snapshots.sql` - Supabase SQL migration.
 
 ## tests
 

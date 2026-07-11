@@ -110,11 +110,12 @@ test('desktop navigation switches to drawer before links can overflow', async ()
     assert.ok(drawerBreakpoint, 'desktop links should hide at the tablet drawer breakpoint');
 });
 
-test('compact desktop navigation reduces spacing before drawer mode', async () => {
+test('compact desktop navigation keeps the active indicator near its label before drawer mode', async () => {
     const appCss = await fs.readFile(path.resolve(process.cwd(), APP_CSS_FILE), 'utf8');
     const layout = await fs.readFile(path.resolve(process.cwd(), LAYOUT_FILE), 'utf8');
 
-    assert.match(appCss, /@media\s*\(max-width:\s*1320px\)\s*\{[\s\S]*?nav \.links a\s*\{[\s\S]*?font-size:\s*12px;[\s\S]*?padding:\s*0 7px;/);
+    assert.match(appCss, /nav \.links a\s*\{[\s\S]*?padding:\s*8px 10px 9px;[\s\S]*?border-bottom:\s*2px solid transparent;/);
+    assert.match(appCss, /@media\s*\(max-width:\s*1320px\)\s*\{[\s\S]*?nav \.links a\s*\{[\s\S]*?font-size:\s*12px;[\s\S]*?padding:\s*8px 7px 9px;/);
     assert.match(layout, /@media\s*\(max-width:\s*1320px\)\s*\{[\s\S]*?\.theme-slider__input\s*\{[\s\S]*?width:\s*58px;/);
 });
 
