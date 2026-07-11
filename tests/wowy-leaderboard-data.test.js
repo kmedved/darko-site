@@ -45,6 +45,16 @@ const allTimeSeasonMigration = readFileSync(
     ),
     'utf8'
 );
+const bioFilterMigration = readFileSync(
+    join(
+        __dirname,
+        '..',
+        'supabase',
+        'migrations',
+        '20260711_001_add_wowy_leaderboard_bio_filters.sql'
+    ),
+    'utf8'
+);
 const seasonAverageActivationOperation = readFileSync(
     join(
         __dirname,
@@ -102,6 +112,8 @@ test('active WOWY helper exposes the compact leaderboard contract and current-te
         'team_code',
         'tm_id',
         'position',
+        'filter_position',
+        'height_inches',
         'snapshot_context',
         'wowy_rapm',
         'wowy_orapm',
@@ -151,6 +163,73 @@ test('historical WOWY rows preserve season context without current-team fallback
     assert.match(normalizer, /last_date:/);
     assert.match(normalizer, /tm_id: isHistoricalSeasonSummary \? null : resolveTeamId/);
     assert.match(normalizer, /position: isHistoricalSeasonSummary \? null : normalizePosition/);
+});
+
+test('WOWY leaderboard bio filters use canonical position groups without changing historical identity', () => {
+    assert.match(
+        bioFilterMigration,
+        /function public\.normalize_wowy_filter_position\(p_position text\)/
+    );
+    assert.match(bioFilterMigration, /language sql/);
+    assert.match(bioFilterMigration, /immutable/);
+    assert.match(bioFilterMigration, /security invoker/);
+    assert.match(bioFilterMigration, /'G-F',\s*'F-G'/);
+    assert.match(bioFilterMigration, /'F-C',\s*'C-F'/);
+    assert.match(bioFilterMigration, /when normalized\.position::numeric <= 2 then 'G'/);
+    assert.match(bioFilterMigration, /when normalized\.position::numeric < 5 then 'F-C'/);
+    assert.match(
+        bioFilterMigration,
+        /grant execute on function public\.normalize_wowy_filter_position\(text\)\s+to anon, authenticated, service_role;/
+    );
+
+    const activeStart = bioFilterMigration.indexOf(
+        'create or replace function public.get_active_wowy_player_ratings()'
+    );
+    const seasonStart = bioFilterMigration.indexOf(
+        'create or replace function public.get_wowy_season_player_ratings(p_season integer)'
+    );
+    const allTimeStart = bioFilterMigration.indexOf(
+        'create or replace function public.get_wowy_all_time_player_seasons()'
+    );
+    assert.ok(activeStart >= 0 && seasonStart > activeStart && allTimeStart > seasonStart);
+
+    const activeRpc = bioFilterMigration.slice(activeStart, seasonStart);
+    const seasonRpc = bioFilterMigration.slice(seasonStart, allTimeStart);
+    const allTimeRpc = bioFilterMigration.slice(allTimeStart);
+    assert.match(activeRpc, /coalesce\(active\.position, players\.position\) as position/);
+    assert.match(
+        activeRpc,
+        /normalize_wowy_filter_position\(\s*coalesce\(active\.position, players\.position\)/s
+    );
+    assert.match(activeRpc, /players\.height between 60 and 96/);
+
+    assert.match(seasonRpc, /language plpgsql/);
+    assert.match(seasonRpc, /if public\.is_wowy_season_average_activated\(\) then/);
+    assert.match(seasonRpc, /null::text as position/);
+    assert.match(seasonRpc, /from public\.wowy_season_player_averages as averages/);
+    assert.match(seasonRpc, /from public\.wowy_season_opening_snapshots as snapshots/);
+    assert.equal(
+        (seasonRpc.match(/normalize_wowy_filter_position\(players\.position\) as filter_position/g) || []).length,
+        2,
+        'both historical publication branches need the explicit filter position'
+    );
+    assert.equal(
+        (seasonRpc.match(/players\.height between 60 and 96/g) || []).length,
+        2,
+        'both historical publication branches need the same plausible height rule'
+    );
+
+    assert.match(allTimeRpc, /null::text as position/);
+    assert.match(allTimeRpc, /normalize_wowy_filter_position\(players\.position\) as filter_position/);
+    assert.match(allTimeRpc, /players\.height between 60 and 96/);
+    assert.match(allTimeRpc, /limit 100/);
+
+    const normalizerStart = supabaseHelper.indexOf('function normalizeWowyLeaderboardRows(data)');
+    const normalizerEnd = supabaseHelper.indexOf('function mergePlayerWithActiveSnapshot', normalizerStart);
+    const normalizer = supabaseHelper.slice(normalizerStart, normalizerEnd);
+    assert.match(normalizer, /filter_position: normalizeWowyFilterPosition/);
+    assert.match(normalizer, /height_inches: normalizeHeightInches/);
+    assert.match(normalizer, /isHistoricalSeasonSummary \? null : row\.position/);
 });
 
 test('all-time WOWY leaderboard uses the fixed top 100 unweighted player-season averages', () => {
@@ -340,6 +419,11 @@ test('all-era historical WOWY rows are sourced from unweighted season averages',
     assert.match(seasonAverageActivationOperation, /averages\.last_date as date/);
     assert.match(seasonAverageActivationOperation, /null::integer as tm_id/);
     assert.match(seasonAverageActivationOperation, /null::text as position/);
+    assert.match(
+        seasonAverageActivationOperation,
+        /normalize_wowy_filter_position\(players\.position\) as filter_position/
+    );
+    assert.match(seasonAverageActivationOperation, /players\.height between 60 and 96/);
     assert.match(seasonAverageActivationOperation, /null::integer as career_game_num/);
     assert.match(seasonAverageActivationOperation, /'season-average'::text as snapshot_context/);
     assert.match(seasonAverageActivationOperation, /left join public\.players as players/);

@@ -161,6 +161,12 @@ and uses a per-player latest-row lookup in `wowy_ratings` for the observed RAPM 
 players without a WOWY observation are omitted. The server helper fills placeholder current-team
 metadata from `get_latest_player_teams()` before rendering.
 
+`supabase/migrations/20260711_001_add_wowy_leaderboard_bio_filters.sql` also exposes two
+filter-only attributes on every WOWY leaderboard row: `filter_position` and `height_inches`.
+`filter_position` is normalized to one of `G`, `G-F`, `F`, `F-C`, or `C`; Current uses the current
+roster classification with a player-dimension fallback. `height_inches` comes only from
+`players.height` and is `NULL` unless the listed value is in the plausible 60–96-inch range.
+
 ### Historical WOWY leaderboard season averages
 
 `supabase/migrations/20260710_011_add_wowy_season_player_averages.sql` provisions the all-era
@@ -169,8 +175,8 @@ and exposure values are the **unweighted arithmetic mean** of every certified pl
 observation published for that player in the selected NBA season; they are not a single-game
 snapshot and are not exposure- or minutes-weighted.
 
-This is an intentional two-phase publication: apply 011, run the checked model publisher, deploy
-the context-aware `/wowy` UI, then explicitly run the manual operation
+This is an intentional two-phase publication: apply 011 and the subsequent WOWY schema migrations,
+run the checked model publisher, deploy the context-aware `/wowy` UI, then explicitly run the manual operation
 `supabase/operations/20260710_activate_wowy_season_player_averages.sql`. That operation owns its
 own transaction. The UI reads `snapshot_context`, so it truthfully presents opening-game rows
 until the cutover and averages afterward. The manual operation fails closed unless the average table covers every
@@ -190,6 +196,11 @@ the average belongs to only one stint. The paired `team_codes` and `team_names` 
 each individual team for filters and provenance. The historical RPC returns no current `tm_id` or
 position, preventing an old team from receiving a modern logo/link; `date` is a compatibility
 alias for `last_date`, while seasonal UI should use the explicit date range and game count.
+
+The 20260711 filter fields deliberately do not change that historical identity contract:
+`filter_position` and `height_inches` are explicit player-dimension metadata for filtering only.
+They are sourced from the current crosswalk, not inferred historical roster, team, or game fields;
+the display `position` remains `NULL` for every historical row.
 
 Migration 010's `wowy_season_opening_snapshots` table remains a model publication artifact. After
 the guarded manual activation operation, `get_wowy_leaderboard_seasons()` and
@@ -212,7 +223,8 @@ averages—there is no minutes, exposure, recency, or game-count cutoff. The ran
 `wowy_rapm DESC`, then season end year descending, then canonical NBA ID ascending. Each row
 includes the ordinal `leaderboard_rank`, season end year, player name, all historical team
 provenance, the three unweighted RAPM averages, exposure, date range, and contributing-game count.
-It leaves the current-active and selected-season RPC contracts unchanged.
+Migration 20260711 adds the same filter-only player-dimension fields to all three leaderboard RPCs
+without changing their ranking, RAPM values, or historical team provenance.
 
 | Column | Postgres type | Notes |
 |---|---|---|
@@ -221,6 +233,8 @@ It leaves the current-active and selected-season RPC contracts unchanged.
 | team_codes, team_names | text[] | Paired individual historical team codes/names, in the same chronological order |
 | first_date, last_date | date | First and last published WOWY observations included in the season average |
 | season_games | integer | Number of published player-game observations in the unweighted average |
+| filter_position | text | Canonical inclusive player-bio filter group: `G`, `G-F`, `F`, `F-C`, or `C`; never a historical roster claim |
+| height_inches | double precision | Listed player-dimension height, exposed only when 60–96 inches |
 | wowy_rapm, wowy_orapm, wowy_drapm, exposure | double precision | Certified unweighted player-season means |
 
 ---
@@ -375,10 +389,10 @@ Comma-joined string of all 69 fetched `player_ratings` column names (66 original
 | Function | Queries | Returns | Used by |
 |---|---|---|---|
 | `getActivePlayers()` | Finds the latest `player_ratings.season`, reads current-season `player_ratings` rows with RATING_COLUMNS and `active_roster = 1`, and dedupes to the latest row per player. This includes `future_game = 1` projection rows, which are the current DARKO snapshot. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
-| `getActiveWowyPlayers()` | Calls `get_active_wowy_player_ratings()`, normalizes team IDs/positions, and caches the compact current-active snapshot for five minutes. | One current-identity row per active player with a latest observed WOWY RAPM row | `/wowy` |
-| `getWowyAllTimePlayers()` | Calls `get_wowy_all_time_player_seasons()`, preserves its database-owned deterministic top-100 order for one hour, and does not cache an empty pre-activation response. | At most 100 all-time player-season rows with unweighted WOWY averages, ordinal rank, season, and historical teams | `/wowy` default |
+| `getActiveWowyPlayers()` | Calls `get_active_wowy_player_ratings()`, normalizes team IDs/display positions plus explicit bio filter fields, and caches the compact current-active snapshot for five minutes. | One current-identity row per active player with a latest observed WOWY RAPM row, canonical filter position, and plausible listed height | `/wowy` |
+| `getWowyAllTimePlayers()` | Calls `get_wowy_all_time_player_seasons()`, preserves its database-owned deterministic top-100 order for one hour, and does not cache an empty pre-activation response. | At most 100 all-time player-season rows with unweighted WOWY averages, ordinal rank, season, historical teams, and explicit bio filter fields | `/wowy` default |
 | `getWowyLeaderboardSeasons()` | Calls `get_wowy_leaderboard_seasons()` and caches the season list for one hour. | All published historical season end years (1980 onward) | `/wowy` |
-| `getWowySeasonPlayers(season)` | Calls `get_wowy_season_player_ratings(p_season)`, preserves chronological historical team arrays, and caches the selected season for five minutes. | One player-season row with unweighted WOWY means, historical teams, date range, and game count | `/wowy?season=YYYY` |
+| `getWowySeasonPlayers(season)` | Calls `get_wowy_season_player_ratings(p_season)`, preserves chronological historical team arrays, and caches the selected season for five minutes. | One player-season row with unweighted WOWY means, historical teams, date range, game count, and explicit bio filter fields | `/wowy?season=YYYY` |
 | `getPlayersIndex()` | `players` with explicit `PLAYERS_DIM_COLUMNS`, merged with `getActivePlayers()`. **Hardcodes output fields** — does NOT pass through survivorship, projections, or RAPM columns. | Array of player objects (subset of fields) | Player search/index pages |
 | `getLongevityRows()` | Calls `getActivePlayers()`, maps DB columns to frontend-aliased keys | Array with aliased longevity fields | `/api/longevity` |
 | `getLongevityTrajectory(id)` | `player_ratings` filtered to one player, maps to chart fields | Array of trajectory points | `/api/player/[id]/longevity` |

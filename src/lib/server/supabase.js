@@ -350,9 +350,44 @@ const POSITION_MAP = {
     'SG': 'G', 'SF': 'F', 'PF': 'F'
 };
 
+const WOWY_FILTER_POSITION_MAP = {
+    G: 'G', PG: 'G', SG: 'G', GUARD: 'G',
+    'G-F': 'G-F', 'F-G': 'G-F',
+    'GUARD-FORWARD': 'G-F', 'FORWARD-GUARD': 'G-F',
+    F: 'F', SF: 'F', PF: 'F', FORWARD: 'F',
+    'F-C': 'F-C', 'C-F': 'F-C',
+    'FORWARD-CENTER': 'F-C', 'CENTER-FORWARD': 'F-C',
+    C: 'C', CENTER: 'C'
+};
+
 function normalizePosition(pos) {
     if (!pos) return null;
     return POSITION_MAP[pos] ?? pos;
+}
+
+// Match public.normalize_wowy_filter_position(). This is deliberately
+// separate from display `position`: historical WOWY rows do not inherit a
+// present-day position, while their filter field is explicit bio metadata.
+function normalizeWowyFilterPosition(position) {
+    if (typeof position !== 'string') return null;
+    const normalized = position.trim().toUpperCase();
+    if (!normalized) return null;
+    if (WOWY_FILTER_POSITION_MAP[normalized]) {
+        return WOWY_FILTER_POSITION_MAP[normalized];
+    }
+
+    if (!/^[1-5](?:\.0|\.5)?$/.test(normalized)) return null;
+    const numericPosition = Number.parseFloat(normalized);
+    if (numericPosition <= 2) return 'G';
+    if (numericPosition < 3) return 'G-F';
+    if (numericPosition <= 3) return 'F';
+    if (numericPosition < 5) return 'F-C';
+    return 'C';
+}
+
+function normalizeHeightInches(value) {
+    const height = Number.parseFloat(value);
+    return Number.isFinite(height) && height >= 60 && height <= 96 ? height : null;
 }
 
 function normalizedTeamName(value) {
@@ -462,6 +497,13 @@ function normalizeWowyLeaderboardRows(data) {
                 // past team look like a current team in the UI.
                 tm_id: isHistoricalSeasonSummary ? null : resolveTeamId(row, teamName),
                 position: isHistoricalSeasonSummary ? null : normalizePosition(row.position ?? null),
+                // Unlike display position, this is an explicitly named,
+                // filter-only attribute. Historical values never affect a
+                // team identity or appear as a season-time roster field.
+                filter_position: normalizeWowyFilterPosition(
+                    row.filter_position ?? (isHistoricalSeasonSummary ? null : row.position)
+                ),
+                height_inches: normalizeHeightInches(row.height_inches ?? row.height),
                 snapshot_context: snapshotContext,
                 wowy_rapm: row.wowy_rapm ?? null,
                 wowy_orapm: row.wowy_orapm ?? null,

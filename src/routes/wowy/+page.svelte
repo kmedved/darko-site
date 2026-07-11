@@ -22,6 +22,11 @@
     let { data } = $props();
 
     const PAGE_SIZE = 50;
+    const positionOptions = [
+        { value: 'G', label: 'Guards' },
+        { value: 'F', label: 'Forwards' },
+        { value: 'C', label: 'Centers' }
+    ];
     const textSortColumns = new Set(['player_name', 'team_name', 'team_sort_label']);
     const seasonSortColumns = new Set([
         'player_name',
@@ -197,6 +202,9 @@
     let sortDirection = $state('desc');
     let searchQuery = $state('');
     let teamFilter = $state('all');
+    let positionFilter = $state('all');
+    let minHeight = $state('');
+    let maxHeight = $state('');
     let leaderboardPage = $state(1);
 
     const players = $derived(
@@ -271,16 +279,43 @@
             ? teamFilter
             : 'all'
     );
+    const activePositionFilter = $derived(
+        positionFilter === 'all' || positionOptions.some((position) => position.value === positionFilter)
+            ? positionFilter
+            : 'all'
+    );
+    const heightOptions = $derived.by(() => {
+        const heights = new Set();
+        for (const player of players) {
+            const height = playerHeightInches(player);
+            if (height !== null && height > 0) heights.add(height);
+        }
+        return [...heights].sort((left, right) => left - right);
+    });
+    const activeMinHeight = $derived(parseHeightBound(minHeight));
+    const activeMaxHeight = $derived(parseHeightBound(maxHeight));
+    const hasHeightFilter = $derived(activeMinHeight !== null || activeMaxHeight !== null);
+    const hasInvalidHeightRange = $derived(
+        activeMinHeight !== null && activeMaxHeight !== null && activeMinHeight > activeMaxHeight
+    );
     const teamScopedPlayers = $derived.by(() =>
         activeTeamFilter === 'all'
             ? players
             : players.filter((player) => teamFilterValues(player).includes(activeTeamFilter))
     );
+    const positionScopedPlayers = $derived.by(() =>
+        activePositionFilter === 'all'
+            ? teamScopedPlayers
+            : teamScopedPlayers.filter((player) => playerMatchesPosition(player, activePositionFilter))
+    );
+    const heightScopedPlayers = $derived.by(() =>
+        positionScopedPlayers.filter((player) => matchesHeightRange(player, activeMinHeight, activeMaxHeight))
+    );
     const filteredPlayers = $derived.by(() => {
         const query = searchQuery.trim().toLocaleLowerCase();
-        if (!query) return teamScopedPlayers;
+        if (!query) return heightScopedPlayers;
 
-        return teamScopedPlayers.filter((player) => {
+        return heightScopedPlayers.filter((player) => {
             const searchable = [
                 player?.player_name,
                 player?.team_name,
@@ -289,7 +324,7 @@
                 ...historicalTeamNames(player),
                 teamDisplayLabel(player),
                 teamAbbr(player?.team_name),
-                player?.position
+                playerFilterPosition(player)
             ].join(' ').toLocaleLowerCase();
             return searchable.includes(query);
         });
@@ -331,6 +366,32 @@
         return Number.isFinite(number) ? number : null;
     }
 
+    function parseHeightBound(value) {
+        const height = toNumber(value);
+        return height !== null && height > 0 ? height : null;
+    }
+
+    function formatHeightLabel(value) {
+        const height = toNumber(value);
+        if (height === null || height <= 0) return '—';
+
+        const inches = Math.round(height);
+        return `${Math.floor(inches / 12)}′ ${inches % 12}″`;
+    }
+
+    function playerHeightInches(player) {
+        const height = toNumber(player?.height_inches ?? player?.height);
+        return height !== null && height > 0 ? height : null;
+    }
+
+    function matchesHeightRange(player, minimum, maximum) {
+        if (minimum === null && maximum === null) return true;
+
+        const height = playerHeightInches(player);
+        if (height === null) return false;
+        return (minimum === null || height >= minimum) && (maximum === null || height <= maximum);
+    }
+
     function toggleSort(column) {
         ({ sortColumn, sortDirection } = getNextSortState({
             sortColumn,
@@ -343,6 +404,26 @@
 
     function setTeamFilter(value) {
         teamFilter = value;
+        leaderboardPage = 1;
+    }
+
+    function setPositionFilter(value) {
+        positionFilter = value;
+        leaderboardPage = 1;
+    }
+
+    function setHeightFilter(bound, value) {
+        if (bound === 'min') {
+            minHeight = value;
+        } else {
+            maxHeight = value;
+        }
+        leaderboardPage = 1;
+    }
+
+    function clearHeightFilters() {
+        minHeight = '';
+        maxHeight = '';
         leaderboardPage = 1;
     }
 
@@ -373,6 +454,9 @@
             sortDirection = 'desc';
         }
         teamFilter = 'all';
+        positionFilter = 'all';
+        minHeight = '';
+        maxHeight = '';
         searchQuery = '';
         leaderboardPage = 1;
         const suffix = selection === 'all-time'
@@ -436,6 +520,15 @@
 
     function playerName(player) {
         return player?.player_name || `Player ${player?.nba_id ?? '—'}`;
+    }
+
+    function playerFilterPosition(player) {
+        const position = player?.filter_position ?? player?.position;
+        return typeof position === 'string' ? position.trim().toUpperCase() : '';
+    }
+
+    function playerMatchesPosition(player, positionGroup) {
+        return playerFilterPosition(player).split('-').includes(positionGroup);
     }
 
     function playerTrajectoryUrl(player) {
@@ -703,6 +796,20 @@
                     </select>
                 </label>
 
+                <label class="wowy-control-field" for="wowy-position-filter">
+                    <span class="sr-only">Filter by position</span>
+                    <select
+                        id="wowy-position-filter"
+                        value={activePositionFilter}
+                        onchange={(event) => setPositionFilter(event.currentTarget.value)}
+                    >
+                        <option value="all">All positions</option>
+                        {#each positionOptions as position (position.value)}
+                            <option value={position.value}>{position.label}</option>
+                        {/each}
+                    </select>
+                </label>
+
                 <label class="wowy-control-field wowy-control-field--search" for="wowy-player-search">
                     <span class="sr-only">Search players</span>
                     <input
@@ -716,6 +823,63 @@
                     />
                 </label>
             </div>
+
+            <details class="wowy-advanced-filters">
+                <summary>
+                    <span>Advanced filters</span>
+                    {#if hasHeightFilter}
+                        <span class="wowy-filter-indicator">Height active</span>
+                    {/if}
+                </summary>
+                <div class="wowy-advanced-filters__content">
+                    <p id="wowy-height-filter-help">
+                        Limit results by listed height. Players without a recorded height are excluded only when a bound is set.
+                    </p>
+                    <div class="wowy-height-fields">
+                        <label class="wowy-height-field" for="wowy-min-height-filter">
+                            <span>Minimum height</span>
+                            <select
+                                id="wowy-min-height-filter"
+                                value={minHeight}
+                                aria-describedby="wowy-height-filter-help"
+                                onchange={(event) => setHeightFilter('min', event.currentTarget.value)}
+                            >
+                                <option value="">No minimum</option>
+                                {#each heightOptions as height (height)}
+                                    <option value={String(height)}>{formatHeightLabel(height)}</option>
+                                {/each}
+                            </select>
+                        </label>
+                        <label class="wowy-height-field" for="wowy-max-height-filter">
+                            <span>Maximum height</span>
+                            <select
+                                id="wowy-max-height-filter"
+                                value={maxHeight}
+                                aria-describedby="wowy-height-filter-help"
+                                onchange={(event) => setHeightFilter('max', event.currentTarget.value)}
+                            >
+                                <option value="">No maximum</option>
+                                {#each heightOptions as height (height)}
+                                    <option value={String(height)}>{formatHeightLabel(height)}</option>
+                                {/each}
+                            </select>
+                        </label>
+                        <button
+                            class="wowy-height-clear"
+                            type="button"
+                            onclick={clearHeightFilters}
+                            disabled={!hasHeightFilter}
+                        >
+                            Clear height
+                        </button>
+                    </div>
+                    {#if hasInvalidHeightRange}
+                        <p class="wowy-height-error" role="status">
+                            Minimum height must not exceed maximum height.
+                        </p>
+                    {/if}
+                </div>
+            </details>
 
             <div class="wowy-table-shell">
                 <table class="wowy-table" class:wowy-table--all-time={isAllTimeView}>
@@ -759,7 +923,7 @@
                         {#if visiblePlayers.length === 0}
                             <tr>
                                 <td class="wowy-empty-row" colspan={tableColumns.length}>
-                                    No players match the selected season, team, and search terms.
+                                    No players match the selected season and filters.
                                 </td>
                             </tr>
                         {:else}
@@ -1115,7 +1279,7 @@
 
     .wowy-controls {
         display: grid;
-        grid-template-columns: minmax(145px, 170px) minmax(145px, 170px) minmax(240px, 1fr);
+        grid-template-columns: repeat(3, minmax(145px, 170px)) minmax(240px, 1fr);
         gap: 10px;
         margin-bottom: 14px;
     }
@@ -1125,7 +1289,8 @@
     }
 
     .wowy-control-field select,
-    .wowy-control-field input {
+    .wowy-control-field input,
+    .wowy-height-field select {
         width: 100%;
         height: 38px;
         border: 1px solid var(--border);
@@ -1140,11 +1305,129 @@
 
     .wowy-control-field input:focus,
     .wowy-control-field select:focus,
+    .wowy-height-field select:focus,
+    .wowy-advanced-filters summary:focus-visible,
+    .wowy-height-clear:focus-visible,
     .wowy-export-button:focus-visible,
     .wowy-pagination button:focus-visible,
     .wowy-column-heading > button:focus-visible {
         border-color: var(--accent);
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+
+    .wowy-advanced-filters {
+        margin-bottom: 14px;
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        background: var(--bg);
+    }
+
+    .wowy-advanced-filters summary {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        border-radius: var(--radius-sm);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 800;
+        list-style: none;
+        padding: 0 12px;
+    }
+
+    .wowy-advanced-filters summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .wowy-advanced-filters summary::after {
+        margin-left: auto;
+        color: var(--text-muted);
+        content: '+';
+        font-family: var(--font-mono);
+        font-size: 16px;
+        font-weight: 650;
+    }
+
+    .wowy-advanced-filters[open] summary {
+        border-bottom: 1px solid var(--border-subtle);
+        color: var(--text);
+    }
+
+    .wowy-advanced-filters[open] summary::after {
+        content: '−';
+    }
+
+    .wowy-advanced-filters__content {
+        padding: 10px 12px 12px;
+    }
+
+    .wowy-advanced-filters__content > p {
+        max-width: 660px;
+        color: var(--text-muted);
+        font-size: 11px;
+        line-height: 1.4;
+    }
+
+    .wowy-filter-indicator {
+        border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+        border-radius: 999px;
+        color: var(--accent);
+        font-family: var(--font-mono);
+        font-size: 9px;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+        padding: 2px 6px;
+        text-transform: uppercase;
+    }
+
+    .wowy-height-fields {
+        display: flex;
+        align-items: end;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .wowy-height-field {
+        display: grid;
+        flex: 1 1 155px;
+        gap: 5px;
+        max-width: 185px;
+    }
+
+    .wowy-height-field > span {
+        color: var(--text-secondary);
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .wowy-height-clear {
+        min-height: 38px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 800;
+        padding: 0 12px;
+    }
+
+    .wowy-height-clear:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .wowy-height-clear:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+
+    .wowy-height-error {
+        margin-top: 8px;
+        color: var(--negative) !important;
     }
 
     .wowy-table-shell {
@@ -1445,6 +1728,14 @@
             -webkit-overflow-scrolling: touch;
         }
 
+        .wowy-controls {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .wowy-control-field--search {
+            grid-column: 1 / -1;
+        }
+
         .wowy-table {
             width: max-content;
             min-width: 720px;
@@ -1517,6 +1808,19 @@
 
         .wowy-controls {
             grid-template-columns: 1fr;
+        }
+
+        .wowy-height-fields {
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+
+        .wowy-height-field {
+            max-width: none;
+        }
+
+        .wowy-height-clear {
+            width: 100%;
         }
 
         .wowy-pagination {

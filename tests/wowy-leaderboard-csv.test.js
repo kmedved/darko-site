@@ -16,6 +16,8 @@ test('WOWY leaderboard CSV uses the current-active observed-rating schema', () =
             'Player',
             'Team',
             'Pos',
+            'Filter Position',
+            'Height (in)',
             'WOWY RAPM',
             'WOWY O-RAPM',
             'WOWY D-RAPM',
@@ -31,6 +33,8 @@ test('WOWY leaderboard CSV uses the current-active observed-rating schema', () =
             'player_name',
             'team_name',
             'position',
+            'filter_position',
+            'height_inches',
             'wowy_rapm',
             'wowy_orapm',
             'wowy_drapm',
@@ -45,11 +49,13 @@ test('WOWY leaderboard CSV preserves signed ratings and model exposure', () => {
     const total = wowyLeaderboardCsvColumns.find((column) => column.accessor === 'wowy_rapm');
     const exposure = wowyLeaderboardCsvColumns.find((column) => column.accessor === 'exposure');
     const sampleGames = wowyLeaderboardCsvColumns.find((column) => column.accessor === 'career_game_num');
+    const height = wowyLeaderboardCsvColumns.find((column) => column.accessor === 'height_inches');
 
     assert.equal(total.format(2.34), '+2.3');
     assert.equal(total.format(-0.04), '-0.0');
     assert.equal(exposure.format(154.26), '154.3');
     assert.equal(sampleGames.format(82), '82');
+    assert.equal(height.format(77), '77');
 });
 
 test('opening-game WOWY CSV retains the snapshot schema during the migration window', () => {
@@ -60,6 +66,8 @@ test('opening-game WOWY CSV retains the snapshot schema during the migration win
             'Player',
             'Team Code',
             'Team',
+            'Filter Position',
+            'Height (in)',
             'WOWY RAPM',
             'WOWY O-RAPM',
             'WOWY D-RAPM',
@@ -75,6 +83,8 @@ test('opening-game WOWY CSV retains the snapshot schema during the migration win
             'player_name',
             'team_code',
             'team_name',
+            'filter_position',
+            'height_inches',
             'wowy_rapm',
             'wowy_orapm',
             'wowy_drapm',
@@ -93,6 +103,8 @@ test('historical WOWY CSV preserves multi-team provenance and season-average con
             'Player',
             'Team Codes',
             'Teams',
+            'Filter Position',
+            'Height (in)',
             'Avg WOWY RAPM',
             'Avg WOWY O-RAPM',
             'Avg WOWY D-RAPM',
@@ -109,6 +121,8 @@ test('historical WOWY CSV preserves multi-team provenance and season-average con
             'player_name',
             'team_codes',
             'team_names',
+            'filter_position',
+            'height_inches',
             'wowy_rapm',
             'wowy_orapm',
             'wowy_drapm',
@@ -123,6 +137,10 @@ test('historical WOWY CSV preserves multi-team provenance and season-average con
         (column) => column.accessor === 'team_codes'
     );
     assert.equal(teamCodes.format(['MIA', 'LAL']), 'MIA / LAL');
+    const height = wowyHistoricalLeaderboardCsvColumns.find(
+        (column) => column.accessor === 'height_inches'
+    );
+    assert.equal(height.format(null), '—');
 });
 
 test('all-time WOWY CSV preserves the official rank and player-season context', () => {
@@ -134,6 +152,8 @@ test('all-time WOWY CSV preserves the official rank and player-season context', 
             'Season',
             'Team Codes',
             'Teams',
+            'Filter Position',
+            'Height (in)',
             'Avg WOWY RAPM',
             'Avg WOWY O-RAPM',
             'Avg WOWY D-RAPM',
@@ -151,6 +171,8 @@ test('all-time WOWY CSV preserves the official rank and player-season context', 
             'season',
             'team_codes',
             'team_names',
+            'filter_position',
+            'height_inches',
             'wowy_rapm',
             'wowy_orapm',
             'wowy_drapm',

@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.29",
+  "arch_version": "0.1.30",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -703,6 +703,7 @@
     "supabase/migrations/20260710_010_add_wowy_season_opening_snapshots.sql",
     "supabase/migrations/20260710_011_add_wowy_season_player_averages.sql",
     "supabase/migrations/20260710_012_add_wowy_all_time_season_leaderboard.sql",
+    "supabase/migrations/20260711_001_add_wowy_leaderboard_bio_filters.sql",
     "svelte.config.js",
     "tests/api-active-players-cache.test.js",
     "tests/api-player-history.test.js",

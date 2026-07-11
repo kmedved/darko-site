@@ -1,7 +1,8 @@
 -- MANUAL PRODUCTION OPERATION — do not run this file as part of normal
 -- Supabase migration replay.
 --
--- Run only after migration 011 has provisioned public.wowy_season_player_averages
+-- Run only after migration 011 has provisioned public.wowy_season_player_averages,
+-- later WOWY schema migrations (currently through 20260711_001) are applied,
 -- and `33_wowy_rapm/scripts/publish_wowy_season_player_averages.py --publish`
 -- has loaded its checked artifact. This file opens and commits its own
 -- transaction; run it with a client in autocommit mode, not inside another
@@ -233,6 +234,13 @@ as $function$
             averages.team_names,
             null::integer as tm_id,
             null::text as position,
+            -- These are explicitly named player-dimension filters, never
+            -- historical roster/team identity. `position` stays NULL above.
+            public.normalize_wowy_filter_position(players.position) as filter_position,
+            case
+                when players.height between 60 and 96 then players.height
+                else null::double precision
+            end as height_inches,
             averages.wowy_rapm,
             averages.wowy_orapm,
             averages.wowy_drapm,
