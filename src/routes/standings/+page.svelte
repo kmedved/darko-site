@@ -7,6 +7,10 @@
     } from '$lib/utils/csvPresets.js';
     import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr, teamId } from '$lib/utils/teamAbbreviations.js';
+    import {
+        buildMetricHeatScales,
+        getMetricHeatVariables
+    } from '$lib/utils/metricHeatScales.js';
 
     let { data } = $props();
 
@@ -93,6 +97,11 @@
         { key: 'Out', label: 'Out', alignClass: 'num', dataType: 'percent' },
         { key: 'conference', label: 'Conference', alignClass: 'name', dataType: 'conference' }
     ];
+    const standingsHeatAccessors = Object.fromEntries(
+        [...baseStandingsColumns, ...expandedStandingsColumns]
+            .filter((column) => column.key !== 'Rk' && ['number', 'percent'].includes(column.dataType))
+            .map((column) => [column.key, column.key])
+    );
 
     const visibleStandingsColumns = $derived.by(() =>
         showExpandedStandings ? [...baseStandingsColumns, ...expandedStandingsColumns] : [...baseStandingsColumns]
@@ -100,6 +109,9 @@
 
     const standings = $derived(
         conference === 'East' ? (data.eastStandings || []) : (data.westStandings || [])
+    );
+    const standingsHeatScales = $derived.by(() =>
+        buildMetricHeatScales(standings, standingsHeatAccessors, { quantileStep: 0.1 })
     );
 
     const filteredStandings = $derived.by(() => {
@@ -315,9 +327,9 @@
     <title>Standings — DARKO DPM</title>
 </svelte:head>
 
-<div class="standings-page">
+<div class="standings-page" data-shiny-page>
     <div class="container standings-container">
-        <section class="standings-hero" aria-labelledby="standings-title">
+        <section class="standings-hero" data-shiny-surface="hero" aria-labelledby="standings-title">
             <div class="standings-title-block">
                 <div class="standings-icon" aria-hidden="true">
                     <span></span>
@@ -332,7 +344,7 @@
 
             <div class="summary-card-grid" aria-label="Simulation leaders">
                 {#each summaryCards as card (card.title)}
-                    <article class="summary-card">
+                    <article class="summary-card" data-shiny-surface="summary">
                         <div class="summary-media" aria-hidden="true">
                             {#if card.team && teamLogoUrl(card.team.team_name)}
                                 <img src={teamLogoUrl(card.team.team_name)} alt="" loading="lazy" onerror={hideBrokenImage} />
@@ -357,8 +369,8 @@
             <div class="empty-state">No standings data is currently available.</div>
         {:else}
             <div class="standings-workspace">
-                <section class="standings-table-panel" aria-label="{conference} conference standings">
-                    <div class="standings-controls">
+                <section class="standings-table-panel" data-shiny-surface="panel" aria-label="{conference} conference standings">
+                    <div class="standings-controls" data-shiny-surface="well">
                         <div class="conference-toggle" role="group" aria-label="Conference">
                             <button type="button" class:active={conference === 'East'} onclick={() => (conference = 'East')}>Eastern</button>
                             <button type="button" class:active={conference === 'West'} onclick={() => (conference = 'West')}>Western</button>
@@ -393,7 +405,7 @@
                     </div>
 
                     <div class="table-scroll-region" class:scrollable={showExpandedStandings}>
-                        <div class="table-wrapper {showExpandedStandings ? 'expanded' : ''}">
+                        <div class="table-wrapper {showExpandedStandings ? 'expanded' : ''}" data-shiny-table>
                             <table>
                                 <thead>
                                     <tr>
@@ -418,7 +430,10 @@
                                         {#each sortedStandings as team (team.team_name)}
                                             <tr>
                                                 {#each visibleStandingsColumns as column (column.key)}
-                                                    <td class={getCellClass(column, team?.[column.key])}>
+                                                    <td
+                                                        class="{getCellClass(column, team?.[column.key])} {standingsHeatScales[column.key] ? 'shiny-heat-cell' : ''}"
+                                                        style={getMetricHeatVariables(column.key, team?.[column.key], standingsHeatScales)}
+                                                    >
                                                         {#if column.isTeam}
                                                             <a class="team-link" href="/standings/{encodeURIComponent(team.team_name)}">
                                                                 <span class="team-mark">
@@ -444,7 +459,7 @@
                 </section>
 
                 <aside class="standings-rail" aria-label="Simulation insights">
-                    <section class="insight-card">
+                    <section class="insight-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
                             <h2>Playoff Odds Distribution</h2>
                             <span class="insight-info" title={`${conference}ern Conference`}>i</span>
@@ -480,7 +495,7 @@
                         </div>
                     </section>
 
-                    <section class="insight-card">
+                    <section class="insight-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
                             <h2>Conference Favorites</h2>
                             <span>WIN CONF %</span>

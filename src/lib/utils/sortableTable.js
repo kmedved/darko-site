@@ -49,6 +49,11 @@ export function getSortGlyph(sortColumn, sortDirection, column) {
     return sortDirection === 'asc' ? '↑' : '↓';
 }
 
+export function getSortAriaValue(sortColumn, sortDirection, column) {
+    if (sortColumn !== column) return 'none';
+    return sortDirection === 'asc' ? 'ascending' : 'descending';
+}
+
 export function getNextSortState({ sortColumn, sortDirection, column, defaultDirection = 'asc' }) {
     if (sortColumn === column) {
         return {

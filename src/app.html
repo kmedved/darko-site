@@ -12,6 +12,24 @@
 	<body data-sveltekit-preload-data="hover">
 		<script>
 			(function () {
+				var VIEW_KEY = 'darko-view';
+				var params = new URLSearchParams(window.location.search);
+				var displayPreview = params.get('display');
+				var legacyPreview = params.get('view');
+				var requestedView = displayPreview === 'shiny' || displayPreview === 'modern'
+					? displayPreview
+					: legacyPreview;
+				var view = requestedView === 'shiny' || requestedView === 'modern'
+					? requestedView
+					: 'modern';
+				if (requestedView !== 'shiny' && requestedView !== 'modern') {
+					try {
+						view = localStorage.getItem(VIEW_KEY) === 'shiny' ? 'shiny' : 'modern';
+					} catch (e) {
+						view = 'modern';
+					}
+				}
+				document.documentElement.dataset.view = view;
 				const THEME_KEY = 'darko-theme';
 				var THEMES = ['black', 'dark', 'light', 'white'];
 				try {

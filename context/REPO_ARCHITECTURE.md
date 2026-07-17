@@ -2,7 +2,7 @@ Paste this first.
 Pair with one `context/COMPRESSED_*.md` bundle for guided context, or with `context/FILE_INDEX.md` for oracle workflows.
 For implementation tasks, also paste raw source of the files you expect to edit.
 
-Architecture sync version: 0.1.30
+Architecture sync version: 0.1.31
 Archetype: Service / App | Secondary: Data / Workflow / Pipeline | Topology: single-unit | Policy B: only shipped/runtime behavior changes bump version.
 
 ## TL;DR
@@ -156,7 +156,7 @@ High-fan-in reverse edges:
 | Elo voting, pair generation, or leaderboard behavior | `src/lib/server/eloService.js` | `src/lib/server/eloSecurity.js`, `src/lib/server/supabase.js`, `src/routes/api/rate/*/+server.js`, `src/routes/rate/+page.svelte` | `COMPRESSED_data_api.md` |
 | Search/autocomplete and client fetch helpers | `src/lib/api.js` | `src/routes/api/search-players/+server.js`, `src/lib/components/PlayerSearch.svelte`, `src/lib/components/AllPlayerSearch.svelte` | `COMPRESSED_data_api.md` |
 | Charts, D3 responsiveness, or SVG export behavior | `src/lib/components/*Chart.svelte` | `src/lib/utils/chartLayout.js`, `src/lib/utils/chartImageExport.js`, `src/lib/utils/chartQuickExport.js`, chart-related tests | `COMPRESSED_ui_charts.md` |
-| Sticky tables, mobile scroll, CSV exports, or metric labels | `src/lib/components/LegacyLeaderboard.svelte` or page table route | `src/lib/utils/wideStickyTable.js`, `src/lib/utils/csvPresets.js`, `src/lib/utils/metricDefinitions.js`, table/export tests | `COMPRESSED_ui_tables.md` |
+| Sticky tables, mobile scroll, CSV exports, or metric labels | `src/routes/+page.svelte` or the relevant page table route | `src/lib/utils/wideStickyTable.js`, `src/lib/utils/csvPresets.js`, `src/lib/utils/metricDefinitions.js`, table/export tests | `COMPRESSED_ui_tables.md` |
 | Canonical URL cleanup or request-time routing behavior | `src/hooks.server.js` | `src/routes/+layout.svelte`, any affected deep-link route tests | `COMPRESSED_pages_routes.md` |
 | LLM context artifacts, bundle splits, or drift tests | `scripts/context-framework.js` | `scripts/generate_repo_architecture_sync.js`, `scripts/build_context_bundle.js`, `tests/context-framework.test.js`, `context/REPO_ARCHITECTURE.md` | `COMPRESSED_tests_context.md` |
 

@@ -4,7 +4,10 @@
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 	import { getChartLayout, getSeasonTickStep, getAgeTickCount } from '$lib/utils/chartLayout.js';
+	import { getChartTheme } from '$lib/utils/chartTheme.js';
+	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
+	import { getContext } from 'svelte';
 
 	let {
 		players = [],
@@ -20,6 +23,7 @@
 	let tooltipData = $state(null);
 	let scalesRef = $state({ x: null, y: null, margin: null, w: 0, h: 0 });
 	let rowsForTooltip = $state([]);
+	const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
 
 	const exportFilenameBase = $derived(`career-trajectories-${talentType}-${timeScale}`);
 
@@ -114,6 +118,7 @@
 		void players;
 		void yMin;
 		void yMax;
+		void displayMode.view;
 		renderChart();
 		return withResizeObserver({ element: containerEl, onResize: renderChart });
 	});
@@ -153,13 +158,25 @@
 		if (allRows.length === 0) return;
 
 		const layout = getChartLayout(width);
-		const { isMobile, margin } = layout;
+		const { isMobile } = layout;
+		const chartTheme = getChartTheme(displayMode.view, { isMobile });
+		const margin = chartTheme.margin ?? layout.margin;
 		const w = width - margin.left - margin.right;
 		const h = HEIGHT - margin.top - margin.bottom;
 
 		const g = svg
 			.append('g')
 			.attr('transform', `translate(${margin.left},${margin.top})`);
+
+		if (chartTheme.plotBorder) {
+			g.append('rect')
+				.attr('class', 'chart-plot-border')
+				.attr('width', w)
+				.attr('height', h)
+				.attr('fill', 'none')
+				.attr('stroke', chartTheme.plotBorderColor)
+				.attr('stroke-width', 1);
+		}
 
 		const xExtent = d3.extent(allRows, (d) => d.x);
 		const yExtent = d3.extent(allRows, (d) => d.y);
@@ -191,20 +208,22 @@
 					sel
 						.selectAll('.tick line')
 						.attr('stroke', 'var(--border-subtle, #333)')
-						.attr('stroke-dasharray', '2,3')
+						.attr('stroke-dasharray', chartTheme.gridDash)
+						.attr('opacity', chartTheme.gridOpacity)
 				);
 
 		// Zero baseline
-		if (yExtent[0] - yPad <= 0 && yExtent[1] + yPad >= 0) {
+		if (SIGNED_METRICS.has(talentType) && yLow <= 0 && yHigh >= 0) {
 			g.append('line')
 				.attr('class', 'chart-zero')
 				.attr('x1', 0)
 				.attr('x2', w)
 				.attr('y1', y(0))
 				.attr('y2', y(0))
-				.attr('stroke', 'var(--text)')
-				.attr('stroke-width', 1.5)
-				.attr('stroke-dasharray', '6,4');
+				.style('stroke', chartTheme.zeroColor)
+				.style('stroke-width', `${chartTheme.zeroWidth}px`)
+				.style('stroke-dasharray', chartTheme.zeroDash)
+				.style('opacity', 1);
 		}
 
 		// Per-player scatter + LOESS
@@ -217,15 +236,16 @@
 				.join('circle')
 				.attr('cx', (d) => x(d.x))
 				.attr('cy', (d) => y(d.y))
-				.attr('r', 2)
+				.attr('r', chartTheme.pointRadius)
 				.attr('fill', player.color)
-				.attr('opacity', 0.3);
+				.attr('opacity', chartTheme.pointOpacity);
 
 			if (rows.length < 2) continue;
 
 			const xVals = rows.map((point) => point.x);
 			const yVals = rows.map((point) => point.y);
-			const bandwidth = rows.length > 100 ? 0.25 : 0.35;
+			const bandwidth = chartTheme.smoothingBandwidth
+				?? (rows.length > 100 ? 0.25 : 0.35);
 			const smoothedY = loess(xVals, yVals, bandwidth);
 			const loessData = xVals.map((xv, i) => ({ x: xv, y: smoothedY[i] }));
 
@@ -239,7 +259,7 @@
 				.datum(loessData)
 				.attr('fill', 'none')
 				.attr('stroke', player.color)
-				.attr('stroke-width', 2.5)
+				.attr('stroke-width', chartTheme.lineWidth)
 				.attr('stroke-linecap', 'round')
 				.attr('stroke-linejoin', 'round')
 				.attr('d', line);
@@ -264,22 +284,22 @@
 			.append('g')
 			.attr('transform', `translate(0,${h})`)
 			.call(xAxisCall);
-		xAxisG.select('.domain').attr('stroke', 'var(--border, #555)');
+		xAxisG.select('.domain').attr('stroke', chartTheme.axisColor);
 		xAxisG
 			.selectAll('.tick text')
 			.style('fill', 'var(--text-muted)')
-			.attr('font-size', layout.tickFontSize);
+			.attr('font-size', chartTheme.tickSize ?? layout.tickFontSize);
 		xAxisG
 			.selectAll('.tick line')
-			.attr('stroke', 'var(--border, #555)');
+			.attr('stroke', chartTheme.axisColor);
 
 		// X axis label
 		g.append('text')
 			.attr('x', w / 2)
 			.attr('y', h + 38)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '13px')
-			.attr('font-weight', '600')
+			.attr('font-size', chartTheme.axisLabelSize)
+			.attr('font-weight', chartTheme.axisLabelWeight)
 			.style('fill', 'var(--text)')
 			.text(TIME_LABELS[timeScale] || 'Games');
 
@@ -296,16 +316,18 @@
 		const yAxis = d3.axisLeft(y).ticks(layout.yTicks);
 		if (MONEY_METRICS.has(talentType)) {
 			yAxis.tickFormat((d) => `$${(d / 1e6).toFixed(0)}M`);
+		} else if (PERCENT_METRICS.has(talentType)) {
+			yAxis.tickFormat((d) => `${(d * 100).toFixed(0)}%`);
 		}
 		const yAxisG = g.append('g').call(yAxis);
-		yAxisG.select('.domain').attr('stroke', 'var(--border, #555)');
+		yAxisG.select('.domain').attr('stroke', chartTheme.axisColor);
 		yAxisG
 			.selectAll('.tick text')
 			.style('fill', 'var(--text-muted)')
-			.attr('font-size', '11px');
+			.attr('font-size', chartTheme.tickSize ?? 11);
 		yAxisG
 			.selectAll('.tick line')
-			.attr('stroke', 'var(--border, #555)');
+			.attr('stroke', chartTheme.axisColor);
 
 		// Y axis label
 			g.append('text')
@@ -313,8 +335,8 @@
 				.attr('x', -h / 2)
 				.attr('y', -45)
 				.attr('text-anchor', 'middle')
-				.attr('font-size', '13px')
-				.attr('font-weight', '600')
+				.attr('font-size', chartTheme.axisLabelSize)
+				.attr('font-weight', chartTheme.axisLabelWeight)
 				.style('fill', 'var(--text)')
 				.text(
 					talentType.startsWith('wowy_')
@@ -327,15 +349,15 @@
 			.attr('x', width / 2)
 			.attr('y', 24)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '16px')
-			.attr('font-weight', '700')
+			.attr('font-size', chartTheme.titleSize)
+			.attr('font-weight', chartTheme.titleWeight)
 			.style('fill', 'var(--text)')
 			.text(title);
 
 		// Legend
 		const legendG = svg
 			.append('g')
-			.attr('transform', `translate(${width / 2}, 38)`);
+			.attr('transform', `translate(${width / 2}, ${chartTheme.legendY})`);
 
 		let legendX = 0;
 		const legendItems = [];
@@ -360,14 +382,14 @@
 				.attr('y1', 0)
 				.attr('y2', 0)
 				.attr('stroke', p.color)
-				.attr('stroke-width', 3)
+				.attr('stroke-width', chartTheme.legendLineWidth)
 				.attr('stroke-linecap', 'round');
 
 			// Dot on line
 			lg.append('circle')
 				.attr('cx', 9)
 				.attr('cy', 0)
-				.attr('r', 3)
+				.attr('r', chartTheme.legendDotRadius)
 				.attr('fill', p.color);
 
 			// Name
@@ -375,7 +397,7 @@
 				.attr('x', 24)
 				.attr('y', 0)
 				.attr('dy', '0.35em')
-				.attr('font-size', '12px')
+				.attr('font-size', chartTheme.legendTextSize)
 				.style('fill', 'var(--text-secondary, var(--text-muted))')
 				.text(p.player_name);
 		});

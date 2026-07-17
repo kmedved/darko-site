@@ -13,20 +13,27 @@
         LEADERBOARD_COLUMNS,
         leaderboardSortConfig
     } from '$lib/utils/leaderboardColumns.js';
-    import { filterPlayers } from '$lib/utils/legacyLeaderboard.js';
-    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
+    import { filterPlayers } from '$lib/utils/playerTableFilters.js';
+    import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { formatSeasonEndYearLabel } from '$lib/utils/seasonUtils.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
+    import {
+        buildPresetHeatScales,
+        getMetricHeatVariables
+    } from '$lib/utils/metricHeatScales.js';
+    import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
+    import { getContext } from 'svelte';
 
     let { data } = $props();
 
     let sortColumn = $state('dpm');
     let sortDirection = $state('desc');
     let searchQuery = $state('');
+    let columnFilters = $state({});
     let teamFilter = $state('all');
     let leaderboardPage = $state(1);
     let positionView = $state('all');
@@ -37,6 +44,8 @@
     let standardSourceHead = $state(null);
     let standardHeaderScroller = $state(null);
     let standardHeaderTable = $state(null);
+    const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
+    const isShinyView = $derived(displayMode.view === 'shiny');
 
     const TOP_POSITION_MIN_GAMES = 20;
     const LEADERBOARD_PAGE_SIZE = 50;
@@ -93,11 +102,11 @@
         return players.filter((player) => player?.team_name === activeTeamFilter);
     });
 
-    const filteredPlayers = $derived.by(() =>
-        filterPlayers(teamScopedPlayers, playerColumns, {
-            player_name: searchQuery
-        })
-    );
+    const filteredPlayers = $derived.by(() => {
+        const columnMatched = filterPlayers(teamScopedPlayers, playerColumns, columnFilters);
+        if (!searchQuery.trim()) return columnMatched;
+        return filterPlayers(columnMatched, playerColumns, { player_name: searchQuery });
+    });
 
     const sortedPlayers = $derived.by(() =>
         getSortedRows(filteredPlayers, {
@@ -116,6 +125,9 @@
         const start = (activeLeaderboardPage - 1) * LEADERBOARD_PAGE_SIZE;
         return sortedPlayers.slice(start, start + LEADERBOARD_PAGE_SIZE);
     });
+    const leaderboardHeatScales = $derived.by(() =>
+        buildPresetHeatScales(players, 'talent')
+    );
     const leaderboardRangeStart = $derived(
         sortedPlayers.length === 0 ? 0 : (activeLeaderboardPage - 1) * LEADERBOARD_PAGE_SIZE + 1
     );
@@ -203,6 +215,18 @@
         }));
         leaderboardPage = 1;
     }
+
+    function updateColumnFilter(column, value) {
+        columnFilters[column] = value;
+        leaderboardPage = 1;
+    }
+
+    $effect(() => {
+        if (!isShinyView && Object.keys(columnFilters).length > 0) {
+            columnFilters = {};
+            leaderboardPage = 1;
+        }
+    });
 
     function metricClass(value) {
         const n = toNumber(value);
@@ -407,9 +431,9 @@
     <title>DARKO DPM - NBA Player Projections</title>
 </svelte:head>
 
-<div class="leaderboard-page">
+<div class="leaderboard-page" data-shiny-page>
     <div class="container leaderboard-container">
-        <section class="leaderboard-hero" aria-labelledby="leaderboard-title">
+        <section class="leaderboard-hero" data-shiny-surface="hero" aria-labelledby="leaderboard-title">
             <div class="leaderboard-title-block">
                 <div class="leaderboard-icon" aria-hidden="true">
                     <span></span>
@@ -457,7 +481,7 @@
         {:else}
             <div class="leaderboard-workspace">
                 <section class="leaderboard-table-panel" aria-label={`${activeSeasonLabel} player leaderboard`}>
-                    <div class="leaderboard-controls">
+                    <div class="leaderboard-controls" data-shiny-surface="well">
                         <div class="control-field">
                             <select
                                 id="season-filter"
@@ -515,10 +539,10 @@
                         </button>
                     </div>
 
-                    <div class="table-wrapper table-shell" bind:this={standardTableRoot}>
+                    <div class="table-wrapper table-shell" data-shiny-table bind:this={standardTableRoot}>
                         <div class="sticky-header-shell">
                             <div class="table-header-scroll" bind:this={standardHeaderScroller}>
-                                <table class="sticky-header-table" bind:this={standardHeaderTable}>
+                                <table class="sticky-header-table" role="presentation" bind:this={standardHeaderTable}>
                                     <thead>
                                         {@render standardHeaderRows()}
                                     </thead>
@@ -528,7 +552,8 @@
 
                         <div class="table-body-scroll" bind:this={standardBodyScroller}>
                             <table bind:this={standardBodyTable}>
-                                <thead class="table-sizing-head" aria-hidden="true" bind:this={standardSourceHead}>
+                                <thead class="table-sizing-head" bind:this={standardSourceHead}>
+                                    {@render standardSemanticHeaderRow()}
                                     {@render standardHeaderRows()}
                                 </thead>
                                 <tbody>
@@ -545,6 +570,17 @@
                                                     {#if column.key === 'player_name'}
                                                         <td class={cellClass(column, value)}>
                                                             <a class="player-link" href="/player/{player.nba_id}">
+                                                                {#if isShinyView && playerHeadshotUrl(player)}
+                                                                    <img
+                                                                        src={playerHeadshotUrl(player)}
+                                                                        alt=""
+                                                                        width="20"
+                                                                        height="20"
+                                                                        class="leaderboard-headshot"
+                                                                        loading="lazy"
+                                                                        onerror={hideBrokenImage}
+                                                                    />
+                                                                {/if}
                                                                 <span>{player.player_name}</span>
                                                                 {#if player.position}<small>{player.position}</small>{/if}
                                                             </a>
@@ -565,7 +601,7 @@
                                                             {/if}
                                                         </td>
                                                     {:else}
-                                                        <td class={cellClass(column, value)}>
+                                                        <td class={cellClass(column, value)} style={getMetricHeatVariables(column.key, value, leaderboardHeatScales)}>
                                                             {column.key === 'x_minutes' ? fmtMpg(value) : formatLeaderboardCell(column, value)}
                                                         </td>
                                                     {/if}
@@ -603,7 +639,7 @@
                 </section>
 
                 <aside class="insight-rail" aria-label="Leaderboard insights">
-                    <section class="insight-card insight-card--distribution">
+                    <section class="insight-card insight-card--distribution" data-shiny-surface="panel">
                         <div class="insight-card-header insight-card-header--distribution">
                             <div class="distribution-title-control">
                                 <h2>Distribution</h2>
@@ -651,9 +687,10 @@
                                 <strong>{distribution.players}</strong>
                             </div>
                         </div>
+                        <p class="shiny-plot-caption">@kmedved | www.darko.app | @anpatt7</p>
                     </section>
 
-                    <section class="insight-card">
+                    <section class="insight-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
                             <h2>Top DPM by Position</h2>
                             <span class="insight-info" title="Minimum 20 games played">i</span>
@@ -666,6 +703,12 @@
                             {/each}
                         </div>
                         <div class="position-list">
+                            <div class="position-table-head" aria-hidden="true">
+                                <span>#</span>
+                                <span>Player</span>
+                                <span>Pos</span>
+                                <span>DPM</span>
+                            </div>
                             {#if topPositionPlayers.length === 0}
                                 <div class="empty-mini">No matching players.</div>
                             {:else}
@@ -678,15 +721,15 @@
                                             {/if}
                                         </span>
                                         <span class="position-player-main">
-                                            <span>
-                                                {player.player_name}
-                                                {#if player.position}<small>{player.position}</small>{/if}
+                                            <span class="position-player-label">
+                                                <span class="position-player-name">{player.player_name}</span>
+                                                {#if player.position}<small class="position-player-position">{player.position}</small>{/if}
                                             </span>
                                             <span class="position-bar">
                                                 <span style={`width: ${barWidth(player.dpm, topPositionPlayers)}%`}></span>
                                             </span>
                                         </span>
-                                        <strong>{formatSignedMetric(player.dpm)}</strong>
+                                        <strong style={getMetricHeatVariables('dpm', player.dpm, leaderboardHeatScales)}>{formatSignedMetric(player.dpm)}</strong>
                                     </a>
                                 {/each}
                             {/if}
@@ -699,13 +742,21 @@
     </div>
 </div>
 
+{#snippet standardSemanticHeaderRow()}
+    <tr class="table-semantic-row sr-only">
+        {#each playerColumns as column (column.key)}
+            <th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}>{column.label}</th>
+        {/each}
+    </tr>
+{/snippet}
+
 {#snippet standardHeaderRows()}
-    <tr class="header-row">
+    <tr class="header-row table-sizing-row">
         {#each playerColumns as column (column.key)}
             <th
                 class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
                 onclick={() => toggleSort(column.key)}
-                aria-sort={sortColumn === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
             >
                 <span class="header-label-wrap">
                     {#if column.metricKey}
@@ -720,6 +771,23 @@
             </th>
         {/each}
     </tr>
+    {#if isShinyView}
+        <tr class="column-filter-row table-sizing-row">
+            {#each playerColumns as column (column.key)}
+                <th class={column.alignClass}>
+                    {#if column.key !== '_rank'}
+                        <input
+                            type="text"
+                            value={columnFilters[column.key] || ''}
+                            oninput={(event) => updateColumnFilter(column.key, event.currentTarget.value)}
+                            placeholder="All"
+                            aria-label={`Filter ${column.label}`}
+                        />
+                    {/if}
+                </th>
+            {/each}
+        </tr>
+    {/if}
 {/snippet}
 
 <style>
@@ -1108,11 +1176,6 @@
         background: color-mix(in srgb, var(--bg-surface) 42%, var(--bg));
     }
 
-    .table-sizing-head th {
-        visibility: hidden;
-        pointer-events: none;
-    }
-
     th.sortable {
         cursor: pointer;
         user-select: none;
@@ -1145,14 +1208,14 @@
     }
 
     .leaderboard-cell--rank,
-    .table-header-scroll .header-row th:nth-child(1) {
+    .table-header-scroll :is(.header-row, .column-filter-row) th:nth-child(1) {
         position: sticky;
         left: 0;
         z-index: 1;
         background: var(--bg);
     }
 
-    .table-header-scroll .header-row th:nth-child(1) {
+    .table-header-scroll :is(.header-row, .column-filter-row) th:nth-child(1) {
         z-index: 22;
         background: color-mix(in srgb, var(--bg-elevated) 86%, var(--bg));
     }
@@ -1169,7 +1232,7 @@
     }
 
     .leaderboard-cell--player,
-    .table-header-scroll .header-row th:nth-child(2) {
+    .table-header-scroll :is(.header-row, .column-filter-row) th:nth-child(2) {
         position: sticky;
         left: var(--frozen-rank-width);
         z-index: 1;
@@ -1178,7 +1241,7 @@
         box-shadow: 1px 0 0 var(--border-subtle);
     }
 
-    .table-header-scroll .header-row th:nth-child(2) {
+    .table-header-scroll :is(.header-row, .column-filter-row) th:nth-child(2) {
         z-index: 21;
         background: color-mix(in srgb, var(--bg-elevated) 86%, var(--bg));
     }
@@ -1453,6 +1516,11 @@
         gap: 13px;
     }
 
+    .position-table-head,
+    .shiny-plot-caption {
+        display: none;
+    }
+
     .position-player {
         display: grid;
         grid-template-columns: 22px 34px minmax(0, 1fr) auto;
@@ -1498,7 +1566,7 @@
         min-width: 0;
     }
 
-    .position-player-main > span:first-child {
+    .position-player-label {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -1580,7 +1648,11 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        .table-sizing-head th {
+        .table-semantic-row {
+            display: none;
+        }
+
+        .table-sizing-head .table-sizing-row th {
             visibility: visible;
             pointer-events: auto;
         }

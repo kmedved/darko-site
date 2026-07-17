@@ -1,11 +1,20 @@
 <script>
     import { goto } from '$app/navigation';
+    import { getContext } from 'svelte';
+    import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
     import { exportCsvRows, formatFixed, formatSignedMetric, getLineupsCsvColumns } from '$lib/utils/csvPresets.js';
-    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
+    import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
+    import {
+        buildPresetHeatScales,
+        getMetricHeatVariables
+    } from '$lib/utils/metricHeatScales.js';
 
     /** @type {import('./$types').PageProps} */
     let { data } = $props();
+    const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
+    const isShinyView = $derived(displayMode.view === 'shiny');
 
     const sizeOptions = [
         { value: 2, label: '2-Man' },
@@ -36,6 +45,12 @@
     let selectedMinimumPossessions = $state(null);
     let page = $state(1);
     let pageSize = $state(20);
+    let lineupsTableRoot = $state(null);
+    let lineupsBodyScroller = $state(null);
+    let lineupsBodyTable = $state(null);
+    let lineupsSourceHead = $state(null);
+    let lineupsHeaderScroller = $state(null);
+    let lineupsHeaderTable = $state(null);
 
     let PLAYER_KEYS = $derived(
         Array.from({ length: data.lineupSize ?? 5 }, (_, i) => `player_${i + 1}`)
@@ -52,11 +67,21 @@
             slotIndex: i,
             sortable: true
         }));
+        const lineupColumns = isShinyView
+            ? [{
+                key: 'lineup_label',
+                label: 'Lineup',
+                alignClass: 'lineup-col',
+                type: 'text',
+                dataType: 'text',
+                sortable: true
+            }]
+            : playerCols;
 
         return [
             { key: '_rank', label: '#', alignClass: 'rank-col', sortable: false },
             { key: 'team_name', label: 'Team', alignClass: 'team-col', type: 'text', dataType: 'text', sortable: true },
-            ...playerCols,
+            ...lineupColumns,
             { key: 'possessions', label: 'Poss', alignClass: 'num', type: 'number', dataType: 'number', sortable: true },
             { key: 'net_pm', label: 'Net +/-', alignClass: 'num', type: 'number', dataType: 'number', sortable: true },
             { key: 'off_pm', label: 'Off +/-', alignClass: 'num', type: 'number', dataType: 'number', sortable: true },
@@ -71,6 +96,7 @@
     let sortConfigs = $derived.by(() => {
         const configs = {
             team_name: { type: 'text' },
+            lineup_label: { type: 'text' },
             possessions: { type: 'number' },
             net_pm: { type: 'number' },
             off_pm: { type: 'number' },
@@ -87,6 +113,9 @@
     });
 
     let selectedLineups = $derived(data.lineupsByVariant?.[selectedVariant] ?? []);
+    let lineupHeatScales = $derived.by(() =>
+        buildPresetHeatScales(selectedLineups, 'lineup')
+    );
     let hasAnyVariantLineups = $derived(
         variantOptions.some((option) => (data.lineupsByVariant?.[option.value] ?? []).length > 0)
     );
@@ -177,6 +206,42 @@
         if (page > totalPages) {
             page = totalPages;
         }
+    });
+
+    $effect(() => {
+        if (!tableColumns.some((column) => column.key === sortColumn)) {
+            sortColumn = 'net_pm';
+            sortDirection = 'desc';
+        }
+    });
+
+    $effect(() => {
+        selectedVariant;
+        sortColumn;
+        sortDirection;
+        page;
+        pageSize;
+        searchQuery;
+        teamFilter;
+        effectiveMinimumPossessions;
+        tableColumns.length;
+        pageRows.length;
+        lineupsTableRoot;
+        lineupsBodyScroller;
+        lineupsBodyTable;
+        lineupsSourceHead;
+        lineupsHeaderScroller;
+        lineupsHeaderTable;
+
+        return setupWideStickyTable({
+            root: lineupsTableRoot,
+            bodyScroller: lineupsBodyScroller,
+            bodyTable: lineupsBodyTable,
+            sourceHead: lineupsSourceHead,
+            headerScroller: lineupsHeaderScroller,
+            headerTable: lineupsHeaderTable,
+            wheelTarget: lineupsHeaderScroller
+        });
     });
 
     function numericValue(value) {
@@ -464,13 +529,45 @@
     }
 </script>
 
+{#snippet lineupsSemanticHeaderRow()}
+    <tr class="table-semantic-row sr-only">
+        {#each tableColumns as column (column.key)}
+            <th
+                id={`lineups-column-${column.key}`}
+                scope="col"
+                aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
+            >{column.label}</th>
+        {/each}
+    </tr>
+{/snippet}
+
+{#snippet lineupsHeaderRow()}
+    <tr class="table-sizing-row">
+        {#each tableColumns as column (column.key)}
+            <th
+                class="{column.alignClass} {sortColumn === column.key ? 'active' : ''}"
+                aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
+            >
+                {#if column.sortable === false}
+                    {column.label}
+                {:else}
+                    <button type="button" onclick={() => toggleSort(column.key)}>
+                        <span>{column.label}</span>
+                        <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
+                    </button>
+                {/if}
+            </th>
+        {/each}
+    </tr>
+{/snippet}
+
 <svelte:head>
     <title>Lineup Projections — DARKO DPM</title>
 </svelte:head>
 
-<div class="lineups-page">
+<div class="lineups-page" data-shiny-page>
     <div class="container lineups-container">
-        <section class="lineups-hero" aria-labelledby="lineups-title">
+        <section class="lineups-hero" data-shiny-surface="hero" aria-labelledby="lineups-title">
             <div class="lineups-title-block">
                 <div class="lineups-icon" aria-hidden="true">
                     <span></span>
@@ -495,7 +592,7 @@
                 <main class="lineups-main">
                     <section class="summary-card-grid" aria-label="Lineup summary">
                         {#each summaryCards as card (card.title)}
-                            <article class="summary-card">
+                            <article class="summary-card" data-shiny-surface="summary">
                                 {#if card.row?.tm_id}
                                     <img
                                         src="/api/img/logo/{card.row.tm_id}"
@@ -520,8 +617,8 @@
                         {/each}
                     </section>
 
-                    <section class="lineups-table-panel" aria-label="{selectedVariantLabel} {currentSizeLabel} lineups">
-                        <div class="lineups-controls">
+                    <section class="lineups-table-panel" data-shiny-surface="panel" aria-label="{selectedVariantLabel} {currentSizeLabel} lineups">
+                        <div class="lineups-controls" data-shiny-surface="well">
                             <fieldset class="control-group">
                                 <legend>Lineup Size</legend>
                                 <div class="segmented-control size-segment">
@@ -600,79 +697,97 @@
                             </button>
                         </div>
 
-                        <div class="table-wrapper">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        {#each tableColumns as column (column.key)}
-                                            <th class="{column.alignClass} {sortColumn === column.key ? 'active' : ''}">
-                                                {#if column.sortable === false}
-                                                    {column.label}
-                                                {:else}
-                                                    <button type="button" onclick={() => toggleSort(column.key)}>
-                                                        <span>{column.label}</span>
-                                                        <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
-                                                    </button>
-                                                {/if}
-                                            </th>
-                                        {/each}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {#if pageRows.length === 0}
-                                        <tr>
-                                            <td class="empty-row" colspan={tableColumns.length}>No matching lineups.</td>
-                                        </tr>
-                                    {:else}
-                                        {#each pageRows as lineup, index (lineup.row_key)}
+                        <div
+                            class="table-wrapper table-shell"
+                            data-shiny-table
+                            data-shiny-table-variant="lineups"
+                            bind:this={lineupsTableRoot}
+                        >
+                            <div class="sticky-header-shell">
+                                <div class="table-header-scroll" bind:this={lineupsHeaderScroller}>
+                                    <table class="sticky-header-table" role="presentation" bind:this={lineupsHeaderTable}>
+                                        <thead>
+                                            {@render lineupsHeaderRow()}
+                                        </thead>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="table-body-scroll" bind:this={lineupsBodyScroller}>
+                                <table bind:this={lineupsBodyTable}>
+                                    <thead class="table-sizing-head" bind:this={lineupsSourceHead}>
+                                        {@render lineupsSemanticHeaderRow()}
+                                        {@render lineupsHeaderRow()}
+                                    </thead>
+                                    <tbody>
+                                        {#if pageRows.length === 0}
                                             <tr>
-                                                {#each tableColumns as column (column.key)}
-                                                    <td
-                                                        class="{column.alignClass} {isMetricColumn(column.key) ? metricToneClass(lineup[column.key]) : ''}"
-                                                    >
-                                                        {#if column.key === '_rank'}
-                                                            {pageStart + index}
-                                                        {:else if column.slotIndex != null}
-                                                            {@const p = lineup.players[column.slotIndex]}
-                                                            {#if p?.id}
-                                                                <a href="/player/{p.id}" class="player-cell-link">
-                                                                    <img
-                                                                        src="/api/img/headshot/{p.id}"
-                                                                        alt=""
-                                                                        class="player-headshot"
-                                                                        loading="lazy"
-                                                                    />
-                                                                    <span>{abbrevName(p.name)}</span>
-                                                                </a>
-                                                            {:else}
-                                                                <span>{abbrevName(p?.name)}</span>
-                                                            {/if}
-                                                        {:else if column.key === 'team_name'}
-                                                            {#if lineup.team_name && lineup.team_name !== TEAM_PENDING_LABEL}
-                                                                <a href="/team/{encodeURIComponent(lineup.team_name)}" class="team-cell-link">
-                                                                    {#if lineup.tm_id}
+                                                <td class="empty-row" colspan={tableColumns.length}>No matching lineups.</td>
+                                            </tr>
+                                        {:else}
+                                            {#each pageRows as lineup, index (lineup.row_key)}
+                                                <tr>
+                                                    {#each tableColumns as column (column.key)}
+                                                        <td
+                                                            headers={`lineups-column-${column.key}`}
+                                                            class="{column.alignClass} {isMetricColumn(column.key) ? metricToneClass(lineup[column.key]) : ''}"
+                                                            style={getMetricHeatVariables(column.key, lineup[column.key], lineupHeatScales)}
+                                                        >
+                                                            {#if column.key === '_rank'}
+                                                                {pageStart + index}
+                                                            {:else if column.key === 'lineup_label'}
+                                                                <div class="lineup-player-links" title={lineupFullNames(lineup)}>
+                                                                    {#each lineup.players ?? [] as player, playerIndex (player?.id ?? `${lineup.row_key}-${playerIndex}`)}
+                                                                        {#if playerIndex > 0}<span class="lineup-separator" aria-hidden="true">|</span>{/if}
+                                                                        {#if player?.id}
+                                                                            <a href="/player/{player.id}">{player.name}</a>
+                                                                        {:else}
+                                                                            <span>{player?.name ?? '—'}</span>
+                                                                        {/if}
+                                                                    {/each}
+                                                                </div>
+                                                            {:else if column.slotIndex != null}
+                                                                {@const p = lineup.players[column.slotIndex]}
+                                                                {#if p?.id}
+                                                                    <a href="/player/{p.id}" class="player-cell-link">
                                                                         <img
-                                                                            src="/api/img/logo/{lineup.tm_id}"
+                                                                            src="/api/img/headshot/{p.id}"
                                                                             alt=""
-                                                                            class="team-logo"
+                                                                            class="player-headshot"
                                                                             loading="lazy"
                                                                         />
-                                                                    {/if}
-                                                                    <span>{teamAbbr(lineup.team_name)}</span>
-                                                                </a>
+                                                                        <span>{abbrevName(p.name)}</span>
+                                                                    </a>
+                                                                {:else}
+                                                                    <span>{abbrevName(p?.name)}</span>
+                                                                {/if}
+                                                            {:else if column.key === 'team_name'}
+                                                                {#if lineup.team_name && lineup.team_name !== TEAM_PENDING_LABEL}
+                                                                    <a href="/team/{encodeURIComponent(lineup.team_name)}" class="team-cell-link">
+                                                                        {#if lineup.tm_id}
+                                                                            <img
+                                                                                src="/api/img/logo/{lineup.tm_id}"
+                                                                                alt=""
+                                                                                class="team-logo"
+                                                                                loading="lazy"
+                                                                            />
+                                                                        {/if}
+                                                                        <span>{isShinyView ? lineup.team_name : teamAbbr(lineup.team_name)}</span>
+                                                                    </a>
+                                                                {:else}
+                                                                    <span class="team-placeholder">{lineup.team_name}</span>
+                                                                {/if}
                                                             {:else}
-                                                                <span class="team-placeholder">{lineup.team_name}</span>
+                                                                {formatCellValue(lineup, column)}
                                                             {/if}
-                                                        {:else}
-                                                            {formatCellValue(lineup, column)}
-                                                        {/if}
-                                                    </td>
-                                                {/each}
-                                            </tr>
-                                        {/each}
-                                    {/if}
-                                </tbody>
-                            </table>
+                                                        </td>
+                                                    {/each}
+                                                </tr>
+                                            {/each}
+                                        {/if}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <div class="table-footer">
@@ -718,7 +833,7 @@
                 </main>
 
                 <aside class="lineups-rail" aria-label="Lineup insights">
-                    <section class="insight-card">
+                    <section class="insight-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
                             <h2>Lineup Distribution by Size</h2>
                             <span class="info-dot" title={`${selectedVariantLabel} lineups across all size tabs`}>i</span>
@@ -742,7 +857,7 @@
                         </div>
                     </section>
 
-                    <section class="insight-card">
+                    <section class="insight-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
                             <h2>Top Net +/- by Team ({currentSizeLabel})</h2>
                             <span class="info-dot" title="Average lineup net rating by team for the current filters">i</span>
@@ -767,7 +882,7 @@
                         <a class="rail-link" href="/standings">View all teams →</a>
                     </section>
 
-                    <section class="insight-card snapshot-card">
+                    <section class="insight-card snapshot-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
                             <h2>Best {currentSizeLabel} Lineup Snapshot</h2>
                             <span class="info-dot" title="Best visible lineup by Net +/-">i</span>
@@ -1182,11 +1297,33 @@
     }
 
     .table-wrapper {
+        --wide-sticky-header-height: 42px;
         width: 100%;
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius-sm);
         background: var(--bg-surface);
         overflow: visible;
+    }
+
+    .table-shell {
+        position: relative;
+    }
+
+    .sticky-header-shell {
+        position: sticky;
+        top: var(--nav-sticky-offset);
+        z-index: 30;
+        margin-bottom: calc(-1 * var(--wide-sticky-header-height));
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        overflow: hidden;
+    }
+
+    .table-header-scroll {
+        overflow: hidden;
+    }
+
+    .table-body-scroll {
+        overflow-x: auto;
     }
 
     table {
@@ -1199,9 +1336,6 @@
     }
 
     th {
-        position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 3;
         height: 42px;
         background: var(--bg);
         border-bottom: 1px solid var(--border);
@@ -1657,8 +1791,7 @@
     /* Touch/mobile scroll mode */
     @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
         (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
-        .table-wrapper {
-            overflow-x: auto;
+        .table-body-scroll {
             -webkit-overflow-scrolling: touch;
         }
 
@@ -1666,10 +1799,6 @@
             width: max-content;
             min-width: 100%;
             table-layout: auto;
-        }
-
-        th {
-            position: static;
         }
 
         .player-col,

@@ -26,8 +26,7 @@ const STICKY_PAGES = [
 	'src/routes/longevity/+page.svelte',
 	'src/routes/standings/+page.svelte',
 	'src/routes/player/[nbaId]/+page.svelte',
-	'src/lib/components/TeamDetailView.svelte',
-	'src/lib/components/LegacyLeaderboard.svelte'
+	'src/lib/components/TeamDetailView.svelte'
 ];
 
 function read(file) {

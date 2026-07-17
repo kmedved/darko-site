@@ -1,8 +1,13 @@
 <script>
 	import * as d3 from 'd3';
+	import { getContext } from 'svelte';
+	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { loess } from '$lib/utils/loess.js';
+	import { buildLoessConfidenceBand } from '$lib/utils/loessConfidenceBand.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import { formatSeasonLabel, getSeasonStartYear } from '$lib/utils/seasonUtils.js';
+	import { getShinyChartPreset } from '$lib/utils/shinyDesign.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
 	let {
@@ -17,6 +22,8 @@
 	let tooltipData = $state(null);
 	let scalesRef = $state({ x: null, y: null, margin: null });
 	let chartPoints = $state([]);
+	const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
+	const shinySinglePlayer = getShinyChartPreset('singlePlayer');
 	const pointBisector = d3.bisector((point) => point.time).left;
 
 	const exportFilenameBase = $derived.by(() => {
@@ -92,6 +99,22 @@
 		};
 	}
 
+	function getSeasonStarts(validRows) {
+		const starts = new Map();
+		for (const entry of validRows) {
+			const seasonEndYear = Number.parseInt(entry.row?.season, 10);
+			const seasonStartYear = Number.isInteger(seasonEndYear)
+				? seasonEndYear - 1
+				: getSeasonStartYear(entry.row?.date);
+			if (!Number.isInteger(seasonStartYear) || starts.has(seasonStartYear)) continue;
+			starts.set(seasonStartYear, {
+				date: entry.date,
+				label: formatSeasonLabel(seasonStartYear)
+			});
+		}
+		return [...starts.values()];
+	}
+
 	$effect(() => {
 		if (!svgEl || !containerEl || rows.length === 0) {
 			if (svgEl) d3.select(svgEl).selectAll('*').remove();
@@ -102,6 +125,7 @@
 		}
 		void talentType;
 		void rows;
+		void displayMode.view;
 		renderChart();
 		return withResizeObserver({ element: containerEl, onResize: renderChart });
 	});
@@ -113,7 +137,21 @@
 		const width = containerEl?.clientWidth ?? 0;
 		if (width === 0) return;
 
-		const margin = { top: 40, right: 30, bottom: 55, left: 60 };
+		const isMobile = width < 500;
+		const isShinyView = displayMode.view === 'shiny';
+		const margin = isShinyView
+			? {
+				top: 64,
+				right: isMobile ? 12 : 22,
+				bottom: 90,
+				left: isMobile ? 58 : 70
+			}
+			: {
+				top: 40,
+				right: isMobile ? 14 : 30,
+				bottom: 55,
+				left: isMobile ? 52 : 60
+			};
 		const w = width - margin.left - margin.right;
 		const h = HEIGHT - margin.top - margin.bottom;
 
@@ -147,9 +185,33 @@
 
 		const dates = validRows.map((entry) => entry.date);
 		const yVals = validRows.map((entry) => entry.value);
+		const xNumeric = validRows.map((entry) => entry.time);
+		const bandwidth = isShinyView
+			? shinySinglePlayer.smoothingBandwidth
+			: (validRows.length > 100 ? 0.25 : 0.35);
+		const smoothedY = loess(xNumeric, yVals, bandwidth);
+		const loessData = xNumeric.map((xValue, index) => ({
+			date: new Date(xValue),
+			value: smoothedY[index]
+		}));
+		const confidenceBand = isShinyView
+			? buildLoessConfidenceBand(xNumeric, yVals, smoothedY, bandwidth).map((point) => ({
+				...point,
+				date: new Date(point.x)
+			}))
+			: [];
+		const seasonStarts = getSeasonStarts(validRows);
 
 		const xExtent = d3.extent(dates);
-		const yExtent = d3.extent(yVals);
+		const yExtent = d3.extent(
+			isShinyView
+				? [
+					...yVals,
+					...confidenceBand.map((point) => point.lower),
+					...confidenceBand.map((point) => point.upper)
+				]
+				: yVals
+		);
 		const yPad = Math.max(Math.abs(yExtent[1] - yExtent[0]) * 0.1, 0.5);
 
 		const x = d3.scaleTime().domain(xExtent).range([0, w]);
@@ -160,34 +222,74 @@
 
 		scalesRef = { x, y, margin, w, h };
 
+		if (isShinyView) {
+			g.append('rect')
+				.attr('class', 'chart-plot-border')
+				.attr('width', w)
+				.attr('height', h)
+				.attr('fill', 'none')
+				.attr('stroke', 'var(--shiny-season-rule)')
+				.attr('stroke-width', 1);
+		}
+
 		// Grid lines
-		g.append('g')
-			.call(
-				d3
-					.axisLeft(y)
-					.ticks(8)
-					.tickSize(-w)
-					.tickFormat(() => '')
-			)
-			.call((sel) => sel.select('.domain').remove())
-			.call((sel) =>
-				sel
-					.selectAll('.tick line')
-					.attr('stroke', 'var(--border-subtle, #333)')
-					.attr('stroke-dasharray', '2,3')
-			);
+		if (!isShinyView) {
+			g.append('g')
+				.call(
+					d3
+						.axisLeft(y)
+						.ticks(8)
+						.tickSize(-w)
+						.tickFormat(() => '')
+				)
+				.call((sel) => sel.select('.domain').remove())
+				.call((sel) =>
+					sel
+						.selectAll('.tick line')
+						.attr('stroke', 'var(--border-subtle, #333)')
+						.attr('stroke-dasharray', '2,3')
+				);
+		}
+
+		if (isShinyView) {
+			g.selectAll('.season-start-rule')
+				.data(seasonStarts)
+				.join('line')
+				.attr('class', 'season-start-rule')
+				.attr('x1', (point) => x(point.date))
+				.attr('x2', (point) => x(point.date))
+				.attr('y1', 0)
+				.attr('y2', h)
+				.attr('stroke', 'var(--shiny-season-rule)')
+				.attr('stroke-width', shinySinglePlayer.seasonRuleWidth);
+		}
 
 		// Zero baseline
-		if (yExtent[0] - yPad <= 0 && yExtent[1] + yPad >= 0) {
+		if ((!isShinyView || SIGNED_METRICS.has(talentType)) && yExtent[0] - yPad <= 0 && yExtent[1] + yPad >= 0) {
 			g.append('line')
 				.attr('class', 'chart-zero')
 				.attr('x1', 0)
 				.attr('x2', w)
 				.attr('y1', y(0))
 				.attr('y2', y(0))
-				.attr('stroke', 'var(--text)')
-				.attr('stroke-width', 1.5)
-				.attr('stroke-dasharray', '6,4');
+				.attr('stroke', isShinyView ? 'var(--shiny-season-rule)' : 'var(--text)')
+				.attr('stroke-width', isShinyView ? shinySinglePlayer.zeroWidth : 1.5)
+				.attr('stroke-dasharray', isShinyView ? null : '6,4');
+		}
+
+		if (isShinyView && confidenceBand.length > 1) {
+			const area = d3
+				.area()
+				.x((point) => x(point.date))
+				.y0((point) => y(point.lower))
+				.y1((point) => y(point.upper))
+				.curve(d3.curveMonotoneX);
+
+			g.append('path')
+				.datum(confidenceBand)
+				.attr('class', 'loess-confidence-band')
+				.attr('fill', 'var(--shiny-single-player-band)')
+				.attr('d', area);
 		}
 
 		// Scatter dots
@@ -196,49 +298,77 @@
 			.join('circle')
 			.attr('cx', (d) => x(d.date))
 			.attr('cy', (d) => y(d.value))
-			.attr('r', 2)
-			.attr('fill', playerColor)
-			.attr('opacity', 0.3);
+			.attr('r', isShinyView ? shinySinglePlayer.pointRadius : 2)
+			.attr('fill', isShinyView ? 'var(--shiny-single-player-points)' : playerColor)
+			.attr('opacity', isShinyView ? shinySinglePlayer.pointOpacity : 0.3);
 
 		// LOESS curve
-		const xNumeric = validRows.map((entry) => entry.time);
-		const bandwidth = validRows.length > 100 ? 0.25 : 0.35;
-		const smoothedY = loess(xNumeric, yVals, bandwidth);
-		const loessData = xNumeric.map((xv, i) => [new Date(xv), smoothedY[i]]);
-
 		const line = d3
 			.line()
-			.x((d) => x(d[0]))
-			.y((d) => y(d[1]))
+			.x((point) => x(point.date))
+			.y((point) => y(point.value))
 			.curve(d3.curveMonotoneX);
 
-		g.append('path')
-			.datum(loessData)
-			.attr('fill', 'none')
-			.attr('stroke', playerColor)
-			.attr('stroke-width', 2.5)
-			.attr('stroke-linecap', 'round')
-			.attr('stroke-linejoin', 'round')
-			.attr('d', line);
+		if (!isShinyView) {
+			g.append('path')
+				.datum(loessData)
+				.attr('fill', 'none')
+				.attr('stroke', playerColor)
+				.attr('stroke-width', 2.5)
+				.attr('stroke-linecap', 'round')
+				.attr('stroke-linejoin', 'round')
+				.attr('d', line);
+		}
 
 		// X axis
+		const visibleSeasonStarts = isMobile && seasonStarts.length > 6
+			? seasonStarts.filter((_, index) => index % 2 === 0 || index === seasonStarts.length - 1)
+			: seasonStarts;
+		const seasonLabelByTime = new Map(
+			visibleSeasonStarts.map((point) => [point.date.getTime(), point.label])
+		);
+		const xAxis = isShinyView
+			? d3
+				.axisBottom(x)
+				.tickValues(visibleSeasonStarts.map((point) => point.date))
+				.tickFormat((date) => seasonLabelByTime.get(date.getTime()) ?? '')
+			: d3.axisBottom(x).ticks(isMobile ? 4 : 6);
 		const xAxisG = g
 			.append('g')
 			.attr('transform', `translate(0,${h})`)
-			.call(d3.axisBottom(x).ticks(6));
+			.call(xAxis);
 		xAxisG.select('.domain').attr('stroke', 'var(--border, #555)');
 		xAxisG
 			.selectAll('.tick text')
 			.style('fill', 'var(--text-muted)')
-			.attr('font-size', '11px');
+				.attr('font-size', isShinyView ? '12px' : '11px');
+		if (isShinyView) {
+			xAxisG
+				.selectAll('.tick text')
+				.attr('transform', 'rotate(-45)')
+				.style('text-anchor', 'end')
+				.attr('dx', '-0.45em')
+				.attr('dy', '0.35em');
+		}
 		xAxisG
 			.selectAll('.tick line')
 			.attr('stroke', 'var(--border, #555)');
 
+		if (isShinyView) {
+			g.append('text')
+				.attr('x', w / 2)
+				.attr('y', h + 66)
+				.attr('text-anchor', 'middle')
+				.attr('font-size', '16px')
+				.attr('font-weight', '400')
+				.style('fill', 'var(--text)')
+				.text('Season Start Points');
+		}
+
 		// Attribution
 		g.append('text')
 			.attr('x', w / 2)
-			.attr('y', h + 45)
+			.attr('y', h + (isShinyView ? 83 : 45))
 			.attr('text-anchor', 'middle')
 			.attr('font-size', '10px')
 			.style('fill', 'var(--text-muted)')
@@ -248,6 +378,8 @@
 		const yAxis = d3.axisLeft(y).ticks(8);
 		if (MONEY_METRICS.has(talentType)) {
 			yAxis.tickFormat((d) => `$${(d / 1e6).toFixed(0)}M`);
+		} else if (PERCENT_METRICS.has(talentType)) {
+			yAxis.tickFormat((d) => `${(d * 100).toFixed(0)}%`);
 		}
 		const yAxisG = g.append('g').call(yAxis);
 		yAxisG.select('.domain').attr('stroke', 'var(--border, #555)');
@@ -265,20 +397,39 @@
 			.attr('x', -h / 2)
 			.attr('y', -45)
 			.attr('text-anchor', 'middle')
-				.attr('font-size', '13px')
-				.attr('font-weight', '600')
+				.attr('font-size', isShinyView ? '16px' : '13px')
+				.attr('font-weight', isShinyView ? '400' : '600')
 				.style('fill', 'var(--text)')
 				.text(`DARKO ${getMetricDisplayLabel(talentType)}`);
 
 		// Chart title
-		svg.append('text')
-			.attr('x', width / 2)
-			.attr('y', 20)
-			.attr('text-anchor', 'middle')
+		if (isShinyView) {
+			svg.append('text')
+				.attr('x', margin.left)
+				.attr('y', 22)
+				.attr('text-anchor', 'start')
+				.attr('font-size', '20px')
+				.attr('font-weight', '400')
+				.style('fill', 'var(--text)')
+				.text(playerName);
+			svg.append('text')
+				.attr('x', margin.left)
+				.attr('y', 47)
+				.attr('text-anchor', 'start')
+				.attr('font-size', '17px')
+				.attr('font-weight', '400')
+				.style('fill', 'var(--text)')
+				.text(`Career DARKO ${getMetricDisplayLabel(talentType)} Progression`);
+		} else {
+			svg.append('text')
+				.attr('x', width / 2)
+				.attr('y', 20)
+				.attr('text-anchor', 'middle')
 				.attr('font-size', '16px')
 				.attr('font-weight', '700')
 				.style('fill', 'var(--text)')
 				.text(`${playerName} — ${getMetricDisplayLabel(talentType)} Trend`);
+		}
 	}
 
 	function handleMouseMove(e) {

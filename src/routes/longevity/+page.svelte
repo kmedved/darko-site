@@ -6,6 +6,10 @@
     import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import {
+        buildPresetHeatScales,
+        getMetricHeatVariables
+    } from '$lib/utils/metricHeatScales.js';
+    import {
         filterLongevityRows,
         formatLongevityDisplayValue,
         getLongevitySortConfig,
@@ -100,6 +104,9 @@
     );
 
     const pageRows = $derived.by(() => paginateRows(sortedRows, page, pageSize));
+    const longevityHeatScales = $derived.by(() =>
+        buildPresetHeatScales(rows, 'longevity')
+    );
 
     const pageRangeStart = $derived.by(() =>
         sortedRows.length === 0 ? 0 : (page - 1) * pageSize + 1
@@ -356,9 +363,9 @@
     <title>Longevity Projections — DARKO DPM</title>
 </svelte:head>
 
-<div class="longevity-page">
+<div class="longevity-page" data-shiny-page>
     <div class="container longevity-container">
-        <section class="longevity-hero" aria-labelledby="longevity-title">
+        <section class="longevity-hero" data-shiny-surface="hero" aria-labelledby="longevity-title">
             <div class="longevity-title-block">
                 <div class="longevity-icon" aria-hidden="true">
                     <span></span>
@@ -374,7 +381,7 @@
             {#if !loading && !error}
                 <div class="summary-card-grid" aria-label="Selected player longevity summary">
                     {#each summaryCards as card (card.label)}
-                        <article class="summary-card">
+                        <article class="summary-card" data-shiny-surface="summary">
                             <div class="summary-icon {card.icon}" aria-hidden="true">
                                 <span></span>
                             </div>
@@ -398,8 +405,8 @@
         {:else if error}
             <div class="longevity-message error-msg">{error}</div>
         {:else}
-            <div class="charts-grid">
-                <section class="chart-card">
+            <div class="charts-grid" data-shiny-layout="split">
+                <section class="chart-card" data-shiny-surface="plot">
                     <div class="chart-card-header">
                         <div>
                             <h2>{activePlayer?.player_name || 'No Player Selected'}</h2>
@@ -409,7 +416,7 @@
                     <LongevityRosterChart player={activePlayer} />
                 </section>
 
-                <section class="chart-card">
+                <section class="chart-card" data-shiny-surface="plot">
                     <div class="chart-card-header">
                         <div>
                             <h2>{activePlayer?.player_name || 'No Player Selected'}</h2>
@@ -420,7 +427,7 @@
                 </section>
             </div>
 
-            <section class="longevity-table-panel" aria-labelledby="longevity-table-title">
+            <section class="longevity-table-panel" data-shiny-surface="panel" aria-labelledby="longevity-table-title">
                 <div class="table-title-row">
                     <div>
                         <h2 id="longevity-table-title">Career Longevity Projections</h2>
@@ -438,7 +445,7 @@
                     </button>
                 </div>
 
-                <div class="table-controls">
+                <div class="table-controls" data-shiny-surface="well">
                     <label class="control-field search-control" for="longevity-search">
                         <span class="sr-only">Search players</span>
                         <input
@@ -509,7 +516,7 @@
                     </label>
                 </div>
 
-                <div class="table-wrapper">
+                <div class="table-wrapper" data-shiny-table>
                     <table>
                         <thead>
                             <tr class="header-row">
@@ -560,6 +567,7 @@
                                         {#each tableColumns as column (column.key)}
                                             <td
                                                 class="{column.align === 'right' ? 'align-right' : ''} {getCellClass(column, row)}"
+                                                style={getMetricHeatVariables(column.key, row[column.key], longevityHeatScales)}
                                             >
                                                 {#if column.key === '_rank'}
                                                     {pageRangeStart + index}
@@ -823,9 +831,7 @@
         font-weight: 700;
         line-height: 1.15;
         margin-bottom: 7px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow-wrap: anywhere;
     }
 
     .summary-copy strong {
@@ -843,9 +849,7 @@
         font-size: 11px;
         font-weight: 700;
         line-height: 1.15;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow-wrap: anywhere;
     }
 
     .longevity-loading {

@@ -1,7 +1,10 @@
 <script>
     import * as d3 from 'd3';
+	import { getContext } from 'svelte';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
     import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+	import { SHINY_COLORS, getShinyChartPreset } from '$lib/utils/shinyDesign.js';
     import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
 	let { data = [], color = 'var(--accent)', height = 120, playerName = '' } = $props();
@@ -13,6 +16,9 @@
 	let tooltipData = $state(null);
 	let chartPoints = $state([]);
 	const indexBisector = d3.bisector((point) => point.index).left;
+	const displayMode = getContext(DISPLAY_VIEW_CONTEXT);
+	const isShinyView = $derived(displayMode?.view === 'shiny');
+	const shinyComparison = getShinyChartPreset('comparison');
 
 	const exportFilenameBase = $derived.by(() => {
 		const prefix = playerName ? `${playerName}-` : '';
@@ -92,6 +98,7 @@
         // Re-read activeStat to make this effect reactive to it
         void activeStat;
         void data;
+		void isShinyView;
         renderChart();
         return withResizeObserver({ element: containerEl, onResize: renderChart });
     });
@@ -107,6 +114,16 @@
         const h = height - margin.top - margin.bottom;
 
         const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+		const seriesColor = isShinyView ? SHINY_COLORS.seriesBlue : color;
+
+		if (isShinyView && shinyComparison.plotBorder) {
+			g.append('rect')
+				.attr('width', w)
+				.attr('height', h)
+				.attr('fill', 'none')
+				.attr('stroke', 'var(--shiny-season-rule)')
+				.attr('stroke-width', 1);
+		}
 
         const points = data
             .map((row, index) => {
@@ -149,11 +166,13 @@
             .y1((point) => y(point.value))
             .curve(d3.curveMonotoneX);
 
-        g.append('path')
-            .datum(points)
-            .attr('class', 'chart-area')
-            .attr('d', area)
-            .attr('fill', color);
+		if (!isShinyView) {
+			g.append('path')
+				.datum(points)
+				.attr('class', 'chart-area')
+				.attr('d', area)
+				.attr('fill', seriesColor);
+		}
 
         // Line
         const line = d3.line()
@@ -165,7 +184,21 @@
             .datum(points)
             .attr('class', 'chart-line')
             .attr('d', line)
-            .attr('stroke', color);
+			.attr('stroke', seriesColor);
+
+		if (isShinyView) {
+			const sampleStep = Math.max(1, Math.ceil(points.length / 240));
+			g.selectAll('.chart-point')
+				.data(points.filter((_, index) => index % sampleStep === 0))
+				.enter()
+				.append('circle')
+				.attr('class', 'chart-point')
+				.attr('cx', (point) => x(point.index))
+				.attr('cy', (point) => y(point.value))
+				.attr('r', 1.4)
+				.attr('fill', seriesColor)
+				.attr('opacity', shinyComparison.pointOpacity);
+		}
 
         // Endpoint dot
         const last = points[points.length - 1];
@@ -173,7 +206,7 @@
             .attr('cx', x(last.index))
             .attr('cy', y(last.value))
             .attr('r', 3)
-            .attr('fill', color);
+			.attr('fill', seriesColor);
 
         // Tooltip elements (initially hidden)
         g.append('line')
@@ -184,7 +217,7 @@
         g.append('circle')
             .attr('class', 'chart-hover-dot')
             .attr('r', 4)
-            .attr('fill', color)
+			.attr('fill', seriesColor)
             .attr('stroke', 'var(--bg-surface)')
             .attr('stroke-width', 2)
             .style('display', 'none');

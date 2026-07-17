@@ -2,9 +2,14 @@
 	<title>What is DARKO? — DARKO DPM</title>
 </svelte:head>
 
-<div class="container">
+<div class="container about-page" data-shiny-page>
 	<article class="about-article">
 		<h1>What Is DARKO?</h1>
+		<img
+			class="about-logo"
+			src="/darko-about-logo.png"
+			alt="DARKO basketball logo"
+		/>
 
 		<p>
 			DARKO is a machine learning-driven basketball player box-score projection system.
@@ -242,6 +247,13 @@
 		letter-spacing: -0.02em;
 		color: var(--text);
 		margin-bottom: 24px;
+	}
+
+	.about-logo {
+		display: block;
+		width: min(100%, 560px);
+		height: auto;
+		margin: 0 auto 32px;
 	}
 
 	.about-article h2 {

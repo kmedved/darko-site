@@ -1,7 +1,10 @@
 <script>
 	import * as d3 from 'd3';
+	import { getContext } from 'svelte';
+	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import { SHINY_SET1 } from '$lib/utils/shinyDesign.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
 	let {
@@ -16,11 +19,16 @@
 	let chartRootEl = $state(null);
 	let svgEl = $state(null);
 	let tooltipData = $state(null);
+	const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
 	const exportFilenameBase = $derived(playerName ? `${playerName}-talent-percentiles` : 'talent-percentiles');
 
 	const ROW_HEIGHT = 50;
 	const BAR_HEIGHT = 18;
-	const chartHeight = $derived(55 + selectedMetrics.length * ROW_HEIGHT + 65);
+	const chartHeight = $derived(
+		displayMode.view === 'shiny'
+			? Math.min(460, 320 + Math.max(0, selectedMetrics.length - 5) * 18)
+			: 55 + selectedMetrics.length * ROW_HEIGHT + 65
+	);
 
 	const ZONE_DEFS = [
 		{ min: 0, max: 25, fill: 'rgba(239,68,68,0.22)', label: 'Poor', labelColor: '#ef4444' },
@@ -69,6 +77,7 @@
 		void percentiles;
 		void selectedMetrics;
 		void playerName;
+		void displayMode.view;
 		renderChart();
 		return withResizeObserver({ element: chartRootEl, onResize: renderChart });
 	});
@@ -90,15 +99,19 @@
 			.append('g')
 			.attr('transform', `translate(${margin.left},${margin.top})`);
 
-		const data = selectedMetrics
+		let data = selectedMetrics
 			.map((metric) => {
 				const p = percentiles.find((d) => d.metric === metric);
 				return p ? { ...p } : null;
 			})
-			.filter(Boolean)
-			.sort((a, b) => b.value - a.value);
+			.filter(Boolean);
 
 		if (data.length === 0) return;
+		if (displayMode.view === 'shiny') {
+			renderShinyChart({ svg, width, data });
+			return;
+		}
+		data = data.sort((a, b) => b.value - a.value);
 
 		const xScale = d3.scaleLinear().domain([0, 100]).range([0, w]);
 
@@ -276,6 +289,120 @@
 		svg.append('text')
 			.attr('x', width / 2)
 			.attr('y', attrY)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', '10px')
+			.style('fill', 'var(--text-muted)')
+			.text('@kmedved | www.darko.app | @anpatt7');
+	}
+
+	function renderShinyChart({ svg, width, data }) {
+		const isMobile = width < 500;
+		const height = chartHeight;
+		const margin = {
+			top: 70,
+			right: isMobile ? 10 : 20,
+			bottom: isMobile ? 112 : 88,
+			left: isMobile ? 48 : 62
+		};
+		const innerWidth = width - margin.left - margin.right;
+		const innerHeight = height - margin.top - margin.bottom;
+		const x = d3
+			.scaleBand()
+			.domain(data.map((point) => point.metric))
+			.range([0, innerWidth])
+			.padding(data.length > 7 ? 0.18 : 0.28);
+		const y = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]);
+		const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+		g.append('rect')
+			.attr('width', innerWidth)
+			.attr('height', innerHeight)
+			.attr('fill', 'var(--shiny-panel-bg, var(--bg-surface))')
+			.attr('stroke', 'var(--shiny-season-rule)')
+			.attr('stroke-width', 1);
+
+		g.selectAll('.percentile-bar')
+			.data(data)
+			.join('rect')
+			.attr('class', 'percentile-bar')
+			.attr('x', (point) => x(point.metric))
+			.attr('y', (point) => y(point.value))
+			.attr('width', x.bandwidth())
+			.attr('height', (point) => innerHeight - y(point.value))
+			.attr('fill', (_, index) => SHINY_SET1[index % SHINY_SET1.length])
+			.attr('stroke', 'darkgray')
+			.attr('stroke-width', 1)
+			.attr('cursor', 'pointer')
+			.on('mouseenter', function (event, point) {
+				const container = chartRootEl.querySelector('.percentiles-chart-container');
+				const containerRect = container.getBoundingClientRect();
+				const svgRect = svgEl.getBoundingClientRect();
+				tooltipData = {
+					metric: point.metric,
+					percentile: point.value,
+					raw: fmtRawValue(point.metric, rawValues[point.metric]),
+					label: getMetricDisplayLabel(point.metric),
+					px: margin.left + x(point.metric) + x.bandwidth() / 2 + svgRect.left - containerRect.left,
+					py: margin.top + y(point.value) + svgRect.top - containerRect.top
+				};
+			})
+			.on('mouseleave', function () {
+				tooltipData = null;
+			});
+
+		const xAxis = g
+			.append('g')
+			.attr('transform', `translate(0,${innerHeight})`)
+			.call(d3.axisBottom(x).tickFormat((metric) => getMetricDisplayLabel(metric)));
+		xAxis.select('.domain').attr('stroke', 'var(--shiny-season-rule)');
+		xAxis.selectAll('.tick line').attr('stroke', 'var(--shiny-season-rule)');
+		xAxis
+			.selectAll('.tick text')
+			.attr('font-size', isMobile ? '9px' : '11px')
+			.attr('transform', data.length > 5 || isMobile ? 'rotate(-28)' : null)
+			.style('text-anchor', data.length > 5 || isMobile ? 'end' : 'middle')
+			.attr('dx', data.length > 5 || isMobile ? '-0.4em' : null)
+			.attr('dy', data.length > 5 || isMobile ? '0.45em' : '0.71em')
+			.style('fill', 'var(--text)');
+
+		const yAxis = g
+			.append('g')
+			.call(d3.axisLeft(y).tickValues(d3.range(0, 101, 10)).tickFormat((value) => `${value}%`));
+		yAxis.select('.domain').attr('stroke', 'var(--shiny-season-rule)');
+		yAxis.selectAll('.tick line').attr('stroke', 'var(--shiny-season-rule)');
+		yAxis.selectAll('.tick text').attr('font-size', isMobile ? '9px' : '11px').style('fill', 'var(--text)');
+
+		g.append('text')
+			.attr('transform', 'rotate(-90)')
+			.attr('x', -innerHeight / 2)
+			.attr('y', isMobile ? -37 : -48)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', isMobile ? '12px' : '14px')
+			.style('fill', 'var(--text)')
+			.text('Percentile');
+
+		svg.append('text')
+			.attr('x', width / 2)
+			.attr('y', 24)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', isMobile ? '16px' : '18px')
+			.attr('font-weight', '400')
+			.style('fill', 'var(--text)')
+			.text(playerName);
+
+		const posLabel = position ? `${position} Only` : 'All Positions';
+		svg.append('text')
+			.attr('x', width / 2)
+			.attr('y', 47)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', isMobile ? '12px' : '15px')
+			.attr('font-weight', '400')
+			.style('fill', 'var(--text)')
+			.text(`${posLabel} (${date || ''})`);
+
+		svg.append('text')
+			.attr('x', width / 2)
+			.attr('y', height - 8)
 			.attr('text-anchor', 'middle')
 			.attr('font-size', '10px')
 			.style('fill', 'var(--text-muted)')

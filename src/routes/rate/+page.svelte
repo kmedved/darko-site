@@ -132,8 +132,8 @@
     <title>Rate Players — DARKO DPM</title>
 </svelte:head>
 
-<div class="container rate-page">
-    <div class="page-header">
+<div class="container rate-page" data-shiny-page>
+    <div class="page-header" data-shiny-surface="hero">
         <h1>Rate a Player</h1>
         <p class="page-subtitle">Who is the better player? Click to vote.</p>
     </div>
@@ -182,7 +182,7 @@
     {/if}
 
     {#if showLeaderboard}
-        <div class="leaderboard-section">
+        <div class="leaderboard-section" data-shiny-surface="panel">
             <div class="leaderboard-header">
                 <h2>Fan Elo Leaderboard</h2>
                 <button class="action-btn action-btn--sm" type="button" onclick={refreshLeaderboard} disabled={leaderboardLoading}>
@@ -192,7 +192,7 @@
             {#if leaderboardLoading}
                 <div class="loading-state">Loading leaderboard&hellip;</div>
             {:else if leaderboard.length > 0}
-                <div class="leaderboard-table-wrap">
+                <div class="leaderboard-table-wrap" data-shiny-table>
                     <table class="leaderboard-table">
                         <thead>
                             <tr>

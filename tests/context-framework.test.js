@@ -72,6 +72,17 @@ test('context sync module dependency map matches live import analysis', async ()
     assert.deepEqual(actualSyncArtifact.module_dependencies, expectedSyncArtifact.module_dependencies);
 });
 
+test('runtime display-mode imports are not classified as repository tooling', async () => {
+    const syncArtifact = await buildSyncArtifact(rootDir);
+
+    for (const sourceGroup of ['routes:pages', 'ui:components']) {
+        assert.ok(
+            !(syncArtifact.module_dependencies.edges[sourceGroup] || []).includes('tooling:repo'),
+            `${sourceGroup} should not depend on tooling:repo`
+        );
+    }
+});
+
 test('context sync public contracts match live export and route inspection', async () => {
     const [expectedSyncArtifact, actualSyncArtifact] = await Promise.all([
         buildSyncArtifact(rootDir),

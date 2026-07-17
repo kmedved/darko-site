@@ -1,8 +1,12 @@
 <script>
 	import * as d3 from 'd3';
+	import { getContext } from 'svelte';
+	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 	import { getChartLayout } from '$lib/utils/chartLayout.js';
+	import { getPositionCategory, getPositionPaletteIndex } from '$lib/utils/positionCategories.js';
+	import { SHINY_COLORS, SHINY_SET1, getShinyChartPreset } from '$lib/utils/shinyDesign.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
 	let {
@@ -17,6 +21,8 @@
 	let tooltipData = $state(null);
 	let scalesRef = $state({ x: null, y: null, margin: null, w: 0, h: 0 });
 	let pointsForTooltip = $state([]);
+	const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
+	const shinyScatter = getShinyChartPreset('scatter');
 
 	const exportFilenameBase = $derived(`scatterplot-${xMetric}-vs-${yMetric}`);
 
@@ -50,7 +56,12 @@
 	];
 
 	function getPositionColor(position) {
-		return POSITION_COLORS[position] || '#888';
+		return POSITION_COLORS[getPositionCategory(position)] || '#888';
+	}
+
+	function getShinyPositionColor(position) {
+		const paletteIndex = getPositionPaletteIndex(position);
+		return SHINY_SET1[paletteIndex ?? 8];
 	}
 
 	function fmtMetricValue(val, metric) {
@@ -99,6 +110,7 @@
 		void yMetric;
 		void colorByPosition;
 		void players;
+		void displayMode.view;
 		renderChart();
 		return withResizeObserver({ element: containerEl, onResize: renderChart });
 	});
@@ -109,6 +121,7 @@
 
 		const width = containerEl?.clientWidth ?? 0;
 		if (!width) return;
+		const isShinyView = displayMode.view === 'shiny';
 
 		// Prepare data points
 		const points = [];
@@ -149,8 +162,18 @@
 
 		scalesRef = { x, y, margin, w, h };
 
+		if (isShinyView && shinyScatter.plotBorder) {
+			g.append('rect')
+				.attr('width', w)
+				.attr('height', h)
+				.attr('fill', 'none')
+				.attr('stroke', 'var(--shiny-season-rule)')
+				.attr('stroke-width', 1);
+		}
+
 		// Grid lines
-		g.append('g')
+		if (!isShinyView) {
+			g.append('g')
 			.call(
 				d3.axisLeft(y)
 					.ticks(layout.yTicks)
@@ -164,7 +187,7 @@
 					.attr('stroke-dasharray', '2,3')
 			);
 
-		g.append('g')
+			g.append('g')
 			.call(
 				d3.axisBottom(x)
 					.ticks(layout.xTicks)
@@ -178,6 +201,7 @@
 					.attr('stroke', 'var(--border-subtle, #333)')
 					.attr('stroke-dasharray', '2,3')
 			);
+		}
 
 		// Zero baselines
 		const xDomain = x.domain();
@@ -186,23 +210,23 @@
 			g.append('line')
 				.attr('x1', x(0)).attr('x2', x(0))
 				.attr('y1', 0).attr('y2', h)
-				.attr('stroke', 'var(--text-muted)')
-				.attr('stroke-width', 1)
+				.attr('stroke', isShinyView ? 'var(--shiny-chart-line)' : 'var(--text-muted)')
+				.attr('stroke-width', isShinyView ? 2 : 1)
 				.attr('stroke-dasharray', '6,4')
-				.attr('opacity', 0.5);
+				.attr('opacity', isShinyView ? 1 : 0.5);
 		}
 		if (SIGNED_METRICS.has(yMetric) && yDomain[0] <= 0 && yDomain[1] >= 0) {
 			g.append('line')
 				.attr('x1', 0).attr('x2', w)
 				.attr('y1', y(0)).attr('y2', y(0))
-				.attr('stroke', 'var(--text-muted)')
-				.attr('stroke-width', 1)
+				.attr('stroke', isShinyView ? 'var(--shiny-chart-line)' : 'var(--text-muted)')
+				.attr('stroke-width', isShinyView ? 2 : 1)
 				.attr('stroke-dasharray', '6,4')
-				.attr('opacity', 0.5);
+				.attr('opacity', isShinyView ? 1 : 0.5);
 		}
 
 		// Dots
-		const dotRadius = isMobile ? 3 : 4;
+		const dotRadius = isShinyView ? shinyScatter.pointRadius : (isMobile ? 3 : 4);
 		g.selectAll('circle.scatter-dot')
 			.data(points)
 			.join('circle')
@@ -212,10 +236,10 @@
 			.attr('r', dotRadius)
 			.attr('fill', (d) =>
 				colorByPosition
-					? getPositionColor(d.player.position)
-					: 'var(--accent)'
+					? (isShinyView ? getShinyPositionColor(d.player.position) : getPositionColor(d.player.position))
+					: (isShinyView ? SHINY_COLORS.scatterBase : 'var(--accent)')
 			)
-			.attr('opacity', 0.6)
+			.attr('opacity', isShinyView ? shinyScatter.pointOpacity : 0.6)
 			.attr('stroke', 'var(--bg-surface)')
 			.attr('stroke-width', 0.5);
 
@@ -238,8 +262,8 @@
 			.attr('x', w / 2)
 			.attr('y', h + 38)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '13px')
-			.attr('font-weight', '600')
+			.attr('font-size', isShinyView ? '16px' : '13px')
+			.attr('font-weight', isShinyView ? '400' : '600')
 			.style('fill', 'var(--text)')
 			.text(getMetricDisplayLabel(xMetric));
 
@@ -270,8 +294,8 @@
 			.attr('x', -h / 2)
 			.attr('y', -45)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '13px')
-			.attr('font-weight', '600')
+			.attr('font-size', isShinyView ? '16px' : '13px')
+			.attr('font-weight', isShinyView ? '400' : '600')
 			.style('fill', 'var(--text)')
 			.text(getMetricDisplayLabel(yMetric));
 
@@ -280,8 +304,8 @@
 			.attr('x', width / 2)
 			.attr('y', 24)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '16px')
-			.attr('font-weight', '700')
+			.attr('font-size', isShinyView ? '20px' : '16px')
+			.attr('font-weight', isShinyView ? '400' : '700')
 			.style('fill', 'var(--text)')
 			.text(`${getMetricDisplayLabel(xMetric)} vs ${getMetricDisplayLabel(yMetric)}`);
 
@@ -298,7 +322,7 @@
 					.attr('cx', 0)
 					.attr('cy', 0)
 					.attr('r', 4)
-					.attr('fill', item.color)
+					.attr('fill', isShinyView ? SHINY_SET1[i] : item.color)
 					.attr('opacity', 0.8);
 
 				row.append('text')

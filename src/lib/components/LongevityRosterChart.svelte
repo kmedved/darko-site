@@ -1,12 +1,19 @@
 <script>
     import * as d3 from 'd3';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
+    import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+    import { loess } from '$lib/utils/loess.js';
+    import { buildLoessConfidenceBand } from '$lib/utils/loessConfidenceBand.js';
+    import { getShinyChartPreset } from '$lib/utils/shinyDesign.js';
     import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
+    import { getContext } from 'svelte';
 
     let { player = null } = $props();
     let chartRootEl = $state(null);
     let svgEl = $state(null);
     let chartPlayer = $state(null);
+    const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
+    const shinySinglePlayer = getShinyChartPreset('singlePlayer');
     const exportFilenameBase = $derived.by(() => {
         const prefix = player?.player_name ? `${player.player_name}-` : '';
         return `${prefix}longevity-roster-projection`;
@@ -19,6 +26,7 @@
 
     $effect(() => {
         if (!svgEl || !chartRootEl) return;
+        void displayMode.view;
         chartPlayer = player;
 
         if (!chartPlayer?.trajectory?.length) {
@@ -39,6 +47,7 @@
     function renderChart(currentPlayer) {
         const width = chartRootEl?.clientWidth ?? 0;
         const isMobile = width < 500;
+        const isShinyView = displayMode.view === 'shiny';
         const height = isMobile ? 260 : 290;
 
         if (!width) {
@@ -75,7 +84,31 @@
             .domain(data.map((point) => point.season_start))
             .range([0, innerWidth]);
 
-        const yExtent = d3.extent(data, (point) => point.projected_retirement_age);
+        const xValues = data.map((_, index) => index);
+        const yValues = data.map((point) => point.projected_retirement_age);
+        const smoothedValues = isShinyView
+            ? loess(xValues, yValues, shinySinglePlayer.smoothingBandwidth)
+            : [];
+        const confidenceBand = isShinyView
+            ? buildLoessConfidenceBand(
+                xValues,
+                yValues,
+                smoothedValues,
+                shinySinglePlayer.smoothingBandwidth
+            ).map((point, index) => ({
+                ...point,
+                season_start: data[index].season_start
+            }))
+            : [];
+        const yExtent = d3.extent(
+            isShinyView
+                ? [
+                    ...yValues,
+                    ...confidenceBand.map((point) => point.lower),
+                    ...confidenceBand.map((point) => point.upper)
+                ]
+                : yValues
+        );
         const yPadding = Math.max(0.8, (yExtent[1] - yExtent[0]) * 0.22);
         const y = d3
             .scaleLinear()
@@ -89,9 +122,18 @@
 
         chartGroup
             .append('g')
-            .call(d3.axisLeft(y).ticks(isMobile ? 4 : 6).tickSize(-innerWidth))
-            .call((group) => group.select('.domain').remove())
-            .call((group) => group.selectAll('.tick line').attr('stroke', 'var(--border-subtle)').attr('stroke-dasharray', '2,3'))
+            .call(
+                d3
+                    .axisLeft(y)
+                    .ticks(isMobile ? 4 : 6)
+                    .tickSize(isShinyView ? 6 : -innerWidth)
+            )
+            .call((group) => {
+                if (!isShinyView) group.select('.domain').remove();
+            })
+            .call((group) => group.selectAll('.tick line')
+                .attr('stroke', isShinyView ? 'var(--shiny-season-rule)' : 'var(--border-subtle)')
+                .attr('stroke-dasharray', isShinyView ? null : '2,3'))
             .call((group) =>
                 group
                     .selectAll('.tick text')
@@ -118,13 +160,42 @@
             .attr('dx', '-0.35em')
             .attr('dy', '0.55em');
 
+        if (isShinyView) {
+            chartGroup
+                .append('rect')
+                .attr('width', innerWidth)
+                .attr('height', innerHeight)
+                .attr('fill', 'none')
+                .attr('stroke', 'var(--shiny-season-rule)')
+                .attr('stroke-width', 1);
+
+            chartGroup
+                .selectAll('.season-start-rule')
+                .data(data)
+                .join('line')
+                .attr('class', 'season-start-rule')
+                .attr('x1', (point) => x(point.season_start))
+                .attr('x2', (point) => x(point.season_start))
+                .attr('y1', 0)
+                .attr('y2', innerHeight)
+                .attr('stroke', 'var(--shiny-season-rule)')
+                .attr('stroke-width', shinySinglePlayer.seasonRuleWidth);
+        }
+
         const bandSize = Math.max(0.22, (yExtent[1] - yExtent[0]) * 0.12);
-        const bandGenerator = d3
-            .area()
-            .x((point) => x(point.season_start))
-            .y0((point) => y(point.projected_retirement_age - bandSize))
-            .y1((point) => y(point.projected_retirement_age + bandSize))
-            .curve(d3.curveMonotoneX);
+        const bandGenerator = isShinyView
+            ? d3
+                .area()
+                .x((point) => x(point.season_start))
+                .y0((point) => y(point.lower))
+                .y1((point) => y(point.upper))
+                .curve(d3.curveMonotoneX)
+            : d3
+                .area()
+                .x((point) => x(point.season_start))
+                .y0((point) => y(point.projected_retirement_age - bandSize))
+                .y1((point) => y(point.projected_retirement_age + bandSize))
+                .curve(d3.curveMonotoneX);
 
         const lineGenerator = d3
             .line()
@@ -134,19 +205,21 @@
 
         chartGroup
             .append('path')
-            .datum(data)
-            .attr('fill', 'var(--positive-bg)')
+            .datum(isShinyView ? confidenceBand : data)
+            .attr('fill', isShinyView ? 'var(--shiny-longevity-band)' : 'var(--positive-bg)')
             .attr('d', bandGenerator);
 
-        chartGroup
-            .append('path')
-            .datum(data)
-            .attr('fill', 'none')
-            .attr('stroke', 'var(--accent)')
-            .attr('stroke-width', 2.5)
-            .attr('stroke-linecap', 'round')
-            .attr('stroke-linejoin', 'round')
-            .attr('d', lineGenerator);
+        if (!isShinyView) {
+            chartGroup
+                .append('path')
+                .datum(data)
+                .attr('fill', 'none')
+                .attr('stroke', 'var(--accent)')
+                .attr('stroke-width', 2.5)
+                .attr('stroke-linecap', 'round')
+                .attr('stroke-linejoin', 'round')
+                .attr('d', lineGenerator);
+        }
 
         chartGroup
             .selectAll('circle')
@@ -154,10 +227,11 @@
             .join('circle')
             .attr('cx', (point) => x(point.season_start))
             .attr('cy', (point) => y(point.projected_retirement_age))
-            .attr('r', 3.4)
-            .attr('fill', 'var(--accent)');
+            .attr('r', isShinyView ? shinySinglePlayer.pointRadius : 3.4)
+            .attr('fill', isShinyView ? 'var(--shiny-longevity-points)' : 'var(--accent)')
+            .attr('opacity', isShinyView ? shinySinglePlayer.pointOpacity : 1);
 
-        if (!isMobile) {
+        if (!isMobile && !isShinyView) {
             chartGroup
                 .selectAll('.point-label')
                 .data(data)

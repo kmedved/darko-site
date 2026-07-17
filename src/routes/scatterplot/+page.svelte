@@ -54,17 +54,17 @@
 	<title>Player scatterplot — DARKO DPM</title>
 </svelte:head>
 
-<div class="container">
-	<div class="page-header">
+<div class="container scatterplot-page" data-shiny-page>
+	<div class="page-header" data-shiny-surface="hero">
 		<h1>Player scatterplot</h1>
 		<p>Compare any two stats across all current-season NBA players.</p>
 	</div>
 
-	<div class="scatterplot-layout">
+	<div class="scatterplot-layout" data-shiny-layout="sidebar">
 		<button class="filters-toggle" onclick={() => filtersOpen = !filtersOpen}>
 			{filtersOpen ? 'Hide Filters' : 'Filters'}
 		</button>
-		<div class="scatterplot-controls" class:mobile-open={filtersOpen}>
+		<div class="scatterplot-controls" data-shiny-surface="well" class:mobile-open={filtersOpen}>
 			<div class="control-group">
 				<label class="control-label" for="x-metric">X-Axis</label>
 				<select id="x-metric" class="control-select" bind:value={xMetric}>
@@ -114,7 +114,7 @@
 			</div>
 		</div>
 
-		<div class="scatterplot-chart-area">
+		<div class="scatterplot-chart-area" data-shiny-surface="plot">
 			<ScatterplotChart
 				players={filteredPlayers}
 				{xMetric}

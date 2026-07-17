@@ -132,7 +132,7 @@ a:hover { color: var(--accent-hover); }
 
 /* ── Nav ────────────────────────────────────────────── */
 
-nav {
+.site-nav {
     padding: 0;
     position: sticky;
     top: 0;
@@ -145,7 +145,7 @@ nav {
     overflow-y: visible;
 }
 
-nav::after {
+.site-nav::after {
     content: '';
     position: absolute;
     top: 0;
@@ -156,14 +156,14 @@ nav::after {
     z-index: -1;
 }
 
-nav .container {
+.site-nav .container {
     display: flex;
     align-items: center;
     height: var(--nav-sticky-offset);
     gap: 12px;
 }
 
-nav .logo {
+.site-nav .logo {
     display: inline-flex;
     align-items: center;
     flex: 0 0 auto;
@@ -181,6 +181,10 @@ nav .logo {
     background-size: contain;
 }
 
+.legacy-logo-lockup {
+    display: none;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -193,20 +197,25 @@ nav .logo {
     border: 0;
 }
 
-nav .links {
+.table-sizing-head .table-sizing-row th {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.site-nav .links {
     display: flex;
     gap: 0;
     height: 100%;
     align-items: center;
 }
 
-nav .desktop-links {
+.site-nav .desktop-links {
     flex: 1 1 auto;
     justify-content: center;
     min-width: 0;
 }
 
-nav .links a {
+.site-nav .links a {
     color: var(--text-muted);
     font-size: 13px;
     font-weight: 500;
@@ -225,25 +234,25 @@ nav .links a {
     white-space: nowrap;
 }
 
-nav .links a:hover {
+.site-nav .links a:hover {
     color: var(--text-secondary);
 }
 
-nav .links a.active {
+.site-nav .links a.active {
     color: var(--text);
     border-bottom-color: var(--accent);
 }
 
 @media (max-width: 1320px) {
-    nav .container {
+	    .site-nav .container {
         gap: 8px;
     }
 
-    nav .logo {
+	    .site-nav .logo {
         margin-right: 0;
     }
 
-    nav .links a {
+	    .site-nav .links a {
         font-size: 12px;
         padding: 8px 7px 9px;
     }
@@ -258,7 +267,7 @@ nav .links a.active {
         padding: 0 16px;
     }
 
-    nav .container {
+	    .site-nav .container {
         gap: 10px;
         height: 56px;
     }
@@ -268,7 +277,7 @@ nav .links a.active {
         width: 48px;
     }
 
-    nav .logo {
+	    .site-nav .logo {
         margin-right: auto;
     }
 }

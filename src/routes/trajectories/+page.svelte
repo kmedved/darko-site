@@ -23,6 +23,9 @@
 	} from '$lib/utils/csvPresets.js';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { getContext } from 'svelte';
+	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 
 	let selectedPlayers = $state([]);
 	let timeScale = $state('games');
@@ -39,6 +42,7 @@
 	let prevTimeScale = $state('games');
 	let wowyPublication = $state(null);
 	let wowyPublicationRequested = false;
+	const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
 	const historyLoads = new Map();
 	const STARTER_PLAYERS = [
 		{ nbaId: 203999, label: 'Nikola Jokic', detail: 'Modern peak big' },
@@ -46,6 +50,7 @@
 		{ nbaId: 2544, label: 'LeBron James', detail: 'Full career arc' },
 		{ nbaId: 201939, label: 'Stephen Curry', detail: 'Shooting prime' }
 	];
+	const starterPlayerById = new Map(STARTER_PLAYERS.map((player) => [player.nbaId, player]));
 
 	$effect(() => {
 		if (talentType !== prevTalentType) {
@@ -83,19 +88,6 @@
 		rangeFilterMax = Number.isFinite(v) ? v : null;
 	}
 
-	const PLAYER_COLORS = [
-		'#5b8def',
-		'#ef4444',
-		'#34d399',
-		'#f59e0b',
-		'#a78bfa',
-		'#06b6d4',
-		'#f97316',
-		'#22c55e',
-		'#ec4899',
-		'#eab308'
-	];
-
 	const PERCENT_METRICS = new Set(['tr_fg3_pct', 'tr_ft_pct', 'x_fg_pct', 'x_fg3_pct', 'x_ft_pct']);
 	const MONEY_METRICS = new Set(['sal_market_fixed']);
 	const SIGNED_METRICS = new Set([
@@ -118,53 +110,6 @@
 	const WOWY_METRICS = new Set(['wowy_rapm', 'wowy_orapm', 'wowy_drapm']);
 
 	const ROLLING_WINDOW_SIZE = 10;
-
-	function hslToHex(h, s, l) {
-		const saturation = s / 100;
-		const lightness = l / 100;
-		const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
-		const huePrime = h / 60;
-		const x = chroma * (1 - Math.abs((huePrime % 2) - 1));
-		let red = 0;
-		let green = 0;
-		let blue = 0;
-
-		if (huePrime >= 0 && huePrime < 1) {
-			red = chroma;
-			green = x;
-		} else if (huePrime < 2) {
-			red = x;
-			green = chroma;
-		} else if (huePrime < 3) {
-			green = chroma;
-			blue = x;
-		} else if (huePrime < 4) {
-			green = x;
-			blue = chroma;
-		} else if (huePrime < 5) {
-			red = x;
-			blue = chroma;
-		} else {
-			red = chroma;
-			blue = x;
-		}
-
-		const match = lightness - chroma / 2;
-		const toHex = (value) =>
-			Math.round((value + match) * 255)
-				.toString(16)
-				.padStart(2, '0');
-
-		return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
-	}
-
-	function getPlayerColor(index) {
-		const presetColor = PLAYER_COLORS[index];
-		if (presetColor) return presetColor;
-
-		const hue = (index * 137.508) % 360;
-		return hslToHex(hue, 68, 56);
-	}
 
 	const talentTypes = [
 		{ key: 'dpm', label: 'DARKO DPM' },
@@ -236,7 +181,7 @@
 	);
 
 	const chartData = $derived(
-		selectedPlayers.map((p) => {
+		selectedPlayers.map((p, index) => {
 			let rows = rowsForPlayer(p);
 			if (rangeFilterMin != null || rangeFilterMax != null) {
 				rows = rows.filter((row) => {
@@ -259,7 +204,7 @@
 			if (timeScale === 'seasons') {
 				rows = isWowyMetric ? computeSeasonXFromEndYear(rows) : computeSeasonX(rows);
 			}
-			return { ...p, rows };
+			return { ...p, color: getSeriesColor(index, displayMode.view), rows };
 		})
 	);
 	const hasChartRows = $derived(chartData.some((player) => player.rows.length > 0));
@@ -440,7 +385,7 @@
 				nba_id: nbaId,
 				player_name: player?.player_name || player?.label || `Player ${nbaId}`,
 				team_name: player?.team_name || null,
-				color: getPlayerColor(selectedPlayers.length),
+				color: getSeriesColor(selectedPlayers.length, displayMode.view),
 				rows: [],
 				darkoLoaded: false,
 				wowyRows: [],
@@ -517,10 +462,14 @@
 				.map((id) => Number.parseInt(id, 10))
 				.filter((id) => Number.isInteger(id) && id > 0)
 		)];
-		for (const nbaId of uniqueIds) addPlayerShell({ nba_id: nbaId });
+		for (const nbaId of uniqueIds) {
+			addPlayerShell({ nba_id: nbaId, label: starterPlayerById.get(nbaId)?.label });
+		}
 
 		const kind = historyKind ?? (isWowyMetric ? 'wowy' : 'darko');
-		const results = await Promise.allSettled(uniqueIds.map((nbaId) => loadHistory(nbaId, kind)));
+		const results = await Promise.allSettled(
+			uniqueIds.map((nbaId) => loadHistory(nbaId, kind))
+		);
 		for (const [index, result] of results.entries()) {
 			if (result.status === 'rejected') {
 				error = error || result.reason?.message || `Failed to load player ${uniqueIds[index]}`;
@@ -649,7 +598,7 @@
 			.filter((p) => p.nba_id !== nbaId)
 			.map((p, i) => ({
 				...p,
-				color: getPlayerColor(i)
+				color: getSeriesColor(i, displayMode.view)
 			}));
 	}
 </script>
@@ -658,9 +607,9 @@
 	<title>Player Career Trajectories - DARKO DPM</title>
 </svelte:head>
 
-<div class="trajectory-page">
+<div class="trajectory-page" data-shiny-page>
 	<div class="container trajectory-container">
-		<section class="trajectory-hero" aria-labelledby="trajectory-title">
+		<section class="trajectory-hero" data-shiny-surface="hero" aria-labelledby="trajectory-title">
 			<div class="trajectory-title-block">
 				<div class="trajectory-icon" aria-hidden="true">
 					<svg viewBox="0 0 48 48" role="presentation">
@@ -677,8 +626,8 @@
 			</div>
 		</section>
 
-		<div class="trajectory-workspace">
-			<aside class="trajectory-controls" aria-label="Trajectory controls">
+		<div class="trajectory-workspace" data-shiny-layout="sidebar">
+			<aside class="trajectory-controls" data-shiny-surface="well" aria-label="Trajectory controls">
 				<fieldset class="control-group">
 					<legend class="control-label">Time Scale</legend>
 					<div class="radio-stack">
@@ -806,8 +755,8 @@
 				<div class="control-group player-control-group">
 					<span class="control-label">Select Players to Compare</span>
 					<div class="player-chip-list">
-						{#each selectedPlayers as p (p.nba_id)}
-							<span class="player-chip" style:--player-color={p.color}>
+						{#each selectedPlayers as p, index (p.nba_id)}
+							<span class="player-chip" style:--player-color={getSeriesColor(index, displayMode.view)}>
 								<span>
 									<strong>{p.player_name}</strong>
 									<small>{p.nba_id}</small>
@@ -844,7 +793,7 @@
 			</aside>
 
 			<main class="trajectory-main">
-				<section class="trajectory-chart-area" aria-label="Career trajectory chart">
+				<section class="trajectory-chart-area" data-shiny-surface="plot" aria-label="Career trajectory chart">
 					{#if error}
 						<div class="trajectory-message error-msg">{error}</div>
 					{/if}
@@ -892,7 +841,7 @@
 				{#if selectedPlayers.length > 0 && hasChartRows}
 					<section class="trajectory-stat-grid" aria-label="Trajectory summary">
 						{#each trajectoryStats as card (card.label)}
-							<article class="trajectory-stat-card {card.tone}">
+							<article class="trajectory-stat-card {card.tone}" data-shiny-surface="summary">
 								<div class="stat-icon" aria-hidden="true">
 									<span></span>
 								</div>

@@ -34,10 +34,12 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/app.css` - source
 - `src/app.html` - source
 - `src/hooks.server.js` - Canonicalizes GET URLs by stripping tracking parameters.
+- `src/shiny-view.css` - source
 
 ## src/lib
 
 - `src/lib/api.js` - Client-side fetch helpers that normalize API responses.
+- `src/lib/displayMode.js` - source
 
 ## src/lib/components
 
@@ -45,7 +47,6 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/components/ChartDownloadMenu.svelte` - component
 - `src/lib/components/ConferenceChart.svelte` - component
 - `src/lib/components/DpmChart.svelte` - component
-- `src/lib/components/LegacyLeaderboard.svelte` - component
 - `src/lib/components/LongevityCareerLengthChart.svelte` - component
 - `src/lib/components/LongevityRosterChart.svelte` - component
 - `src/lib/components/MetricTooltip.svelte` - component
@@ -85,18 +86,24 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/utils/chartLayout.js` - util
 - `src/lib/utils/chartQuickExport.js` - util
 - `src/lib/utils/chartResizeObserver.js` - util
+- `src/lib/utils/chartTheme.js` - util
 - `src/lib/utils/compareUtils.js` - util
 - `src/lib/utils/csv.js` - util
 - `src/lib/utils/csvPresets.js` - util
 - `src/lib/utils/leaderboardColumns.js` - util
 - `src/lib/utils/leaderboardCsv.js` - util
-- `src/lib/utils/legacyLeaderboard.js` - util
 - `src/lib/utils/loess.js` - util
+- `src/lib/utils/loessConfidenceBand.js` - util
+- `src/lib/utils/longevityProbabilityBands.js` - util
 - `src/lib/utils/longevityTable.js` - util
 - `src/lib/utils/metricDefinitions.js` - util
+- `src/lib/utils/metricHeatScales.js` - util
 - `src/lib/utils/playerSearch.js` - util
+- `src/lib/utils/playerTableFilters.js` - util
+- `src/lib/utils/positionCategories.js` - util
 - `src/lib/utils/requestSequencer.js` - util
 - `src/lib/utils/seasonUtils.js` - util
+- `src/lib/utils/shinyDesign.js` - util
 - `src/lib/utils/sortableTable.js` - util
 - `src/lib/utils/supabaseConfig.js` - util
 - `src/lib/utils/teamAbbreviations.js` - util
@@ -192,23 +199,26 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/elo-vote-service-wrapper.test.js` - test
 - `tests/leaderboard-export.test.js` - test
 - `tests/leaderboard-page-ui-guards.test.js` - test
-- `tests/legacy-leaderboard.test.js` - test
 - `tests/lineup-ratings.test.js` - test
 - `tests/lineups-csv.test.js` - test
 - `tests/lineups-page-loader.test.js` - test
 - `tests/lineups-page-ui-guards.test.js` - test
 - `tests/longevity-csv.test.js` - test
+- `tests/longevity-probability-bands.test.js` - test
 - `tests/longevity-table.test.js` - test
 - `tests/mobile-table-scroll.test.js` - test
 - `tests/package-json-hygiene.test.js` - test
 - `tests/player-page-server-load.test.js` - test
 - `tests/player-search-contracts.test.js` - test
 - `tests/player-search.test.js` - test
+- `tests/player-table-filters.test.js` - test
 - `tests/player-views.test.js` - test
+- `tests/position-categories.test.js` - test
 - `tests/request-sequencer.test.js` - test
 - `tests/search-player-route.test.js` - test
 - `tests/season-utils.test.js` - test
 - `tests/server-error-logging.test.js` - test
+- `tests/shiny-view.test.js` - test
 - `tests/standings-page-ui-guards.test.js` - test
 - `tests/sticky-header-overflow.test.js` - test
 - `tests/supabase-config.test.js` - test

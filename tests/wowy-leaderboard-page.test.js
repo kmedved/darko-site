@@ -122,7 +122,10 @@ test('WOWY leaderboard supports sorting, filtering, complete CSV export, and mob
 
     assert.match(contents, /getNextSortState/);
     assert.match(contents, /getSortedRows/);
-    assert.match(contents, /aria-sort=\{sortColumn === column\.key/);
+    assert.equal(
+        (contents.match(/aria-sort=\{getSortAriaValue\(sortColumn, sortDirection, column\.key\)\}/g) ?? []).length,
+        2
+    );
     assert.match(contents, /const seasonSortColumns = new Set/);
     assert.match(contents, /const allTimeSortColumns = new Set\(\[\.\.\.seasonSortColumns, 'season'\]\)/);
     assert.match(contents, /const currentSortColumns = new Set/);
@@ -174,6 +177,20 @@ test('WOWY leaderboard supports sorting, filtering, complete CSV export, and mob
     assert.match(contents, /isAllTimeView[\s\S]*wowyAllTimeLeaderboardCsvColumns[\s\S]*isCurrentView[\s\S]*wowyLeaderboardCsvColumns[\s\S]*isSeasonAverageHistory[\s\S]*wowyHistoricalLeaderboardCsvColumns[\s\S]*wowyOpeningGameLeaderboardCsvColumns/);
     assert.match(contents, /isSeasonAverageHistory \? 'season-average' : 'opening-game'/);
     assert.match(contents, /class:wowy-table--all-time=\{isAllTimeView\}/);
+    assert.match(contents, /setupWideStickyTable/);
+    assert.match(contents, /class="sticky-header-shell"/);
+    assert.match(contents, /class="table-header-scroll"/);
+    assert.match(contents, /class="table-body-scroll"/);
+    assert.match(contents, /id=\{`wowy-column-\$\{column\.key\}`\}/);
+    assert.match(contents, /class="table-semantic-row sr-only"/);
+    assert.match(contents, /role="presentation"/);
+    assert.match(contents, /headers="wowy-column-player_name"/);
+    assert.match(contents, /headers=\{`wowy-column-\$\{teamColumnKey\}`\}/);
+    assert.match(contents, /getMetricHeatVariables\('dpm', player\.wowy_rapm, heatScales\)/);
+    assert.match(contents, /getMetricHeatVariables\('o_dpm', player\.wowy_orapm, heatScales\)/);
+    assert.match(contents, /getMetricHeatVariables\('d_dpm', player\.wowy_drapm, heatScales\)/);
+    assert.match(contents, /buildPresetHeatScales\(players, 'wowy'\)/);
+    assert.doesNotMatch(contents, /buildPresetHeatScales\((?:sortedPlayers|filteredPlayers), 'wowy'\)/);
     assert.ok(desktopColumnsStart >= 0 && touchStart > desktopColumnsStart, 'page should define desktop column priorities');
     assert.ok(touchStart >= 0 && touchEnd > touchStart, 'page should define a touch-table mode');
 
@@ -190,11 +207,10 @@ test('WOWY leaderboard supports sorting, filtering, complete CSV export, and mob
     assert.match(touchBlock, /any-hover:\s*none/);
     assert.match(touchBlock, /any-pointer:\s*coarse/);
     assert.match(touchBlock, /max-width:\s*1024px/);
-    assert.match(touchBlock, /\.wowy-table-shell\s*\{[\s\S]*overflow-x:\s*auto;/);
+    assert.match(touchBlock, /\.table-body-scroll\s*\{[\s\S]*-webkit-overflow-scrolling:\s*touch;/);
     assert.match(touchBlock, /\.wowy-table\s*\{[\s\S]*width:\s*max-content;[\s\S]*min-width:\s*900px;/);
-    assert.match(touchBlock, /\.wowy-table th\s*\{[\s\S]*position:\s*static;/);
-    assert.match(contents, /\.wowy-table th\s*\{[\s\S]*position:\s*sticky;[\s\S]*top:\s*var\(--nav-sticky-offset\);/);
+    assert.match(contents, /\.sticky-header-shell\s*\{[\s\S]*position:\s*sticky;[\s\S]*top:\s*var\(--nav-sticky-offset\);/);
+    assert.match(contents, /\.table-body-scroll\s*\{[\s\S]*overflow-x:\s*auto;/);
     assert.match(contents, /\.wowy-table-shell\s*\{[\s\S]*overflow:\s*visible;/);
-    assert.match(contents, /@media \(max-width: 840px\)\s*\{[\s\S]*?\.wowy-table-shell\s*\{[\s\S]*?overflow-x:\s*auto;/);
-    assert.match(contents, /@media \(max-width: 840px\)\s*\{[\s\S]*?\.wowy-table th\s*\{[\s\S]*?position:\s*static;/);
+    assert.match(contents, /@media \(max-width: 840px\)\s*\{[\s\S]*?\.table-body-scroll\s*\{[\s\S]*?-webkit-overflow-scrolling:\s*touch;/);
 });

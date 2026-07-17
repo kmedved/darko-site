@@ -36,7 +36,10 @@ export function setupWideStickyTable({
             return;
         }
 
-        const sourceCells = Array.from(sourceHead.querySelectorAll('th'));
+        const sizingCells = Array.from(sourceHead.querySelectorAll('.table-sizing-row th'));
+        const sourceCells = sizingCells.length > 0
+            ? sizingCells
+            : Array.from(sourceHead.querySelectorAll('th'));
         const headerCells = Array.from(headerTable.querySelectorAll('th'));
 
         if (sourceCells.length === 0 || sourceCells.length !== headerCells.length) {
@@ -54,10 +57,11 @@ export function setupWideStickyTable({
             headerCell.style.maxWidth = `${width}px`;
         }
 
-        root.style.setProperty(
-            '--wide-sticky-header-height',
-            `${Math.ceil(sourceHead.getBoundingClientRect().height)}px`
-        );
+        const sizingRows = Array.from(sourceHead.querySelectorAll('.table-sizing-row'));
+        const sourceHeaderHeight = sizingRows.length > 0
+            ? sizingRows.reduce((height, row) => height + row.getBoundingClientRect().height, 0)
+            : sourceHead.getBoundingClientRect().height;
+        root.style.setProperty('--wide-sticky-header-height', `${Math.ceil(sourceHeaderHeight)}px`);
 
         headerScroller.scrollLeft = bodyScroller.scrollLeft;
     };

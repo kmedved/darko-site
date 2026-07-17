@@ -220,9 +220,9 @@
 	<title>{playerInfo?.player_name || 'Player'} Profile — DARKO DPM</title>
 </svelte:head>
 
-<div class="container">
-	<div class="profile-layout">
-		<aside class="profile-sidebar">
+<div class="container player-profile-page" data-shiny-page>
+	<div class="profile-layout" data-shiny-layout="sidebar">
+		<aside class="profile-sidebar" data-shiny-surface="well">
 			<div class="sidebar-section">
 				<p class="sidebar-label">Player</p>
 				<AllPlayerSearch onSelect={handleSelectPlayer} exclude={[]} />
@@ -246,7 +246,7 @@
 							</div>
 						{/if}
 					</div>
-					<h2>{playerInfo.player_name}</h2>
+					<h1>{playerInfo.player_name}</h1>
 					<p class="player-meta">{playerInfo.team_name} · {playerInfo.position || '?'}</p>
 					<p class="player-detail">{playerDetailText}</p>
 				</div>
@@ -281,8 +281,8 @@
 
 		<div class="profile-content">
 			{#if playerInfo}
-				<div class="charts-row">
-					<div class="chart-panel chart-half">
+				<div class="charts-row" data-shiny-layout="split">
+					<div class="chart-panel chart-half" data-shiny-surface="plot">
 						<TalentTrendChart
 							rows={historyRows}
 							{talentType}
@@ -295,7 +295,7 @@
 						{/if}
 					</div>
 					{#if hasLongevityData}
-						<div class="chart-panel chart-half">
+						<div class="chart-panel chart-half" data-shiny-surface="plot">
 							<h3 class="chart-panel-title">{playerInfo.player_name}</h3>
 							<p class="chart-panel-subtitle">Career Length Projections</p>
 							<LongevityCareerLengthChart player={longevityPlayer} />
@@ -304,15 +304,15 @@
 				</div>
 
 				{#if percentilesLoading}
-					<div class="chart-panel">
+					<div class="chart-panel" data-shiny-surface="panel">
 						<div class="loading">Loading percentile context...</div>
 					</div>
 				{:else if percentileNotice}
-					<div class="chart-panel">
+					<div class="chart-panel" data-shiny-surface="panel">
 						<p class="percentile-notice">{percentileNotice}</p>
 					</div>
 				{:else if allActivePlayers.length > 0}
-					<div class="chart-panel">
+					<div class="chart-panel" data-shiny-surface="plot">
 						<TalentPercentilesChart
 							playerName={playerInfo.player_name}
 							position={playerInfo.position}
@@ -352,7 +352,7 @@
 		border-radius: var(--radius-sm);
 	}
 
-	.sidebar-player-info h2 {
+	.sidebar-player-info h1 {
 		font-size: 18px;
 		font-weight: 700;
 		color: var(--text);

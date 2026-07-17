@@ -1,7 +1,19 @@
 <script>
 	import '../app.css';
+	import '../shiny-view.css';
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { setContext } from 'svelte';
+	import {
+		DISPLAY_VIEW_CONTEXT,
+		DISPLAY_VIEW_QUERY_KEY,
+		DISPLAY_VIEW_STORAGE_KEY,
+		LEGACY_DISPLAY_VIEW_QUERY_KEY,
+		getDisplayViewPreview,
+		isDisplayView,
+		normalizeDisplayView
+	} from '$lib/displayMode.js';
 
 	const THEME_KEY = 'darko-theme';
 	const THEMES = ['black', 'dark', 'light', 'white'];
@@ -27,9 +39,63 @@
 		{ label: 'Team Profile', match: (path) => path.startsWith('/team/') }
 	];
 	let { children } = $props();
+	const displayMode = $state({ view: 'modern' });
+	setContext(DISPLAY_VIEW_CONTEXT, displayMode);
 
 	let theme = $state('white');
 	let mobileMenuOpen = $state(false);
+	const isShinyView = $derived(displayMode.view === 'shiny');
+
+	function readSavedDisplayView() {
+		try {
+			const savedView = localStorage.getItem(DISPLAY_VIEW_STORAGE_KEY);
+			return isDisplayView(savedView) ? savedView : null;
+		} catch {
+			return null;
+		}
+	}
+
+	function resolveDisplayView(url) {
+		return getDisplayViewPreview(url.searchParams) ?? readSavedDisplayView() ?? 'modern';
+	}
+
+	function setDisplayView(nextView) {
+		const normalizedView = normalizeDisplayView(nextView);
+		displayMode.view = normalizedView;
+		if (!browser) return;
+
+		document.documentElement.dataset.view = normalizedView;
+		try {
+			localStorage.setItem(DISPLAY_VIEW_STORAGE_KEY, normalizedView);
+		} catch {
+			// localStorage can be unavailable in some privacy modes
+		}
+
+		const url = new URL(window.location.href);
+		let removedPreview = false;
+		if (isDisplayView(url.searchParams.get(DISPLAY_VIEW_QUERY_KEY))) {
+			url.searchParams.delete(DISPLAY_VIEW_QUERY_KEY);
+			removedPreview = true;
+		}
+		if (isDisplayView(url.searchParams.get(LEGACY_DISPLAY_VIEW_QUERY_KEY))) {
+			url.searchParams.delete(LEGACY_DISPLAY_VIEW_QUERY_KEY);
+			removedPreview = true;
+		}
+		if (removedPreview) {
+			void goto(`${url.pathname}${url.search}${url.hash}`, {
+				replaceState: true,
+				keepFocus: true,
+				noScroll: true
+			});
+		}
+	}
+
+	$effect(() => {
+		if (!browser) return;
+		const resolvedView = resolveDisplayView($page.url);
+		displayMode.view = resolvedView;
+		document.documentElement.dataset.view = resolvedView;
+	});
 
 	function toggleMobileMenu() {
 		mobileMenuOpen = !mobileMenuOpen;
@@ -174,7 +240,7 @@
 	const moreMenuActive = $derived(MORE_NAV_ITEMS.some((item) => isNavItemActive(item, $page.url.pathname)));
 </script>
 
-<nav>
+<nav class="site-nav">
     <div class="container">
 		<button class="mobile-menu-btn" onclick={toggleMobileMenu} aria-label="Toggle menu" aria-expanded={mobileMenuOpen}>
 			<span class="hamburger-line" class:open={mobileMenuOpen}></span>
@@ -184,6 +250,15 @@
 		<a href="/" class="logo" aria-label="DARKO DPM">
             <span class="sr-only">DARKO DPM</span>
             <span class="logo-mark" aria-hidden="true"></span>
+            <span class="legacy-logo-lockup" aria-hidden="true">
+                <img
+                    src="/darko-about-logo.png"
+                    alt=""
+                    width="504"
+                    height="399"
+                    class="legacy-logo-mark"
+                />
+            </span>
         </a>
 		<span class="mobile-current-page">{currentPageLabel}</span>
         <div class="links desktop-links">
@@ -203,7 +278,28 @@
 			<details class="display-menu">
 				<summary>Display</summary>
 				<div class="display-menu-panel">
-					<label class="display-control">
+					<div class="display-control">
+						<span>View</span>
+						<div class="view-mode-toggle" role="group" aria-label="View">
+							<button
+								type="button"
+								class:active={!isShinyView}
+								aria-pressed={!isShinyView}
+								onclick={() => setDisplayView('modern')}
+							>
+								Modern
+							</button>
+							<button
+								type="button"
+								class:active={isShinyView}
+								aria-pressed={isShinyView}
+								onclick={() => setDisplayView('shiny')}
+							>
+								Shiny
+							</button>
+						</div>
+					</div>
+					<label class="display-control" class:disabled={isShinyView}>
 						<span>Theme</span>
 						<div class="theme-slider" role="group" aria-label="Theme selector">
 							<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[0]}</span>
@@ -217,18 +313,22 @@
 								class="theme-slider__input"
 								aria-label="Theme"
 								aria-valuetext={theme}
+								disabled={isShinyView}
 							/>
 							<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
 						</div>
 					</label>
-					<label class="display-control">
+					<label class="display-control" class:disabled={isShinyView}>
 						<span>Font</span>
-						<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font">
+						<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font" disabled={isShinyView}>
 							{#each FONTS as f, i (f)}
 								<option value={f}>{FONT_LABELS[i]}</option>
 							{/each}
 						</select>
 					</label>
+					{#if isShinyView}
+						<p class="display-mode-note">Shiny View uses its original light palette and Helvetica typography.</p>
+					{/if}
 				</div>
 			</details>
 		</div>
@@ -240,13 +340,36 @@
 	<div class="mobile-overlay" onclick={closeMobileMenu} onkeydown={() => {}}></div>
 {/if}
 
-<div class="mobile-drawer" class:open={mobileMenuOpen}>
+<div
+	class="mobile-drawer"
+	class:open={mobileMenuOpen}
+	aria-hidden={!mobileMenuOpen}
+	inert={!mobileMenuOpen}
+>
 	<div class="mobile-drawer-links">
 		{#each ALL_NAV_ITEMS as item (item.href)}
 			<a href={item.href} class:active={isNavItemActive(item, $page.url.pathname)} onclick={closeMobileMenu}>{item.label}</a>
 		{/each}
 	</div>
 	<div class="mobile-drawer-controls">
+		<div class="view-mode-toggle" role="group" aria-label="View">
+			<button
+				type="button"
+				class:active={!isShinyView}
+				aria-pressed={!isShinyView}
+				onclick={() => setDisplayView('modern')}
+			>
+				Modern
+			</button>
+			<button
+				type="button"
+				class:active={isShinyView}
+				aria-pressed={isShinyView}
+				onclick={() => setDisplayView('shiny')}
+			>
+				Shiny
+			</button>
+		</div>
 		<div class="theme-slider" role="group" aria-label="Theme selector">
 			<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[0]}</span>
 			<input
@@ -259,14 +382,18 @@
 				class="theme-slider__input"
 				aria-label="Theme"
 				aria-valuetext={theme}
+				disabled={isShinyView}
 			/>
 			<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
 		</div>
-		<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font">
+		<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font" disabled={isShinyView}>
 			{#each FONTS as f, i (f)}
 				<option value={f}>{FONT_LABELS[i]}</option>
 			{/each}
 		</select>
+		{#if isShinyView}
+			<p class="display-mode-note">Theme and font are fixed while Shiny View is active.</p>
+		{/if}
 	</div>
 </div>
 
@@ -274,12 +401,7 @@
     {@render children()}
 </main>
 
-<footer class="site-footer">
-    <div class="container footer-inner">
-        <span>DARKO DPM by <a href="https://x.com/kmedved" target="_blank" rel="noopener">@kmedved</a> & <a href="https://x.com/anpatt7" target="_blank" rel="noopener">@anpatt7</a></span>
-        <a href="/about">About</a>
-    </div>
-</footer>
+<!-- Product decision: the former global credits footer is intentionally absent in both display modes. -->
 
 <style>
 	.theme-slider {
@@ -472,6 +594,60 @@
 		font-weight: 700;
 	}
 
+	.display-control.disabled {
+		opacity: 0.48;
+	}
+
+	.view-mode-toggle {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-elevated);
+		overflow: hidden;
+	}
+
+	.view-mode-toggle button {
+		appearance: none;
+		min-height: 32px;
+		border: 0;
+		border-right: 1px solid var(--border);
+		background: transparent;
+		color: var(--text-secondary);
+		cursor: pointer;
+		font-family: var(--font-sans);
+		font-size: 12px;
+		font-weight: 700;
+		transition: background-color 0.15s, color 0.15s;
+	}
+
+	.view-mode-toggle button:last-child {
+		border-right: 0;
+	}
+
+	.view-mode-toggle button:hover,
+	.view-mode-toggle button:focus-visible {
+		color: var(--text);
+	}
+
+	.view-mode-toggle button:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: -2px;
+	}
+
+	.view-mode-toggle button.active {
+		background: var(--accent);
+		color: #fff;
+	}
+
+	.display-mode-note {
+		margin: 0;
+		color: var(--text-muted);
+		font-size: 10.5px;
+		font-weight: 500;
+		line-height: 1.35;
+	}
+
 	.display-control .theme-slider {
 		height: auto;
 	}
@@ -585,6 +761,10 @@
 		width: 100%;
 	}
 
+	.mobile-drawer-controls .display-mode-note {
+		font-size: 11px;
+	}
+
 	/* ── Desktop controls wrapper ── */
 	.desktop-controls {
 		display: flex;
@@ -629,7 +809,7 @@
 			--nav-sticky-offset: 56px;
 		}
 
-		:global(nav .container) {
+			:global(.site-nav .container) {
 			gap: 10px;
 			height: 56px;
 			padding: 0 16px;
@@ -640,7 +820,7 @@
 			width: 48px;
 		}
 
-		:global(nav .logo) {
+			:global(.site-nav .logo) {
 			margin-right: 0;
 		}
 
@@ -670,35 +850,4 @@
 			width: 100%;
 		}
 	}
-	/* ── Footer ── */
-	.site-footer {
-		margin-top: 48px;
-		padding: 20px 0;
-		border-top: 1px solid var(--border-subtle);
-	}
-
-	.footer-inner {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		font-size: 12px;
-		color: var(--text-muted);
-	}
-
-	.footer-inner a {
-		color: var(--text-muted);
-	}
-
-	.footer-inner a:hover {
-		color: var(--accent);
-	}
-
-	@media (max-width: 768px) {
-		.footer-inner {
-			flex-direction: column;
-			gap: 8px;
-			text-align: center;
-		}
-	}
-
 </style>

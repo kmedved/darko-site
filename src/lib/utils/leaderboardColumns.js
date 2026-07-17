@@ -82,6 +82,7 @@ const COLUMN_DEFINITIONS = Object.freeze({
         alignClass: 'num',
         dataType: 'number',
         format: 'millions',
+        filterScale: 1e-6,
         metricKey: 'sal_market_fixed'
     },
     actual_salary: {
@@ -91,7 +92,8 @@ const COLUMN_DEFINITIONS = Object.freeze({
         align: 'right',
         alignClass: 'num',
         dataType: 'number',
-        format: 'millions'
+        format: 'millions',
+        filterScale: 1e-6
     },
     box_dpm: {
         key: 'box_dpm',
@@ -165,6 +167,7 @@ const COLUMN_DEFINITIONS = Object.freeze({
         alignClass: 'num',
         dataType: 'number',
         format: 'percent',
+        filterScale: 100,
         metricKey: 'x_fg_pct'
     },
     x_fg3_pct: {
@@ -175,6 +178,7 @@ const COLUMN_DEFINITIONS = Object.freeze({
         alignClass: 'num',
         dataType: 'number',
         format: 'percent',
+        filterScale: 100,
         metricKey: 'x_fg3_pct'
     },
     x_ft_pct: {
@@ -185,6 +189,7 @@ const COLUMN_DEFINITIONS = Object.freeze({
         alignClass: 'num',
         dataType: 'number',
         format: 'percent',
+        filterScale: 100,
         metricKey: 'x_ft_pct'
     },
     surplus_value: {
@@ -195,6 +200,7 @@ const COLUMN_DEFINITIONS = Object.freeze({
         alignClass: 'num',
         dataType: 'number',
         format: 'signedMillions',
+        filterScale: 1e-6,
         metricKey: 'surplus_value'
     }
 });
@@ -252,20 +258,11 @@ export const LEADERBOARD_COLUMNS = buildColumns(
     }
 );
 
-export const LEGACY_LEADERBOARD_COLUMNS = buildColumns(
-    ['_rank', 'player_name', 'team_name', ...SHARED_PLAYER_METRIC_KEYS, 'surplus_value'],
-    {
-        o_dpm: { label: 'Off' },
-        d_dpm: { label: 'Def' }
-    }
-);
-
 export const TEAM_PLAYER_COLUMNS = buildColumns(
     ['player_name', 'position', ...SHARED_PLAYER_METRIC_KEYS]
 );
 
 export const leaderboardSortConfig = buildPlayerTableSortConfig(LEADERBOARD_COLUMNS);
-export const legacyLeaderboardSortConfig = buildPlayerTableSortConfig(LEGACY_LEADERBOARD_COLUMNS);
 export const teamPlayerSortConfig = buildPlayerTableSortConfig(TEAM_PLAYER_COLUMNS);
 
 export function getPlayerTableCellValue(player, column, index) {

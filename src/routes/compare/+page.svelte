@@ -109,8 +109,8 @@
 	<title>Compare Players — DARKO DPM</title>
 </svelte:head>
 
-<div class="container">
-	<div class="page-header">
+<div class="container compare-page" data-shiny-page>
+	<div class="page-header" data-shiny-surface="hero">
 		<div class="page-header-toolbar">
 			<div>
 				<h1>Compare Players</h1>
@@ -130,7 +130,7 @@
 		</div>
 	</div>
 
-	<div class="compare-search-panel">
+	<div class="compare-search-panel" data-shiny-surface="well">
 		<PlayerSearch onSelect={addPlayer} exclude={excludeIds} />
 		{#if selectedPlayers.length > 0}
 			<div class="compare-count">

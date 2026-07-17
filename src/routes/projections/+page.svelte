@@ -2,8 +2,8 @@
 	<title>Daily Box Score Projections — DARKO DPM</title>
 </svelte:head>
 
-<div class="container">
-	<div class="page-header">
+<div class="container projections-page" data-shiny-page>
+	<div class="page-header" data-shiny-surface="hero">
 		<div class="page-header-toolbar">
 			<div>
 				<h1>Daily Box Score Projections</h1>
@@ -12,9 +12,9 @@
 		</div>
 	</div>
 
-	<section class="projection-status" aria-labelledby="projection-status-title">
+	<section class="projection-status" data-shiny-surface="panel" aria-labelledby="projection-status-title">
 		<div>
-			<p class="status-eyebrow">Not live yet</p>
+			<p class="status-eyebrow" data-shiny-role="editorial-kicker">Not live yet</p>
 			<h2 id="projection-status-title">Daily box score projections are still being prepared for beta.</h2>
 			<p>
 				This page will house player-level points, rebounds, assists, shooting, and minutes projections when the feed is ready.

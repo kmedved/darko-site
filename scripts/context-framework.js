@@ -98,7 +98,7 @@ export const WHERE_TO_EDIT_ROWS = Object.freeze([
     },
     {
         task: 'Sticky tables, mobile scroll, CSV exports, or metric labels',
-        startHere: '`src/lib/components/LegacyLeaderboard.svelte` or page table route',
+        startHere: '`src/routes/+page.svelte` or the relevant page table route',
         alsoTouch: '`src/lib/utils/wideStickyTable.js`, `src/lib/utils/csvPresets.js`, `src/lib/utils/metricDefinitions.js`, table/export tests',
         primaryBundle: 'COMPRESSED_ui_tables.md'
     },
@@ -210,7 +210,7 @@ export const BUNDLE_DEFINITIONS = Object.freeze([
             'Sticky tables, mobile scroll, CSV exports, or metric labels'
         ],
         sourcePaths: [
-            'src/lib/components/LegacyLeaderboard.svelte',
+            'src/routes/+page.svelte',
             'src/lib/components/PlayerSearch.svelte',
             'src/lib/components/AllPlayerSearch.svelte',
             'src/lib/utils/csvPresets.js',
@@ -223,7 +223,6 @@ export const BUNDLE_DEFINITIONS = Object.freeze([
         ],
         matcher(relPath) {
             return (
-                relPath === 'src/lib/components/LegacyLeaderboard.svelte' ||
                 relPath === 'src/lib/components/PlayerSearch.svelte' ||
                 relPath === 'src/lib/components/AllPlayerSearch.svelte' ||
                 relPath === 'src/lib/components/PlayerCard.svelte' ||
@@ -234,7 +233,7 @@ export const BUNDLE_DEFINITIONS = Object.freeze([
                 relPath === 'src/lib/utils/metricDefinitions.js' ||
                 relPath.startsWith('src/lib/utils/leaderboard') ||
                 relPath === 'src/lib/utils/longevityTable.js' ||
-                relPath === 'src/lib/utils/legacyLeaderboard.js' ||
+                relPath === 'src/lib/utils/playerTableFilters.js' ||
                 relPath === 'src/lib/utils/requestSequencer.js' ||
                 relPath === 'src/lib/utils/seasonUtils.js'
             );
@@ -515,6 +514,7 @@ function groupForPath(relPath) {
     if (relPath === 'src/lib/server/supabase.js') return 'server:data';
     if (relPath.startsWith('src/lib/server/')) return 'server:helpers';
     if (relPath.startsWith('src/lib/components/')) return 'ui:components';
+    if (relPath === 'src/lib/displayMode.js') return 'ui:utils';
     if (relPath.startsWith('src/lib/utils/')) return 'ui:utils';
     if (relPath.startsWith('src/lib/data/')) return 'data:static';
     if (relPath === 'src/hooks.server.js') return 'platform:hooks';

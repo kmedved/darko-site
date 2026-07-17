@@ -31,3 +31,12 @@ test('trajectories restores and serializes metric and scale URL state', async ()
     assert.match(contents, /url\.searchParams\.set\('scale', desiredScale\)/);
     assert.match(contents, /WOWY_METRICS\.has\(talentType\) \? 'wowy' : 'darko'/);
 });
+
+test('direct-linked players resolve names from targeted history without loading the full index', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), TARGET_FILE), 'utf8');
+
+    assert.match(contents, /starterPlayerById\.get\(nbaId\)\?\.label/);
+    assert.match(contents, /player_name: first\?\.player_name \|\| entry\.player_name/);
+    assert.match(contents, /uniqueIds\.map\(\(nbaId\) => loadHistory\(nbaId, kind\)\)/);
+    assert.doesNotMatch(contents, /apiPlayersIndex|resolveMissingPlayerMetadata/);
+});

@@ -11,8 +11,13 @@
     } from '$lib/utils/csvPresets.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { formatSeasonEndYearLabel } from '$lib/utils/seasonUtils.js';
-    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
+    import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
+    import {
+        buildPresetHeatScales,
+        getMetricHeatVariables
+    } from '$lib/utils/metricHeatScales.js';
     import {
         getWowyHistoricalSnapshotContext,
         isWowySeasonAverageContext
@@ -206,6 +211,12 @@
     let minHeight = $state('');
     let maxHeight = $state('');
     let leaderboardPage = $state(1);
+    let wowyTableRoot = $state(null);
+    let wowyBodyScroller = $state(null);
+    let wowyBodyTable = $state(null);
+    let wowySourceHead = $state(null);
+    let wowyHeaderScroller = $state(null);
+    let wowyHeaderTable = $state(null);
 
     const players = $derived(
         Array.isArray(data.players)
@@ -264,6 +275,9 @@
                 ? seasonAverageTableColumns
                 : openingGameTableColumns
     );
+    const teamColumnKey = $derived(isCurrentView ? 'team_name' : 'team_sort_label');
+    const sampleColumnKey = $derived(isSeasonAverageHistory ? 'season_games' : 'career_game_num');
+    const dateColumnKey = $derived(isSeasonAverageHistory ? 'last_date' : 'date');
     const teamOptions = $derived.by(() => {
         const teams = new Map();
         for (const player of players) {
@@ -342,6 +356,9 @@
         const start = (activeLeaderboardPage - 1) * PAGE_SIZE;
         return sortedPlayers.slice(start, start + PAGE_SIZE);
     });
+    const heatScales = $derived.by(() =>
+        buildPresetHeatScales(players, 'wowy')
+    );
     const rangeStart = $derived(
         sortedPlayers.length === 0 ? 0 : (activeLeaderboardPage - 1) * PAGE_SIZE + 1
     );
@@ -360,6 +377,30 @@
                 ? 'Each value is a simple, unweighted average of the player\'s observed game-level WOWY ratings for the season.'
                 : "Opening-game snapshot of players who appeared in their teams' first games."
     );
+
+    $effect(() => {
+        activeLeaderboardPage;
+        visiblePlayers;
+        tableColumns.length;
+        sortColumn;
+        sortDirection;
+        wowyTableRoot;
+        wowyBodyScroller;
+        wowyBodyTable;
+        wowySourceHead;
+        wowyHeaderScroller;
+        wowyHeaderTable;
+
+        return setupWideStickyTable({
+            root: wowyTableRoot,
+            bodyScroller: wowyBodyScroller,
+            bodyTable: wowyBodyTable,
+            sourceHead: wowySourceHead,
+            headerScroller: wowyHeaderScroller,
+            headerTable: wowyHeaderTable,
+            wheelTarget: wowyHeaderScroller
+        });
+    });
 
     function toNumber(value) {
         const number = Number.parseFloat(value);
@@ -648,6 +689,53 @@
     }
 </script>
 
+{#snippet wowySemanticHeaderRow()}
+    <tr class="table-semantic-row sr-only">
+        {#each tableColumns as column (column.key)}
+            <th
+                id={`wowy-column-${column.key}`}
+                scope="col"
+                aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
+            >{column.label}</th>
+        {/each}
+    </tr>
+{/snippet}
+
+{#snippet wowyHeaderRow()}
+    <tr class="table-sizing-row">
+        {#each tableColumns as column (column.key)}
+            <th
+                scope="col"
+                aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
+                class:align-right={column.align === 'right'}
+                class:active-sort={sortColumn === column.key}
+            >
+                <div class="wowy-column-heading">
+                    {#if column.sortable !== false}
+                        <button
+                            type="button"
+                            onclick={() => toggleSort(column.key)}
+                            aria-label={`Sort by ${column.label}`}
+                        >
+                            <span>{column.label}</span>
+                            <span class="wowy-sort-glyph" aria-hidden="true">
+                                {getSortGlyph(sortColumn, sortDirection, column.key)}
+                            </span>
+                        </button>
+                    {:else}
+                        <span>{column.label}</span>
+                    {/if}
+                    {#if column.tooltip}
+                        <MetricTooltip text={column.tooltip}>
+                            <span class="wowy-tooltip-mark" aria-hidden="true">i</span>
+                        </MetricTooltip>
+                    {/if}
+                </div>
+            </th>
+        {/each}
+    </tr>
+{/snippet}
+
 <svelte:head>
     <title>WOWY RAPM — DARKO</title>
     <meta
@@ -662,11 +750,11 @@
     />
 </svelte:head>
 
-<div class="wowy-page">
+<div class="wowy-page" data-shiny-page>
     <div class="container wowy-container">
-        <section class="wowy-hero" aria-labelledby="wowy-title">
+        <section class="wowy-hero" data-shiny-surface="hero" aria-labelledby="wowy-title">
             <div class="wowy-hero-copy">
-                <p class="wowy-eyebrow">Game-level impact</p>
+                <p class="wowy-eyebrow" data-shiny-role="editorial-kicker">Game-level impact</p>
                 <div class="wowy-title-row">
                     <div class="wowy-icon" aria-hidden="true">
                         <svg viewBox="0 0 64 64" role="presentation">
@@ -709,7 +797,7 @@
                 <p class="wowy-projection-note">Observed player-game ratings only. This page does not use DARKO projection rows.</p>
             </div>
 
-            <aside class="wowy-method" aria-label="How to read WOWY RAPM">
+            <aside class="wowy-method" data-shiny-surface="well" aria-label="How to read WOWY RAPM">
                 <p class="wowy-method-label">Reading the table</p>
                 <p>{getMetricDefinition('wowy_rapm')}</p>
                 <p>
@@ -727,10 +815,10 @@
             </aside>
         </section>
 
-        <section class="wowy-table-panel" aria-labelledby="wowy-table-title">
+        <section class="wowy-table-panel" data-shiny-surface="panel" aria-labelledby="wowy-table-title">
             <div class="wowy-table-heading">
                 <div>
-                    <p class="wowy-eyebrow">Leaderboard</p>
+                    <p class="wowy-eyebrow" data-shiny-role="editorial-kicker">Leaderboard</p>
                     <h2 id="wowy-table-title">
                         {isAllTimeView
                             ? 'All-time top 100 seasons'
@@ -766,7 +854,7 @@
                 </button>
             </div>
 
-            <div class="wowy-controls">
+            <div class="wowy-controls" data-shiny-surface="well">
                 <label class="wowy-control-field" for="wowy-season-filter">
                     <span class="sr-only">Season</span>
                     <select
@@ -881,45 +969,33 @@
                 </div>
             </details>
 
-            <div class="wowy-table-shell">
-                <table class="wowy-table" class:wowy-table--all-time={isAllTimeView}>
-                    <thead>
-                        <tr>
-                            {#each tableColumns as column (column.key)}
-                                <th
-                                    scope="col"
-                                    aria-sort={sortColumn === column.key
-                                        ? (sortDirection === 'asc' ? 'ascending' : 'descending')
-                                        : 'none'}
-                                    class:align-right={column.align === 'right'}
-                                    class:active-sort={sortColumn === column.key}
-                                >
-                                    <div class="wowy-column-heading">
-                                        {#if column.sortable !== false}
-                                            <button
-                                                type="button"
-                                                onclick={() => toggleSort(column.key)}
-                                                aria-label={`Sort by ${column.label}`}
-                                            >
-                                                <span>{column.label}</span>
-                                                <span class="wowy-sort-glyph" aria-hidden="true">
-                                                    {getSortGlyph(sortColumn, sortDirection, column.key)}
-                                                </span>
-                                            </button>
-                                        {:else}
-                                            <span>{column.label}</span>
-                                        {/if}
-                                        {#if column.tooltip}
-                                            <MetricTooltip text={column.tooltip}>
-                                                <span class="wowy-tooltip-mark" aria-hidden="true">i</span>
-                                            </MetricTooltip>
-                                        {/if}
-                                    </div>
-                                </th>
-                            {/each}
-                        </tr>
-                    </thead>
-                    <tbody>
+            <div class="wowy-table-shell" data-shiny-table bind:this={wowyTableRoot}>
+                <div class="sticky-header-shell">
+                    <div class="table-header-scroll" bind:this={wowyHeaderScroller}>
+                        <table
+                            class="wowy-table sticky-header-table"
+                            role="presentation"
+                            class:wowy-table--all-time={isAllTimeView}
+                            bind:this={wowyHeaderTable}
+                        >
+                            <thead>
+                                {@render wowyHeaderRow()}
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="table-body-scroll" bind:this={wowyBodyScroller}>
+                    <table
+                        class="wowy-table"
+                        class:wowy-table--all-time={isAllTimeView}
+                        bind:this={wowyBodyTable}
+                    >
+                        <thead class="table-sizing-head" bind:this={wowySourceHead}>
+                            {@render wowySemanticHeaderRow()}
+                            {@render wowyHeaderRow()}
+                        </thead>
+                        <tbody>
                         {#if visiblePlayers.length === 0}
                             <tr>
                                 <td class="wowy-empty-row" colspan={tableColumns.length}>
@@ -931,8 +1007,8 @@
                                 {@const fallbackRank = (activeLeaderboardPage - 1) * PAGE_SIZE + index + 1}
                                 {@const rank = isAllTimeView ? allTimeRank(player, fallbackRank) : fallbackRank}
                                 <tr>
-                                    <td class="align-right wowy-rank-cell">{rank}</td>
-                                    <td class="wowy-player-cell">
+                                    <td headers="wowy-column-_rank" class="align-right wowy-rank-cell">{rank}</td>
+                                    <td headers="wowy-column-player_name" class="wowy-player-cell">
                                         <a
                                             class="wowy-player-link"
                                             href={playerTrajectoryUrl(player)}
@@ -943,9 +1019,9 @@
                                         </a>
                                     </td>
                                     {#if isAllTimeView}
-                                        <td class="wowy-season-cell">{formatPlayerSeason(player)}</td>
+                                        <td headers="wowy-column-season" class="wowy-season-cell">{formatPlayerSeason(player)}</td>
                                     {/if}
-                                    <td>
+                                    <td headers={`wowy-column-${teamColumnKey}`}>
                                         {#if isHistoricalSeasonSummary(player)}
                                             {#if teamDisplayLabel(player) !== '—'}
                                                 <span class="wowy-historical-team" title={teamDisplayTitle(player)}>
@@ -970,22 +1046,34 @@
                                             <span class="metric-muted">—</span>
                                         {/if}
                                     </td>
-                                    <td class={`align-right wowy-metric-cell ${metricTone(player.wowy_rapm)}`}>
+                                    <td
+                                        headers="wowy-column-wowy_rapm"
+                                        class={`align-right wowy-metric-cell ${metricTone(player.wowy_rapm)}`}
+                                        style={getMetricHeatVariables('dpm', player.wowy_rapm, heatScales)}
+                                    >
                                         {formatSignedMetric(player.wowy_rapm)}
                                     </td>
-                                    <td class={`align-right wowy-metric-cell ${metricTone(player.wowy_orapm)}`}>
+                                    <td
+                                        headers="wowy-column-wowy_orapm"
+                                        class={`align-right wowy-metric-cell ${metricTone(player.wowy_orapm)}`}
+                                        style={getMetricHeatVariables('o_dpm', player.wowy_orapm, heatScales)}
+                                    >
                                         {formatSignedMetric(player.wowy_orapm)}
                                     </td>
-                                    <td class={`align-right wowy-metric-cell ${metricTone(player.wowy_drapm)}`}>
+                                    <td
+                                        headers="wowy-column-wowy_drapm"
+                                        class={`align-right wowy-metric-cell ${metricTone(player.wowy_drapm)}`}
+                                        style={getMetricHeatVariables('d_dpm', player.wowy_drapm, heatScales)}
+                                    >
                                         {formatSignedMetric(player.wowy_drapm)}
                                     </td>
-                                    <td class="align-right wowy-sample-cell">{formatFixed(player.exposure, 1)}</td>
-                                    <td class="align-right wowy-sample-cell">
+                                    <td headers="wowy-column-exposure" class="align-right wowy-sample-cell">{formatFixed(player.exposure, 1)}</td>
+                                    <td headers={`wowy-column-${sampleColumnKey}`} class="align-right wowy-sample-cell">
                                         {isSeasonAverageHistory
                                             ? formatWholeNumber(player.season_games)
                                             : formatWholeNumber(player.career_game_num)}
                                     </td>
-                                    <td class="align-right wowy-date-cell">
+                                    <td headers={`wowy-column-${dateColumnKey}`} class="align-right wowy-date-cell">
                                         <time datetime={displayedObservedDate(player) || undefined}>
                                             {formatObservedDate(displayedObservedDate(player))}
                                         </time>
@@ -993,8 +1081,9 @@
                                 </tr>
                             {/each}
                         {/if}
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {#if sortedPlayers.length > PAGE_SIZE}
@@ -1035,14 +1124,14 @@
 <style>
     .wowy-page {
         min-height: calc(100dvh - var(--nav-sticky-offset));
-        padding: 24px 0 34px;
+        padding: 20px 0 36px;
         background: var(--bg);
     }
 
     .wowy-container {
-        max-width: 1680px;
+        max-width: 1560px;
         display: grid;
-        gap: 18px;
+        gap: 14px;
     }
 
     .wowy-hero {
@@ -1050,21 +1139,21 @@
         isolation: isolate;
         overflow: hidden;
         display: grid;
-        grid-template-columns: minmax(0, 1.35fr) minmax(270px, 0.65fr);
-        gap: 28px;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 410px);
+        gap: 20px;
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius);
         background: var(--bg-surface);
-        box-shadow: 0 18px 44px color-mix(in srgb, var(--text) 10%, transparent);
-        padding: 27px 30px;
+        box-shadow: 0 10px 30px color-mix(in srgb, var(--text) 7%, transparent);
+        padding: 22px 24px;
     }
 
     .wowy-hero::before {
         content: '';
         position: absolute;
         z-index: -1;
-        inset: 0 0 0 57%;
-        opacity: 0.42;
+        inset: 0 0 0 66%;
+        opacity: 0.32;
         background-image:
             linear-gradient(color-mix(in srgb, var(--border-subtle) 82%, transparent) 1px, transparent 1px),
             linear-gradient(90deg, color-mix(in srgb, var(--border-subtle) 82%, transparent) 1px, transparent 1px);
@@ -1092,12 +1181,12 @@
         display: flex;
         align-items: center;
         gap: 16px;
-        margin-top: 10px;
+        margin-top: 8px;
     }
 
     .wowy-icon {
-        width: 62px;
-        height: 62px;
+        width: 52px;
+        height: 52px;
         display: grid;
         place-items: center;
         flex: 0 0 auto;
@@ -1108,8 +1197,8 @@
     }
 
     .wowy-icon svg {
-        width: 38px;
-        height: 38px;
+        width: 32px;
+        height: 32px;
         fill: none;
         stroke: currentColor;
         stroke-linecap: round;
@@ -1123,7 +1212,7 @@
 
     h1 {
         color: var(--text);
-        font-size: clamp(32px, 3.2vw, 46px);
+        font-size: clamp(32px, 2.7vw, 40px);
         font-weight: 875;
         letter-spacing: -0.04em;
         line-height: 0.95;
@@ -1141,7 +1230,7 @@
         align-items: center;
         flex-wrap: wrap;
         gap: 8px;
-        margin-top: 22px;
+        margin-top: 16px;
         color: var(--text-secondary);
         font-size: 12px;
     }
@@ -1180,8 +1269,10 @@
         flex-direction: column;
         justify-content: center;
         min-width: 0;
-        border-left: 1px solid var(--border);
-        padding-left: 26px;
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        background: color-mix(in srgb, var(--bg-elevated) 72%, var(--bg-surface));
+        padding: 16px 18px;
     }
 
     .wowy-method > p:not(.wowy-method-label) {
@@ -1224,8 +1315,8 @@
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius);
         background: var(--bg-surface);
-        box-shadow: 0 16px 36px color-mix(in srgb, var(--text) 9%, transparent);
-        padding: 20px;
+        box-shadow: 0 10px 30px color-mix(in srgb, var(--text) 6%, transparent);
+        padding: 18px;
     }
 
     .wowy-table-heading {
@@ -1282,6 +1373,10 @@
         grid-template-columns: repeat(3, minmax(145px, 170px)) minmax(240px, 1fr);
         gap: 10px;
         margin-bottom: 14px;
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        background: color-mix(in srgb, var(--bg-elevated) 64%, var(--bg-surface));
+        padding: 12px;
     }
 
     .wowy-control-field {
@@ -1431,6 +1526,7 @@
     }
 
     .wowy-table-shell {
+        --wide-sticky-header-height: 42px;
         width: 100%;
         overflow: visible;
         border: 1px solid var(--border-subtle);
@@ -1438,18 +1534,33 @@
         background: var(--bg-surface);
     }
 
+    .sticky-header-shell {
+        position: sticky;
+        top: var(--nav-sticky-offset);
+        z-index: 30;
+        margin-bottom: calc(-1 * var(--wide-sticky-header-height));
+        overflow: hidden;
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    }
+
+    .table-header-scroll {
+        overflow: hidden;
+    }
+
+    .table-body-scroll {
+        overflow-x: auto;
+    }
+
     .wowy-table {
         width: 100%;
         min-width: 900px;
         border-collapse: separate;
         border-spacing: 0;
+        table-layout: auto;
         font-size: 13px;
     }
 
     .wowy-table th {
-        position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 2;
         height: 42px;
         border-bottom: 1px solid var(--border);
         background: var(--bg);
@@ -1548,6 +1659,10 @@
 
     .wowy-table tbody tr:hover td {
         background: var(--bg-elevated);
+    }
+
+    .wowy-table tbody tr:nth-child(even) td {
+        background: color-mix(in srgb, var(--bg-elevated) 48%, var(--bg-surface));
     }
 
     .wowy-rank-cell,
@@ -1705,8 +1820,7 @@
     /* Touch/mobile scroll mode */
     @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
         (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
-        .wowy-table-shell {
-            overflow-x: auto;
+        .table-body-scroll {
             -webkit-overflow-scrolling: touch;
         }
 
@@ -1715,16 +1829,12 @@
             min-width: 900px;
         }
 
-        .wowy-table th {
-            position: static;
-        }
     }
     /* End touch/mobile scroll mode */
 
     /* Narrow fine-pointer windows need the same scroll-safe table behavior. */
     @media (max-width: 840px) {
-        .wowy-table-shell {
-            overflow-x: auto;
+        .table-body-scroll {
             -webkit-overflow-scrolling: touch;
         }
 
@@ -1741,9 +1851,6 @@
             min-width: 720px;
         }
 
-        .wowy-table th {
-            position: static;
-        }
     }
 
     @media (max-width: 900px) {
@@ -1758,9 +1865,7 @@
 
         .wowy-method {
             border-top: 1px solid var(--border);
-            border-left: 0;
-            padding-top: 20px;
-            padding-left: 0;
+            padding: 16px 18px;
         }
 
     }

@@ -7,9 +7,13 @@
         formatSignedMetric,
         teamPlayersCsvColumns
     } from '$lib/utils/csvPresets.js';
-    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
+    import {
+        buildPresetHeatScales,
+        getMetricHeatVariables
+    } from '$lib/utils/metricHeatScales.js';
     import {
         formatPlayerTableCell,
         getPlayerTableCellValue,
@@ -46,6 +50,7 @@
     });
 
     const teamPlayers = $derived(players || []);
+    const teamPlayerHeatScales = $derived(buildPresetHeatScales(teamPlayers, 'talent'));
     const teamWinDist = $derived(winDist || []);
     const topLineups = $derived(lineups?.top ?? []);
     const worstLineups = $derived(lineups?.worst ?? []);
@@ -141,12 +146,21 @@
     });
 </script>
 
+{#snippet teamSemanticHeaderRow()}
+    <tr class="table-semantic-row sr-only">
+        {#each teamPlayerColumns as column (column.key)}
+            <th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}>{column.label}</th>
+        {/each}
+    </tr>
+{/snippet}
+
 {#snippet teamHeaderRow()}
-    <tr>
+    <tr class="table-sizing-row">
         {#each teamPlayerColumns as column (column.key)}
             <th
                 class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
                 onclick={() => toggleSort(column.key)}
+                aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
             >
                 <span class="header-label-wrap">
                     {#if column.metricKey}
@@ -206,10 +220,10 @@
     {/if}
 {/snippet}
 
-<div class="container">
+<div class="container team-detail-page" data-shiny-page>
     <a class="back-link" href={backHref}>{backLabel}</a>
 
-    <div class="page-header">
+    <div class="page-header" data-shiny-surface="hero">
         <div class="page-header-toolbar">
             <div class="team-header-info">
                 {#if teamId && !logoFailed}
@@ -243,7 +257,7 @@
     </div>
 
     {#if sim}
-        <div class="stats-grid">
+        <div class="stats-grid" data-shiny-surface="panel">
             <div class="stat-box">
                 <div class="stat-label">Playoff%</div>
                 <div class="stat-value pct {pctClass(sim.Playoffs)}">{formatFixed(sim.Playoffs)}%</div>
@@ -279,10 +293,10 @@
         <div class="empty-state">No current-season players found for {teamName}.</div>
     {:else}
         <h2 class="section-title">Players</h2>
-        <div class="table-wrapper table-shell" bind:this={teamTableRoot}>
+        <div class="table-wrapper table-shell" data-shiny-table bind:this={teamTableRoot}>
             <div class="sticky-header-shell">
                 <div class="table-header-scroll" bind:this={teamHeaderScroller}>
-                    <table class="sticky-header-table" bind:this={teamHeaderTable}>
+                    <table class="sticky-header-table" role="presentation" bind:this={teamHeaderTable}>
                         <thead>
                             {@render teamHeaderRow()}
                         </thead>
@@ -292,7 +306,8 @@
 
             <div class="table-body-scroll" bind:this={teamBodyScroller}>
                 <table bind:this={teamBodyTable}>
-                    <thead class="table-sizing-head" aria-hidden="true" bind:this={teamSourceHead}>
+                    <thead class="table-sizing-head" bind:this={teamSourceHead}>
+                        {@render teamSemanticHeaderRow()}
                         {@render teamHeaderRow()}
                     </thead>
                     <tbody>
@@ -305,7 +320,10 @@
                                             <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
                                         </td>
                                     {:else}
-                                        <td class={teamCellClass(column, value)}>
+                                        <td
+											class="{teamCellClass(column, value)} {teamPlayerHeatScales[column.key] ? 'shiny-heat-cell' : ''}"
+											style={getMetricHeatVariables(column.key, value, teamPlayerHeatScales)}
+										>
                                             {formatPlayerTableCell(column, value)}
                                         </td>
                                     {/if}
@@ -484,11 +502,6 @@
         background: var(--bg-elevated);
     }
 
-    .table-sizing-head th {
-        visibility: hidden;
-        pointer-events: none;
-    }
-
     .empty-state {
         color: var(--text-muted);
         margin: 16px 0;
@@ -648,6 +661,10 @@
             grid-template-columns: repeat(2, 1fr);
         }
 
+        .lineups-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
         .stat-value {
             font-size: 16px;
         }
@@ -665,7 +682,11 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        .table-sizing-head th {
+        .table-semantic-row {
+            display: none;
+        }
+
+        .table-sizing-head .table-sizing-row th {
             visibility: visible;
             pointer-events: auto;
         }

@@ -46,8 +46,10 @@ Key details:
 - After starting, wait a couple seconds before taking screenshots.
 
 ## Browsing Live DARKO.app
-The live site (darko.app) is a Shiny app — fully JS-rendered. `web_fetch` returns empty HTML.
-To inspect it, connect to the Chrome extension and use `read_page` (accessibility tree). Screenshots of the Chrome extension URL may fail, but `read_page` gives enough structural info.
+The live site (darko.app) is the SvelteKit app from this repo, deployed with server-side rendering — a plain fetch (`curl`, `web_fetch`) returns real HTML, so no browser automation is needed to inspect it.
+The deployed Shiny app is gone. Its screenshots and design dossier live in
+`docs/legacy-site-screenshots/`; the historical source remains in
+`anpatton/darko-app` on GitHub.
 
 ## MCP Servers
 You have access to:

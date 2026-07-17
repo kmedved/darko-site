@@ -11,12 +11,6 @@ const TARGET_FILES = [
     'src/routes/longevity/+page.svelte'
 ];
 
-// lineups/+page.svelte is excluded: dynamic column counts make
-// nth-child column-hiding media queries impractical.
-const TOUCH_SCROLL_ONLY_FILES = [
-    'src/routes/lineups/+page.svelte'
-];
-
 function extractTouchScrollBlock(contents, file) {
     const start = contents.indexOf(START_MARKER);
     const end = contents.indexOf(END_MARKER);
@@ -76,13 +70,16 @@ function assertTouchScrollBlock(block, file) {
     assert.doesNotMatch(block, /nth-child\s*\([\s\S]*display:\s*none;/, `${file} should not hide columns in touch/mobile scroll mode`);
 }
 
-test('touch-scroll-only files have scroll block without column-hiding requirement', async () => {
-    for (const file of TOUCH_SCROLL_ONLY_FILES) {
-        const absolutePath = path.resolve(process.cwd(), file);
-        const contents = await fs.readFile(absolutePath, 'utf8');
-        const block = extractTouchScrollBlock(contents, file);
-        assertTouchScrollBlock(block, file);
-    }
+test('lineups keeps its detached sticky header while the body scrolls on touch', async () => {
+    const file = 'src/routes/lineups/+page.svelte';
+    const contents = await fs.readFile(path.resolve(process.cwd(), file), 'utf8');
+    const block = extractTouchScrollBlock(contents, file);
+
+    assert.match(contents, /\.table-body-scroll\s*\{[\s\S]*overflow-x:\s*auto;/);
+    assert.match(block, /\.table-body-scroll\s*\{[\s\S]*-webkit-overflow-scrolling:\s*touch;/);
+    assert.match(block, /table\s*\{[\s\S]*width:\s*max-content;[\s\S]*min-width:\s*100%;/);
+    assert.doesNotMatch(block, /\.table-wrapper\s*\{[\s\S]*overflow-x:\s*auto;/);
+    assert.doesNotMatch(block, /\.sticky-header-shell\s*\{[\s\S]*display:\s*none;/);
 });
 
 test('touch/mobile table scroll mode enables horizontal scrolling without hiding columns', async () => {

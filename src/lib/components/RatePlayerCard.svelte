@@ -3,6 +3,11 @@
 
     let imgFailed = $state(false);
 
+    $effect(() => {
+        void player?.nba_id;
+        imgFailed = false;
+    });
+
     function formatHeight(inches) {
         if (!inches) return null;
         const ft = Math.floor(inches / 12);
@@ -71,6 +76,7 @@
 <button
     type="button"
     class="rate-card"
+    data-shiny-surface="panel"
     class:chosen
     class:disabled
     {onclick}
