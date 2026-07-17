@@ -34,6 +34,13 @@ test('WOWY article publishes the complete season-adjusted story', async () => {
 	assert.match(markdown, /## What the model cannot know/);
 	assert.match(markdown, /20,543 player-seasons/);
 	assert.match(markdown, /Season-Adjusted WOWY and BPM agree/);
+	assert.match(markdown, /public Average is \+5\.99/);
+	assert.match(markdown, /playing-time-weighted daily baseline/);
+	assert.match(markdown, /shows minutes rather than a separate total-value column/);
+	assert.match(markdown, /underlying project retains a complete audit trail/);
+	assert.doesNotMatch(markdown, /Average\*\* option on the site shows the first column/);
+	assert.doesNotMatch(markdown, /Now you can see both numbers/);
+	assert.doesNotMatch(markdown, /github\.com\/kmedved\/wowy-rapm/);
 });
 
 test('WOWY navigation stays active on the article route', async () => {

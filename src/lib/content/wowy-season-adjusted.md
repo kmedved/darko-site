@@ -7,8 +7,8 @@ Who was the best player in the NBA in 1983?
 Not who won the MVP — Moses Malone did, and we'll get to him. Who actually moved the scoreboard
 the most, per possession, on both ends of the floor? Here is my answer:
 
-| Rank | Player | Offense | Defense | Total | Daily-season average | Season adjustment |
-| ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| Rank | Player | Offense | Defense | Total | Weighted daily baseline | Season adjustment |
+| ---: | :--- | ---: | ---: | ---: | ---: | ---: |
 | 1 | Larry Bird | +5.32 | +2.80 | **+8.12** | +6.68 | +1.45 |
 | 2 | Magic Johnson | +6.16 | +1.23 | **+7.39** | +6.52 | +0.87 |
 | 3 | Julius Erving | +2.61 | +2.61 | **+5.21** | +4.83 | +0.38 |
@@ -32,7 +32,8 @@ top ten. On per-possession impact he lands 12th, at +3.57. But Moses played 91 g
 regular season and playoffs, more than almost anyone. Count total points added across the whole
 season instead of impact per possession, and he climbs to 8th. That gap — between how good a
 player was per minute and how much he gave you in total — is a tension MVP voters have argued
-about forever. Now you can see both numbers.
+about forever. The model lets us calculate both kinds of value, even though the public leaderboard
+ranks per-possession impact and shows minutes rather than a separate total-value column.
 
 And then there is Tree Rollins. The Hawks center scored little and the box score of the era barely
 knew what to do with him: the model rates his 1983 offense at -0.9. His defense comes in at +4.1,
@@ -67,7 +68,7 @@ Before anything else, the answer everyone asks for. Among seasons with substanti
 the current top ten:
 
 | Rank | Player | Season | Offense | Defense | Total |
-| ---: | --- | ---: | ---: | ---: | ---: |
+| ---: | :--- | ---: | ---: | ---: | ---: |
 | 1 | LeBron James | 2009 | +7.12 | +3.68 | **+10.80** |
 | 2 | Michael Jordan | 1991 | +7.08 | +3.12 | **+10.20** |
 | 3 | LeBron James | 2010 | +7.56 | +2.44 | **+10.01** |
@@ -97,9 +98,10 @@ near-MVP territory in year two.
 
 Was that a great season? Per possession, absolutely. In total value, Jordan added roughly 76
 points above average all year. Larry Bird that same season played at +8.84 and added about 715.
-Same league, same year, a tenfold gap in delivered value. The site shows the per-possession rating
-up front, but both facts are true, and the distinction — how good a player *was* versus how much
-he *gave you* — runs through the whole table.
+Same league, same year, a tenfold gap in delivered value. The site puts per-possession rating and
+minutes side by side; it ranks the former, while total value is a derived comparison rather than a
+displayed leaderboard column. The distinction — how good a player *was* versus how much he *gave
+you* — runs through the whole table.
 
 Injured superstars are also why the table has no minimum-games cutoff. In 1996-97, David Robinson
 hurt his back, came back, broke his foot, and played six games. In 1988-89, Larry Bird had bone
@@ -127,8 +129,8 @@ learning. But with the full season behind us, we know more. To drag a stubborn d
 
 The gap between those two readings shows up in real seasons:
 
-| Player-season | Daily-season average | Season adjustment | Adjusted rating |
-| --- | ---: | ---: | ---: |
+| Player-season | Weighted daily baseline | Season adjustment | Adjusted rating |
+| :--- | ---: | ---: | ---: |
 | Larry Bird, 1983 | +6.68 | +1.45 | **+8.12** |
 | Michael Jordan, 1991 | +8.38 | +1.82 | **+10.20** |
 | Michael Jordan, 1993 | +8.21 | +1.65 | **+9.85** |
@@ -136,8 +138,10 @@ The gap between those two readings shows up in real seasons:
 | LeBron James, 2013 | +8.51 | +1.41 | **+9.92** |
 | Nikola Jokic, 2025 | +8.73 | +0.85 | **+9.58** |
 
-The **Average** option on the site shows the first column. The **Adjusted** option shows the last
-one.
+The baseline column is not a literal copy of the site's **Average** toggle. The public Average is a
+simple mean in which every published game counts equally. The adjustment model uses a
+playing-time-weighted daily baseline before adding the season evidence. For Bird in 1983, the
+public Average is +5.99, the weighted baseline is +6.68, and the **Adjusted** rating is +8.12.
 
 ## How it works, briefly
 
@@ -231,7 +235,7 @@ shows how much higher or lower WOWY rates each career than that scale-matched BP
 among players with at least 20,000 tracked possessions:
 
 | Player | Season-Adjusted WOWY | Recreated BPM | WOWY difference after scale matching |
-| --- | ---: | ---: | ---: |
+| :--- | ---: | ---: | ---: |
 | Larry Bird | +7.23 | +6.94 | **+2.26** |
 | Steve Nash | +4.09 | +2.96 | **+1.97** |
 | Magic Johnson | +7.13 | +7.52 | **+1.73** |
@@ -307,10 +311,11 @@ for, and I will publish the grade either way.
 ## How to read the site
 
 Use **Average** when you want a season summary of the daily trajectory already shown on DARKO —
-the model's evolving, cautious view of the player's level, averaged over his games.
+the model's evolving, cautious view of the player's level, with every published game counting
+equally.
 
-Use **Adjusted** when you want the retrospective verdict: the daily average plus however much
-season-specific performance the broader evidence actually supports.
+Use **Adjusted** when you want the retrospective verdict: the weighted daily baseline plus however
+much season-specific performance the broader evidence actually supports.
 
 Both views are useful. They answer different questions — which is the whole point. What did we
 think of Larry Bird while 1983 was happening, and what do we know now? For the first time, the
@@ -318,7 +323,5 @@ table answers both, for every player, in every season, back to 1980.
 
 ---
 
-For readers who want the audit trail, the model record, failed approaches, validation results, and
-artifact hashes remain in the public
-[program record](https://github.com/kmedved/wowy-rapm/blob/main/PROGRAM_RECORD.md) and
-[claims index](https://github.com/kmedved/wowy-rapm/blob/main/reports/publication/claims_index.md).
+The underlying project retains a complete audit trail: the model record, failed approaches,
+validation results, and artifact hashes.

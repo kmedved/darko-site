@@ -345,8 +345,8 @@
 		text-transform: uppercase;
 	}
 
-	.story-body :global(th:nth-child(2)),
-	.story-body :global(td:nth-child(2)) {
+	.story-body :global(th[align='left']),
+	.story-body :global(td[align='left']) {
 		text-align: left;
 	}
 
