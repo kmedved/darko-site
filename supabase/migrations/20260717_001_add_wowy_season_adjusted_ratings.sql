@@ -219,6 +219,8 @@ as $function$
             null::integer as career_game_num,
             'season-adjusted'::text as snapshot_context
         from public.wowy_season_adjusted_ratings as adjusted
+        left join public.players as players
+            on players.nba_id = adjusted.nba_id
     ),
     top_seasons as (
         select *

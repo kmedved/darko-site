@@ -554,6 +554,11 @@ test('Season-Adjusted WOWY RPCs expose all rows and rank the separate product', 
     assert.match(seasonAdjustedMigration, /adjusted\.playoff_games/);
     assert.match(seasonAdjustedMigration, /'season-adjusted'::text as snapshot_context/);
     assert.match(seasonAdjustedMigration, /limit 100/);
+    assert.equal(
+        (seasonAdjustedMigration.match(/left join public\.players as players/g) ?? []).length,
+        2,
+        'both adjusted leaderboard RPCs must join player metadata'
+    );
     assert.doesNotMatch(seasonAdjustedMigration, /where adjusted\.possessions/);
     assert.doesNotMatch(seasonAdjustedMigration, /where adjusted\.season_games/);
 
