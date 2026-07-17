@@ -1,5 +1,6 @@
 <script>
     import { goto } from '$app/navigation';
+    import { untrack } from 'svelte';
     import {
         exportCsvRows,
         formatFixed,
@@ -29,6 +30,7 @@
     let { data } = $props();
 
     const PAGE_SIZE = 50;
+    const ALL_TIME_BATCH_SIZE = 100;
     const positionOptions = [
         { value: 'G', label: 'Guards' },
         { value: 'F', label: 'Forwards' },
@@ -41,7 +43,9 @@
         'wowy_rapm',
         'wowy_orapm',
         'wowy_drapm',
-        'exposure'
+        'exposure',
+        'season_games',
+        'last_date'
     ]);
     const allTimeSortColumns = new Set([...seasonSortColumns, 'season']);
     const currentSortColumns = new Set([
@@ -62,6 +66,7 @@
         wowy_orapm: { type: 'number' },
         wowy_drapm: { type: 'number' },
         exposure: { type: 'number' },
+        season_possessions: { type: 'number' },
         career_game_num: { type: 'number' },
         season: { type: 'number' },
         date: { type: 'text' },
@@ -196,6 +201,12 @@
             tooltip: 'Simple, unweighted mean of the player\'s observed game-level defensive WOWY RAPM values for that season.'
         },
         {
+            key: 'season_possessions',
+            label: 'Possessions',
+            align: 'right',
+            tooltip: 'Estimated possessions played in the regular season and playoffs.'
+        },
+        {
             key: 'exposure',
             label: 'Avg Exposure',
             align: 'right',
@@ -250,7 +261,26 @@
     let positionFilter = $state('all');
     let minHeight = $state('');
     let maxHeight = $state('');
+    let minPossessions = $state('');
+    let maxPossessions = $state('');
     let leaderboardPage = $state(1);
+    let allTimePlayers = $state(
+        untrack(() => Array.isArray(data.players) ? [...data.players] : [])
+    );
+    let allTimeTotal = $state(
+        untrack(() =>
+            Number.isInteger(data.allTimeTotal)
+                ? data.allTimeTotal
+                : Array.isArray(data.players)
+                    ? data.players.length
+                    : 0
+        )
+    );
+    let allTimeHasMore = $state(untrack(() => data.allTimeHasMore === true));
+    let allTimeLoading = $state(false);
+    let allTimeLoadError = $state('');
+    let allTimeAppliedQuery = $state('');
+    let allTimeRequestSequence = 0;
     let wowyTableRoot = $state(null);
     let wowyBodyScroller = $state(null);
     let wowyBodyTable = $state(null);
@@ -259,7 +289,9 @@
     let wowyHeaderTable = $state(null);
 
     const players = $derived(
-        Array.isArray(data.players)
+        data.selectedView === 'all-time'
+            ? allTimePlayers
+            : Array.isArray(data.players)
             ? data.players
             : Array.isArray(data.allTimePlayers)
                 ? data.allTimePlayers
@@ -337,7 +369,9 @@
         return [...teams.values()].sort((left, right) => left.label.localeCompare(right.label));
     });
     const activeTeamFilter = $derived(
-        teamFilter === 'all' || teamOptions.some((team) => team.value === teamFilter)
+        isAllTimeView ||
+        teamFilter === 'all' ||
+        teamOptions.some((team) => team.value === teamFilter)
             ? teamFilter
             : 'all'
     );
@@ -360,6 +394,17 @@
     const hasInvalidHeightRange = $derived(
         activeMinHeight !== null && activeMaxHeight !== null && activeMinHeight > activeMaxHeight
     );
+    const activeMinPossessions = $derived(parsePossessionBound(minPossessions));
+    const activeMaxPossessions = $derived(parsePossessionBound(maxPossessions));
+    const hasPossessionFilter = $derived(
+        activeMinPossessions !== null || activeMaxPossessions !== null
+    );
+    const hasInvalidPossessionRange = $derived(
+        activeMinPossessions !== null &&
+        activeMaxPossessions !== null &&
+        activeMinPossessions > activeMaxPossessions
+    );
+    const hasAdvancedFilter = $derived(hasHeightFilter || (isAllTimeView && hasPossessionFilter));
     const teamScopedPlayers = $derived.by(() =>
         activeTeamFilter === 'all'
             ? players
@@ -373,11 +418,18 @@
     const heightScopedPlayers = $derived.by(() =>
         positionScopedPlayers.filter((player) => matchesHeightRange(player, activeMinHeight, activeMaxHeight))
     );
+    const possessionScopedPlayers = $derived.by(() =>
+        isAllTimeView
+            ? heightScopedPlayers.filter((player) =>
+                matchesPossessionRange(player, activeMinPossessions, activeMaxPossessions)
+            )
+            : heightScopedPlayers
+    );
     const filteredPlayers = $derived.by(() => {
         const query = searchQuery.trim().toLocaleLowerCase();
-        if (!query) return heightScopedPlayers;
+        if (!query) return possessionScopedPlayers;
 
-        return heightScopedPlayers.filter((player) => {
+        return possessionScopedPlayers.filter((player) => {
             const searchable = [
                 player?.player_name,
                 player?.team_name,
@@ -386,7 +438,8 @@
                 ...historicalTeamNames(player),
                 teamDisplayLabel(player),
                 teamAbbr(player?.team_name),
-                playerFilterPosition(player)
+                playerFilterPosition(player),
+                player?.season
             ].join(' ').toLocaleLowerCase();
             return searchable.includes(query);
         });
@@ -401,6 +454,7 @@
     const leaderboardPageCount = $derived(Math.max(1, Math.ceil(sortedPlayers.length / PAGE_SIZE)));
     const activeLeaderboardPage = $derived(Math.min(leaderboardPage, leaderboardPageCount));
     const visiblePlayers = $derived.by(() => {
+        if (isAllTimeView) return sortedPlayers;
         const start = (activeLeaderboardPage - 1) * PAGE_SIZE;
         return sortedPlayers.slice(start, start + PAGE_SIZE);
     });
@@ -408,9 +462,17 @@
         buildPresetHeatScales(players, 'wowy')
     );
     const rangeStart = $derived(
-        sortedPlayers.length === 0 ? 0 : (activeLeaderboardPage - 1) * PAGE_SIZE + 1
+        sortedPlayers.length === 0
+            ? 0
+            : isAllTimeView
+                ? 1
+                : (activeLeaderboardPage - 1) * PAGE_SIZE + 1
     );
-    const rangeEnd = $derived(Math.min(activeLeaderboardPage * PAGE_SIZE, sortedPlayers.length));
+    const rangeEnd = $derived(
+        isAllTimeView
+            ? sortedPlayers.length
+            : Math.min(activeLeaderboardPage * PAGE_SIZE, sortedPlayers.length)
+    );
     const freshnessLabel = $derived(
         publication?.data_through
             ? `Data through ${formatObservedDate(publication.data_through)}`
@@ -419,8 +481,8 @@
     const viewStatusDetail = $derived(
         isAllTimeView
             ? isAdjustedRatings
-                ? 'The 100 highest Season-Adjusted player-seasons, ranked by total WOWY RAPM.'
-                : 'The 100 highest player-season averages, ranked by simple unweighted WOWY RAPM.'
+                ? 'Every modeled Season-Adjusted player-season, loaded 100 at a time.'
+                : 'Every published player-season average, loaded 100 at a time.'
             : isCurrentView
             ? freshnessLabel
             : isSeasonSummaryHistory
@@ -429,6 +491,34 @@
                     : 'Each value is a simple, unweighted average of the player\'s observed game-level WOWY ratings for the season.'
                 : "Opening-game snapshot of players who appeared in their teams' first games."
     );
+
+    $effect(() => {
+        const nextPlayers = Array.isArray(data.players) ? [...data.players] : [];
+        if (data.selectedView === 'all-time') {
+            allTimePlayers = nextPlayers;
+            allTimeTotal = Number.isInteger(data.allTimeTotal)
+                ? data.allTimeTotal
+                : nextPlayers.length;
+            allTimeHasMore = data.allTimeHasMore === true;
+            allTimeLoadError = '';
+            allTimeAppliedQuery = defaultAllTimeQuerySignature(
+                data.selectedRatingMode === 'adjusted'
+            );
+        }
+    });
+
+    $effect(() => {
+        if (!isAllTimeView || hasInvalidHeightRange || hasInvalidPossessionRange) return;
+
+        const querySignature = buildAllTimeQuerySignature();
+        if (querySignature === allTimeAppliedQuery) return;
+
+        const delay = searchQuery.trim() ? 250 : 0;
+        const timer = window.setTimeout(() => {
+            loadAllTimePage({ reset: true, querySignature });
+        }, delay);
+        return () => window.clearTimeout(timer);
+    });
 
     $effect(() => {
         activeLeaderboardPage;
@@ -464,6 +554,11 @@
         return height !== null && height > 0 ? height : null;
     }
 
+    function parsePossessionBound(value) {
+        const possessions = toNumber(value);
+        return possessions !== null && possessions >= 0 ? possessions : null;
+    }
+
     function formatHeightLabel(value) {
         const height = toNumber(value);
         if (height === null || height <= 0) return '—';
@@ -483,6 +578,25 @@
         const height = playerHeightInches(player);
         if (height === null) return false;
         return (minimum === null || height >= minimum) && (maximum === null || height <= maximum);
+    }
+
+    function playerSeasonPossessions(player) {
+        const possessions = toNumber(
+            player?.season_possessions ??
+            (player?.snapshot_context === 'season-adjusted' ? player?.exposure : null)
+        );
+        return possessions !== null && possessions >= 0 ? possessions : null;
+    }
+
+    function matchesPossessionRange(player, minimum, maximum) {
+        if (minimum === null && maximum === null) return true;
+
+        const possessions = playerSeasonPossessions(player);
+        if (possessions === null) return false;
+        return (
+            (minimum === null || possessions >= minimum) &&
+            (maximum === null || possessions <= maximum)
+        );
     }
 
     function toggleSort(column) {
@@ -520,6 +634,21 @@
         leaderboardPage = 1;
     }
 
+    function setPossessionFilter(bound, value) {
+        if (bound === 'min') {
+            minPossessions = value;
+        } else {
+            maxPossessions = value;
+        }
+        leaderboardPage = 1;
+    }
+
+    function clearPossessionFilters() {
+        minPossessions = '';
+        maxPossessions = '';
+        leaderboardPage = 1;
+    }
+
     function setSearchQuery(value) {
         searchQuery = value;
         leaderboardPage = 1;
@@ -550,6 +679,8 @@
         positionFilter = 'all';
         minHeight = '';
         maxHeight = '';
+        minPossessions = '';
+        maxPossessions = '';
         searchQuery = '';
         leaderboardPage = 1;
         const params = new URLSearchParams();
@@ -575,6 +706,14 @@
             ? 'adjusted'
             : 'average';
         const params = new URLSearchParams();
+        teamFilter = 'all';
+        positionFilter = 'all';
+        minHeight = '';
+        maxHeight = '';
+        minPossessions = '';
+        maxPossessions = '';
+        searchQuery = '';
+        leaderboardPage = 1;
         if (isSeasonView) {
             params.set('season', String(data.selectedSeason));
         }
@@ -583,6 +722,112 @@
         }
         const suffix = params.size > 0 ? `?${params.toString()}` : '';
         goto(`/wowy${suffix}`, { keepFocus: true });
+    }
+
+    function buildAllTimeQuerySignature() {
+        return JSON.stringify({
+            rating: isAdjustedRatings ? 'adjusted' : 'average',
+            search: searchQuery.trim(),
+            team: teamFilter === 'all' ? null : teamFilter,
+            position: positionFilter === 'all' ? null : positionFilter,
+            minHeight: activeMinHeight,
+            maxHeight: activeMaxHeight,
+            minPossessions: activeMinPossessions,
+            maxPossessions: activeMaxPossessions,
+            sortColumn,
+            sortDirection
+        });
+    }
+
+    function defaultAllTimeQuerySignature(adjusted) {
+        return JSON.stringify({
+            rating: adjusted ? 'adjusted' : 'average',
+            search: '',
+            team: null,
+            position: null,
+            minHeight: null,
+            maxHeight: null,
+            minPossessions: null,
+            maxPossessions: null,
+            sortColumn: 'wowy_rapm',
+            sortDirection: 'desc'
+        });
+    }
+
+    function buildAllTimeRequestUrl(offset) {
+        const params = new URLSearchParams({
+            rating: isAdjustedRatings ? 'adjusted' : 'average',
+            limit: String(ALL_TIME_BATCH_SIZE),
+            offset: String(offset),
+            sort: sortColumn,
+            direction: sortDirection
+        });
+        if (searchQuery.trim()) params.set('search', searchQuery.trim());
+        if (teamFilter !== 'all') params.set('team', teamFilter);
+        if (positionFilter !== 'all') params.set('position', positionFilter);
+        if (activeMinHeight !== null) params.set('min_height', String(activeMinHeight));
+        if (activeMaxHeight !== null) params.set('max_height', String(activeMaxHeight));
+        if (activeMinPossessions !== null) {
+            params.set('min_possessions', String(activeMinPossessions));
+        }
+        if (activeMaxPossessions !== null) {
+            params.set('max_possessions', String(activeMaxPossessions));
+        }
+        return `/api/wowy/all-time?${params.toString()}`;
+    }
+
+    async function loadAllTimePage({ reset = false, querySignature = null } = {}) {
+        if (!isAllTimeView || allTimeLoading) return;
+        if (hasInvalidHeightRange || hasInvalidPossessionRange) return;
+
+        const requestSequence = ++allTimeRequestSequence;
+        const signature = querySignature ?? buildAllTimeQuerySignature();
+        const offset = reset ? 0 : allTimePlayers.length;
+        allTimeLoading = true;
+        allTimeLoadError = '';
+
+        try {
+            const response = await fetch(buildAllTimeRequestUrl(offset));
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload?.error || 'Could not load more WOWY seasons.');
+            }
+            if (requestSequence !== allTimeRequestSequence) return;
+
+            const nextPlayers = Array.isArray(payload.players) ? payload.players : [];
+            allTimePlayers = reset
+                ? nextPlayers
+                : appendUniquePlayerSeasons(allTimePlayers, nextPlayers);
+            allTimeTotal = Number.isInteger(payload.totalCount)
+                ? payload.totalCount
+                : allTimePlayers.length;
+            allTimeHasMore = payload.hasMore === true;
+            allTimeAppliedQuery = signature;
+            leaderboardPage = 1;
+        } catch (error) {
+            if (requestSequence !== allTimeRequestSequence) return;
+            allTimeLoadError = error instanceof Error
+                ? error.message
+                : 'Could not load more WOWY seasons.';
+            allTimeAppliedQuery = signature;
+        } finally {
+            if (requestSequence === allTimeRequestSequence) {
+                allTimeLoading = false;
+            }
+        }
+    }
+
+    function appendUniquePlayerSeasons(existing, additions) {
+        const keys = new Set(existing.map((player) => playerRowKey(player)));
+        return [
+            ...existing,
+            ...additions.filter((player) => {
+                const key = playerRowKey(player);
+                if (keys.has(key)) return false;
+                keys.add(key);
+                return true;
+            })
+        ];
     }
 
     function formatObservedDate(value) {
@@ -740,7 +985,7 @@
 
     function exportPlayersCsv() {
         const seasonFileLabel = isAllTimeView
-            ? `${isAdjustedRatings ? 'adjusted-' : ''}all-time-top-100`
+            ? `${isAdjustedRatings ? 'adjusted-' : ''}all-time-loaded`
             : isCurrentView
                 ? 'current-active'
                 : `${formatSeasonEndYearLabel(activeSeason) ?? activeSeason}-${isAdjustedRatings ? 'season-adjusted' : isSeasonSummaryHistory ? 'season-average' : 'opening-game'}`;
@@ -818,8 +1063,8 @@
         name="description"
         content={isAllTimeView
             ? isAdjustedRatings
-                ? 'The 100 highest Season-Adjusted WOWY RAPM player-seasons of all time.'
-                : 'The 100 highest unweighted WOWY RAPM player-seasons of all time.'
+                ? 'All Season-Adjusted WOWY RAPM player-seasons, loaded 100 at a time.'
+                : 'All unweighted WOWY RAPM player-seasons, loaded 100 at a time.'
             : isCurrentView
                 ? 'Latest observed WOWY RAPM ratings for current active NBA players.'
                 : isSeasonSummaryHistory
@@ -852,8 +1097,8 @@
                         <p class="wowy-subtitle">
                             {#if isAllTimeView}
                                 {isAdjustedRatings
-                                    ? 'The 100 highest Season-Adjusted WOWY RAPM player-seasons.'
-                                    : 'The 100 highest single-season WOWY RAPM averages.'}
+                                    ? 'Every Season-Adjusted WOWY RAPM player-season.'
+                                    : 'Every single-season WOWY RAPM average.'}
                             {:else if isCurrentView}
                                 Synthetic game-level RAPM for current active players.
                             {:else if isSeasonSummaryHistory}
@@ -870,8 +1115,8 @@
                     <strong>
                         {isAllTimeView
                             ? isAdjustedRatings
-                                ? 'Adjusted top 100'
-                                : 'Average top 100'
+                                ? 'All adjusted seasons'
+                                : 'All average seasons'
                             : isCurrentView
                                 ? 'Latest observed'
                                 : isSeasonSummaryHistory
@@ -891,9 +1136,9 @@
                 <p>
                     {#if isAllTimeView}
                         {#if isAdjustedRatings}
-                            Each row is one modeled player-season, ranked by Season-Adjusted WOWY RAPM. The adjustment estimates how the player performed in that season relative to the underlying daily WOWY baseline. Regular-season and playoff evidence are included, with no exposure cutoff.
+                            Each row is one modeled player-season, ranked by Season-Adjusted WOWY RAPM. The adjustment estimates how the player performed in that season relative to the underlying daily WOWY baseline. Regular-season and playoff evidence are included. Results load 100 at a time, with no default possession cutoff.
                         {:else}
-                            Each row is one player-season, ranked within the top 100 by its raw, simple, unweighted average across published WOWY games. There is no sample or exposure cutoff, and the current season can move as new games are published.
+                            Each row is one player-season, ranked by its raw, simple, unweighted average across published WOWY games. Results load 100 at a time, with no default possession cutoff, and the current season can move as new games are published.
                         {/if}
                     {:else if isCurrentView}
                         Each player row is dated to that player’s most recent observed game; team and position reflect the current DARKO roster.
@@ -918,8 +1163,8 @@
                     <h2 id="wowy-table-title">
                         {isAllTimeView
                             ? isAdjustedRatings
-                                ? 'All-time adjusted top 100 seasons'
-                                : 'All-time average top 100 seasons'
+                                ? 'All-time adjusted seasons'
+                                : 'All-time average seasons'
                             : isCurrentView
                                 ? 'Current active players'
                                 : isSeasonSummaryHistory
@@ -933,7 +1178,7 @@
                             No players match this season and these filters.
                         {:else}
                             {#if isAllTimeView}
-                                Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} player-seasons from the all-time top 100, ranked by {isAdjustedRatings ? 'Season-Adjusted' : 'average'} WOWY RAPM.
+                                Showing {rangeStart}–{rangeEnd} of {allTimeTotal} matching player-seasons, ranked by {isAdjustedRatings ? 'Season-Adjusted' : 'average'} WOWY RAPM.
                             {:else if isCurrentView}
                                 Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} current active players with an observed WOWY rating.
                             {:else if isSeasonSummaryHistory}
@@ -950,7 +1195,7 @@
                     onclick={exportPlayersCsv}
                     disabled={sortedPlayers.length === 0}
                 >
-                    Download CSV
+                    {isAllTimeView ? 'Download loaded CSV' : 'Download CSV'}
                 </button>
             </div>
 
@@ -1045,57 +1290,122 @@
             <details class="wowy-advanced-filters">
                 <summary>
                     <span>Advanced filters</span>
-                    {#if hasHeightFilter}
-                        <span class="wowy-filter-indicator">Height active</span>
+                    {#if hasAdvancedFilter}
+                        <span class="wowy-filter-indicator">
+                            {isAllTimeView && hasPossessionFilter && hasHeightFilter
+                                ? '2 active'
+                                : isAllTimeView && hasPossessionFilter
+                                    ? 'Possessions active'
+                                    : 'Height active'}
+                        </span>
                     {/if}
                 </summary>
                 <div class="wowy-advanced-filters__content">
-                    <p id="wowy-height-filter-help">
-                        Limit results by listed height. Players without a recorded height are excluded only when a bound is set.
-                    </p>
-                    <div class="wowy-height-fields">
-                        <label class="wowy-height-field" for="wowy-min-height-filter">
-                            <span>Minimum height</span>
-                            <select
-                                id="wowy-min-height-filter"
-                                value={minHeight}
-                                aria-describedby="wowy-height-filter-help"
-                                onchange={(event) => setHeightFilter('min', event.currentTarget.value)}
-                            >
-                                <option value="">No minimum</option>
-                                {#each heightOptions as height (height)}
-                                    <option value={String(height)}>{formatHeightLabel(height)}</option>
-                                {/each}
-                            </select>
-                        </label>
-                        <label class="wowy-height-field" for="wowy-max-height-filter">
-                            <span>Maximum height</span>
-                            <select
-                                id="wowy-max-height-filter"
-                                value={maxHeight}
-                                aria-describedby="wowy-height-filter-help"
-                                onchange={(event) => setHeightFilter('max', event.currentTarget.value)}
-                            >
-                                <option value="">No maximum</option>
-                                {#each heightOptions as height (height)}
-                                    <option value={String(height)}>{formatHeightLabel(height)}</option>
-                                {/each}
-                            </select>
-                        </label>
-                        <button
-                            class="wowy-height-clear"
-                            type="button"
-                            onclick={clearHeightFilters}
-                            disabled={!hasHeightFilter}
-                        >
-                            Clear height
-                        </button>
-                    </div>
-                    {#if hasInvalidHeightRange}
-                        <p class="wowy-height-error" role="status">
-                            Minimum height must not exceed maximum height.
-                        </p>
+                    {#if isAllTimeView}
+                        <section class="wowy-advanced-filter-group" aria-labelledby="wowy-possession-filter-title">
+                            <div>
+                                <h3 id="wowy-possession-filter-title">Season possessions</h3>
+                                <p id="wowy-possession-filter-help">
+                                    Includes regular-season and playoff possessions. Average-only rows without a modeled possession total are excluded only when a bound is set.
+                                </p>
+                            </div>
+                            <div class="wowy-filter-fields">
+                                <label class="wowy-filter-field" for="wowy-min-possessions-filter">
+                                    <span>Minimum possessions</span>
+                                    <input
+                                        id="wowy-min-possessions-filter"
+                                        type="number"
+                                        min="0"
+                                        step="100"
+                                        inputmode="numeric"
+                                        value={minPossessions}
+                                        aria-describedby="wowy-possession-filter-help"
+                                        placeholder="No minimum"
+                                        oninput={(event) => setPossessionFilter('min', event.currentTarget.value)}
+                                    />
+                                </label>
+                                <label class="wowy-filter-field" for="wowy-max-possessions-filter">
+                                    <span>Maximum possessions</span>
+                                    <input
+                                        id="wowy-max-possessions-filter"
+                                        type="number"
+                                        min="0"
+                                        step="100"
+                                        inputmode="numeric"
+                                        value={maxPossessions}
+                                        aria-describedby="wowy-possession-filter-help"
+                                        placeholder="No maximum"
+                                        oninput={(event) => setPossessionFilter('max', event.currentTarget.value)}
+                                    />
+                                </label>
+                                <button
+                                    class="wowy-filter-clear"
+                                    type="button"
+                                    onclick={clearPossessionFilters}
+                                    disabled={!hasPossessionFilter}
+                                >
+                                    Clear possessions
+                                </button>
+                            </div>
+                            {#if hasInvalidPossessionRange}
+                                <p class="wowy-filter-error" role="status">
+                                    Minimum possessions must not exceed maximum possessions.
+                                </p>
+                            {/if}
+                        </section>
                     {/if}
+
+                    <section class="wowy-advanced-filter-group" aria-labelledby="wowy-height-filter-title">
+                        <div>
+                            <h3 id="wowy-height-filter-title">Listed height</h3>
+                            <p id="wowy-height-filter-help">
+                                Players without a recorded height are excluded only when a bound is set.
+                            </p>
+                        </div>
+                        <div class="wowy-filter-fields">
+                            <label class="wowy-filter-field" for="wowy-min-height-filter">
+                                <span>Minimum height</span>
+                                <select
+                                    id="wowy-min-height-filter"
+                                    value={minHeight}
+                                    aria-describedby="wowy-height-filter-help"
+                                    onchange={(event) => setHeightFilter('min', event.currentTarget.value)}
+                                >
+                                    <option value="">No minimum</option>
+                                    {#each heightOptions as height (height)}
+                                        <option value={String(height)}>{formatHeightLabel(height)}</option>
+                                    {/each}
+                                </select>
+                            </label>
+                            <label class="wowy-filter-field" for="wowy-max-height-filter">
+                                <span>Maximum height</span>
+                                <select
+                                    id="wowy-max-height-filter"
+                                    value={maxHeight}
+                                    aria-describedby="wowy-height-filter-help"
+                                    onchange={(event) => setHeightFilter('max', event.currentTarget.value)}
+                                >
+                                    <option value="">No maximum</option>
+                                    {#each heightOptions as height (height)}
+                                        <option value={String(height)}>{formatHeightLabel(height)}</option>
+                                    {/each}
+                                </select>
+                            </label>
+                            <button
+                                class="wowy-filter-clear"
+                                type="button"
+                                onclick={clearHeightFilters}
+                                disabled={!hasHeightFilter}
+                            >
+                                Clear height
+                            </button>
+                        </div>
+                        {#if hasInvalidHeightRange}
+                            <p class="wowy-filter-error" role="status">
+                                Minimum height must not exceed maximum height.
+                            </p>
+                        {/if}
+                    </section>
                 </div>
             </details>
 
@@ -1134,7 +1444,9 @@
                             </tr>
                         {:else}
                             {#each visiblePlayers as player, index (playerRowKey(player))}
-                                {@const fallbackRank = (activeLeaderboardPage - 1) * PAGE_SIZE + index + 1}
+                                {@const fallbackRank = isAllTimeView
+                                    ? index + 1
+                                    : (activeLeaderboardPage - 1) * PAGE_SIZE + index + 1}
                                 {@const rank = isAllTimeView ? allTimeRank(player, fallbackRank) : fallbackRank}
                                 <tr>
                                     <td headers="wowy-column-_rank" class="align-right wowy-rank-cell">{rank}</td>
@@ -1216,7 +1528,21 @@
                 </div>
             </div>
 
-            {#if sortedPlayers.length > PAGE_SIZE}
+            {#if isAllTimeView && (allTimeHasMore || allTimeLoading || allTimeLoadError)}
+                <div class="wowy-load-more">
+                    <button
+                        type="button"
+                        onclick={() => loadAllTimePage()}
+                        disabled={allTimeLoading || !allTimeHasMore}
+                    >
+                        {allTimeLoading ? 'Loading…' : `Load ${ALL_TIME_BATCH_SIZE} more`}
+                    </button>
+                    <span>{allTimePlayers.length.toLocaleString('en-US')} of {allTimeTotal.toLocaleString('en-US')} loaded</span>
+                    {#if allTimeLoadError}
+                        <span class="wowy-load-error" role="status">{allTimeLoadError}</span>
+                    {/if}
+                </div>
+            {:else if !isAllTimeView && sortedPlayers.length > PAGE_SIZE}
                 <nav class="wowy-pagination" aria-label="WOWY leaderboard pagination">
                     <button
                         type="button"
@@ -1239,9 +1565,9 @@
             <p class="wowy-table-note">
                 {#if isAllTimeView}
                     {#if isAdjustedRatings}
-                        This leaderboard is limited to the 100 highest modeled player-seasons. Adjusted ratings include regular-season and playoff evidence and use actual season possessions; there is no exposure cutoff. Appearance-only player-seasons without the model’s required season baseline remain available in Average mode.
+                        All modeled player-seasons are available in 100-row batches. Adjusted ratings include regular-season and playoff evidence and use actual season possessions; no possession cutoff is applied unless you set one. Appearance-only player-seasons without the model’s required season baseline remain available in Average mode.
                     {:else}
-                        This leaderboard is limited to the 100 highest player-season averages returned by the server. Each value is a raw, simple, unweighted mean across that season’s published WOWY games; there is no sample or exposure cutoff. The current season can change as new observations are published.
+                        All published player-season averages are available in 100-row batches. Each value is a raw, simple, unweighted mean across that season’s published WOWY games; no possession cutoff is applied unless you set one. The current season can change as new observations are published.
                     {/if}
                 {:else if isCurrentView}
                     Exposure is shown without a cutoff. Sample games include the available WOWY regular-season and postseason appearances.
@@ -1481,7 +1807,8 @@
     }
 
     .wowy-export-button,
-    .wowy-pagination button {
+    .wowy-pagination button,
+    .wowy-load-more button {
         min-height: 36px;
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
@@ -1495,13 +1822,15 @@
     }
 
     .wowy-export-button:hover:not(:disabled),
-    .wowy-pagination button:hover:not(:disabled) {
+    .wowy-pagination button:hover:not(:disabled),
+    .wowy-load-more button:hover:not(:disabled) {
         border-color: var(--accent);
         color: var(--accent);
     }
 
     .wowy-export-button:disabled,
-    .wowy-pagination button:disabled {
+    .wowy-pagination button:disabled,
+    .wowy-load-more button:disabled {
         cursor: not-allowed;
         opacity: 0.45;
     }
@@ -1575,7 +1904,8 @@
 
     .wowy-control-field select,
     .wowy-control-field input,
-    .wowy-height-field select {
+    .wowy-filter-field select,
+    .wowy-filter-field input {
         width: 100%;
         height: 38px;
         border: 1px solid var(--border);
@@ -1590,11 +1920,13 @@
 
     .wowy-control-field input:focus,
     .wowy-control-field select:focus,
-    .wowy-height-field select:focus,
+    .wowy-filter-field select:focus,
+    .wowy-filter-field input:focus,
     .wowy-advanced-filters summary:focus-visible,
-    .wowy-height-clear:focus-visible,
+    .wowy-filter-clear:focus-visible,
     .wowy-export-button:focus-visible,
     .wowy-pagination button:focus-visible,
+    .wowy-load-more button:focus-visible,
     .wowy-column-heading > button:focus-visible {
         border-color: var(--accent);
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
@@ -1647,7 +1979,7 @@
         padding: 10px 12px 12px;
     }
 
-    .wowy-advanced-filters__content > p {
+    .wowy-advanced-filter-group p {
         max-width: 660px;
         color: var(--text-muted);
         font-size: 11px;
@@ -1666,28 +1998,47 @@
         text-transform: uppercase;
     }
 
-    .wowy-height-fields {
+    .wowy-advanced-filter-group {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.75fr) minmax(360px, 1.25fr);
+        align-items: end;
+        gap: 16px;
+    }
+
+    .wowy-advanced-filter-group + .wowy-advanced-filter-group {
+        margin-top: 12px;
+        border-top: 1px solid var(--border-subtle);
+        padding-top: 12px;
+    }
+
+    .wowy-advanced-filter-group h3 {
+        margin-bottom: 3px;
+        color: var(--text);
+        font-size: 11px;
+        font-weight: 850;
+    }
+
+    .wowy-filter-fields {
         display: flex;
         align-items: end;
         flex-wrap: wrap;
         gap: 10px;
-        margin-top: 10px;
     }
 
-    .wowy-height-field {
+    .wowy-filter-field {
         display: grid;
         flex: 1 1 155px;
         gap: 5px;
         max-width: 185px;
     }
 
-    .wowy-height-field > span {
+    .wowy-filter-field > span {
         color: var(--text-secondary);
         font-size: 10px;
         font-weight: 800;
     }
 
-    .wowy-height-clear {
+    .wowy-filter-clear {
         min-height: 38px;
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
@@ -1700,17 +2051,18 @@
         padding: 0 12px;
     }
 
-    .wowy-height-clear:hover:not(:disabled) {
+    .wowy-filter-clear:hover:not(:disabled) {
         border-color: var(--accent);
         color: var(--accent);
     }
 
-    .wowy-height-clear:disabled {
+    .wowy-filter-clear:disabled {
         cursor: not-allowed;
         opacity: 0.45;
     }
 
-    .wowy-height-error {
+    .wowy-filter-error {
+        grid-column: 1 / -1;
         margin-top: 8px;
         color: var(--negative) !important;
     }
@@ -1978,6 +2330,27 @@
         min-height: 32px;
     }
 
+    .wowy-load-more {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 13px;
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+
+    .wowy-load-more button {
+        min-width: 130px;
+    }
+
+    .wowy-load-error {
+        flex-basis: 100%;
+        color: var(--negative);
+        text-align: center;
+    }
+
     .wowy-table-note {
         margin-top: 12px;
         color: var(--text-muted);
@@ -2117,16 +2490,17 @@
             width: 100%;
         }
 
-        .wowy-height-fields {
+        .wowy-advanced-filter-group,
+        .wowy-filter-fields {
             display: grid;
             grid-template-columns: 1fr;
         }
 
-        .wowy-height-field {
+        .wowy-filter-field {
             max-width: none;
         }
 
-        .wowy-height-clear {
+        .wowy-filter-clear {
             width: 100%;
         }
 

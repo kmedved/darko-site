@@ -52,6 +52,8 @@ const CACHE_MS = {
     eloLeaderboard: 30_000
 };
 
+export const WOWY_ALL_TIME_PAGE_SIZE = 100;
+
 function cacheKey(prefix, value = '') {
     return `${prefix}:${value}`;
 }
@@ -513,6 +515,7 @@ function normalizeWowyLeaderboardRows(data) {
                 wowy_orapm: row.wowy_orapm ?? null,
                 wowy_drapm: row.wowy_drapm ?? null,
                 exposure: row.exposure ?? null,
+                season_possessions: row.season_possessions ?? null,
                 date: row.date ?? null,
                 career_game_num: row.career_game_num ?? null,
                 season_games: row.season_games ?? null,
@@ -734,44 +737,171 @@ export async function getActiveWowyPlayers() {
     });
 }
 
-/**
- * Get the fixed top 100 all-time unweighted WOWY player-season averages.
- * The database owns the deterministic ranking and chronological team
- * provenance, so do not re-sort these rows in the helper.
- */
-export async function getWowyAllTimePlayers() {
-    const key = cacheKey('wowyAllTimePlayers', 'top-100');
-    const rows = await runCached(key, CACHE_MS.wowyAllTimePlayers, async () => {
-        const { data, error } = await supabase.rpc('get_wowy_all_time_player_seasons');
-        if (error) throw error;
+const WOWY_ALL_TIME_SORT_COLUMNS = new Set([
+    'player_name',
+    'team_sort_label',
+    'season',
+    'wowy_rapm',
+    'wowy_orapm',
+    'wowy_drapm',
+    'exposure',
+    'season_possessions',
+    'season_games',
+    'last_date'
+]);
 
-        return normalizeWowyLeaderboardRows(data);
-    });
-
-    // The RPC intentionally returns [] until the manual publication
-    // certification marker exists. Do not preserve that pre-activation state
-    // for the normal all-time cache lifetime after the marker is written.
-    if (rows.length === 0) {
-        cacheStore.delete(key);
+function normalizedOptionalNumber(value, label) {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        throw new TypeError(`Invalid ${label}: ${value}`);
     }
-
-    return rows;
+    return parsed;
 }
 
-/**
- * Get the fixed top 100 all-time Season-Adjusted WOWY player-seasons.
- * Every row comes from the separately published seasonal model.
- */
-export async function getWowyAdjustedAllTimePlayers() {
-    const key = cacheKey('wowyAdjustedAllTimePlayers', 'top-100');
-    return runCached(key, CACHE_MS.wowyAdjustedAllTimePlayers, async () => {
+function normalizedOptionalText(value) {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim();
+    return normalized || null;
+}
+
+function normalizeWowyAllTimePageOptions(options = {}) {
+    const limit = Number.parseInt(options.limit ?? WOWY_ALL_TIME_PAGE_SIZE, 10);
+    const offset = Number.parseInt(options.offset ?? 0, 10);
+    const minPossessions = normalizedOptionalNumber(
+        options.minPossessions,
+        'minimum possessions'
+    );
+    const maxPossessions = normalizedOptionalNumber(
+        options.maxPossessions,
+        'maximum possessions'
+    );
+    const minHeight = normalizedOptionalNumber(options.minHeight, 'minimum height');
+    const maxHeight = normalizedOptionalNumber(options.maxHeight, 'maximum height');
+    const position = normalizedOptionalText(options.position)?.toUpperCase() ?? null;
+    const sortColumn = normalizedOptionalText(options.sortColumn) ?? 'wowy_rapm';
+    const sortDirection =
+        normalizedOptionalText(options.sortDirection)?.toLowerCase() ?? 'desc';
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > WOWY_ALL_TIME_PAGE_SIZE) {
+        throw new TypeError(
+            `WOWY all-time limit must be between 1 and ${WOWY_ALL_TIME_PAGE_SIZE}`
+        );
+    }
+    if (!Number.isInteger(offset) || offset < 0) {
+        throw new TypeError('WOWY all-time offset must be a nonnegative integer');
+    }
+    for (const [label, value] of [
+        ['minimum possessions', minPossessions],
+        ['maximum possessions', maxPossessions],
+        ['minimum height', minHeight],
+        ['maximum height', maxHeight]
+    ]) {
+        if (value !== null && value < 0) {
+            throw new TypeError(`${label} must be nonnegative`);
+        }
+    }
+    if (
+        minPossessions !== null &&
+        maxPossessions !== null &&
+        minPossessions > maxPossessions
+    ) {
+        throw new TypeError('Minimum possessions must not exceed maximum possessions');
+    }
+    if (minHeight !== null && maxHeight !== null && minHeight > maxHeight) {
+        throw new TypeError('Minimum height must not exceed maximum height');
+    }
+    if (position !== null && !['G', 'F', 'C'].includes(position)) {
+        throw new TypeError(`Unsupported WOWY position group: ${position}`);
+    }
+    if (!WOWY_ALL_TIME_SORT_COLUMNS.has(sortColumn)) {
+        throw new TypeError(`Unsupported WOWY all-time sort column: ${sortColumn}`);
+    }
+    if (!['asc', 'desc'].includes(sortDirection)) {
+        throw new TypeError(`Unsupported WOWY all-time sort direction: ${sortDirection}`);
+    }
+
+    return {
+        limit,
+        offset,
+        minPossessions,
+        maxPossessions,
+        search: normalizedOptionalText(options.search),
+        team: normalizedOptionalText(options.team),
+        position,
+        minHeight,
+        maxHeight,
+        sortColumn,
+        sortDirection
+    };
+}
+
+async function getWowyAllTimePageForMode(ratingMode, options = {}) {
+    const normalized = normalizeWowyAllTimePageOptions(options);
+    const cachePrefix =
+        ratingMode === 'adjusted' ? 'wowyAdjustedAllTimePlayers' : 'wowyAllTimePlayers';
+    const key = cacheKey(cachePrefix, JSON.stringify(normalized));
+    const page = await runCached(key, CACHE_MS[cachePrefix], async () => {
         const { data, error } = await supabase.rpc(
-            'get_wowy_adjusted_all_time_player_seasons'
+            'get_wowy_all_time_player_seasons_page',
+            {
+                p_rating_mode: ratingMode,
+                p_limit: normalized.limit,
+                p_offset: normalized.offset,
+                p_min_possessions: normalized.minPossessions,
+                p_max_possessions: normalized.maxPossessions,
+                p_search: normalized.search,
+                p_team: normalized.team,
+                p_position: normalized.position,
+                p_min_height: normalized.minHeight,
+                p_max_height: normalized.maxHeight,
+                p_sort_column: normalized.sortColumn,
+                p_sort_direction: normalized.sortDirection
+            }
         );
         if (error) throw error;
 
-        return normalizeWowyLeaderboardRows(data);
+        const payload = data && typeof data === 'object' && !Array.isArray(data)
+            ? data
+            : {};
+        const players = normalizeWowyLeaderboardRows(payload.rows);
+        const totalCount = Number.parseInt(payload.total_count, 10);
+        return {
+            players,
+            totalCount: Number.isInteger(totalCount) && totalCount >= 0
+                ? totalCount
+                : players.length,
+            hasMore: payload.has_more === true,
+            activated: payload.activated !== false
+        };
     });
+
+    // Average mode intentionally returns an inactive empty page until the
+    // separately certified season-average publication is ready. Retry on the
+    // next request instead of caching that temporary state for an hour.
+    if (ratingMode === 'average' && !page.activated) {
+        cacheStore.delete(key);
+    }
+    return page;
+}
+
+/** Get one filtered, deterministically sorted all-time Average WOWY page. */
+export function getWowyAllTimePage(options = {}) {
+    return getWowyAllTimePageForMode('average', options);
+}
+
+/** Get one filtered, deterministically sorted all-time Adjusted WOWY page. */
+export function getWowyAdjustedAllTimePage(options = {}) {
+    return getWowyAllTimePageForMode('adjusted', options);
+}
+
+// Compatibility wrappers for callers that only need the initial row array.
+export async function getWowyAllTimePlayers(options = {}) {
+    return (await getWowyAllTimePage(options)).players;
+}
+
+export async function getWowyAdjustedAllTimePlayers(options = {}) {
+    return (await getWowyAdjustedAllTimePage(options)).players;
 }
 
 /**

@@ -65,6 +65,16 @@ const seasonAdjustedMigration = readFileSync(
     ),
     'utf8'
 );
+const paginatedAllTimeMigration = readFileSync(
+    join(
+        __dirname,
+        '..',
+        'supabase',
+        'migrations',
+        '20260717_002_paginate_wowy_all_time_leaderboards.sql'
+    ),
+    'utf8'
+);
 const seasonAverageActivationOperation = readFileSync(
     join(
         __dirname,
@@ -175,6 +185,7 @@ test('historical WOWY rows preserve season context without current-team fallback
     assert.match(normalizer, /last_date:/);
     assert.match(normalizer, /playoff_games:/);
     assert.match(normalizer, /playoff_possessions:/);
+    assert.match(normalizer, /season_possessions:/);
     assert.match(normalizer, /method_version:/);
     assert.match(normalizer, /application_model:/);
     assert.match(normalizer, /tm_id: isHistoricalSeasonSummary \? null : resolveTeamId/);
@@ -498,19 +509,65 @@ test('historical WOWY helpers cache season options and selected-season snapshots
     assert.match(playersHelper, /sortByWowyRapmDesc/);
 });
 
-test('all-time WOWY helper preserves the database-owned top-100 ranking', () => {
-    const start = supabaseHelper.indexOf('export async function getWowyAllTimePlayers()');
+test('all-time WOWY helper requests bounded filtered pages and preserves database order', () => {
+    const start = supabaseHelper.indexOf('const WOWY_ALL_TIME_SORT_COLUMNS');
     const end = supabaseHelper.indexOf('export async function getWowyLeaderboardSeasons()', start);
     assert.ok(start >= 0 && end > start, 'all-time WOWY helper should be discoverable');
 
     const helper = supabaseHelper.slice(start, end);
-    assert.match(helper, /CACHE_MS\.wowyAllTimePlayers/);
-    assert.match(helper, /cacheKey\('wowyAllTimePlayers', 'top-100'\)/);
-    assert.match(helper, /\.rpc\('get_wowy_all_time_player_seasons'\)/);
-    assert.match(helper, /normalizeWowyLeaderboardRows\(data\)/);
-    assert.match(helper, /if \(rows\.length === 0\)/);
+    assert.match(helper, /WOWY_ALL_TIME_PAGE_SIZE/);
+    assert.match(helper, /'wowyAllTimePlayers'/);
+    assert.match(helper, /CACHE_MS\[cachePrefix\]/);
+    assert.match(helper, /get_wowy_all_time_player_seasons_page/);
+    assert.match(helper, /p_limit: normalized\.limit/);
+    assert.match(helper, /p_offset: normalized\.offset/);
+    assert.match(helper, /p_min_possessions: normalized\.minPossessions/);
+    assert.match(helper, /p_max_possessions: normalized\.maxPossessions/);
+    assert.match(helper, /p_sort_column: normalized\.sortColumn/);
+    assert.match(helper, /normalizeWowyLeaderboardRows\(payload\.rows\)/);
+    assert.match(helper, /totalCount:/);
+    assert.match(helper, /hasMore:/);
+    assert.match(helper, /if \(ratingMode === 'average' && !page\.activated\)/);
     assert.match(helper, /cacheStore\.delete\(key\)/);
     assert.doesNotMatch(helper, /sortByWowyRapmDesc/);
+});
+
+test('all-time WOWY page RPC filters before a hard 100-row page boundary', () => {
+    assert.match(
+        paginatedAllTimeMigration,
+        /function public\.get_wowy_all_time_player_seasons_page\(/
+    );
+    assert.match(paginatedAllTimeMigration, /p_limit integer default 100/);
+    assert.match(paginatedAllTimeMigration, /p_offset integer default 0/);
+    assert.match(paginatedAllTimeMigration, /p_min_possessions double precision default null/);
+    assert.match(paginatedAllTimeMigration, /p_max_possessions double precision default null/);
+    assert.match(paginatedAllTimeMigration, /p_limit < 1 or p_limit > 100/);
+    assert.match(paginatedAllTimeMigration, /security invoker/);
+    assert.match(paginatedAllTimeMigration, /set search_path = ''/);
+    assert.match(paginatedAllTimeMigration, /where normalized_rating_mode = 'average'/);
+    assert.match(paginatedAllTimeMigration, /where normalized_rating_mode = 'adjusted'/);
+    assert.match(
+        paginatedAllTimeMigration,
+        /left join public\.wowy_season_adjusted_ratings as season_counts/
+    );
+    assert.match(paginatedAllTimeMigration, /season_counts\.possessions as season_possessions/);
+    assert.match(paginatedAllTimeMigration, /or season_possessions >= p_min_possessions/);
+    assert.match(paginatedAllTimeMigration, /or season_possessions <= p_max_possessions/);
+    assert.match(paginatedAllTimeMigration, /normalized_sort_column = 'season_games'/);
+    assert.match(paginatedAllTimeMigration, /normalized_sort_column = 'last_date'/);
+    assert.ok(
+        paginatedAllTimeMigration.indexOf('filtered_rows as (') <
+            paginatedAllTimeMigration.indexOf('page_rows as ('),
+        'the complete result set must be filtered before the page is sliced'
+    );
+    assert.match(paginatedAllTimeMigration, /page_sort_rank > p_offset/);
+    assert.match(paginatedAllTimeMigration, /page_sort_rank <= p_offset \+ p_limit/);
+    assert.match(paginatedAllTimeMigration, /'total_count'/);
+    assert.match(paginatedAllTimeMigration, /'has_more'/);
+    assert.match(
+        paginatedAllTimeMigration,
+        /grant execute on function public\.get_wowy_all_time_player_seasons_page/
+    );
 });
 
 test('Season-Adjusted WOWY migration keeps the research product separate and public-read-only', () => {
@@ -573,9 +630,9 @@ test('Season-Adjusted WOWY RPCs expose all rows and rank the separate product', 
     }
 });
 
-test('Season-Adjusted WOWY helpers use separate caches and RPCs', () => {
+test('Season-Adjusted WOWY helpers use separate caches and the shared paged RPC', () => {
     const allTimeStart = supabaseHelper.indexOf(
-        'export async function getWowyAdjustedAllTimePlayers()'
+        'async function getWowyAllTimePageForMode'
     );
     const allTimeEnd = supabaseHelper.indexOf(
         'export async function getWowyLeaderboardSeasons()',
@@ -590,9 +647,11 @@ test('Season-Adjusted WOWY helpers use separate caches and RPCs', () => {
 
     const allTimeHelper = supabaseHelper.slice(allTimeStart, allTimeEnd);
     const seasonHelper = supabaseHelper.slice(seasonStart, seasonEnd);
-    assert.match(allTimeHelper, /CACHE_MS\.wowyAdjustedAllTimePlayers/);
-    assert.match(allTimeHelper, /get_wowy_adjusted_all_time_player_seasons/);
-    assert.match(allTimeHelper, /normalizeWowyLeaderboardRows\(data\)/);
+    assert.match(allTimeHelper, /'wowyAdjustedAllTimePlayers'/);
+    assert.match(allTimeHelper, /CACHE_MS\[cachePrefix\]/);
+    assert.match(allTimeHelper, /get_wowy_all_time_player_seasons_page/);
+    assert.match(allTimeHelper, /getWowyAdjustedAllTimePage/);
+    assert.match(allTimeHelper, /normalizeWowyLeaderboardRows\(payload\.rows\)/);
     assert.match(seasonHelper, /CACHE_MS\.wowyAdjustedSeasonPlayers/);
     assert.match(seasonHelper, /get_wowy_adjusted_season_player_ratings/);
     assert.match(seasonHelper, /p_season: seasonEndYear/);

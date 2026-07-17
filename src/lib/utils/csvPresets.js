@@ -186,6 +186,7 @@ export const wowyHistoricalLeaderboardCsvColumns = [
     { header: 'Avg WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
     { header: 'Avg WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
     { header: 'Avg WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
+    { header: 'Possessions', accessor: 'season_possessions', format: (value) => formatFixed(value, 1) },
     { header: 'Avg Exposure', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
     { header: 'Games', accessor: 'season_games', format: (value) => formatFixed(value, 0) },
     { header: 'First Game', accessor: 'first_date', format: formatOrDash },

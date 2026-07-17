@@ -1,8 +1,8 @@
 import {
     getActiveWowyPlayers,
-    getWowyAdjustedAllTimePlayers,
+    getWowyAdjustedAllTimePage,
     getWowyAdjustedSeasonPlayers,
-    getWowyAllTimePlayers,
+    getWowyAllTimePage,
     getWowyLeaderboardSeasons,
     getWowyPublication,
     getWowySeasonPlayers
@@ -36,6 +36,8 @@ export async function load({ url, setHeaders }) {
     const selectedRatingMode =
         selectedView === 'current' ? 'average' : requestedRatingMode;
     let players;
+    let allTimeTotal = null;
+    let allTimeHasMore = false;
     let isActivationFallback = false;
 
     if (selectedView === 'season') {
@@ -45,16 +47,21 @@ export async function load({ url, setHeaders }) {
     } else if (selectedView === 'current') {
         players = await getActiveWowyPlayers();
     } else {
-        players = selectedRatingMode === 'adjusted'
-            ? await getWowyAdjustedAllTimePlayers()
-            : await getWowyAllTimePlayers();
+        const page = selectedRatingMode === 'adjusted'
+            ? await getWowyAdjustedAllTimePage()
+            : await getWowyAllTimePage();
+        players = page.players;
+        allTimeTotal = page.totalCount;
+        allTimeHasMore = page.hasMore;
 
         // Migration 012 deliberately returns no all-time rows until the
         // separate manual certification operation has committed its marker.
         // Keep the normal page useful during that safe intermediate state.
-        if (selectedRatingMode === 'average' && players.length === 0) {
+        if (selectedRatingMode === 'average' && !page.activated) {
             selectedView = 'current';
             players = await getActiveWowyPlayers();
+            allTimeTotal = null;
+            allTimeHasMore = false;
             isActivationFallback = true;
         }
     }
@@ -81,7 +88,9 @@ export async function load({ url, setHeaders }) {
         seasons,
         selectedSeason,
         selectedView,
-        selectedRatingMode
+        selectedRatingMode,
+        allTimeTotal,
+        allTimeHasMore
     };
 }
 

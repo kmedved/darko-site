@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 
 const WOWY_PAGE = 'src/routes/wowy/+page.svelte';
 const WOWY_PAGE_SERVER = 'src/routes/wowy/+page.server.js';
+const WOWY_ALL_TIME_API = 'src/routes/api/wowy/all-time/+server.js';
 
 async function read(file) {
     return fs.readFile(path.resolve(process.cwd(), file), 'utf8');
@@ -14,9 +15,9 @@ test('WOWY leaderboard loader defaults to all time and supports Current and URL-
     const contents = await read(WOWY_PAGE_SERVER);
 
     assert.match(contents, /getActiveWowyPlayers/);
-    assert.match(contents, /getWowyAdjustedAllTimePlayers/);
+    assert.match(contents, /getWowyAdjustedAllTimePage/);
     assert.match(contents, /getWowyAdjustedSeasonPlayers/);
-    assert.match(contents, /getWowyAllTimePlayers/);
+    assert.match(contents, /getWowyAllTimePage/);
     assert.match(contents, /getWowyLeaderboardSeasons/);
     assert.match(contents, /getWowyPublication/);
     assert.match(contents, /getWowySeasonPlayers/);
@@ -30,13 +31,15 @@ test('WOWY leaderboard loader defaults to all time and supports Current and URL-
     assert.match(contents, /selectedView === 'current' \? 'average' : requestedRatingMode/);
     assert.match(contents, /let selectedView = selectedSeason !== null/);
     assert.match(contents, /'all-time'/);
-    assert.match(contents, /getWowyAllTimePlayers\(\)/);
+    assert.match(contents, /getWowyAllTimePage\(\)/);
     assert.match(contents, /getActiveWowyPlayers\(\)/);
     assert.match(contents, /getWowyAdjustedSeasonPlayers\(selectedSeason\)/);
     assert.match(contents, /getWowySeasonPlayers\(selectedSeason\)/);
-    assert.match(contents, /getWowyAdjustedAllTimePlayers\(\)/);
+    assert.match(contents, /getWowyAdjustedAllTimePage\(\)/);
+    assert.match(contents, /allTimeTotal = page\.totalCount/);
+    assert.match(contents, /allTimeHasMore = page\.hasMore/);
     assert.match(contents, /let isActivationFallback = false;/);
-    assert.match(contents, /selectedRatingMode === 'average' && players\.length === 0/);
+    assert.match(contents, /selectedRatingMode === 'average' && !page\.activated/);
     assert.match(contents, /selectedView = 'current';/);
     assert.match(contents, /isActivationFallback = true;/);
     assert.match(contents, /if \(isActivationFallback\) \{[\s\S]*'cache-control': 'no-store'/);
@@ -49,7 +52,7 @@ test('WOWY leaderboard loader defaults to all time and supports Current and URL-
     assert.match(contents, /swr:\s*3600/);
 });
 
-test('WOWY leaderboard defaults to the all-time top 100 and preserves Current and season semantics', async () => {
+test('WOWY leaderboard defaults to all seasons and preserves Current and season semantics', async () => {
     const contents = await read(WOWY_PAGE);
 
     assert.match(contents, /import \{ goto \} from '\$app\/navigation';/);
@@ -58,12 +61,12 @@ test('WOWY leaderboard defaults to the all-time top 100 and preserves Current an
     assert.match(contents, /const hasAllTimeRanks/);
     assert.match(contents, /return hasAllTimeRanks \? 'all-time' : 'current';/);
     assert.match(contents, /const isAllTimeView/);
-    assert.match(contents, /The 100 highest unweighted WOWY RAPM player-seasons of all time/);
-    assert.match(contents, /The 100 highest single-season WOWY RAPM averages/);
-    assert.match(contents, /All-time average top 100 seasons/);
-    assert.match(contents, /All-time adjusted top 100 seasons/);
+    assert.match(contents, /All unweighted WOWY RAPM player-seasons, loaded 100 at a time/);
+    assert.match(contents, /Every single-season WOWY RAPM average/);
+    assert.match(contents, /All-time average seasons/);
+    assert.match(contents, /All-time adjusted seasons/);
     assert.match(contents, /raw, simple, unweighted average across published WOWY games/);
-    assert.match(contents, /no sample or exposure cutoff/);
+    assert.match(contents, /no default possession cutoff/);
     assert.match(contents, /current season can move as new games are published/);
     assert.match(contents, /<option value="all-time">All time<\/option>/);
     assert.match(contents, /Latest observed/);
@@ -132,7 +135,7 @@ test('WOWY leaderboard defaults to the all-time top 100 and preserves Current an
     assert.doesNotMatch(contents, /Observed leaders|leaderCards|buildLeaderCard|wowy-leader-/);
 });
 
-test('WOWY leaderboard supports sorting, filtering, complete CSV export, and mobile table access', async () => {
+test('WOWY leaderboard supports sorting, filtering, loaded CSV export, and mobile table access', async () => {
     const contents = await read(WOWY_PAGE);
     const desktopColumnsStart = contents.indexOf('@media (hover: hover) and (pointer: fine) and (max-width: 980px)');
     const touchStart = contents.indexOf('/* Touch/mobile scroll mode */');
@@ -177,15 +180,30 @@ test('WOWY leaderboard supports sorting, filtering, complete CSV export, and mob
     assert.match(contents, /function formatHeightLabel\(value\)/);
     assert.match(contents, /function setHeightFilter\(bound, value\)/);
     assert.match(contents, /function clearHeightFilters\(\)/);
+    assert.match(contents, /let minPossessions = \$state\(''\);/);
+    assert.match(contents, /let maxPossessions = \$state\(''\);/);
+    assert.match(contents, /function playerSeasonPossessions\(player\)/);
+    assert.match(contents, /function matchesPossessionRange\(player, minimum, maximum\)/);
+    assert.match(contents, /function setPossessionFilter\(bound, value\)/);
+    assert.match(contents, /function clearPossessionFilters\(\)/);
     assert.match(contents, /<details class="wowy-advanced-filters">/);
     assert.match(contents, /<summary>[\s\S]*Advanced filters/);
     assert.match(contents, /id="wowy-min-height-filter"/);
     assert.match(contents, /id="wowy-max-height-filter"/);
+    assert.match(contents, /id="wowy-min-possessions-filter"/);
+    assert.match(contents, /id="wowy-max-possessions-filter"/);
+    assert.match(contents, /Includes regular-season and playoff possessions/);
     assert.match(contents, /<option value="">No minimum<\/option>/);
     assert.match(contents, /<option value="">No maximum<\/option>/);
     assert.match(contents, /Players without a recorded height are excluded only when a bound is set/);
     assert.match(contents, /positionFilter = 'all';[\s\S]*minHeight = '';[\s\S]*maxHeight = '';/);
     assert.match(contents, /setSearchQuery/);
+    assert.match(contents, /const ALL_TIME_BATCH_SIZE = 100;/);
+    assert.match(contents, /function loadAllTimePage/);
+    assert.match(contents, /fetch\(buildAllTimeRequestUrl\(offset\)\)/);
+    assert.match(contents, /Load \$\{ALL_TIME_BATCH_SIZE\} more/);
+    assert.match(contents, /allTimePlayers\.length\.toLocaleString/);
+    assert.match(contents, /allTimeTotal\.toLocaleString/);
     assert.match(contents, /sortedPlayers\.map\(\(player, index\) => \(\{/);
     assert.match(contents, /rank: isAllTimeView \? allTimeRank\(player, index \+ 1\) : index \+ 1/);
     assert.match(contents, /wowyAllTimeLeaderboardCsvColumns/);
@@ -233,4 +251,19 @@ test('WOWY leaderboard supports sorting, filtering, complete CSV export, and mob
     assert.match(contents, /\.table-body-scroll\s*\{[\s\S]*overflow-x:\s*auto;/);
     assert.match(contents, /\.wowy-table-shell\s*\{[\s\S]*overflow:\s*visible;/);
     assert.match(contents, /@media \(max-width: 840px\)\s*\{[\s\S]*?\.table-body-scroll\s*\{[\s\S]*?-webkit-overflow-scrolling:\s*touch;/);
+});
+
+test('all-time WOWY API forwards complete filters into bounded server pages', async () => {
+    const contents = await read(WOWY_ALL_TIME_API);
+
+    assert.match(contents, /WOWY_ALL_TIME_PAGE_SIZE/);
+    assert.match(contents, /getWowyAllTimePage/);
+    assert.match(contents, /getWowyAdjustedAllTimePage/);
+    assert.match(contents, /minPossessions: numericParam\(url, 'min_possessions'\)/);
+    assert.match(contents, /maxPossessions: numericParam\(url, 'max_possessions'\)/);
+    assert.match(contents, /offset: numericParam\(url, 'offset'\) \?\? 0/);
+    assert.match(contents, /sortColumn: textParam\(url, 'sort'\)/);
+    assert.match(contents, /sortDirection: textParam\(url, 'direction'\)/);
+    assert.match(contents, /edgeSMaxAge: 300/);
+    assert.match(contents, /return json\(\{ error: error\.message \}, \{ status: 400 \}\)/);
 });

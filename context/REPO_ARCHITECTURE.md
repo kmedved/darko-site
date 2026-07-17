@@ -61,6 +61,7 @@ Darko Site is a single SvelteKit application for NBA analytics pages and JSON AP
 | `/api/standings` | `GET` | query: conference | conference standings payload |
 | `/api/standings/:slug` | `GET` | path: slug | team detail payload |
 | `/api/wowy-publication` | `GET` | none | JSON route payload |
+| `/api/wowy/all-time` | `GET` | query: rating | JSON route payload |
 
 ### Page Loaders
 

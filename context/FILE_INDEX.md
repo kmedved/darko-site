@@ -157,6 +157,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/api/standings/+server.js` - API /api/standings
 - `src/routes/api/standings/[slug]/+server.js` - API /api/standings/:slug
 - `src/routes/api/wowy-publication/+server.js` - API /api/wowy-publication
+- `src/routes/api/wowy/all-time/+server.js` - API /api/wowy/all-time
 
 ## supabase/migrations
 
@@ -181,6 +182,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260710_012_add_wowy_all_time_season_leaderboard.sql` - Supabase SQL migration.
 - `supabase/migrations/20260711_001_add_wowy_leaderboard_bio_filters.sql` - Supabase SQL migration.
 - `supabase/migrations/20260717_001_add_wowy_season_adjusted_ratings.sql` - Supabase SQL migration.
+- `supabase/migrations/20260717_002_paginate_wowy_all_time_leaderboards.sql` - Supabase SQL migration.
 
 ## tests
 

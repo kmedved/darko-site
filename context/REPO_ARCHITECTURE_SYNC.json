@@ -346,6 +346,31 @@
         "queryParams": [],
         "route": "/api/wowy-publication",
         "writesState": false
+      },
+      {
+        "bodyFields": [],
+        "cache": {
+          "edgeSMaxAge": 300,
+          "sie": 86400,
+          "swr": 3600,
+          "type": "edge"
+        },
+        "dataSources": [
+          "$lib/server/cacheHeaders.js:setEdgeCache",
+          "$lib/server/supabase.js:WOWY_ALL_TIME_PAGE_SIZE",
+          "$lib/server/supabase.js:getWowyAdjustedAllTimePage",
+          "$lib/server/supabase.js:getWowyAllTimePage"
+        ],
+        "file": "src/routes/api/wowy/all-time/+server.js",
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "rating"
+        ],
+        "route": "/api/wowy/all-time",
+        "writesState": false
       }
     ],
     "page_loaders": [
@@ -490,9 +515,9 @@
         "dataSources": [
           "$lib/server/cacheHeaders.js:setEdgeCache",
           "$lib/server/supabase.js:getActiveWowyPlayers",
-          "$lib/server/supabase.js:getWowyAdjustedAllTimePlayers",
+          "$lib/server/supabase.js:getWowyAdjustedAllTimePage",
           "$lib/server/supabase.js:getWowyAdjustedSeasonPlayers",
-          "$lib/server/supabase.js:getWowyAllTimePlayers",
+          "$lib/server/supabase.js:getWowyAllTimePage",
           "$lib/server/supabase.js:getWowyLeaderboardSeasons",
           "$lib/server/supabase.js:getWowyPublication",
           "$lib/server/supabase.js:getWowySeasonPlayers"
@@ -671,6 +696,7 @@
     "src/routes/api/standings/+server.js",
     "src/routes/api/standings/[slug]/+server.js",
     "src/routes/api/wowy-publication/+server.js",
+    "src/routes/api/wowy/all-time/+server.js",
     "src/routes/compare/+page.server.js",
     "src/routes/compare/+page.svelte",
     "src/routes/favicon.ico/+server.js",
@@ -714,6 +740,7 @@
     "supabase/migrations/20260710_012_add_wowy_all_time_season_leaderboard.sql",
     "supabase/migrations/20260711_001_add_wowy_leaderboard_bio_filters.sql",
     "supabase/migrations/20260717_001_add_wowy_season_adjusted_ratings.sql",
+    "supabase/migrations/20260717_002_paginate_wowy_all_time_leaderboards.sql",
     "svelte.config.js",
     "tests/api-active-players-cache.test.js",
     "tests/api-player-history.test.js",
@@ -1028,6 +1055,18 @@
         "queryParams": [],
         "returns": "JSON route payload",
         "route": "/api/wowy-publication"
+      },
+      {
+        "bodyFields": [],
+        "methods": [
+          "GET"
+        ],
+        "pathParams": [],
+        "queryParams": [
+          "rating"
+        ],
+        "returns": "JSON route payload",
+        "route": "/api/wowy/all-time"
       }
     ],
     "clientApi": [
@@ -1268,16 +1307,24 @@
             "signature": "getTeamWinDistribution(teamName)"
           },
           {
+            "name": "getWowyAdjustedAllTimePage",
+            "signature": "getWowyAdjustedAllTimePage(options = {})"
+          },
+          {
             "name": "getWowyAdjustedAllTimePlayers",
-            "signature": "getWowyAdjustedAllTimePlayers()"
+            "signature": "getWowyAdjustedAllTimePlayers(options = {})"
           },
           {
             "name": "getWowyAdjustedSeasonPlayers",
             "signature": "getWowyAdjustedSeasonPlayers(season)"
           },
           {
+            "name": "getWowyAllTimePage",
+            "signature": "getWowyAllTimePage(options = {})"
+          },
+          {
             "name": "getWowyAllTimePlayers",
-            "signature": "getWowyAllTimePlayers()"
+            "signature": "getWowyAllTimePlayers(options = {})"
           },
           {
             "name": "getWowyLeaderboardSeasons",
