@@ -1,5 +1,7 @@
 import {
     getActiveWowyPlayers,
+    getWowyAdjustedAllTimePlayers,
+    getWowyAdjustedSeasonPlayers,
     getWowyAllTimePlayers,
     getWowyLeaderboardSeasons,
     getWowyPublication,
@@ -29,20 +31,28 @@ export async function load({ url, setHeaders }) {
         : requestedCurrent
             ? 'current'
             : 'all-time';
+    const requestedRatingMode =
+        url.searchParams.get('rating') === 'adjusted' ? 'adjusted' : 'average';
+    const selectedRatingMode =
+        selectedView === 'current' ? 'average' : requestedRatingMode;
     let players;
     let isActivationFallback = false;
 
     if (selectedView === 'season') {
-        players = await getWowySeasonPlayers(selectedSeason);
+        players = selectedRatingMode === 'adjusted'
+            ? await getWowyAdjustedSeasonPlayers(selectedSeason)
+            : await getWowySeasonPlayers(selectedSeason);
     } else if (selectedView === 'current') {
         players = await getActiveWowyPlayers();
     } else {
-        players = await getWowyAllTimePlayers();
+        players = selectedRatingMode === 'adjusted'
+            ? await getWowyAdjustedAllTimePlayers()
+            : await getWowyAllTimePlayers();
 
         // Migration 012 deliberately returns no all-time rows until the
         // separate manual certification operation has committed its marker.
         // Keep the normal page useful during that safe intermediate state.
-        if (players.length === 0) {
+        if (selectedRatingMode === 'average' && players.length === 0) {
             selectedView = 'current';
             players = await getActiveWowyPlayers();
             isActivationFallback = true;
@@ -65,7 +75,14 @@ export async function load({ url, setHeaders }) {
         });
     }
 
-    return { players, publication, seasons, selectedSeason, selectedView };
+    return {
+        players,
+        publication,
+        seasons,
+        selectedSeason,
+        selectedView,
+        selectedRatingMode
+    };
 }
 
 function parseSeasonEndYear(value) {

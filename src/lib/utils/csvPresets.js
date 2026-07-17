@@ -192,6 +192,23 @@ export const wowyHistoricalLeaderboardCsvColumns = [
     { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
 ];
 
+export const wowyAdjustedHistoricalLeaderboardCsvColumns = [
+    { header: '#', accessor: 'rank' },
+    { header: 'Player', accessor: 'player_name' },
+    { header: 'Team Codes', accessor: 'team_codes', format: formatListOrDash },
+    { header: 'Teams', accessor: 'team_names', format: formatListOrDash },
+    { header: 'Filter Position', accessor: 'filter_position', format: formatOrDash },
+    { header: 'Height (in)', accessor: 'height_inches', format: (value) => formatFixed(value, 0) },
+    { header: 'Adjusted WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
+    { header: 'Adjusted WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
+    { header: 'Adjusted WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
+    { header: 'Possessions', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
+    { header: 'Games', accessor: 'season_games', format: (value) => formatFixed(value, 0) },
+    { header: 'Playoff Games', accessor: 'playoff_games', format: (value) => formatFixed(value, 0) },
+    { header: 'First Game', accessor: 'first_date', format: formatOrDash },
+    { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
+];
+
 export const wowyAllTimeLeaderboardCsvColumns = [
     { header: '#', accessor: 'rank' },
     { header: 'Player', accessor: 'player_name' },
@@ -205,6 +222,24 @@ export const wowyAllTimeLeaderboardCsvColumns = [
     { header: 'Avg WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
     { header: 'Avg Exposure', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
     { header: 'Games', accessor: 'season_games', format: (value) => formatFixed(value, 0) },
+    { header: 'First Game', accessor: 'first_date', format: formatOrDash },
+    { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
+];
+
+export const wowyAdjustedAllTimeLeaderboardCsvColumns = [
+    { header: '#', accessor: 'rank' },
+    { header: 'Player', accessor: 'player_name' },
+    { header: 'Season', accessor: 'season', format: formatSeasonEndYearOrDash },
+    { header: 'Team Codes', accessor: 'team_codes', format: formatListOrDash },
+    { header: 'Teams', accessor: 'team_names', format: formatListOrDash },
+    { header: 'Filter Position', accessor: 'filter_position', format: formatOrDash },
+    { header: 'Height (in)', accessor: 'height_inches', format: (value) => formatFixed(value, 0) },
+    { header: 'Adjusted WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
+    { header: 'Adjusted WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
+    { header: 'Adjusted WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
+    { header: 'Possessions', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
+    { header: 'Games', accessor: 'season_games', format: (value) => formatFixed(value, 0) },
+    { header: 'Playoff Games', accessor: 'playoff_games', format: (value) => formatFixed(value, 0) },
     { header: 'First Game', accessor: 'first_date', format: formatOrDash },
     { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
 ];

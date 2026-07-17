@@ -55,6 +55,16 @@ const bioFilterMigration = readFileSync(
     ),
     'utf8'
 );
+const seasonAdjustedMigration = readFileSync(
+    join(
+        __dirname,
+        '..',
+        'supabase',
+        'migrations',
+        '20260717_001_add_wowy_season_adjusted_ratings.sql'
+    ),
+    'utf8'
+);
 const seasonAverageActivationOperation = readFileSync(
     join(
         __dirname,
@@ -153,7 +163,9 @@ test('historical WOWY rows preserve season context without current-team fallback
     assert.match(normalizer, /snapshot_context: snapshotContext/);
     assert.match(normalizer, /teamCode/);
     assert.match(normalizer, /team_code: teamCode/);
-    assert.match(normalizer, /snapshotContext === 'opening-game' \|\| snapshotContext === 'season-average'/);
+    assert.match(normalizer, /snapshotContext === 'opening-game'/);
+    assert.match(normalizer, /snapshotContext === 'season-average'/);
+    assert.match(normalizer, /snapshotContext === 'season-adjusted'/);
     assert.match(normalizer, /team_codes:/);
     assert.match(normalizer, /team_names:/);
     assert.match(normalizer, /season:/);
@@ -161,6 +173,10 @@ test('historical WOWY rows preserve season context without current-team fallback
     assert.match(normalizer, /season_games:/);
     assert.match(normalizer, /first_date:/);
     assert.match(normalizer, /last_date:/);
+    assert.match(normalizer, /playoff_games:/);
+    assert.match(normalizer, /playoff_possessions:/);
+    assert.match(normalizer, /method_version:/);
+    assert.match(normalizer, /application_model:/);
     assert.match(normalizer, /tm_id: isHistoricalSeasonSummary \? null : resolveTeamId/);
     assert.match(normalizer, /position: isHistoricalSeasonSummary \? null : normalizePosition/);
 });
@@ -495,4 +511,85 @@ test('all-time WOWY helper preserves the database-owned top-100 ranking', () => 
     assert.match(helper, /if \(rows\.length === 0\)/);
     assert.match(helper, /cacheStore\.delete\(key\)/);
     assert.doesNotMatch(helper, /sortByWowyRapmDesc/);
+});
+
+test('Season-Adjusted WOWY migration keeps the research product separate and public-read-only', () => {
+    assert.match(
+        seasonAdjustedMigration,
+        /create table if not exists public\.wowy_season_adjusted_ratings/
+    );
+    assert.match(seasonAdjustedMigration, /primary key \(season, nba_id\)/);
+    assert.match(seasonAdjustedMigration, /season_games integer not null/);
+    assert.match(seasonAdjustedMigration, /playoff_games integer not null/);
+    assert.match(seasonAdjustedMigration, /possessions double precision not null/);
+    assert.match(seasonAdjustedMigration, /wowy_rapm double precision not null/);
+    assert.match(seasonAdjustedMigration, /wowy_orapm double precision not null/);
+    assert.match(seasonAdjustedMigration, /wowy_drapm double precision not null/);
+    assert.match(seasonAdjustedMigration, /abs\(\(wowy_orapm \+ wowy_drapm\) - wowy_rapm\)/);
+    assert.match(
+        seasonAdjustedMigration,
+        /create table if not exists public\.wowy_season_adjusted_publication/
+    );
+    assert.match(seasonAdjustedMigration, /source_sha256 text not null/);
+    assert.match(seasonAdjustedMigration, /output_sha256 text not null/);
+    assert.match(seasonAdjustedMigration, /enable row level security/);
+    assert.match(seasonAdjustedMigration, /wowy_season_adjusted_ratings_public_read/);
+    assert.match(
+        seasonAdjustedMigration,
+        /grant select on table\s+public\.wowy_season_adjusted_ratings,\s+public\.wowy_season_adjusted_publication\s+to anon, authenticated;/
+    );
+});
+
+test('Season-Adjusted WOWY RPCs expose all rows and rank the separate product', () => {
+    assert.match(
+        seasonAdjustedMigration,
+        /function public\.get_wowy_adjusted_season_player_ratings\(\s*p_season integer/
+    );
+    assert.match(
+        seasonAdjustedMigration,
+        /function public\.get_wowy_adjusted_all_time_player_seasons\(\)/
+    );
+    assert.match(seasonAdjustedMigration, /from public\.wowy_season_adjusted_ratings as adjusted/);
+    assert.match(seasonAdjustedMigration, /adjusted\.possessions as exposure/);
+    assert.match(seasonAdjustedMigration, /adjusted\.playoff_games/);
+    assert.match(seasonAdjustedMigration, /'season-adjusted'::text as snapshot_context/);
+    assert.match(seasonAdjustedMigration, /limit 100/);
+    assert.doesNotMatch(seasonAdjustedMigration, /where adjusted\.possessions/);
+    assert.doesNotMatch(seasonAdjustedMigration, /where adjusted\.season_games/);
+
+    for (const functionName of [
+        'get_wowy_adjusted_season_player_ratings',
+        'get_wowy_adjusted_all_time_player_seasons'
+    ]) {
+        assert.match(
+            seasonAdjustedMigration,
+            new RegExp(`grant execute on function\\s+public\\.${functionName}`)
+        );
+    }
+});
+
+test('Season-Adjusted WOWY helpers use separate caches and RPCs', () => {
+    const allTimeStart = supabaseHelper.indexOf(
+        'export async function getWowyAdjustedAllTimePlayers()'
+    );
+    const allTimeEnd = supabaseHelper.indexOf(
+        'export async function getWowyLeaderboardSeasons()',
+        allTimeStart
+    );
+    const seasonStart = supabaseHelper.indexOf(
+        'export async function getWowyAdjustedSeasonPlayers(season)'
+    );
+    const seasonEnd = supabaseHelper.indexOf('/**\n * Get every season', seasonStart);
+    assert.ok(allTimeStart >= 0 && allTimeEnd > allTimeStart);
+    assert.ok(seasonStart >= 0 && seasonEnd > seasonStart);
+
+    const allTimeHelper = supabaseHelper.slice(allTimeStart, allTimeEnd);
+    const seasonHelper = supabaseHelper.slice(seasonStart, seasonEnd);
+    assert.match(allTimeHelper, /CACHE_MS\.wowyAdjustedAllTimePlayers/);
+    assert.match(allTimeHelper, /get_wowy_adjusted_all_time_player_seasons/);
+    assert.match(allTimeHelper, /normalizeWowyLeaderboardRows\(data\)/);
+    assert.match(seasonHelper, /CACHE_MS\.wowyAdjustedSeasonPlayers/);
+    assert.match(seasonHelper, /get_wowy_adjusted_season_player_ratings/);
+    assert.match(seasonHelper, /p_season: seasonEndYear/);
+    assert.match(seasonHelper, /sortByWowyRapmDesc/);
 });

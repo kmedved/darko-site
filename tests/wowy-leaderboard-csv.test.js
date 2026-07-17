@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+    wowyAdjustedAllTimeLeaderboardCsvColumns,
+    wowyAdjustedHistoricalLeaderboardCsvColumns,
     wowyAllTimeLeaderboardCsvColumns,
     wowyHistoricalLeaderboardCsvColumns,
     wowyLeaderboardCsvColumns,
@@ -187,4 +189,46 @@ test('all-time WOWY CSV preserves the official rank and player-season context', 
         (column) => column.accessor === 'season'
     );
     assert.equal(season.format(1981), '1980-81');
+});
+
+test('Season-Adjusted WOWY CSV labels modeled ratings and season possessions', () => {
+    assert.deepEqual(
+        wowyAdjustedHistoricalLeaderboardCsvColumns.map((column) => column.header),
+        [
+            '#',
+            'Player',
+            'Team Codes',
+            'Teams',
+            'Filter Position',
+            'Height (in)',
+            'Adjusted WOWY RAPM',
+            'Adjusted WOWY O-RAPM',
+            'Adjusted WOWY D-RAPM',
+            'Possessions',
+            'Games',
+            'Playoff Games',
+            'First Game',
+            'Last Game'
+        ]
+    );
+    assert.deepEqual(
+        wowyAdjustedAllTimeLeaderboardCsvColumns.map((column) => column.accessor),
+        [
+            'rank',
+            'player_name',
+            'season',
+            'team_codes',
+            'team_names',
+            'filter_position',
+            'height_inches',
+            'wowy_rapm',
+            'wowy_orapm',
+            'wowy_drapm',
+            'exposure',
+            'season_games',
+            'playoff_games',
+            'first_date',
+            'last_date'
+        ]
+    );
 });

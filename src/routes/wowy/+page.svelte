@@ -4,6 +4,8 @@
         exportCsvRows,
         formatFixed,
         formatSignedMetric,
+        wowyAdjustedAllTimeLeaderboardCsvColumns,
+        wowyAdjustedHistoricalLeaderboardCsvColumns,
         wowyAllTimeLeaderboardCsvColumns,
         wowyHistoricalLeaderboardCsvColumns,
         wowyLeaderboardCsvColumns,
@@ -202,6 +204,44 @@
         { key: 'season_games', label: 'Games', align: 'right' },
         { key: 'last_date', label: 'Last game', align: 'right' }
     ];
+    const seasonAdjustedTableColumns = [
+        { key: '_rank', label: '#', align: 'right', sortable: false },
+        { key: 'player_name', label: 'Player', align: 'left' },
+        { key: 'team_sort_label', label: 'Teams', align: 'left' },
+        {
+            key: 'wowy_rapm',
+            label: 'Adjusted WOWY RAPM',
+            align: 'right',
+            tooltip: 'Season-average WOWY RAPM after updating the season baseline with season-specific game, quarter, box, Elo, and play-by-play-era evidence.'
+        },
+        {
+            key: 'wowy_orapm',
+            label: 'Adjusted O-RAPM',
+            align: 'right',
+            tooltip: 'Season-Adjusted offensive WOWY RAPM.'
+        },
+        {
+            key: 'wowy_drapm',
+            label: 'Adjusted D-RAPM',
+            align: 'right',
+            tooltip: 'Season-Adjusted defensive WOWY RAPM.'
+        },
+        {
+            key: 'exposure',
+            label: 'Possessions',
+            align: 'right',
+            tooltip: 'Estimated possessions played in the regular season and playoffs.'
+        },
+        { key: 'season_games', label: 'Games', align: 'right' },
+        { key: 'last_date', label: 'Last game', align: 'right' }
+    ];
+    const allTimeAdjustedTableColumns = [
+        { key: '_rank', label: '#', align: 'right', sortable: false },
+        { key: 'player_name', label: 'Player', align: 'left' },
+        { key: 'season', label: 'Season', align: 'left' },
+        { key: 'team_sort_label', label: 'Teams', align: 'left' },
+        ...seasonAdjustedTableColumns.slice(3)
+    ];
 
     let sortColumn = $state('wowy_rapm');
     let sortDirection = $state('desc');
@@ -247,6 +287,8 @@
     const isAllTimeView = $derived(activeView === 'all-time');
     const isCurrentView = $derived(activeView === 'current');
     const isSeasonView = $derived(activeView === 'season');
+    const ratingMode = $derived(data.selectedRatingMode === 'adjusted' ? 'adjusted' : 'average');
+    const isAdjustedRatings = $derived(!isCurrentView && ratingMode === 'adjusted');
     const activeSeason = $derived(
         isAllTimeView
             ? 'all-time'
@@ -263,21 +305,27 @@
             ? 'season-average'
             : getWowyHistoricalSnapshotContext(players, isHistoricalSeason)
     );
-    const isSeasonAverageHistory = $derived(
-        isAllTimeView || isWowySeasonAverageContext(historicalSnapshotContext)
+    const isSeasonSummaryHistory = $derived(
+        isAdjustedRatings ||
+        isAllTimeView ||
+        isWowySeasonAverageContext(historicalSnapshotContext)
     );
     const tableColumns = $derived(
         isAllTimeView
-            ? allTimeTableColumns
+            ? isAdjustedRatings
+                ? allTimeAdjustedTableColumns
+                : allTimeTableColumns
             : isCurrentView
             ? currentTableColumns
-            : isSeasonAverageHistory
-                ? seasonAverageTableColumns
+            : isSeasonSummaryHistory
+                ? isAdjustedRatings
+                    ? seasonAdjustedTableColumns
+                    : seasonAverageTableColumns
                 : openingGameTableColumns
     );
     const teamColumnKey = $derived(isCurrentView ? 'team_name' : 'team_sort_label');
-    const sampleColumnKey = $derived(isSeasonAverageHistory ? 'season_games' : 'career_game_num');
-    const dateColumnKey = $derived(isSeasonAverageHistory ? 'last_date' : 'date');
+    const sampleColumnKey = $derived(isSeasonSummaryHistory ? 'season_games' : 'career_game_num');
+    const dateColumnKey = $derived(isSeasonSummaryHistory ? 'last_date' : 'date');
     const teamOptions = $derived.by(() => {
         const teams = new Map();
         for (const player of players) {
@@ -370,11 +418,15 @@
     );
     const viewStatusDetail = $derived(
         isAllTimeView
-            ? 'The 100 highest player-season averages, ranked by simple unweighted WOWY RAPM.'
+            ? isAdjustedRatings
+                ? 'The 100 highest Season-Adjusted player-seasons, ranked by total WOWY RAPM.'
+                : 'The 100 highest player-season averages, ranked by simple unweighted WOWY RAPM.'
             : isCurrentView
             ? freshnessLabel
-            : isSeasonAverageHistory
-                ? 'Each value is a simple, unweighted average of the player\'s observed game-level WOWY ratings for the season.'
+            : isSeasonSummaryHistory
+                ? isAdjustedRatings
+                    ? 'Each rating starts from the season WOWY baseline and adds a bounded season-specific performance adjustment.'
+                    : 'Each value is a simple, unweighted average of the player\'s observed game-level WOWY ratings for the season.'
                 : "Opening-game snapshot of players who appeared in their teams' first games."
     );
 
@@ -500,17 +552,37 @@
         maxHeight = '';
         searchQuery = '';
         leaderboardPage = 1;
-        const suffix = selection === 'all-time'
-            ? ''
-            : selection === 'current'
-                ? '?view=current'
-                : `?season=${encodeURIComponent(selection)}`;
+        const params = new URLSearchParams();
+        if (selection === 'current') {
+            params.set('view', 'current');
+        } else if (selection !== 'all-time') {
+            params.set('season', selection);
+        }
+        if (selection !== 'current' && isAdjustedRatings) {
+            params.set('rating', 'adjusted');
+        }
+        const suffix = params.size > 0 ? `?${params.toString()}` : '';
         // A pre-activation all-time request safely falls back to Current at
         // the same /wowy URL. Force its retry to rerun the server loader.
         goto(`/wowy${suffix}`, {
             keepFocus: true,
             invalidateAll: selection === 'all-time'
         });
+    }
+
+    function selectRatingMode(event) {
+        const nextRatingMode = event.currentTarget.value === 'adjusted'
+            ? 'adjusted'
+            : 'average';
+        const params = new URLSearchParams();
+        if (isSeasonView) {
+            params.set('season', String(data.selectedSeason));
+        }
+        if (nextRatingMode === 'adjusted') {
+            params.set('rating', 'adjusted');
+        }
+        const suffix = params.size > 0 ? `?${params.toString()}` : '';
+        goto(`/wowy${suffix}`, { keepFocus: true });
     }
 
     function formatObservedDate(value) {
@@ -534,7 +606,7 @@
     }
 
     function displayedObservedDate(player) {
-        return isSeasonAverageHistory ? player?.last_date : player?.date;
+        return isSeasonSummaryHistory ? player?.last_date : player?.date;
     }
 
     function formatPlayerSeason(player) {
@@ -668,21 +740,25 @@
 
     function exportPlayersCsv() {
         const seasonFileLabel = isAllTimeView
-            ? 'all-time-top-100'
+            ? `${isAdjustedRatings ? 'adjusted-' : ''}all-time-top-100`
             : isCurrentView
                 ? 'current-active'
-                : `${formatSeasonEndYearLabel(activeSeason) ?? activeSeason}-${isSeasonAverageHistory ? 'season-average' : 'opening-game'}`;
+                : `${formatSeasonEndYearLabel(activeSeason) ?? activeSeason}-${isAdjustedRatings ? 'season-adjusted' : isSeasonSummaryHistory ? 'season-average' : 'opening-game'}`;
         exportCsvRows({
             rows: sortedPlayers.map((player, index) => ({
                 ...player,
                 rank: isAllTimeView ? allTimeRank(player, index + 1) : index + 1
             })),
             columns: isAllTimeView
-                ? wowyAllTimeLeaderboardCsvColumns
+                ? isAdjustedRatings
+                    ? wowyAdjustedAllTimeLeaderboardCsvColumns
+                    : wowyAllTimeLeaderboardCsvColumns
                 : isCurrentView
                     ? wowyLeaderboardCsvColumns
-                    : isSeasonAverageHistory
-                        ? wowyHistoricalLeaderboardCsvColumns
+                    : isSeasonSummaryHistory
+                        ? isAdjustedRatings
+                            ? wowyAdjustedHistoricalLeaderboardCsvColumns
+                            : wowyHistoricalLeaderboardCsvColumns
                         : wowyOpeningGameLeaderboardCsvColumns,
             filename: `darko-wowy-rapm-${seasonFileLabel}.csv`
         });
@@ -741,11 +817,15 @@
     <meta
         name="description"
         content={isAllTimeView
-            ? 'The 100 highest unweighted WOWY RAPM player-seasons of all time.'
+            ? isAdjustedRatings
+                ? 'The 100 highest Season-Adjusted WOWY RAPM player-seasons of all time.'
+                : 'The 100 highest unweighted WOWY RAPM player-seasons of all time.'
             : isCurrentView
                 ? 'Latest observed WOWY RAPM ratings for current active NBA players.'
-                : isSeasonAverageHistory
-                ? 'Unweighted season-average WOWY RAPM ratings for NBA players.'
+                : isSeasonSummaryHistory
+                ? isAdjustedRatings
+                    ? 'Season-Adjusted WOWY RAPM ratings for NBA players.'
+                    : 'Unweighted season-average WOWY RAPM ratings for NBA players.'
                 : 'Opening-game snapshot WOWY RAPM ratings for NBA players.'}
     />
 </svelte:head>
@@ -771,11 +851,15 @@
                         <h1 id="wowy-title">WOWY RAPM</h1>
                         <p class="wowy-subtitle">
                             {#if isAllTimeView}
-                                The 100 highest single-season WOWY RAPM averages.
+                                {isAdjustedRatings
+                                    ? 'The 100 highest Season-Adjusted WOWY RAPM player-seasons.'
+                                    : 'The 100 highest single-season WOWY RAPM averages.'}
                             {:else if isCurrentView}
                                 Synthetic game-level RAPM for current active players.
-                            {:else if isSeasonAverageHistory}
-                                Unweighted season-average RAPM for {activeSeasonLabel}.
+                            {:else if isSeasonSummaryHistory}
+                                {isAdjustedRatings
+                                    ? `Season-Adjusted RAPM for ${activeSeasonLabel}.`
+                                    : `Unweighted season-average RAPM for ${activeSeasonLabel}.`}
                             {:else}
                                 Opening-game snapshot RAPM for {activeSeasonLabel}.
                             {/if}
@@ -785,11 +869,15 @@
                 <div class="wowy-status">
                     <strong>
                         {isAllTimeView
-                            ? 'All-time top 100'
+                            ? isAdjustedRatings
+                                ? 'Adjusted top 100'
+                                : 'Average top 100'
                             : isCurrentView
                                 ? 'Latest observed'
-                                : isSeasonAverageHistory
-                                ? 'Unweighted season average'
+                                : isSeasonSummaryHistory
+                                ? isAdjustedRatings
+                                    ? 'Season adjusted'
+                                    : 'Unweighted season average'
                                 : 'Opening-game snapshot'}
                     </strong>
                     <span>{viewStatusDetail}</span>
@@ -802,11 +890,19 @@
                 <p>{getMetricDefinition('wowy_rapm')}</p>
                 <p>
                     {#if isAllTimeView}
-                        Each row is one player-season, ranked within the top 100 by its raw, simple, unweighted average across published WOWY games. There is no sample or exposure cutoff, and the current season can move as new games are published.
+                        {#if isAdjustedRatings}
+                            Each row is one modeled player-season, ranked by Season-Adjusted WOWY RAPM. The adjustment estimates how the player performed in that season relative to the underlying daily WOWY baseline. Regular-season and playoff evidence are included, with no exposure cutoff.
+                        {:else}
+                            Each row is one player-season, ranked within the top 100 by its raw, simple, unweighted average across published WOWY games. There is no sample or exposure cutoff, and the current season can move as new games are published.
+                        {/if}
                     {:else if isCurrentView}
                         Each player row is dated to that player’s most recent observed game; team and position reflect the current DARKO roster.
-                    {:else if isSeasonAverageHistory}
-                        Each row is a simple, unweighted average of that player’s observed game-level WOWY values in {activeSeasonLabel}. Historical team codes list every team represented in those games.
+                    {:else if isSeasonSummaryHistory}
+                        {#if isAdjustedRatings}
+                            Each row is the player’s Season-Adjusted O-RAPM, D-RAPM, and total RAPM for {activeSeasonLabel}. The table includes every player-season emitted by the model and uses both regular-season and playoff games.
+                        {:else}
+                            Each row is a simple, unweighted average of that player’s observed game-level WOWY values in {activeSeasonLabel}. Historical team codes list every team represented in those games.
+                        {/if}
                     {:else}
                         Each row is a player who appeared in their team’s first game of {activeSeasonLabel}. Historical team codes and names reflect that opening-game snapshot.
                     {/if}
@@ -821,11 +917,15 @@
                     <p class="wowy-eyebrow" data-shiny-role="editorial-kicker">Leaderboard</p>
                     <h2 id="wowy-table-title">
                         {isAllTimeView
-                            ? 'All-time top 100 seasons'
+                            ? isAdjustedRatings
+                                ? 'All-time adjusted top 100 seasons'
+                                : 'All-time average top 100 seasons'
                             : isCurrentView
                                 ? 'Current active players'
-                                : isSeasonAverageHistory
-                                ? `${activeSeasonLabel} season averages`
+                                : isSeasonSummaryHistory
+                                ? isAdjustedRatings
+                                    ? `${activeSeasonLabel} adjusted ratings`
+                                    : `${activeSeasonLabel} season averages`
                                 : `${activeSeasonLabel} opening-game snapshot`}
                     </h2>
                     <p>
@@ -833,11 +933,11 @@
                             No players match this season and these filters.
                         {:else}
                             {#if isAllTimeView}
-                                Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} player-seasons from the all-time top 100, ranked by average WOWY RAPM.
+                                Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} player-seasons from the all-time top 100, ranked by {isAdjustedRatings ? 'Season-Adjusted' : 'average'} WOWY RAPM.
                             {:else if isCurrentView}
                                 Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} current active players with an observed WOWY rating.
-                            {:else if isSeasonAverageHistory}
-                                Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} players with observed WOWY games in {activeSeasonLabel}.
+                            {:else if isSeasonSummaryHistory}
+                                Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} players with {isAdjustedRatings ? 'a modeled Season-Adjusted rating' : 'observed WOWY games'} in {activeSeasonLabel}.
                             {:else}
                                 Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} players who appeared in their teams’ first games.
                             {/if}
@@ -854,7 +954,11 @@
                 </button>
             </div>
 
-            <div class="wowy-controls" data-shiny-surface="well">
+            <div
+                class="wowy-controls"
+                class:wowy-controls--current={isCurrentView}
+                data-shiny-surface="well"
+            >
                 <label class="wowy-control-field" for="wowy-season-filter">
                     <span class="sr-only">Season</span>
                     <select
@@ -869,6 +973,32 @@
                         {/each}
                     </select>
                 </label>
+
+                {#if !isCurrentView}
+                    <fieldset class="wowy-rating-mode">
+                        <legend class="sr-only">Rating type</legend>
+                        <label class:active={!isAdjustedRatings}>
+                            <input
+                                type="radio"
+                                name="wowy-rating-mode"
+                                value="average"
+                                checked={!isAdjustedRatings}
+                                onchange={selectRatingMode}
+                            />
+                            <span>Average</span>
+                        </label>
+                        <label class:active={isAdjustedRatings}>
+                            <input
+                                type="radio"
+                                name="wowy-rating-mode"
+                                value="adjusted"
+                                checked={isAdjustedRatings}
+                                onchange={selectRatingMode}
+                            />
+                            <span>Adjusted</span>
+                        </label>
+                    </fieldset>
+                {/if}
 
                 <label class="wowy-control-field" for="wowy-team-filter">
                     <span class="sr-only">Filter by team</span>
@@ -905,7 +1035,7 @@
                         type="search"
                         value={searchQuery}
                         oninput={(event) => setSearchQuery(event.currentTarget.value)}
-                        placeholder={isSeasonAverageHistory
+                        placeholder={isSeasonSummaryHistory
                             ? 'Search players or historical teams...'
                             : 'Search players, teams, or positions...'}
                     />
@@ -1069,7 +1199,7 @@
                                     </td>
                                     <td headers="wowy-column-exposure" class="align-right wowy-sample-cell">{formatFixed(player.exposure, 1)}</td>
                                     <td headers={`wowy-column-${sampleColumnKey}`} class="align-right wowy-sample-cell">
-                                        {isSeasonAverageHistory
+                                        {isSeasonSummaryHistory
                                             ? formatWholeNumber(player.season_games)
                                             : formatWholeNumber(player.career_game_num)}
                                     </td>
@@ -1108,11 +1238,19 @@
 
             <p class="wowy-table-note">
                 {#if isAllTimeView}
-                    This leaderboard is limited to the 100 highest player-season averages returned by the server. Each value is a raw, simple, unweighted mean across that season’s published WOWY games; there is no sample or exposure cutoff. The current season can change as new observations are published.
+                    {#if isAdjustedRatings}
+                        This leaderboard is limited to the 100 highest modeled player-seasons. Adjusted ratings include regular-season and playoff evidence and use actual season possessions; there is no exposure cutoff. Appearance-only player-seasons without the model’s required season baseline remain available in Average mode.
+                    {:else}
+                        This leaderboard is limited to the 100 highest player-season averages returned by the server. Each value is a raw, simple, unweighted mean across that season’s published WOWY games; there is no sample or exposure cutoff. The current season can change as new observations are published.
+                    {/if}
                 {:else if isCurrentView}
                     Exposure is shown without a cutoff. Sample games include the available WOWY regular-season and postseason appearances.
-                {:else if isSeasonAverageHistory}
-                    Ratings and exposure are simple, unweighted means across each player’s observed WOWY games in the selected season. Games counts those observations; Last game is the latest included game. Multiple teams indicate that the player appeared for each listed historical team.
+                {:else if isSeasonSummaryHistory}
+                    {#if isAdjustedRatings}
+                        Ratings are the season model’s adjusted O/D/T values. Possessions and games include the regular season and playoffs; Last game is the latest included appearance. No exposure cutoff is applied.
+                    {:else}
+                        Ratings and exposure are simple, unweighted means across each player’s observed WOWY games in the selected season. Games counts those observations; Last game is the latest included game. Multiple teams indicate that the player appeared for each listed historical team.
+                    {/if}
                 {:else}
                     This opening-game snapshot includes players who appeared in their teams’ first games. Exposure and sample games are shown at that snapshot.
                 {/if}
@@ -1370,7 +1508,11 @@
 
     .wowy-controls {
         display: grid;
-        grid-template-columns: repeat(3, minmax(145px, 170px)) minmax(240px, 1fr);
+        grid-template-columns:
+            minmax(145px, 170px)
+            minmax(176px, 205px)
+            repeat(2, minmax(145px, 170px))
+            minmax(240px, 1fr);
         gap: 10px;
         margin-bottom: 14px;
         border: 1px solid var(--border-subtle);
@@ -1379,8 +1521,56 @@
         padding: 12px;
     }
 
+    .wowy-controls--current {
+        grid-template-columns: repeat(3, minmax(145px, 170px)) minmax(240px, 1fr);
+    }
+
     .wowy-control-field {
         min-width: 0;
+    }
+
+    .wowy-rating-mode {
+        height: 38px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg);
+        padding: 3px;
+    }
+
+    .wowy-rating-mode label {
+        min-width: 0;
+        display: grid;
+        place-items: center;
+        border-radius: 4px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .wowy-rating-mode label.active {
+        background: var(--bg-surface);
+        box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 15%, transparent);
+        color: var(--accent);
+    }
+
+    .wowy-rating-mode input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .wowy-rating-mode:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
     }
 
     .wowy-control-field select,
@@ -1842,6 +2032,10 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .wowy-controls--current {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .wowy-control-field--search {
             grid-column: 1 / -1;
         }
@@ -1913,6 +2107,14 @@
 
         .wowy-controls {
             grid-template-columns: 1fr;
+        }
+
+        .wowy-controls--current {
+            grid-template-columns: 1fr;
+        }
+
+        .wowy-rating-mode {
+            width: 100%;
         }
 
         .wowy-height-fields {

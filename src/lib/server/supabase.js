@@ -30,8 +30,10 @@ const CACHE_MS = {
     activePlayers: 60_000,
     activeWowyPlayers: 300_000,
     wowyAllTimePlayers: 3_600_000,
+    wowyAdjustedAllTimePlayers: 3_600_000,
     wowyLeaderboardSeasons: 3_600_000,
     wowySeasonPlayers: 300_000,
+    wowyAdjustedSeasonPlayers: 300_000,
     leaderboardSeasons: 3_600_000,
     seasonStartPlayers: 3_600_000,
     playersIndex: 300_000,
@@ -470,7 +472,9 @@ function normalizeWowyLeaderboardRows(data) {
             const leaderboardRank = Number(row?.leaderboard_rank);
             const snapshotContext = normalizedTeamName(row?.snapshot_context);
             const isHistoricalSeasonSummary =
-                snapshotContext === 'opening-game' || snapshotContext === 'season-average';
+                snapshotContext === 'opening-game' ||
+                snapshotContext === 'season-average' ||
+                snapshotContext === 'season-adjusted';
             const teamName = normalizedTeamName(row.team_name);
             const teamCode = normalizedTeamName(row.team_code);
             const teamCodes = normalizedTeamList(row.team_codes);
@@ -512,8 +516,12 @@ function normalizeWowyLeaderboardRows(data) {
                 date: row.date ?? null,
                 career_game_num: row.career_game_num ?? null,
                 season_games: row.season_games ?? null,
+                playoff_games: row.playoff_games ?? null,
+                playoff_possessions: row.playoff_possessions ?? null,
                 first_date: row.first_date ?? null,
-                last_date: row.last_date ?? null
+                last_date: row.last_date ?? null,
+                method_version: row.method_version ?? null,
+                application_model: row.application_model ?? null
             };
         })
         .filter(Boolean);
@@ -751,6 +759,22 @@ export async function getWowyAllTimePlayers() {
 }
 
 /**
+ * Get the fixed top 100 all-time Season-Adjusted WOWY player-seasons.
+ * Every row comes from the separately published seasonal model.
+ */
+export async function getWowyAdjustedAllTimePlayers() {
+    const key = cacheKey('wowyAdjustedAllTimePlayers', 'top-100');
+    return runCached(key, CACHE_MS.wowyAdjustedAllTimePlayers, async () => {
+        const { data, error } = await supabase.rpc(
+            'get_wowy_adjusted_all_time_player_seasons'
+        );
+        if (error) throw error;
+
+        return normalizeWowyLeaderboardRows(data);
+    });
+}
+
+/**
  * Get the historical WOWY seasons. The database stores NBA season end years,
  * so 2013 represents 2012-13.
  */
@@ -782,6 +806,25 @@ export async function getWowySeasonPlayers(season) {
         const { data, error } = await supabase.rpc('get_wowy_season_player_ratings', {
             p_season: seasonEndYear
         });
+        if (error) throw error;
+
+        return sortByWowyRapmDesc(normalizeWowyLeaderboardRows(data));
+    });
+}
+
+/** Get every modeled Season-Adjusted WOWY row for one season. */
+export async function getWowyAdjustedSeasonPlayers(season) {
+    const seasonEndYear = Number.parseInt(season, 10);
+    if (!Number.isInteger(seasonEndYear)) {
+        throw new TypeError(`Invalid adjusted WOWY season end year: ${season}`);
+    }
+
+    const key = cacheKey('wowyAdjustedSeasonPlayers', seasonEndYear);
+    return runCached(key, CACHE_MS.wowyAdjustedSeasonPlayers, async () => {
+        const { data, error } = await supabase.rpc(
+            'get_wowy_adjusted_season_player_ratings',
+            { p_season: seasonEndYear }
+        );
         if (error) throw error;
 
         return sortByWowyRapmDesc(normalizeWowyLeaderboardRows(data));
