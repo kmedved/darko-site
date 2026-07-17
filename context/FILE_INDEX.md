@@ -62,6 +62,10 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/components/TrajectoryChart.svelte` - component
 - `src/lib/components/WinDistChart.svelte` - component
 
+## src/lib/content
+
+- `src/lib/content/wowy-season-adjusted.md` - source
+
 ## src/lib/data
 
 - `src/lib/data/longevityScaffold.js` - static data
@@ -138,6 +142,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/trajectories/+page.svelte` - page /trajectories
 - `src/routes/wowy/+page.server.js` - load /wowy
 - `src/routes/wowy/+page.svelte` - page /wowy
+- `src/routes/wowy/about/+page.svelte` - page /wowy/about
 
 ## src/routes/api
 
@@ -234,6 +239,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/trajectories-mobile-layout.test.js` - test
 - `tests/trajectories-url-sync.test.js` - test
 - `tests/wide-sticky-table-layout.test.js` - test
+- `tests/wowy-article-page.test.js` - test
 - `tests/wowy-leaderboard-csv.test.js` - test
 - `tests/wowy-leaderboard-data.test.js` - test
 - `tests/wowy-leaderboard-page.test.js` - test

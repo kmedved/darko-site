@@ -1166,7 +1166,10 @@
                         Each row is a player who appeared in their team’s first game of {activeSeasonLabel}. Historical team codes and names reflect that opening-game snapshot.
                     {/if}
                 </p>
-                <a href="/trajectories?metric=wowy_rapm">Explore career WOWY trajectories <span aria-hidden="true">→</span></a>
+                <div class="wowy-method-links">
+                    <a href="/wowy/about">Read how WOWY works <span aria-hidden="true">→</span></a>
+                    <a href="/trajectories?metric=wowy_rapm">Explore career trajectories <span aria-hidden="true">→</span></a>
+                </div>
             </aside>
         </section>
 
@@ -1782,6 +1785,17 @@
 
     .wowy-method a:hover {
         color: var(--accent-hover);
+    }
+
+    .wowy-method-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 18px;
+        margin-top: 16px;
+    }
+
+    .wowy-method-links a {
+        margin-top: 0;
     }
 
     .wowy-team-mark {

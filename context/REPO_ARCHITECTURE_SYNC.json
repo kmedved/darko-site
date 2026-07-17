@@ -635,6 +635,7 @@
     "src/lib/components/TeamDetailView.svelte",
     "src/lib/components/TrajectoryChart.svelte",
     "src/lib/components/WinDistChart.svelte",
+    "src/lib/content/wowy-season-adjusted.md",
     "src/lib/data/longevityScaffold.js",
     "src/lib/displayMode.js",
     "src/lib/server/activePlayersCache.js",
@@ -718,6 +719,7 @@
     "src/routes/trajectories/+page.svelte",
     "src/routes/wowy/+page.server.js",
     "src/routes/wowy/+page.svelte",
+    "src/routes/wowy/about/+page.svelte",
     "src/shiny-view.css",
     "supabase/migrations/20260303_001_enable_players_rls.sql",
     "supabase/migrations/20260303_002_harden_elo_vote_path.sql",
@@ -790,6 +792,7 @@
     "tests/trajectories-mobile-layout.test.js",
     "tests/trajectories-url-sync.test.js",
     "tests/wide-sticky-table-layout.test.js",
+    "tests/wowy-article-page.test.js",
     "tests/wowy-leaderboard-csv.test.js",
     "tests/wowy-leaderboard-data.test.js",
     "tests/wowy-leaderboard-page.test.js",
@@ -811,6 +814,7 @@
       ],
       "routes:pages": [
         "client:api",
+        "misc",
         "ui:components",
         "ui:utils"
       ],
@@ -838,6 +842,9 @@
         "routes:pages",
         "tests",
         "ui:components"
+      ],
+      "misc": [
+        "routes:pages"
       ],
       "platform:hooks": [
         "tests"

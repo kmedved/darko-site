@@ -98,8 +98,8 @@ test('WOWY RAPM is a primary navigation destination', async () => {
     assert.ok(primaryNavItems, 'primary desktop nav items should be declared');
     assert.match(
         primaryNavItems[1],
-        /\{ href: '\/wowy', label: 'WOWY RAPM', match: \(path\) => path === '\/wowy' \}/,
-        'WOWY RAPM should have an exact-match top-level navigation link'
+        /\{ href: '\/wowy', label: 'WOWY RAPM', match: \(path\) => path\.startsWith\('\/wowy'\) \}/,
+        'WOWY RAPM should remain active for the leaderboard and its article'
     );
 });
 
