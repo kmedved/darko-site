@@ -221,10 +221,8 @@ export const wowyAllTimeLeaderboardCsvColumns = [
     { header: 'Avg WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
     { header: 'Avg WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
     { header: 'Avg WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
-    { header: 'Avg Exposure', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
-    { header: 'Games', accessor: 'season_games', format: (value) => formatFixed(value, 0) },
-    { header: 'First Game', accessor: 'first_date', format: formatOrDash },
-    { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
+    { header: 'Minutes', accessor: 'minutes', format: (value) => formatFixed(value, 0) },
+    { header: 'BPM', accessor: 'bpm', format: formatSignedMetric }
 ];
 
 export const wowyAdjustedAllTimeLeaderboardCsvColumns = [
@@ -238,11 +236,8 @@ export const wowyAdjustedAllTimeLeaderboardCsvColumns = [
     { header: 'Adjusted WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
     { header: 'Adjusted WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
     { header: 'Adjusted WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
-    { header: 'Possessions', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
-    { header: 'Games', accessor: 'season_games', format: (value) => formatFixed(value, 0) },
-    { header: 'Playoff Games', accessor: 'playoff_games', format: (value) => formatFixed(value, 0) },
-    { header: 'First Game', accessor: 'first_date', format: formatOrDash },
-    { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
+    { header: 'Minutes', accessor: 'minutes', format: (value) => formatFixed(value, 0) },
+    { header: 'BPM', accessor: 'bpm', format: formatSignedMetric }
 ];
 
 export const compareCsvColumns = [

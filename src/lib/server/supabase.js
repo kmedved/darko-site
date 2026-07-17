@@ -516,6 +516,8 @@ function normalizeWowyLeaderboardRows(data) {
                 wowy_drapm: row.wowy_drapm ?? null,
                 exposure: row.exposure ?? null,
                 season_possessions: row.season_possessions ?? null,
+                minutes: row.minutes ?? null,
+                bpm: row.bpm ?? null,
                 date: row.date ?? null,
                 career_game_num: row.career_game_num ?? null,
                 season_games: row.season_games ?? null,

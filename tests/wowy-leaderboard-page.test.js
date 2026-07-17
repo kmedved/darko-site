@@ -116,6 +116,8 @@ test('WOWY leaderboard defaults to all seasons and preserves Current and season 
     assert.match(contents, /Adjusted WOWY RAPM/);
     assert.match(contents, /Adjusted O-RAPM/);
     assert.match(contents, /Adjusted D-RAPM/);
+    assert.match(contents, /label: 'Minutes'/);
+    assert.match(contents, /label: 'BPM'/);
     assert.match(contents, /label: 'Possessions'/);
     assert.match(contents, /name="wowy-rating-mode"/);
     assert.match(contents, /value="average"/);
@@ -235,9 +237,7 @@ test('WOWY leaderboard supports sorting, filtering, loaded CSV export, and mobil
     const desktopColumnsBlock = contents.slice(desktopColumnsStart, touchStart);
     assert.match(desktopColumnsBlock, /\.wowy-table:not\(\.wowy-table--all-time\) th:nth-child\(7\)/);
     assert.match(desktopColumnsBlock, /\.wowy-table:not\(\.wowy-table--all-time\) th:nth-child\(8\)/);
-    assert.match(desktopColumnsBlock, /\.wowy-table--all-time th:nth-child\(8\)/);
-    assert.match(desktopColumnsBlock, /\.wowy-table--all-time th:nth-child\(9\)/);
-    assert.doesNotMatch(desktopColumnsBlock, /\.wowy-table--all-time th:nth-child\(7\)/);
+    assert.doesNotMatch(desktopColumnsBlock, /\.wowy-table--all-time th:nth-child/);
 
     const touchBlock = contents.slice(touchStart, touchEnd);
     assert.match(touchBlock, /hover:\s*none/);

@@ -161,10 +161,8 @@ test('all-time WOWY CSV preserves the official rank and player-season context', 
             'Avg WOWY RAPM',
             'Avg WOWY O-RAPM',
             'Avg WOWY D-RAPM',
-            'Avg Exposure',
-            'Games',
-            'First Game',
-            'Last Game'
+            'Minutes',
+            'BPM'
         ]
     );
     assert.deepEqual(
@@ -180,10 +178,8 @@ test('all-time WOWY CSV preserves the official rank and player-season context', 
             'wowy_rapm',
             'wowy_orapm',
             'wowy_drapm',
-            'exposure',
-            'season_games',
-            'first_date',
-            'last_date'
+            'minutes',
+            'bpm'
         ]
     );
 
@@ -226,11 +222,8 @@ test('Season-Adjusted WOWY CSV labels modeled ratings and season possessions', (
             'wowy_rapm',
             'wowy_orapm',
             'wowy_drapm',
-            'exposure',
-            'season_games',
-            'playoff_games',
-            'first_date',
-            'last_date'
+            'minutes',
+            'bpm'
         ]
     );
 });

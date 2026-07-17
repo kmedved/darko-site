@@ -75,6 +75,16 @@ const paginatedAllTimeMigration = readFileSync(
     ),
     'utf8'
 );
+const seasonBoxContextMigration = readFileSync(
+    join(
+        __dirname,
+        '..',
+        'supabase',
+        'migrations',
+        '20260717_003_add_wowy_season_box_context.sql'
+    ),
+    'utf8'
+);
 const seasonAverageActivationOperation = readFileSync(
     join(
         __dirname,
@@ -567,6 +577,45 @@ test('all-time WOWY page RPC filters before a hard 100-row page boundary', () =>
     assert.match(
         paginatedAllTimeMigration,
         /grant execute on function public\.get_wowy_all_time_player_seasons_page/
+    );
+});
+
+test('all-time WOWY rows add read-only season minutes and BPM after paging', () => {
+    assert.match(
+        seasonBoxContextMigration,
+        /create table if not exists public\.wowy_season_box_context/
+    );
+    assert.match(
+        seasonBoxContextMigration,
+        /primary key \(season, nba_id\)/
+    );
+    assert.match(
+        seasonBoxContextMigration,
+        /alter table public\.wowy_season_box_context enable row level security/
+    );
+    assert.match(
+        seasonBoxContextMigration,
+        /rename to get_wowy_all_time_player_seasons_page_base/
+    );
+    assert.match(
+        seasonBoxContextMigration,
+        /jsonb_array_elements\(payload -> 'rows'\)/
+    );
+    assert.match(
+        seasonBoxContextMigration,
+        /security definer/
+    );
+    assert.match(
+        seasonBoxContextMigration,
+        /'minutes', box_context\.minutes/
+    );
+    assert.match(
+        seasonBoxContextMigration,
+        /'bpm', box_context\.bpm/
+    );
+    assert.match(
+        seasonBoxContextMigration,
+        /grant select on table public\.wowy_season_box_context/
     );
 });
 

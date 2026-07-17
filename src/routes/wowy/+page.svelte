@@ -201,19 +201,19 @@
             tooltip: 'Simple, unweighted mean of the player\'s observed game-level defensive WOWY RAPM values for that season.'
         },
         {
-            key: 'season_possessions',
-            label: 'Possessions',
+            key: 'minutes',
+            label: 'Minutes',
             align: 'right',
-            tooltip: 'Estimated possessions played in the regular season and playoffs.'
+            sortable: false,
+            tooltip: 'Total minutes played across the regular season and playoffs.'
         },
         {
-            key: 'exposure',
-            label: 'Avg Exposure',
+            key: 'bpm',
+            label: 'BPM',
             align: 'right',
-            tooltip: 'Simple, unweighted mean of the player\'s observed game-level WOWY exposure values for that season.'
-        },
-        { key: 'season_games', label: 'Games', align: 'right' },
-        { key: 'last_date', label: 'Last game', align: 'right' }
+            sortable: false,
+            tooltip: 'Ordinary Basketball-Reference-style BPM 2.0, reconstructed from the season box score and weighted across regular-season and playoff possessions. It is shown on its native scale, not rescaled to WOWY.'
+        }
     ];
     const seasonAdjustedTableColumns = [
         { key: '_rank', label: '#', align: 'right', sortable: false },
@@ -251,7 +251,21 @@
         { key: 'player_name', label: 'Player', align: 'left' },
         { key: 'season', label: 'Season', align: 'left' },
         { key: 'team_sort_label', label: 'Teams', align: 'left' },
-        ...seasonAdjustedTableColumns.slice(3)
+        ...seasonAdjustedTableColumns.slice(3, 6),
+        {
+            key: 'minutes',
+            label: 'Minutes',
+            align: 'right',
+            sortable: false,
+            tooltip: 'Total minutes played across the regular season and playoffs.'
+        },
+        {
+            key: 'bpm',
+            label: 'BPM',
+            align: 'right',
+            sortable: false,
+            tooltip: 'Ordinary Basketball-Reference-style BPM 2.0, reconstructed from the season box score and weighted across regular-season and playoff possessions. It is shown on its native scale, not rescaled to WOWY.'
+        }
     ];
 
     let sortColumn = $state('wowy_rapm');
@@ -1136,9 +1150,9 @@
                 <p>
                     {#if isAllTimeView}
                         {#if isAdjustedRatings}
-                            Each row is one modeled player-season, ranked by Season-Adjusted WOWY RAPM. The adjustment estimates how the player performed in that season relative to the underlying daily WOWY baseline. Regular-season and playoff evidence are included. Results load 100 at a time, with no default possession cutoff.
+                            Each row is one modeled player-season, ranked by Season-Adjusted WOWY RAPM. The adjustment estimates how the player performed in that season relative to the underlying daily WOWY baseline. Regular-season and playoff evidence are included. BPM is the ordinary box-score baseline; WOWY adds non-box evidence. Results load 100 at a time, with no default possession cutoff.
                         {:else}
-                            Each row is one player-season, ranked by its raw, simple, unweighted average across published WOWY games. Results load 100 at a time, with no default possession cutoff, and the current season can move as new games are published.
+                            Each row is one player-season, ranked by its raw, simple, unweighted average across published WOWY games. BPM is the ordinary box-score baseline; WOWY adds non-box evidence. Results load 100 at a time, with no default possession cutoff, and the current season can move as new games are published.
                         {/if}
                     {:else if isCurrentView}
                         Each player row is dated to that player’s most recent observed game; team and position reflect the current DARKO roster.
@@ -1509,17 +1523,29 @@
                                     >
                                         {formatSignedMetric(player.wowy_drapm)}
                                     </td>
-                                    <td headers="wowy-column-exposure" class="align-right wowy-sample-cell">{formatFixed(player.exposure, 1)}</td>
-                                    <td headers={`wowy-column-${sampleColumnKey}`} class="align-right wowy-sample-cell">
-                                        {isSeasonSummaryHistory
-                                            ? formatWholeNumber(player.season_games)
-                                            : formatWholeNumber(player.career_game_num)}
-                                    </td>
-                                    <td headers={`wowy-column-${dateColumnKey}`} class="align-right wowy-date-cell">
-                                        <time datetime={displayedObservedDate(player) || undefined}>
-                                            {formatObservedDate(displayedObservedDate(player))}
-                                        </time>
-                                    </td>
+                                    {#if isAllTimeView}
+                                        <td headers="wowy-column-minutes" class="align-right wowy-sample-cell">
+                                            {formatWholeNumber(player.minutes)}
+                                        </td>
+                                        <td
+                                            headers="wowy-column-bpm"
+                                            class={`align-right wowy-metric-cell ${metricTone(player.bpm)}`}
+                                        >
+                                            {formatSignedMetric(player.bpm)}
+                                        </td>
+                                    {:else}
+                                        <td headers="wowy-column-exposure" class="align-right wowy-sample-cell">{formatFixed(player.exposure, 1)}</td>
+                                        <td headers={`wowy-column-${sampleColumnKey}`} class="align-right wowy-sample-cell">
+                                            {isSeasonSummaryHistory
+                                                ? formatWholeNumber(player.season_games)
+                                                : formatWholeNumber(player.career_game_num)}
+                                        </td>
+                                        <td headers={`wowy-column-${dateColumnKey}`} class="align-right wowy-date-cell">
+                                            <time datetime={displayedObservedDate(player) || undefined}>
+                                                {formatObservedDate(displayedObservedDate(player))}
+                                            </time>
+                                        </td>
+                                    {/if}
                                 </tr>
                             {/each}
                         {/if}
@@ -2366,17 +2392,8 @@
             display: none;
         }
 
-        /* All-time adds a Season column before the metrics. Keep D-RAPM (7)
-           visible and hide its lower-priority Exposure (8) and Games (9). */
-        .wowy-table--all-time th:nth-child(8),
-        .wowy-table--all-time td:nth-child(8),
-        .wowy-table--all-time th:nth-child(9),
-        .wowy-table--all-time td:nth-child(9) {
-            display: none;
-        }
-
         .wowy-table {
-            min-width: 720px;
+            min-width: 900px;
         }
     }
 
