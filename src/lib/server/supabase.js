@@ -1235,7 +1235,7 @@ export async function getWowyPublication() {
         const { data, error } = await supabase
             .from('wowy_publication')
             .select(
-                'publication_id, composite_sha256, output_sha256, data_through, season_through, row_count, player_count, published_at'
+                'publication_id, composite_sha256, output_sha256, data_through, season_through, row_count, player_count, display_method, historian_sha256, historian_method_version, published_at'
             )
             .eq('id', 1)
             .maybeSingle();
