@@ -189,6 +189,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260717_001_add_wowy_season_adjusted_ratings.sql` - Supabase SQL migration.
 - `supabase/migrations/20260717_002_paginate_wowy_all_time_leaderboards.sql` - Supabase SQL migration.
 - `supabase/migrations/20260717_003_add_wowy_season_box_context.sql` - Supabase SQL migration.
+- `supabase/migrations/20260719_001_publish_wowy_final_cut_default.sql` - Supabase SQL migration.
 
 ## tests
 
