@@ -121,6 +121,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/+page.server.js` - load /
 - `src/routes/+page.svelte` - page /
 - `src/routes/about/+page.svelte` - page /about
+- `src/routes/about/fair-salary/+page.svelte` - page /about/fair-salary
 - `src/routes/compare/+page.server.js` - load /compare
 - `src/routes/compare/+page.svelte` - page /compare
 - `src/routes/favicon.ico/+server.js` - API /favicon.ico
@@ -207,6 +208,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/csv-formatters.test.js` - test
 - `tests/d3-theme-colors.test.js` - test
 - `tests/elo-vote-service-wrapper.test.js` - test
+- `tests/fair-salary-page.test.js` - test
 - `tests/leaderboard-export.test.js` - test
 - `tests/leaderboard-page-ui-guards.test.js` - test
 - `tests/lineup-ratings.test.js` - test

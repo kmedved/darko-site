@@ -31,7 +31,7 @@
 		{ href: '/compare', label: 'Compare', match: (path) => path === '/compare' },
 		{ href: '/projections', label: 'Projections', match: (path) => path === '/projections' },
 		{ href: '/rate', label: 'Rate a Player', match: (path) => path === '/rate' },
-		{ href: '/about', label: 'About', match: (path) => path === '/about' }
+		{ href: '/about', label: 'About', match: (path) => path.startsWith('/about') }
 	];
 	const ALL_NAV_ITEMS = [...PRIMARY_NAV_ITEMS, ...MORE_NAV_ITEMS];
 	const DETAIL_PAGE_LABELS = [

@@ -182,6 +182,11 @@
 			change substantially going forward.
 		</p>
 
+		<p>
+			The Active Leaderboard also translates DPM and minutes into an annualized
+			<a href="/about/fair-salary">Fair Salary / $ Value estimate</a>.
+		</p>
+
 		<h2>Rookies</h2>
 
 		<p>

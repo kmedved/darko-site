@@ -539,6 +539,11 @@
                         </button>
                     </div>
 
+                    <p class="leaderboard-value-note">
+                        <strong>$ Value</strong> is DARKO's fair-salary estimate.
+                        <a href="/about/fair-salary">See how it is calculated →</a>
+                    </p>
+
                     <div class="table-wrapper table-shell" data-shiny-table bind:this={standardTableRoot}>
                         <div class="sticky-header-shell">
                             <div class="table-header-scroll" bind:this={standardHeaderScroller}>
@@ -1003,6 +1008,27 @@
         gap: 10px;
         align-items: center;
         margin-bottom: 14px;
+    }
+
+    .leaderboard-value-note {
+        margin: -2px 0 12px;
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .leaderboard-value-note strong {
+        color: var(--text);
+    }
+
+    .leaderboard-value-note a {
+        color: var(--accent);
+        font-weight: 750;
+    }
+
+    .leaderboard-value-note a:hover {
+        text-decoration: underline;
+        text-underline-offset: 2px;
     }
 
     .control-field {

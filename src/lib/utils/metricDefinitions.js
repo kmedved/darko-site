@@ -18,7 +18,7 @@ export const metricDefinitions = {
     x_fg_pct: 'Projected field-goal percentage.',
     x_fg3_pct: 'Projected three-point percentage.',
     x_ft_pct: 'Projected free-throw percentage.',
-    sal_market_fixed: 'Estimated fair market salary based on projected on-court value.',
+    sal_market_fixed: 'Annualized on-court value estimate based on DPM above replacement and DARKO’s time-decayed minutes estimate.',
     surplus_value: 'Difference between fair salary and actual salary. Positive means underpaid.',
     lineup_net_pm: 'Projected net plus/minus per 100 possessions for this lineup, relative to league average.',
     lineup_off_pm: 'Projected offensive plus/minus per 100 possessions for this lineup, relative to league average.',

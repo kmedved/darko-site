@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.31",
+  "arch_version": "0.1.32",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -681,6 +681,7 @@
     "src/routes/+page.server.js",
     "src/routes/+page.svelte",
     "src/routes/about/+page.svelte",
+    "src/routes/about/fair-salary/+page.svelte",
     "src/routes/api/active-players/+server.js",
     "src/routes/api/docs/+server.js",
     "src/routes/api/img/[type]/[id]/+server.js",
@@ -760,6 +761,7 @@
     "tests/csv-formatters.test.js",
     "tests/d3-theme-colors.test.js",
     "tests/elo-vote-service-wrapper.test.js",
+    "tests/fair-salary-page.test.js",
     "tests/leaderboard-export.test.js",
     "tests/leaderboard-page-ui-guards.test.js",
     "tests/lineup-ratings.test.js",
