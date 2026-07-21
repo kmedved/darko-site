@@ -29,6 +29,8 @@ test('WOWY article publishes the complete season-adjusted story', async () => {
 	assert.match(markdown, /## Two numbers, two questions/);
 	assert.match(markdown, /## Why not just average the daily ratings\?/);
 	assert.match(markdown, /## How it works, briefly/);
+	assert.match(markdown, /## A timing mistake we found in our own model/);
+	assert.match(markdown, /before-game ratings use before-game information/);
 	assert.match(markdown, /## Did it work\?/);
 	assert.match(markdown, /## What the box score missed/);
 	assert.match(markdown, /## What the model cannot know/);

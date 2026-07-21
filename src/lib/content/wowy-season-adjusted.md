@@ -179,6 +179,25 @@ contains little evidence, caps how large any single correction can be, and force
 negative adjustments to balance within each season. Six games are not allowed to manufacture a
 brand-new peak.
 
+## A timing mistake we found in our own model
+
+Late in the project, I found that one input to the daily ratings was not as "before the game" as I
+thought it was. It had been rebuilt using the full history and then joined back onto earlier dates.
+The effect was subtle, but the principle was not: a rating labeled as what we knew before a game
+should not contain even a faint imprint of games that had not happened yet.
+
+The fix was computationally tedious and conceptually simple. I rebuilt that input separately for
+all 9,374 game dates. At each date, the fitting process could see only earlier games. The audit found
+zero timing violations, and changing later data left earlier states unchanged. The clean rebuild
+still improved prediction by about 2.5 percent compared with throwing that evidence away entirely.
+
+The future-informed version scored a little better than the clean one on a conventional accuracy
+test. That is exactly what accidental peeking tends to do. I rejected it anyway, then rebuilt the
+daily ratings, the season ratings, and the public tables from the clean foundation. A separate set
+of strictly lagged role and playing-time signals recovered additional predictive value without
+looking ahead. The headline rankings survived, but they now rest on a claim the pipeline actually
+keeps: before-game ratings use before-game information.
+
 ## Did it work?
 
 Three checks, in plain terms.
@@ -206,8 +225,9 @@ exam. The pristine exam is coming — more on that at the end.
 
 The table also passed the boring tests that usually expose a historical model: offense plus
 defense equals total everywhere, the 1997-to-1998 boundary (where play-by-play begins) is smooth,
-the low-minute tails stay bounded, and the daily WOWY data underneath the project remain
-unchanged.
+and the low-minute tails stay bounded. The daily WOWY foundation was rebuilt once under the clean
+before-game timing rule, then the season layer and every public table were regenerated from that
+same version.
 
 ## What the box score missed
 
