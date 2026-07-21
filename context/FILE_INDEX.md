@@ -61,10 +61,12 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/components/TeamDetailView.svelte` - component
 - `src/lib/components/TrajectoryChart.svelte` - component
 - `src/lib/components/WinDistChart.svelte` - component
+- `src/lib/components/WowyStoryPage.svelte` - component
 
 ## src/lib/content
 
 - `src/lib/content/wowy-season-adjusted.md` - source
+- `src/lib/content/wowy-timing-repair.md` - source
 
 ## src/lib/data
 
@@ -105,6 +107,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/utils/playerSearch.js` - util
 - `src/lib/utils/playerTableFilters.js` - util
 - `src/lib/utils/positionCategories.js` - util
+- `src/lib/utils/renderArticleMarkdown.js` - util
 - `src/lib/utils/requestSequencer.js` - util
 - `src/lib/utils/seasonUtils.js` - util
 - `src/lib/utils/shinyDesign.js` - util
@@ -144,6 +147,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/wowy/+page.server.js` - load /wowy
 - `src/routes/wowy/+page.svelte` - page /wowy
 - `src/routes/wowy/about/+page.svelte` - page /wowy/about
+- `src/routes/wowy/timing/+page.svelte` - page /wowy/timing
 
 ## src/routes/api
 
