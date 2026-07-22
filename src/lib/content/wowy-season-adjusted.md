@@ -51,16 +51,19 @@ live on the DARKO site now.
 On the WOWY season leaderboard you will now see a choice: **Average** or **Adjusted**.
 
 WOWY is my attempt to estimate player impact back to 1980, including the years before the NBA had
-complete play-by-play data. The daily WOWY model updates its opinion of every player game by game,
-and that daily line is still the foundation. The two season numbers answer different questions:
+complete play-by-play data. Underneath everything is a causal daily model that updates its opinion
+before each game using only information then available. The public career trajectory applies a
+separately tested retrospective pass called **Final Cut**, which uses later games to sharpen that
+line after the fact. The two season numbers answer different questions:
 
-- **Average** asks: what did the daily model believe about this player, game by game, over the
-  season?
+- **Average** asks: what is the simple average of the published Final Cut game-by-game ratings?
 - **Adjusted** asks: with the whole season in front of us, how well does the evidence say he
   actually played?
 
-The adjusted rating is a second layer built on top of the daily model. It does not replace the
-daily model or change the career trajectories already on the site.
+The adjusted rating is a second layer built on the retained causal daily ratings. It does not
+replace either daily series or change the career trajectories already on the site. Every published
+game row retains the causal pregame values alongside the displayed Final Cut values; Final Cut is
+intentionally retrospective and should not be read as a before-game forecast.
 
 ## The best season since 1980
 
@@ -171,10 +174,10 @@ rich season can move meaningfully away from the daily baseline. A six-game seaso
 Adjustments are bounded, and each season remains centered around league average, so a short hot
 streak cannot create a new all-time peak by itself.
 
-The timing of the two layers is also deliberate. Each daily baseline uses only information that
-was available before that game. The season adjustment is retrospective: it asks what the completed
-season tells us once all of its evidence is available. That is why **Average** and **Adjusted** can
-differ without contradicting each other.
+The timing of the layers is also deliberate. Each internal daily baseline uses only information
+that was available before that game. Final Cut retrospectively sharpens the public game-by-game
+line, while the season adjustment asks what the completed season tells us as one evidence block.
+That is why **Average** and **Adjusted** can differ without contradicting each other.
 
 ## Why trust it?
 

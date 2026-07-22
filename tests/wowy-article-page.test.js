@@ -38,8 +38,11 @@ test('WOWY article publishes the complete season-adjusted story', async () => {
 	assert.match(markdown, /## Two numbers, two questions/);
 	assert.match(markdown, /## Why not just average the daily ratings\?/);
 	assert.match(markdown, /## How it works, briefly/);
-	assert.match(markdown, /Each daily baseline uses only information/);
-	assert.match(markdown, /The season adjustment is retrospective/);
+	assert.match(markdown, /internal daily baseline uses only information/);
+	assert.match(markdown, /Final Cut retrospectively sharpens/);
+	assert.match(markdown, /Final Cut is\s+intentionally retrospective/);
+	assert.match(markdown, /simple average of the published Final Cut/);
+	assert.match(markdown, /retains the causal pregame values/);
 	assert.match(markdown, /## Why trust it\?/);
 	assert.match(markdown, /## What the box score missed/);
 	assert.match(markdown, /## What the model cannot know/);
