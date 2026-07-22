@@ -66,7 +66,6 @@ For implementation work, request or paste raw source for the files you expect to
 ## src/lib/content
 
 - `src/lib/content/wowy-season-adjusted.md` - source
-- `src/lib/content/wowy-timing-repair.md` - source
 
 ## src/lib/data
 
@@ -147,7 +146,6 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/routes/wowy/+page.server.js` - load /wowy
 - `src/routes/wowy/+page.svelte` - page /wowy
 - `src/routes/wowy/about/+page.svelte` - page /wowy/about
-- `src/routes/wowy/timing/+page.svelte` - page /wowy/timing
 
 ## src/routes/api
 

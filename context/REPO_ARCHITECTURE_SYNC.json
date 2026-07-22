@@ -1,5 +1,5 @@
 {
-  "arch_version": "0.1.33",
+  "arch_version": "0.1.34",
   "behavior_snapshot": {
     "api_routes": [
       {
@@ -637,7 +637,6 @@
     "src/lib/components/WinDistChart.svelte",
     "src/lib/components/WowyStoryPage.svelte",
     "src/lib/content/wowy-season-adjusted.md",
-    "src/lib/content/wowy-timing-repair.md",
     "src/lib/data/longevityScaffold.js",
     "src/lib/displayMode.js",
     "src/lib/server/activePlayersCache.js",
@@ -724,7 +723,6 @@
     "src/routes/wowy/+page.server.js",
     "src/routes/wowy/+page.svelte",
     "src/routes/wowy/about/+page.svelte",
-    "src/routes/wowy/timing/+page.svelte",
     "src/shiny-view.css",
     "supabase/migrations/20260303_001_enable_players_rls.sql",
     "supabase/migrations/20260303_002_harden_elo_vote_path.sql",

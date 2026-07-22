@@ -45,8 +45,7 @@
 	{articleHtml}
 	footerLead="Ready to compare eras?"
 	footerLinks={[
-		{ href: '/wowy?rating=adjusted', label: 'Open the Season-Adjusted WOWY leaderboard' },
-		{ href: '/wowy/timing', label: 'Read how we repaired the daily timing' }
+		{ href: '/wowy?rating=adjusted', label: 'Open the Season-Adjusted WOWY leaderboard' }
 	]}
 	{toc}
 />

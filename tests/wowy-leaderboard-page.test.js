@@ -132,8 +132,6 @@ test('WOWY leaderboard defaults to all seasons and preserves Current and season 
     assert.match(contents, /publication\.data_through/);
     assert.match(contents, /href="\/wowy\/about"/);
     assert.match(contents, /Read how WOWY works/);
-    assert.match(contents, /href="\/wowy\/timing"/);
-    assert.match(contents, /Read the timing repair/);
     assert.match(contents, /\/trajectories\?ids=\$\{encodeURIComponent\(player\.nba_id\)\}&metric=wowy_rapm/);
     assert.doesNotMatch(contents, /Final observed/i);
     assert.doesNotMatch(contents, /opening roster/i);

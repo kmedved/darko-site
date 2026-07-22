@@ -54,25 +54,20 @@ test('WOWY article publishes the complete season-adjusted story', async () => {
 	assert.doesNotMatch(markdown, /github\.com\/kmedved\/wowy-rapm/);
 });
 
-test('WOWY timing article is published and linked from the leaderboard', async () => {
-	const [page, markdown, wowyPage] = await Promise.all([
-		read(TIMING_PAGE),
-		read(TIMING_MARKDOWN),
+test('retired WOWY timing article is neither routable nor linked', async () => {
+	const [articlePage, wowyPage] = await Promise.all([
+		read(ARTICLE_PAGE),
 		read(WOWY_PAGE)
 	]);
 
-	assert.match(page, /We Found Tomorrow in a Before-Game Rating/);
-	assert.match(page, /WowyStoryPage/);
-	assert.match(page, /Published July 21, 2026/);
-	assert.match(page, /https:\/\/www\.darko\.app\/wowy\/timing/);
-	assert.match(markdown, /The causal Daily WOWY series makes a simple promise/);
-	assert.match(markdown, /currently shows \*\*Final Cut\*\*/);
-	assert.match(markdown, /retains the causal before-game offensive, defensive, and total ratings/);
-	assert.match(markdown, /three distinct statistical objects/);
-	assert.match(markdown, /4,126,431 rows/);
-	assert.match(markdown, /21 minutes 25 seconds/);
-	assert.match(wowyPage, /href="\/wowy\/timing"/);
-	assert.match(wowyPage, /Read the timing repair/);
+	assert.doesNotMatch(articlePage, /\/wowy\/timing/);
+	assert.doesNotMatch(wowyPage, /\/wowy\/timing/);
+	await assert.rejects(fs.access(path.resolve(process.cwd(), TIMING_PAGE)), {
+		code: 'ENOENT'
+	});
+	await assert.rejects(fs.access(path.resolve(process.cwd(), TIMING_MARKDOWN)), {
+		code: 'ENOENT'
+	});
 });
 
 test('WOWY navigation stays active on the article routes', async () => {
