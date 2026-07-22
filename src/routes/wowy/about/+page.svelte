@@ -13,7 +13,7 @@
 		{ id: 'two-numbers-two-questions', label: 'Average vs. Adjusted' },
 		{ id: 'why-not-just-average-the-daily-ratings', label: 'From daily to season ratings' },
 		{ id: 'how-it-works-briefly', label: 'How the model works' },
-		{ id: 'did-it-work', label: 'How it was tested' },
+		{ id: 'why-trust-it', label: 'Why trust it' },
 		{ id: 'what-the-box-score-missed', label: 'WOWY vs. BPM' },
 		{ id: 'what-the-model-cannot-know', label: 'What it cannot know' },
 		{ id: 'how-to-read-the-site', label: 'How to read the site' }

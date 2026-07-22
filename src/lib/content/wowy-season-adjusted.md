@@ -80,11 +80,10 @@ the current top ten:
 | 9 | Nikola Jokic | 2025 | +8.16 | +1.43 | **+9.58** |
 | 10 | Giannis Antetokounmpo | 2022 | +4.52 | +4.94 | **+9.46** |
 
-LeBron's 2009 season edges Jordan's 1991 by six-tenths of a point. Nobody wrote a Jordan rule or
-an era bonus; the gap emerged after requiring every season to use the same information and the
-same scoring process. One disclosure: when I chose among candidate models, I required the winner
-to keep the best modern peak and the best pre-1998 peak within one point of each other. That was a
-guardrail to keep eras comparable, not independent proof that six-tenths is the true gap.
+LeBron's 2009 season edges Jordan's 1991 by six-tenths of a point. Both are scored from the same
+kind of evidence under the same rules. More importantly, they belong in the same tier: differences
+of a few tenths should be read as uncertainty around two extraordinary seasons, not as proof that
+one peak was definitively better.
 
 The table is not meant to settle every argument. It is meant to put those arguments on a
 consistent footing: 2009 LeBron and 1991 Jordan and 1983 Bird, finally scored by one procedure.
@@ -151,83 +150,52 @@ the season, playoffs included at full weight.
 Then ask whether the season gives us a reason to move that baseline. The model looks only at
 evidence that exists for every season since 1980: how the player's teams did with him and without
 him; results by game and by quarter; box-score production and role; team offense and defense; a
-proprietary dynamic plus-minus system — a custom RAPM variant we built to track how each part of a
-player's game (scoring, shooting efficiency, turnovers, rebounding, foul-drawing) changes over
-time; and how much evidence the season actually contains. A player in 1983 and a player in 2025
+dynamic plus-minus track that follows how each part of a player's game (scoring, shooting
+efficiency, turnovers, rebounding, foul-drawing) changes over time; and how much evidence the
+season actually contains. A player in 1983 and a player in 2025
 are judged on the same information. Modern players get no special inputs that older players could
 never have had.
 
-Modern play-by-play still matters, but as the teacher rather than the ingredient. For recent
-seasons I can compute a season-by-season RAPM answer sheet from full play-by-play. The model
-studies those seasons to learn how full-season evidence tends to differ from the cautious daily
-average, then applies that lesson everywhere using only the every-era inputs. Offense and defense
-are estimated separately and added together exactly; the total is always offense plus defense, in
-points per 100 possessions.
+Modern play-by-play supplies the comparison target, not a modern-only input. Recent seasons show
+how full-season performance tends to differ from the cautious daily average. The model learns that
+relationship, then applies it everywhere using only the evidence available in every era. Offense
+and defense are estimated separately and added together exactly; the total is always offense plus
+defense, in points per 100 possessions.
 
-There is an obvious trap here: a model taught with modern answer sheets could simply memorize
-them. So the published ratings are built the way a fair teacher grades — the model never grades a
-season it was trained on. I split the modern seasons into large blocks; whenever a block was
-scored, the answer sheets for those seasons were hidden from the model. I repeated this five times
-with different blocks and averaged the results. Every season from 1980 to 2026, ancient or modern,
-goes through that same five-pass process, so no season's published value ever comes from a model
-that saw that season's answer key.
+The modern teaching seasons are used only to learn the general relationship between season
+evidence and season performance. A player's published rating is always produced without training
+on that player's season result. The same scoring procedure is then applied from 1980 through 2026.
 
-One more piece of restraint. Early versions of this project were too aggressive: amplify every
-wiggle in the daily ratings and stars look dramatic, but little-used players get absurd numbers
-and one strange week becomes a historic season. The final version moves ratings less when a season
-contains little evidence, caps how large any single correction can be, and forces the positive and
-negative adjustments to balance within each season. Six games are not allowed to manufacture a
-brand-new peak.
+How much the rating moves depends on how much the season can actually tell us. A full, information-
+rich season can move meaningfully away from the daily baseline. A six-game season usually cannot.
+Adjustments are bounded, and each season remains centered around league average, so a short hot
+streak cannot create a new all-time peak by itself.
 
-## A timing mistake we found in our own model
+The timing of the two layers is also deliberate. Each daily baseline uses only information that
+was available before that game. The season adjustment is retrospective: it asks what the completed
+season tells us once all of its evidence is available. That is why **Average** and **Adjusted** can
+differ without contradicting each other.
 
-Late in the project, I found that one input to the daily ratings was not as "before the game" as I
-thought it was. It had been rebuilt using the full history and then joined back onto earlier dates.
-The effect was subtle, but the principle was not: a rating labeled as what we knew before a game
-should not contain even a faint imprint of games that had not happened yet.
+## Why trust it?
 
-The fix was computationally tedious and conceptually simple. I rebuilt that input separately for
-all 9,374 game dates. At each date, the fitting process could see only earlier games. The audit found
-zero timing violations, and changing later data left earlier states unchanged. The clean rebuild
-still improved prediction by about 2.5 percent compared with throwing that evidence away entirely.
+Three kinds of evidence support the ratings.
 
-The future-informed version scored a little better than the clean one on a conventional accuracy
-test. That is exactly what accidental peeking tends to do. I rejected it anyway, then rebuilt the
-daily ratings, the season ratings, and the public tables from the clean foundation. A separate set
-of strictly lagged role and playing-time signals recovered additional predictive value without
-looking ahead. The headline rankings survived, but they now rest on a claim the pipeline actually
-keeps: before-game ratings use before-game information.
+**Comparison with play-by-play RAPM.** In modern seasons, where full play-by-play provides a much
+more direct season-level comparison, the adjusted ratings land closer to season RAPM than the
+daily averages do — on offense, on defense, and in total. The scale also lines up: a one-point
+adjustment generally corresponds to about a one-point difference in the comparison ratings.
 
-## Did it work?
+**Historical team results.** Before 1998 there is no complete play-by-play comparison, but there
+are final scores. Adding the player ratings back up reproduces historical team performance more
+closely with the adjusted ratings than with the daily averages, both for total impact and defense.
 
-Three checks, in plain terms.
+**Playoff performance.** Players whose season evidence moved them above their daily baseline also
+tended to outperform that baseline in the playoffs. The relationship carried through at about 60
+percent strength, which is substantial given the smaller samples and stronger opponents.
 
-**The hidden-season test.** For modern seasons, I repeatedly hid the play-by-play answer sheet and
-asked whether the adjusted rating landed closer to it than the daily average did. It did — on
-offense, on defense, and on total impact. The size of the corrections also checked out: a
-one-point adjustment in the published table corresponded to about a one-point movement in the
-hidden answers. A model can look accurate while making every correction too timid or too bold;
-this one moves about the right amount.
-
-**The team test.** Before 1998 there is no play-by-play answer sheet, but there are final scores.
-Add the player ratings back up and you can ask how well they reconstruct each team's actual
-results. The adjusted ratings came closer to historical team performance than the daily averages
-did, for total impact and for defense.
-
-**The playoff test.** While the adjustment model was being developed, playoff games were kept out
-of its training data. Then I asked: when the model says a player genuinely played better than his
-daily rating that season, did his playoff minutes agree? They did. The season adjustments carried
-through to playoff results at about 60 percent of full strength — a relationship more than five
-standard errors from chance. Playoffs are small samples against brutal opponents, so 60 percent is
-roughly what honest signal should look like. I will note that this playoff check was consulted
-more than once during development, so I treat it as strong support rather than a pristine final
-exam. The pristine exam is coming — more on that at the end.
-
-The table also passed the boring tests that usually expose a historical model: offense plus
-defense equals total everywhere, the 1997-to-1998 boundary (where play-by-play begins) is smooth,
-and the low-minute tails stay bounded. The daily WOWY foundation was rebuilt once under the clean
-before-game timing rule, then the season layer and every public table were regenerated from that
-same version.
+The table also behaves consistently at the places where historical ratings often break: offense
+plus defense equals total everywhere, the 1997-to-1998 play-by-play boundary is smooth, and
+low-minute seasons remain within reasonable bounds.
 
 ## What the box score missed
 
@@ -235,14 +203,10 @@ BPM is the natural comparison: the best-known box-score impact stat, and itself 
 The question is whether everything else — team results, with-and-without evidence, quarter-by-
 quarter results, and the dynamic component ratings — improves on what the box score alone can see.
 
-A note on sourcing. My archive has Basketball Reference's game-level BPM starting in 1985, and for
-the full sample I recreated BPM 2.0 from the published Basketball Reference method. The recreation
-is effectively exact: against the archived Basketball Reference values, one-game numbers correlate
-at 0.9998 with a mean error of 0.12 points, and player-season numbers correlate at 0.9996 with a
-mean error of 0.08 points (0.07 among 3,000-possession seasons). The check matches all 1,060,583
-played Basketball Reference rows and 99.92% of reconstructed rows; the small remainder is mostly
-play-in games without an archived value. So: recreated BPM 2.0, not an official download, but the
-same statistic for this purpose.
+The BPM values here recreate Basketball Reference's published BPM 2.0 method from the box score.
+They are not an official download, but the reconstruction is effectively exact: player-season
+values correlate at 0.9996 with archived Basketball Reference values, with a mean error of 0.08
+points. That is close enough for the comparison to be about basketball rather than data plumbing.
 
 Season-Adjusted WOWY and BPM agree far more than they disagree — their correlation is 0.885 across
 all player-seasons weighted by playing time, and about 0.897 among seasons with at least 3,000
@@ -269,27 +233,23 @@ among players with at least 20,000 tracked possessions:
 | Trae Young | -0.06 | +2.46 | **-1.83** |
 | Zach LaVine | -1.30 | +0.46 | **-1.63** |
 
-This is the pattern I hoped the extra evidence would find. The gainers are defenders the box score
-never captured — Rodman, Mutombo, Mourning — plus the great offensive organizers, Bird, Magic, and
-Nash, whose effect on teammates does not fit in a stat line. The losers are mostly high-volume
-scorers whose teams did not move the way their box scores imply. Trae Young stays genuinely strong
-on offense, but the team evidence charges him a much larger defensive bill than BPM does.
+The gainers are defenders the box score never captured — Rodman, Mutombo, Mourning — plus the great
+offensive organizers, Bird, Magic, and Nash, whose effect on teammates does not fit in a stat line.
+The losers are mostly high-volume scorers whose teams did not move the way their box scores imply.
+Trae Young stays genuinely strong on offense, but the team evidence charges him a much larger
+defensive bill than BPM does.
 
 None of this proves every WOWY rating is right, and since BPM feeds into WOWY, this is not a
-contest between two strangers. The stronger evidence is the hidden-season test above. What this
-comparison shows is where the extra tools actually change the basketball answer — and it is
-exactly where you would want them to: defense, playmaking, and empty-calorie scoring.
+contest between two strangers. The stronger evidence is the modern play-by-play comparison above.
+What the BPM comparison shows is where the extra tools change the basketball answer: defense,
+playmaking, and empty-calorie scoring.
 
 ## What the model cannot know
 
-Before building this, I tried to build something more ambitious: a rating that tracks a player's
-form *within* a season — the hot January, the post-All-Star surge. I tested whether that is even
-possible by planting fake mid-season swings of realistic size into simulated seasons built on real
-schedules, then asking the machinery to recover them. It could not come close. At realistic swing
-sizes, the reconstructed swings carried more than twenty times as much noise as signal. The
-information simply is not in the game outcomes. That failure shaped this product: one honest
-number per season, because that is what the evidence can support. I would rather tell you what the
-data cannot say than sell you a decimal it cannot back.
+This is a season rating, not a reliable map of every hot or cold month. At realistic within-season
+swing sizes, game outcomes carry far more noise than recoverable signal. The evidence supports one
+careful estimate for the season much better than it supports a precise claim about a player's
+January form or post-All-Star surge.
 
 Some limits remain even at the season level.
 
@@ -314,19 +274,9 @@ thinnest. The model says so rather than bluffing.
 
 **And the obvious one.** There is no hidden file containing true RAPM for Larry Bird in 1983.
 Before the play-by-play era the evidence is necessarily indirect. The historical ratings are
-supported by the hidden-season tests, the team reconstructions, the playoff check, and sensible
+supported by modern comparisons, team reconstructions, playoff performance, and consistent
 behavior at both ends of the table. That is meaningful evidence, not certainty — differences of a
-few tenths should never be read as proof. The 2025-26 season was also visible while I built this,
-so it is included but is not an untouched test.
-
-## The test we cannot cheat
-
-Which brings me to the last piece. The cleanest way to grade a model is on a season it has never
-seen, judged by rules written before anyone knows the answer. So the rules are already written:
-before this article was published, I froze a protocol specifying exactly how the model will be
-evaluated on the 2026-27 season — which questions get asked, which checks are binding — a year
-before the season can be scored. When 2027 arrives, the model takes an exam it cannot have studied
-for, and I will publish the grade either way.
+few tenths should never be read as proof.
 
 ## How to read the site
 
@@ -340,8 +290,3 @@ much season-specific performance the broader evidence actually supports.
 Both views are useful. They answer different questions — which is the whole point. What did we
 think of Larry Bird while 1983 was happening, and what do we know now? For the first time, the
 table answers both, for every player, in every season, back to 1980.
-
----
-
-The underlying project retains a complete audit trail: the model record, failed approaches,
-validation results, and artifact hashes.

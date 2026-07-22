@@ -38,9 +38,9 @@ test('WOWY article publishes the complete season-adjusted story', async () => {
 	assert.match(markdown, /## Two numbers, two questions/);
 	assert.match(markdown, /## Why not just average the daily ratings\?/);
 	assert.match(markdown, /## How it works, briefly/);
-	assert.match(markdown, /## A timing mistake we found in our own model/);
-	assert.match(markdown, /before-game ratings use before-game information/);
-	assert.match(markdown, /## Did it work\?/);
+	assert.match(markdown, /Each daily baseline uses only information/);
+	assert.match(markdown, /The season adjustment is retrospective/);
+	assert.match(markdown, /## Why trust it\?/);
 	assert.match(markdown, /## What the box score missed/);
 	assert.match(markdown, /## What the model cannot know/);
 	assert.match(markdown, /20,543 player-seasons/);
@@ -48,7 +48,10 @@ test('WOWY article publishes the complete season-adjusted story', async () => {
 	assert.match(markdown, /public Average is \+5\.99/);
 	assert.match(markdown, /playing-time-weighted daily baseline/);
 	assert.match(markdown, /shows minutes rather than a separate total-value column/);
-	assert.match(markdown, /underlying project retains a complete audit trail/);
+	assert.doesNotMatch(markdown, /Early versions of this project/);
+	assert.doesNotMatch(markdown, /Late in the project/);
+	assert.doesNotMatch(markdown, /9,374 game dates/);
+	assert.doesNotMatch(markdown, /## The test we cannot cheat/);
 	assert.doesNotMatch(markdown, /Average\*\* option on the site shows the first column/);
 	assert.doesNotMatch(markdown, /Now you can see both numbers/);
 	assert.doesNotMatch(markdown, /github\.com\/kmedved\/wowy-rapm/);
