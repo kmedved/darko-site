@@ -98,9 +98,9 @@ played only 18 regular-season games. The model watched every one of them and rat
 +4.31 in the weighted daily baseline; with the full season's evidence, the adjusted figure comes
 to +5.03 — already an excellent level in year two.
 
-Was that a great season? Per possession, absolutely. In total value, Jordan added roughly 76
+Was that a great season? Per possession, absolutely. In total value, Jordan added roughly 60
 points above average all year. Larry Bird that same season played at +9.05 and added about 732.
-Same league, same year, a tenfold gap in delivered value. The site puts per-possession rating and
+Same league, same year, a twelvefold gap in delivered value. The site puts per-possession rating and
 minutes side by side; it ranks the former, while total value is a derived comparison rather than a
 displayed leaderboard column. The distinction — how good a player *was* versus how much he *gave
 you* — runs through the whole table.

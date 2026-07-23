@@ -52,6 +52,9 @@ test('WOWY article publishes the complete season-adjusted story', async () => {
 	assert.match(markdown, /public Average is \+6\.05/);
 	assert.match(markdown, /playing-time-weighted daily baseline/);
 	assert.match(markdown, /shows minutes rather than a separate total-value column/);
+	assert.match(markdown, /Jordan added roughly 60\s+points above average/);
+	assert.match(markdown, /a twelvefold gap in delivered value/);
+	assert.doesNotMatch(markdown, /Jordan added roughly 76\s+points above average/);
 	assert.doesNotMatch(markdown, /Early versions of this project/);
 	assert.doesNotMatch(markdown, /Late in the project/);
 	assert.doesNotMatch(markdown, /9,374 game dates/);
