@@ -42,7 +42,7 @@ the ball was still one of the most impactful players in basketball, because of w
 other end. The 1983 box score could never have told you that. Team results, with him and without
 him, can.
 
-That is the new product in one season: **Season-Adjusted WOWY**. One table, 21,108 player-seasons,
+That is the new product in one season: **Season-Adjusted WOWY**. One table, 21,128 player-seasons,
 covering all 49 seasons from 1977-78 through 2025-26, every one scored by the same procedure. It is
 live on the DARKO site now.
 

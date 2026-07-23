@@ -6,7 +6,7 @@
 	const articleHtml = renderArticleMarkdown(articleMarkdown);
 	const facts = [
 		{ value: '49', label: 'NBA seasons' },
-		{ value: '21,108', label: 'player-seasons' },
+		{ value: '21,128', label: 'player-seasons' },
 		{ value: '1978–2026', label: 'one scoring procedure' }
 	];
 	const toc = [
