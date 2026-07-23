@@ -1,6 +1,6 @@
 # What Did Larry Bird Play Like in 1983?
 
-*A season-by-season impact rating for every NBA player since 1980, now live on the DARKO site.*
+*Season-by-season impact ratings from 1977-78 onward, now live on the DARKO site.*
 
 Who was the best player in the NBA in 1983?
 
@@ -9,16 +9,16 @@ the most, per possession, on both ends of the floor? Here is my answer:
 
 | Rank | Player | Offense | Defense | Total | Weighted daily baseline | Season adjustment |
 | ---: | :--- | ---: | ---: | ---: | ---: | ---: |
-| 1 | Larry Bird | +5.32 | +2.80 | **+8.12** | +6.68 | +1.45 |
-| 2 | Magic Johnson | +6.16 | +1.23 | **+7.39** | +6.52 | +0.87 |
-| 3 | Julius Erving | +2.61 | +2.61 | **+5.21** | +4.83 | +0.38 |
-| 4 | Kareem Abdul-Jabbar | +3.20 | +1.96 | **+5.15** | +3.50 | +1.66 |
-| 5 | Johnny Moore | +1.90 | +3.17 | **+5.07** | +3.42 | +1.65 |
-| 6 | Sidney Moncrief | +2.97 | +1.71 | **+4.68** | +4.17 | +0.51 |
-| 7 | Larry Nance | +1.33 | +3.04 | **+4.37** | +2.65 | +1.72 |
-| 8 | Gus Williams | +2.76 | +1.13 | **+3.88** | +3.30 | +0.59 |
-| 9 | Maurice Cheeks | +0.52 | +3.25 | **+3.78** | +2.82 | +0.96 |
-| 10 | Robert Parish | +2.22 | +1.51 | **+3.73** | +3.21 | +0.52 |
+| 1 | Larry Bird | +5.18 | +2.91 | **+8.09** | +6.82 | +1.27 |
+| 2 | Magic Johnson | +6.10 | +1.01 | **+7.11** | +6.20 | +0.91 |
+| 3 | Kareem Abdul-Jabbar | +3.47 | +2.61 | **+6.08** | +4.23 | +1.85 |
+| 4 | Julius Erving | +2.64 | +2.78 | **+5.42** | +5.27 | +0.15 |
+| 5 | Johnny Moore | +2.01 | +3.18 | **+5.20** | +2.90 | +2.30 |
+| 6 | Larry Nance | +1.39 | +2.96 | **+4.35** | +2.42 | +1.93 |
+| 7 | Sidney Moncrief | +3.12 | +1.19 | **+4.31** | +3.68 | +0.63 |
+| 8 | Moses Malone | +3.64 | +0.41 | **+4.05** | +3.58 | +0.46 |
+| 9 | Robert Parish | +2.32 | +1.70 | **+4.01** | +3.54 | +0.47 |
+| 10 | Gus Williams | +2.93 | +0.91 | **+3.84** | +3.37 | +0.47 |
 
 Bird and Magic, one and two, at the peak of their rivalry. The numbers are points per 100
 possessions above an average player, the same scale RAPM uses — RAPM being the family of
@@ -27,30 +27,30 @@ for who he played with and against.
 
 Two names in that season tell you what this table can see.
 
-Moses Malone won the 1983 MVP, swept through the playoffs with the Sixers, and does not crack this
-top ten. On per-possession impact he lands 12th, at +3.57. But Moses played 91 games that year,
-regular season and playoffs, more than almost anyone. Count total points added across the whole
-season instead of impact per possession, and he climbs to 8th. That gap — between how good a
+Moses Malone won the 1983 MVP and swept through the playoffs with the Sixers. On per-possession
+impact he lands eighth, at +4.05. But Moses played 91 games that year, regular season and
+playoffs, more than almost anyone. Count total points added across the whole season instead of
+impact per possession, and he climbs to sixth. That gap — between how good a
 player was per minute and how much he gave you in total — is a tension MVP voters have argued
 about forever. The model lets us calculate both kinds of value, even though the public leaderboard
 ranks per-possession impact and shows minutes rather than a separate total-value column.
 
 And then there is Tree Rollins. The Hawks center scored little and the box score of the era barely
-knew what to do with him: the model rates his 1983 offense at -0.9. His defense comes in at +4.1,
+knew what to do with him: the model rates his 1983 offense at -0.81. His defense comes in at +4.38,
 the best defensive rating in the league that season. A player who was actively below average with
 the ball was still one of the most impactful players in basketball, because of what happened at the
 other end. The 1983 box score could never have told you that. Team results, with him and without
 him, can.
 
-That is the new product in one season: **Season-Adjusted WOWY**. One table, 20,543 player-seasons,
-covering all 47 seasons from 1979-80 through 2025-26, every one scored by the same procedure. It is
+That is the new product in one season: **Season-Adjusted WOWY**. One table, 21,108 player-seasons,
+covering all 49 seasons from 1977-78 through 2025-26, every one scored by the same procedure. It is
 live on the DARKO site now.
 
 ## Two numbers, two questions
 
 On the WOWY season leaderboard you will now see a choice: **Average** or **Adjusted**.
 
-WOWY is my attempt to estimate player impact back to 1980, including the years before the NBA had
+WOWY is my attempt to estimate player impact back to 1977-78, including the years before the NBA had
 complete play-by-play data. Underneath everything is a causal daily model that updates its opinion
 before each game using only information then available. The public career trajectory applies a
 separately tested retrospective pass called **Final Cut**, which uses later games to sharpen that
@@ -65,25 +65,25 @@ replace either daily series or change the career trajectories already on the sit
 game row retains the causal pregame values alongside the displayed Final Cut values; Final Cut is
 intentionally retrospective and should not be read as a before-game forecast.
 
-## The best season since 1980
+## The best season in the table
 
 Before anything else, the answer everyone asks for. Among seasons with substantial playing time,
 the current top ten:
 
 | Rank | Player | Season | Offense | Defense | Total |
 | ---: | :--- | ---: | ---: | ---: | ---: |
-| 1 | LeBron James | 2009 | +7.12 | +3.68 | **+10.80** |
-| 2 | Michael Jordan | 1991 | +7.08 | +3.12 | **+10.20** |
-| 3 | LeBron James | 2010 | +7.56 | +2.44 | **+10.01** |
-| 4 | LeBron James | 2013 | +7.67 | +2.24 | **+9.92** |
-| 5 | LeBron James | 2017 | +7.42 | +2.44 | **+9.86** |
-| 6 | Michael Jordan | 1993 | +6.78 | +3.07 | **+9.85** |
-| 7 | LeBron James | 2016 | +6.80 | +2.96 | **+9.76** |
-| 8 | Giannis Antetokounmpo | 2020 | +5.56 | +4.19 | **+9.75** |
-| 9 | Nikola Jokic | 2025 | +8.16 | +1.43 | **+9.58** |
-| 10 | Giannis Antetokounmpo | 2022 | +4.52 | +4.94 | **+9.46** |
+| 1 | LeBron James | 2009 | +7.27 | +3.74 | **+11.01** |
+| 2 | LeBron James | 2017 | +8.04 | +2.67 | **+10.71** |
+| 3 | Nikola Jokic | 2025 | +8.25 | +2.08 | **+10.33** |
+| 4 | Michael Jordan | 1993 | +6.92 | +3.37 | **+10.29** |
+| 5 | Michael Jordan | 1991 | +7.06 | +3.20 | **+10.25** |
+| 6 | LeBron James | 2010 | +7.70 | +2.43 | **+10.13** |
+| 7 | LeBron James | 2016 | +7.02 | +3.07 | **+10.09** |
+| 8 | Michael Jordan | 1988 | +7.10 | +2.90 | **+10.00** |
+| 9 | Michael Jordan | 1996 | +7.52 | +2.27 | **+9.79** |
+| 10 | Nikola Jokic | 2026 | +8.28 | +1.45 | **+9.73** |
 
-LeBron's 2009 season edges Jordan's 1991 by six-tenths of a point. Both are scored from the same
+LeBron's 2009 season edges Jordan's 1993 by about seven-tenths of a point. Both are scored from the same
 kind of evidence under the same rules. More importantly, they belong in the same tier: differences
 of a few tenths should be read as uncertainty around two extraordinary seasons, not as proof that
 one peak was definitively better.
@@ -95,11 +95,11 @@ consistent footing: 2009 LeBron and 1991 Jordan and 1983 Bird, finally scored by
 
 In the fall of 1985, Michael Jordan broke a bone in his foot three games into the season. He
 played only 18 regular-season games. The model watched every one of them and rated his level at
-+5.4 while he played; with the full season's evidence, the adjusted figure comes to +6.4 — already
-near-MVP territory in year two.
++4.31 in the weighted daily baseline; with the full season's evidence, the adjusted figure comes
+to +5.03 — already an excellent level in year two.
 
 Was that a great season? Per possession, absolutely. In total value, Jordan added roughly 76
-points above average all year. Larry Bird that same season played at +8.84 and added about 715.
+points above average all year. Larry Bird that same season played at +9.05 and added about 732.
 Same league, same year, a tenfold gap in delivered value. The site puts per-possession rating and
 minutes side by side; it ranks the former, while total value is a derived comparison rather than a
 displayed leaderboard column. The distinction — how good a player *was* versus how much he *gave
@@ -110,7 +110,7 @@ hurt his back, came back, broke his foot, and played six games. In 1988-89, Larr
 spurs removed from both heels after six games. A "filter out low-minutes players" rule would
 quietly flag two Hall of Famers as noise. Instead the model does what a sensible observer would
 do: it starts from everything it already knew about the player and lets six games move that
-belief only a little. Robinson's six games rate +6.7; Bird's rate +7.3. Great players, briefly
+belief only a little. Robinson's six games rate +6.9; Bird's rate +7.5. Great players, briefly
 seen, still look like great players — the rating just refuses to pretend six games taught it
 much.
 
@@ -133,17 +133,17 @@ The gap between those two readings shows up in real seasons:
 
 | Player-season | Weighted daily baseline | Season adjustment | Adjusted rating |
 | :--- | ---: | ---: | ---: |
-| Larry Bird, 1983 | +6.68 | +1.45 | **+8.12** |
-| Michael Jordan, 1991 | +8.38 | +1.82 | **+10.20** |
-| Michael Jordan, 1993 | +8.21 | +1.65 | **+9.85** |
-| LeBron James, 2009 | +8.55 | +2.25 | **+10.80** |
-| LeBron James, 2013 | +8.51 | +1.41 | **+9.92** |
-| Nikola Jokic, 2025 | +8.73 | +0.85 | **+9.58** |
+| Larry Bird, 1983 | +6.82 | +1.27 | **+8.09** |
+| Michael Jordan, 1991 | +8.37 | +1.89 | **+10.25** |
+| Michael Jordan, 1993 | +8.44 | +1.85 | **+10.29** |
+| LeBron James, 2009 | +8.55 | +2.46 | **+11.01** |
+| LeBron James, 2013 | +8.71 | +0.85 | **+9.56** |
+| Nikola Jokic, 2025 | +9.16 | +1.17 | **+10.33** |
 
 The baseline column is not a literal copy of the site's **Average** toggle. The public Average is a
 simple mean in which every published game counts equally. The adjustment model uses a
 playing-time-weighted daily baseline before adding the season evidence. For Bird in 1983, the
-public Average is +5.99, the weighted baseline is +6.68, and the **Adjusted** rating is +8.12.
+public Average is +6.05, the weighted baseline is +6.82, and the **Adjusted** rating is +8.09.
 
 ## How it works, briefly
 
@@ -151,7 +151,7 @@ Start with the baseline: a playing-time-weighted average of the player's daily W
 the season, playoffs included at full weight.
 
 Then ask whether the season gives us a reason to move that baseline. The model looks only at
-evidence that exists for every season since 1980: how the player's teams did with him and without
+evidence that exists for every season from 1977-78 onward: how the player's teams did with him and without
 him; results by game and by quarter; box-score production and role; team offense and defense; a
 dynamic plus-minus track that follows how each part of a player's game (scoring, shooting
 efficiency, turnovers, rebounding, foul-drawing) changes over time; and how much evidence the
@@ -167,7 +167,7 @@ defense, in points per 100 possessions.
 
 The modern teaching seasons are used only to learn the general relationship between season
 evidence and season performance. A player's published rating is always produced without training
-on that player's season result. The same scoring procedure is then applied from 1980 through 2026.
+on that player's season result. The same scoring procedure is then applied from 1978 through 2026.
 
 How much the rating moves depends on how much the season can actually tell us. A full, information-
 rich season can move meaningfully away from the daily baseline. A six-game season usually cannot.
@@ -211,8 +211,8 @@ They are not an official download, but the reconstruction is effectively exact: 
 values correlate at 0.9996 with archived Basketball Reference values, with a mean error of 0.08
 points. That is close enough for the comparison to be about basketball rather than data plumbing.
 
-Season-Adjusted WOWY and BPM agree far more than they disagree — their correlation is 0.885 across
-all player-seasons weighted by playing time, and about 0.897 among seasons with at least 3,000
+Season-Adjusted WOWY and BPM agree far more than they disagree — their correlation is 0.881 across
+all player-seasons weighted by playing time, and about 0.893 among seasons with at least 3,000
 possessions. Box scores contain a lot of real information, and WOWY uses it.
 
 The disagreements are the interesting part. One technical note first: BPM's numbers are spread
@@ -223,18 +223,18 @@ among players with at least 20,000 tracked possessions:
 
 | Player | Season-Adjusted WOWY | Recreated BPM | WOWY difference after scale matching |
 | :--- | ---: | ---: | ---: |
-| Larry Bird | +7.23 | +6.94 | **+2.26** |
-| Steve Nash | +4.09 | +2.96 | **+1.97** |
-| Magic Johnson | +7.13 | +7.52 | **+1.73** |
-| Dikembe Mutombo | +2.89 | +1.67 | **+1.69** |
-| Alonzo Mourning | +3.21 | +2.18 | **+1.65** |
-| Dennis Rodman | +2.09 | +0.72 | **+1.57** |
-| Collin Sexton | -3.40 | -1.27 | **-2.49** |
-| Clarence Weatherspoon | -2.60 | -0.50 | **-2.23** |
-| Donyell Marshall | -1.42 | +0.94 | **-2.10** |
-| Ricky Davis | -2.66 | -1.01 | **-1.94** |
-| Trae Young | -0.06 | +2.46 | **-1.83** |
-| Zach LaVine | -1.30 | +0.46 | **-1.63** |
+| Larry Bird | +7.37 | +6.94 | **+2.31** |
+| Steve Nash | +4.03 | +2.96 | **+1.87** |
+| Dennis Rodman | +2.18 | +0.72 | **+1.65** |
+| Magic Johnson | +7.09 | +7.52 | **+1.61** |
+| Dikembe Mutombo | +2.80 | +1.67 | **+1.58** |
+| Alonzo Mourning | +3.14 | +2.18 | **+1.54** |
+| Collin Sexton | -3.43 | -1.27 | **-2.51** |
+| Clarence Weatherspoon | -2.53 | -0.50 | **-2.16** |
+| Martell Webster | -2.82 | -0.91 | **-2.16** |
+| Trae Young | -0.23 | +2.46 | **-2.03** |
+| Donyell Marshall | -1.16 | +0.94 | **-1.84** |
+| Ricky Davis | -2.49 | -1.01 | **-1.76** |
 
 The gainers are defenders the box score never captured — Rodman, Mutombo, Mourning — plus the great
 offensive organizers, Bird, Magic, and Nash, whose effect on teammates does not fit in a stat line.
@@ -292,4 +292,4 @@ much season-specific performance the broader evidence actually supports.
 
 Both views are useful. They answer different questions — which is the whole point. What did we
 think of Larry Bird while 1983 was happening, and what do we know now? For the first time, the
-table answers both, for every player, in every season, back to 1980.
+table answers both across the league, back to 1977-78.

@@ -46,9 +46,10 @@ test('WOWY article publishes the complete season-adjusted story', async () => {
 	assert.match(markdown, /## Why trust it\?/);
 	assert.match(markdown, /## What the box score missed/);
 	assert.match(markdown, /## What the model cannot know/);
-	assert.match(markdown, /20,543 player-seasons/);
+	assert.match(markdown, /21,108 player-seasons/);
+	assert.match(markdown, /1977-78 through 2025-26/);
 	assert.match(markdown, /Season-Adjusted WOWY and BPM agree/);
-	assert.match(markdown, /public Average is \+5\.99/);
+	assert.match(markdown, /public Average is \+6\.05/);
 	assert.match(markdown, /playing-time-weighted daily baseline/);
 	assert.match(markdown, /shows minutes rather than a separate total-value column/);
 	assert.doesNotMatch(markdown, /Early versions of this project/);

@@ -85,6 +85,16 @@ const seasonBoxContextMigration = readFileSync(
     ),
     'utf8'
 );
+const unified1977Migration = readFileSync(
+    join(
+        __dirname,
+        '..',
+        'supabase',
+        'migrations',
+        '20260723_001_extend_wowy_publication_to_1978.sql'
+    ),
+    'utf8'
+);
 const seasonAverageActivationOperation = readFileSync(
     join(
         __dirname,
@@ -198,8 +208,40 @@ test('historical WOWY rows preserve season context without current-team fallback
     assert.match(normalizer, /season_possessions:/);
     assert.match(normalizer, /method_version:/);
     assert.match(normalizer, /application_model:/);
+    assert.match(normalizer, /season >= 1978/);
     assert.match(normalizer, /tm_id: isHistoricalSeasonSummary \? null : resolveTeamId/);
     assert.match(normalizer, /position: isHistoricalSeasonSummary \? null : normalizePosition/);
+});
+
+test('unified publication migration accepts 1978 while preserving incumbent rollback', () => {
+    for (const constraint of [
+        'wowy_season_opening_snapshots_season_check',
+        'wowy_season_player_averages_season_check',
+        'wowy_season_adjusted_ratings_season_check',
+        'wowy_season_box_context_season_check'
+    ]) {
+        assert.match(
+            unified1977Migration,
+            new RegExp(`drop constraint if exists ${constraint}`)
+        );
+    }
+    assert.equal(
+        (unified1977Migration.match(/check \(season >= 1978\)/g) || []).length,
+        4
+    );
+    assert.match(
+        unified1977Migration,
+        /check \(season_from >= 1978 and season_through >= season_from\)/
+    );
+    assert.match(
+        unified1977Migration,
+        /check \(source_min_season >= 1978\)/
+    );
+    assert.match(
+        unified1977Migration,
+        /to_regclass\('public\.wowy_season_average_activation'\) is not null/
+    );
+    assert.match(unified1977Migration, /accepts both the incumbent 1980/);
 });
 
 test('WOWY leaderboard bio filters use canonical position groups without changing historical identity', () => {

@@ -487,7 +487,7 @@ function normalizeWowyLeaderboardRows(data) {
 
             return {
                 nba_id: nbaId,
-                season: Number.isInteger(season) && season >= 1980 ? season : null,
+                season: Number.isInteger(season) && season >= 1978 ? season : null,
                 leaderboard_rank:
                     Number.isInteger(leaderboardRank) && leaderboardRank > 0
                         ? leaderboardRank
