@@ -194,6 +194,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260717_003_add_wowy_season_box_context.sql` - Supabase SQL migration.
 - `supabase/migrations/20260719_001_publish_wowy_final_cut_default.sql` - Supabase SQL migration.
 - `supabase/migrations/20260723_001_extend_wowy_publication_to_1978.sql` - Supabase SQL migration.
+- `supabase/migrations/20260724_001_sanitize_wowy_publication_method.sql` - Supabase SQL migration.
 
 ## tests
 
