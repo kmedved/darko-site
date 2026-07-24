@@ -118,7 +118,6 @@ test('WOWY leaderboard defaults to all seasons and preserves Current and season 
     assert.match(contents, /Adjusted D-RAPM/);
     assert.match(contents, /label: 'Minutes'/);
     assert.match(contents, /label: 'BPM'/);
-    assert.match(contents, /label: 'Possessions'/);
     assert.match(contents, /name="wowy-rating-mode"/);
     assert.match(contents, /value="average"/);
     assert.match(contents, /value="adjusted"/);
@@ -137,6 +136,21 @@ test('WOWY leaderboard defaults to all seasons and preserves Current and season 
     assert.doesNotMatch(contents, /opening roster/i);
     assert.doesNotMatch(contents, /before that team’s opening game/i);
     assert.doesNotMatch(contents, /Observed leaders|leaderCards|buildLeaderCard|wowy-leader-/);
+});
+
+test('single-season Adjusted uses the same Minutes and BPM context as all-time', async () => {
+    const contents = await read(WOWY_PAGE);
+    const adjustedStart = contents.indexOf('const seasonAdjustedTableColumns');
+    const adjustedEnd = contents.indexOf('const allTimeAdjustedTableColumns', adjustedStart);
+    const adjustedColumns = contents.slice(adjustedStart, adjustedEnd);
+
+    assert.ok(adjustedStart >= 0 && adjustedEnd > adjustedStart);
+    assert.match(adjustedColumns, /label: 'Minutes'/);
+    assert.match(adjustedColumns, /label: 'BPM'/);
+    assert.doesNotMatch(adjustedColumns, /label: 'Possessions'/);
+    assert.doesNotMatch(adjustedColumns, /label: 'Games'/);
+    assert.doesNotMatch(adjustedColumns, /label: 'Last game'/);
+    assert.match(contents, /\{#if isAllTimeView \|\| isAdjustedRatings\}/);
 });
 
 test('WOWY leaderboard supports sorting, filtering, loaded CSV export, and mobile table access', async () => {

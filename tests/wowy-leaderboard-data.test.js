@@ -745,6 +745,9 @@ test('Season-Adjusted WOWY helpers use separate caches and the shared paged RPC'
     assert.match(allTimeHelper, /normalizeWowyLeaderboardRows\(payload\.rows\)/);
     assert.match(seasonHelper, /CACHE_MS\.wowyAdjustedSeasonPlayers/);
     assert.match(seasonHelper, /get_wowy_adjusted_season_player_ratings/);
+    assert.match(seasonHelper, /\.from\('wowy_season_box_context'\)/);
+    assert.match(seasonHelper, /\.select\('nba_id, minutes, bpm'\)/);
+    assert.match(seasonHelper, /rowsWithContext/);
     assert.match(seasonHelper, /p_season: seasonEndYear/);
     assert.match(seasonHelper, /sortByWowyRapmDesc/);
 });

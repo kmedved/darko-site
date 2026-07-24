@@ -238,13 +238,19 @@
             tooltip: 'Season-Adjusted defensive WOWY RAPM.'
         },
         {
-            key: 'exposure',
-            label: 'Possessions',
+            key: 'minutes',
+            label: 'Minutes',
             align: 'right',
-            tooltip: 'Estimated possessions played in the regular season and playoffs.'
+            sortable: false,
+            tooltip: 'Total minutes played across the regular season and playoffs.'
         },
-        { key: 'season_games', label: 'Games', align: 'right' },
-        { key: 'last_date', label: 'Last game', align: 'right' }
+        {
+            key: 'bpm',
+            label: 'BPM',
+            align: 'right',
+            sortable: false,
+            tooltip: 'Ordinary Basketball-Reference-style BPM 2.0, reconstructed from the season box score and weighted across regular-season and playoff possessions. It is shown on its native scale, not rescaled to WOWY.'
+        },
     ];
     const allTimeAdjustedTableColumns = [
         { key: '_rank', label: '#', align: 'right', sortable: false },
@@ -1526,7 +1532,7 @@
                                     >
                                         {formatSignedMetric(player.wowy_drapm)}
                                     </td>
-                                    {#if isAllTimeView}
+                                    {#if isAllTimeView || isAdjustedRatings}
                                         <td headers="wowy-column-minutes" class="align-right wowy-sample-cell">
                                             {formatWholeNumber(player.minutes)}
                                         </td>
@@ -1602,7 +1608,7 @@
                     Exposure is shown without a cutoff. Sample games include the available WOWY regular-season and postseason appearances.
                 {:else if isSeasonSummaryHistory}
                     {#if isAdjustedRatings}
-                        Ratings are the season model’s adjusted O/D/T values. Possessions and games include the regular season and playoffs; Last game is the latest included appearance. No exposure cutoff is applied.
+                        Ratings are the season model’s adjusted O/D/T values. Minutes and BPM include regular-season and playoff contributions.
                     {:else}
                         Ratings and exposure are simple, unweighted means across each player’s observed WOWY games in the selected season. Games counts those observations; Last game is the latest included game. Multiple teams indicate that the player appeared for each listed historical team.
                     {/if}

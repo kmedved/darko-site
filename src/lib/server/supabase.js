@@ -953,13 +953,35 @@ export async function getWowyAdjustedSeasonPlayers(season) {
 
     const key = cacheKey('wowyAdjustedSeasonPlayers', seasonEndYear);
     return runCached(key, CACHE_MS.wowyAdjustedSeasonPlayers, async () => {
-        const { data, error } = await supabase.rpc(
-            'get_wowy_adjusted_season_player_ratings',
-            { p_season: seasonEndYear }
-        );
-        if (error) throw error;
+        const [ratingsResponse, contextResponse] = await Promise.all([
+            supabase.rpc('get_wowy_adjusted_season_player_ratings', {
+                p_season: seasonEndYear
+            }),
+            supabase
+                .from('wowy_season_box_context')
+                .select('nba_id, minutes, bpm')
+                .eq('season', seasonEndYear)
+        ]);
+        if (ratingsResponse.error) throw ratingsResponse.error;
+        if (contextResponse.error) throw contextResponse.error;
 
-        return sortByWowyRapmDesc(normalizeWowyLeaderboardRows(data));
+        const contextByPlayer = new Map(
+            (Array.isArray(contextResponse.data) ? contextResponse.data : []).map(
+                (row) => [Number(row.nba_id), row]
+            )
+        );
+        const rowsWithContext = (
+            Array.isArray(ratingsResponse.data) ? ratingsResponse.data : []
+        ).map((row) => {
+            const context = contextByPlayer.get(Number(row.nba_id));
+            return {
+                ...row,
+                minutes: row.minutes ?? context?.minutes ?? null,
+                bpm: row.bpm ?? context?.bpm ?? null
+            };
+        });
+
+        return sortByWowyRapmDesc(normalizeWowyLeaderboardRows(rowsWithContext));
     });
 }
 
