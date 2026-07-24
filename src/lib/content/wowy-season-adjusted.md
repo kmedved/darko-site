@@ -2,6 +2,14 @@
 
 *Season-by-season impact ratings from 1977-78 onward, now live on the DARKO site.*
 
+**Update, July 24, 2026:** I fixed a boundary bug that treated players who
+were already established before 1977-78 as if the model's sample marked the
+start of their careers. In 1978, it affected 8,623 player-game context rows
+from 136 players. The Daily, Final Cut, and season ratings now use each
+player's actual prior career history when identifying career stage. This
+corrects existing biographical context; it does not invent earlier
+possessions or game evidence.
+
 Who was the best player in the NBA in 1983?
 
 Not who won the MVP — Moses Malone did, and we'll get to him. Who actually moved the scoreboard

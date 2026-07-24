@@ -39,7 +39,7 @@
 	kicker="Introducing Season-Adjusted WOWY"
 	title="What Did Larry Bird Play Like in 1983?"
 	deck="A season-by-season impact rating for every NBA player from 1977-78 onward, built from the daily WOWY model and the evidence of each completed season."
-	published="Published July 17, 2026 · Updated July 23, 2026"
+	published="Published July 17, 2026 · Updated July 24, 2026"
 	{facts}
 	primaryAction={{ href: '/wowy?rating=adjusted', label: 'Explore the ratings' }}
 	{articleHtml}
