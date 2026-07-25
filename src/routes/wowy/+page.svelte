@@ -223,7 +223,7 @@
             key: 'wowy_rapm',
             label: 'Adjusted WOWY RAPM',
             align: 'right',
-            tooltip: 'Season-average WOWY RAPM after updating the season baseline with season-specific game, quarter, box, Elo, and play-by-play-era evidence.'
+            tooltip: 'Season-average WOWY RAPM after updating the season baseline with season-specific game, quarter, box, and play-by-play-era evidence.'
         },
         {
             key: 'wowy_orapm',
