@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises';
 import { isWowyPlayerId } from '../src/lib/utils/wowyPlayerId.js';
 
 const MIGRATION = 'supabase/migrations/20260814_001_publish_unified_wowy_from_1957.sql';
+const ACTIVATION_MIGRATION =
+    'supabase/migrations/20260814_002_lower_wowy_season_average_activation_floor_to_1957.sql';
 const SERVER = 'src/lib/server/supabase.js';
 const LOADER = 'src/routes/wowy/+page.server.js';
 const LEADERBOARD = 'src/routes/wowy/+page.svelte';
@@ -45,6 +47,20 @@ test('Unified 1957 migration separates Daily coverage from Season-Adjusted cover
     assert.match(migration, /aba_cross_league_identified_from integer not null default 1972/);
     assert.match(migration, /season_from >= 1957/);
     assert.match(migration, /season_adjusted_from >= 1978/);
+});
+
+test('Unified 1957 activation marker accepts the historical season floor', async () => {
+    const migration = await readFile(ACTIVATION_MIGRATION, 'utf8');
+
+    assert.match(
+        migration,
+        /to_regclass\('public\.wowy_season_average_activation'\) is not null/
+    );
+    assert.match(
+        migration,
+        /drop constraint if exists wowy_season_average_activation_minimum_check/
+    );
+    assert.match(migration, /check \(source_min_season >= 1957\)/);
 });
 
 test('historical RPCs search, sort, and return publication-owned identities', async () => {
