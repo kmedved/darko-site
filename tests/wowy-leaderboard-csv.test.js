@@ -66,6 +66,8 @@ test('opening-game WOWY CSV retains the snapshot schema during the migration win
         [
             '#',
             'Player',
+            'League',
+            'Cross-League Level',
             'Team Code',
             'Team',
             'Filter Position',
@@ -83,6 +85,8 @@ test('opening-game WOWY CSV retains the snapshot schema during the migration win
         [
             'rank',
             'player_name',
+            'league',
+            'cross_league_level_identified',
             'team_code',
             'team_name',
             'filter_position',
@@ -103,6 +107,8 @@ test('historical WOWY CSV preserves multi-team provenance and season-average con
         [
             '#',
             'Player',
+            'League',
+            'Cross-League Level',
             'Team Codes',
             'Teams',
             'Filter Position',
@@ -122,6 +128,8 @@ test('historical WOWY CSV preserves multi-team provenance and season-average con
         [
             'rank',
             'player_name',
+            'league',
+            'cross_league_level_identified',
             'team_codes',
             'team_names',
             'filter_position',
@@ -145,6 +153,11 @@ test('historical WOWY CSV preserves multi-team provenance and season-average con
         (column) => column.accessor === 'height_inches'
     );
     assert.equal(height.format(null), '—');
+    const linkage = wowyHistoricalLeaderboardCsvColumns.find(
+        (column) => column.accessor === 'cross_league_level_identified'
+    );
+    assert.equal(linkage.format(false), 'Unidentified');
+    assert.equal(linkage.format(true), 'Identified');
 });
 
 test('all-time WOWY CSV preserves the official rank and player-season context', () => {
@@ -154,6 +167,8 @@ test('all-time WOWY CSV preserves the official rank and player-season context', 
             '#',
             'Player',
             'Season',
+            'League',
+            'Cross-League Level',
             'Team Codes',
             'Teams',
             'Filter Position',
@@ -171,6 +186,8 @@ test('all-time WOWY CSV preserves the official rank and player-season context', 
             'rank',
             'player_name',
             'season',
+            'league',
+            'cross_league_level_identified',
             'team_codes',
             'team_names',
             'filter_position',

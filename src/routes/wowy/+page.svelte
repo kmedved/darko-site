@@ -319,6 +319,10 @@
     );
     const publication = $derived(data.publication || null);
     const seasonOptions = $derived(data.seasons || []);
+    const seasonAdjustedFrom = $derived.by(() => {
+        const value = Number(publication?.season_adjusted_from);
+        return Number.isInteger(value) && value >= 1978 ? value : 1978;
+    });
     const hasAllTimeRanks = $derived.by(() =>
         players.some((player) => {
             const rank = Number.parseInt(player?.leaderboard_rank, 10);
@@ -339,6 +343,10 @@
     const isAllTimeView = $derived(activeView === 'all-time');
     const isCurrentView = $derived(activeView === 'current');
     const isSeasonView = $derived(activeView === 'season');
+    const adjustedAvailable = $derived(
+        isAllTimeView ||
+        (isSeasonView && Number(data.selectedSeason) >= seasonAdjustedFrom)
+    );
     const ratingMode = $derived(data.selectedRatingMode === 'adjusted' ? 'adjusted' : 'average');
     const isAdjustedRatings = $derived(!isCurrentView && ratingMode === 'adjusted');
     const activeSeason = $derived(
@@ -454,6 +462,7 @@
                 player?.player_name,
                 player?.team_name,
                 player?.team_code,
+                player?.league,
                 ...historicalTeamCodes(player),
                 ...historicalTeamNames(player),
                 teamDisplayLabel(player),
@@ -900,6 +909,14 @@
         return player?.player_name || `Player ${player?.nba_id ?? '—'}`;
     }
 
+    function historicalLeagueLabel(player) {
+        const league = String(player?.league || '').trim().toUpperCase();
+        if (!league.includes('ABA')) return null;
+        return player?.cross_league_level_identified === false
+            ? `${league} · level unlinked`
+            : league;
+    }
+
     function playerFilterPosition(player) {
         const position = player?.filter_position ?? player?.position;
         return typeof position === 'string' ? position.trim().toUpperCase() : '';
@@ -1147,7 +1164,9 @@
                     </strong>
                     <span>{viewStatusDetail}</span>
                 </div>
-                <p class="wowy-projection-note">Observed player-game ratings only. This page does not use DARKO projection rows.</p>
+                <p class="wowy-projection-note">
+                    Observed player-game ratings only; this page does not use DARKO projection rows. Daily and season-average WOWY begin in 1956-57. Season-Adjusted WOWY remains available from 1977-78.
+                </p>
             </div>
 
             <aside class="wowy-method" data-shiny-surface="well" aria-label="How to read WOWY RAPM">
@@ -1171,6 +1190,9 @@
                     {:else}
                         Each row is a player who appeared in their team’s first game of {activeSeasonLabel}. Historical team codes and names reflect that opening-game snapshot.
                     {/if}
+                </p>
+                <p>
+                    ABA seasons are included. The ABA-to-NBA level is explicitly unidentified from 1967-68 through 1970-71 and identified from 1971-72 through 1975-76.
                 </p>
                 <div class="wowy-method-links">
                     <a href="/wowy/about">Read how WOWY works <span aria-hidden="true">→</span></a>
@@ -1255,12 +1277,17 @@
                             />
                             <span>Average</span>
                         </label>
-                        <label class:active={isAdjustedRatings}>
+                        <label
+                            class:active={isAdjustedRatings}
+                            class:unavailable={!adjustedAvailable}
+                            title={!adjustedAvailable ? 'Season-Adjusted WOWY begins in 1977-78.' : undefined}
+                        >
                             <input
                                 type="radio"
                                 name="wowy-rating-mode"
                                 value="adjusted"
                                 checked={isAdjustedRatings}
+                                disabled={!adjustedAvailable}
                                 onchange={selectRatingMode}
                             />
                             <span>Adjusted</span>
@@ -1480,7 +1507,11 @@
                                             aria-label={`Open ${playerName(player)}'s WOWY RAPM trajectory`}
                                         >
                                             <span>{playerName(player)}</span>
-                                            {#if player.position}<small>{player.position}</small>{/if}
+                                            {#if historicalLeagueLabel(player)}
+                                                <small>{historicalLeagueLabel(player)}</small>
+                                            {:else if player.position}
+                                                <small>{player.position}</small>
+                                            {/if}
                                         </a>
                                     </td>
                                     {#if isAllTimeView}
@@ -1931,6 +1962,11 @@
         background: var(--bg-surface);
         box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 15%, transparent);
         color: var(--accent);
+    }
+
+    .wowy-rating-mode label.unavailable {
+        cursor: not-allowed;
+        opacity: 0.45;
     }
 
     .wowy-rating-mode input {

@@ -122,7 +122,7 @@ Built by `build_supabase_tables.py` which left-joins six source files on `(nba_i
 ### wowy_ratings
 
 Synthetic WOWY RAPM history for the Trajectories page. One row per mapped player appearance from
-the 1977-78 season onward, including postseason games and with no exposure minimum.
+the 1956-57 season onward, including NBA and ABA postseason games and with no exposure minimum.
 
 - **Primary key:** `(nba_id, game_id)`
 - **Unique constraints:** `(nba_id, date)`, `(nba_id, career_game_num)`
@@ -136,22 +136,28 @@ the 1977-78 season onward, including postseason games and with no exposure minim
 
 | Column | Postgres type | Notes |
 |---|---|---|
-| nba_id | bigint | Canonical NBA player ID |
+| nba_id | bigint | Official positive NBA ID, or stable negative project ID when no NBA ID exists; zero is forbidden |
+| player_name | text | Publication-owned display identity; required on unified 1957 artifacts |
 | game_id | text | Canonical model game ID |
 | date | date | Same-date postgame rating date |
 | season | integer | NBA season ending year |
 | career_game_num | integer | Sample-relative played-game number, starting at 1 |
-| age | double precision | Player age on game date |
+| age | double precision | Player age on game date; nullable when the historical biography is unavailable |
 | wowy_rapm | double precision | Synthetic total RAPM |
 | wowy_orapm | double precision | Synthetic offensive RAPM |
 | wowy_drapm | double precision | Synthetic defensive RAPM; positive is better defense |
 | exposure | double precision | Model exposure at the snapshot |
+| league | text | `NBA`, `ABA`, or a slash-joined within-season league label |
+| cross_league_level_identified | boolean | False for ABA observations before the 1971-72 identified linkage period |
 
 ### wowy_publication
 
 Singleton freshness and provenance row for the public WOWY table. `id` is constrained to `1`.
 It records the publication ID, composite/output hashes, data-through date and season, counts, and
-publication timestamp. The Trajectories page uses `season_through` for its freshness label.
+publication timestamp. `season_from`, `season_adjusted_from`, and
+`aba_cross_league_identified_from` separately record the Daily/Final Cut floor, the unchanged
+Season-Adjusted floor, and the first identified ABA-to-NBA linkage season. The Trajectories page
+uses `season_through` for its freshness label.
 
 ### Active WOWY leaderboard snapshot
 
@@ -209,11 +215,14 @@ the guarded manual activation operation, `get_wowy_leaderboard_seasons()` and
 `get_wowy_season_player_ratings(p_season)` source only the season-average table and return
 `snapshot_context = 'season-average'`.
 
-Migration `20260723_001_extend_wowy_publication_to_1978.sql` lowers the four
-season-table constraints to 1978 and permits both the incumbent 1980 metadata
-and the 1978 successor during a rollback-safe transaction. The model publisher
-updates the private season-average activation marker atomically with the
-average table, so its recorded range and counts cannot lag the public data.
+Migration `20260814_001_publish_unified_wowy_from_1957.sql` lowers only the
+Daily/Final Cut and season-average/opening constraints to 1957. Season-Adjusted
+and box context stay at 1978. It also embeds historical player and league
+identity in each publication-owned table, permits nonzero negative IDs on WOWY
+surfaces only, and keeps the incumbent 1978 publication valid before the atomic
+data replacement. The model publisher updates the private season-average
+activation marker and publication coverage metadata atomically with the public
+tables, so their recorded range and counts cannot lag the data.
 
 ### All-time WOWY season leaderboard
 

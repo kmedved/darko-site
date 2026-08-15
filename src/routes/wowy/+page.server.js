@@ -33,8 +33,18 @@ export async function load({ url, setHeaders }) {
             : 'all-time';
     const requestedRatingMode =
         url.searchParams.get('rating') === 'adjusted' ? 'adjusted' : 'average';
+    const publishedSeasonAdjustedFrom = Number(publication?.season_adjusted_from);
+    const seasonAdjustedFrom =
+        Number.isInteger(publishedSeasonAdjustedFrom) && publishedSeasonAdjustedFrom >= 1978
+            ? publishedSeasonAdjustedFrom
+            : 1978;
+    const adjustedAvailable =
+        selectedView === 'all-time' ||
+        (selectedView === 'season' && selectedSeason >= seasonAdjustedFrom);
     const selectedRatingMode =
-        selectedView === 'current' ? 'average' : requestedRatingMode;
+        selectedView === 'current' || !adjustedAvailable
+            ? 'average'
+            : requestedRatingMode;
     let players;
     let allTimeTotal = null;
     let allTimeHasMore = false;

@@ -208,7 +208,7 @@ test('historical WOWY rows preserve season context without current-team fallback
     assert.match(normalizer, /season_possessions:/);
     assert.match(normalizer, /method_version:/);
     assert.match(normalizer, /application_model:/);
-    assert.match(normalizer, /season >= 1978/);
+    assert.match(normalizer, /season >= 1957/);
     assert.match(normalizer, /tm_id: isHistoricalSeasonSummary \? null : resolveTeamId/);
     assert.match(normalizer, /position: isHistoricalSeasonSummary \? null : normalizePosition/);
 });

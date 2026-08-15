@@ -262,13 +262,16 @@ const PLAYERS_DIM_COLUMNS = [
 
 const WOWY_RATING_COLUMNS = [
     'nba_id',
+    'player_name',
     'date',
     'season',
     'career_game_num',
     'age',
     'wowy_rapm',
     'wowy_orapm',
-    'wowy_drapm'
+    'wowy_drapm',
+    'league',
+    'cross_league_level_identified'
 ].join(', ');
 
 const TEAM_FALLBACK_LOOKBACK_DAYS = 370;
@@ -468,7 +471,7 @@ function normalizeWowyLeaderboardRows(data) {
     return (Array.isArray(data) ? data : [])
         .map((row) => {
             const nbaId = Number(row?.nba_id);
-            if (!Number.isInteger(nbaId) || nbaId <= 0) return null;
+            if (!Number.isInteger(nbaId) || nbaId === 0) return null;
 
             const season = Number(row?.season);
             const leaderboardRank = Number(row?.leaderboard_rank);
@@ -487,12 +490,17 @@ function normalizeWowyLeaderboardRows(data) {
 
             return {
                 nba_id: nbaId,
-                season: Number.isInteger(season) && season >= 1978 ? season : null,
+                season: Number.isInteger(season) && season >= 1957 ? season : null,
                 leaderboard_rank:
                     Number.isInteger(leaderboardRank) && leaderboardRank > 0
                         ? leaderboardRank
                         : null,
                 player_name: row.player_name ?? null,
+                league: normalizedTeamName(row.league),
+                cross_league_level_identified:
+                    typeof row.cross_league_level_identified === 'boolean'
+                        ? row.cross_league_level_identified
+                        : null,
                 team_name: teamName,
                 team_code: teamCode ?? teamCodes[0] ?? null,
                 team_codes: teamCodes,
@@ -1257,7 +1265,7 @@ export async function getWowyPublication() {
         const { data, error } = await supabase
             .from('wowy_publication')
             .select(
-                'publication_id, composite_sha256, output_sha256, data_through, season_through, row_count, player_count, display_method, historian_sha256, published_at'
+                'publication_id, composite_sha256, output_sha256, data_through, season_from, season_through, season_adjusted_from, aba_cross_league_identified_from, row_count, player_count, display_method, historian_sha256, published_at'
             )
             .eq('id', 1)
             .maybeSingle();

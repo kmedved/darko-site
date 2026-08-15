@@ -26,6 +26,7 @@
 	import { getContext } from 'svelte';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
+	import { isWowyPlayerId } from '$lib/utils/wowyPlayerId.js';
 
 	let selectedPlayers = $state([]);
 	let timeScale = $state('games');
@@ -374,9 +375,16 @@
 		];
 	}
 
-	function addPlayerShell(player) {
+	function isPlayerIdForHistory(nbaId, kind) {
+		return kind === 'wowy'
+			? isWowyPlayerId(nbaId)
+			: Number.isInteger(nbaId) && nbaId > 0;
+	}
+
+	function addPlayerShell(player, historyKind = null) {
 		const nbaId = Number.parseInt(player?.nba_id ?? player?.nbaId, 10);
-		if (!Number.isInteger(nbaId) || nbaId <= 0) return false;
+		const kind = historyKind ?? (isWowyMetric ? 'wowy' : 'darko');
+		if (!isPlayerIdForHistory(nbaId, kind)) return false;
 		if (selectedPlayers.some((entry) => entry.nba_id === nbaId)) return false;
 
 		selectedPlayers = [
@@ -396,6 +404,7 @@
 	}
 
 	async function loadHistory(nbaId, kind) {
+		if (!isPlayerIdForHistory(nbaId, kind)) return [];
 		const player = selectedPlayers.find((entry) => entry.nba_id === nbaId);
 		if (!player) return [];
 		const loadedKey = kind === 'wowy' ? 'wowyLoaded' : 'darkoLoaded';
@@ -433,7 +442,8 @@
 
 	async function ensureSelectedHistories(kind) {
 		const playersToLoad = selectedPlayers.filter((player) =>
-			kind === 'wowy' ? !player.wowyLoaded : !player.darkoLoaded
+			isPlayerIdForHistory(player.nba_id, kind) &&
+			(kind === 'wowy' ? !player.wowyLoaded : !player.darkoLoaded)
 		);
 		if (playersToLoad.length === 0) return;
 
@@ -457,16 +467,16 @@
 
 	async function preloadPlayersById(idList, historyKind = null) {
 		if (!Array.isArray(idList) || idList.length === 0) return;
+		const kind = historyKind ?? (isWowyMetric ? 'wowy' : 'darko');
 		const uniqueIds = [...new Set(
 			idList
 				.map((id) => Number.parseInt(id, 10))
-				.filter((id) => Number.isInteger(id) && id > 0)
+				.filter((id) => isPlayerIdForHistory(id, kind))
 		)];
 		for (const nbaId of uniqueIds) {
-			addPlayerShell({ nba_id: nbaId, label: starterPlayerById.get(nbaId)?.label });
+			addPlayerShell({ nba_id: nbaId, label: starterPlayerById.get(nbaId)?.label }, kind);
 		}
 
-		const kind = historyKind ?? (isWowyMetric ? 'wowy' : 'darko');
 		const results = await Promise.allSettled(
 			uniqueIds.map((nbaId) => loadHistory(nbaId, kind))
 		);
@@ -543,10 +553,10 @@
 
 	async function loadPlayerById(nbaId) {
 		const starter = STARTER_PLAYERS.find((player) => player.nbaId === nbaId);
-		if (!addPlayerShell({ nba_id: nbaId, label: starter?.label })) return;
+		const kind = isWowyMetric ? 'wowy' : 'darko';
+		if (!addPlayerShell({ nba_id: nbaId, label: starter?.label }, kind)) return;
 		error = null;
 		try {
-			const kind = isWowyMetric ? 'wowy' : 'darko';
 			const rows = await loadHistory(nbaId, kind);
 			if (rows.length === 0) {
 				error = `No ${selectedMetricLabel} history found for player ${nbaId}`;
@@ -568,8 +578,8 @@
 
 			const randomIndex = Math.floor(Math.random() * players.length);
 			const randomPlayer = players[randomIndex];
-			if (addPlayerShell(randomPlayer)) {
-				const kind = historyKind ?? (isWowyMetric ? 'wowy' : 'darko');
+			const kind = historyKind ?? (isWowyMetric ? 'wowy' : 'darko');
+			if (addPlayerShell(randomPlayer, kind)) {
 				await loadHistory(randomPlayer.nba_id, kind);
 			}
 		} catch (err) {
@@ -580,10 +590,10 @@
 	}
 
 	async function addPlayer(player) {
-		if (!addPlayerShell(player)) return;
+		const kind = isWowyMetric ? 'wowy' : 'darko';
+		if (!addPlayerShell(player, kind)) return;
 		error = null;
 		try {
-			const kind = isWowyMetric ? 'wowy' : 'darko';
 			const rows = await loadHistory(player.nba_id, kind);
 			if (rows.length === 0) {
 				error = `No ${selectedMetricLabel} history found for ${player.player_name}`;

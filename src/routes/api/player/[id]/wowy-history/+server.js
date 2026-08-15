@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 
 import { MAX_WOWY_HISTORY_ROWS, getWowyPlayerHistory } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
+import { isWowyPlayerId } from '$lib/utils/wowyPlayerId.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -16,7 +17,7 @@ export async function GET({ params, setHeaders }) {
     });
 
     const nbaId = Number(params.id);
-    if (!Number.isInteger(nbaId) || nbaId <= 0) {
+    if (!isWowyPlayerId(nbaId)) {
         throw error(400, 'Invalid nba_id');
     }
 

@@ -5,7 +5,7 @@ export const metricDefinitions = {
     box_dpm: 'Box-score-only DPM, built from core on-court box-score components.',
     on_off_dpm: 'On/off DPM, incorporating team-level impact when a player is on vs. off the court.',
     bayes_rapm_total: 'Bayesian RAPM total estimate, in points per 100 possessions above league average.',
-    wowy_rapm: 'Daily-grain synthetic RAPM estimate built consistently from the 1977-78 season onward. Historical dates use a modest hindsight refinement to sharpen career arcs.',
+    wowy_rapm: 'Daily-grain synthetic RAPM estimate built consistently from the 1956-57 season onward. Historical dates use a modest hindsight refinement to sharpen career arcs.',
     wowy_orapm: 'Daily-grain synthetic offensive RAPM estimate with the same historical refinement. Offensive and defensive attribution is less stable than total impact.',
     wowy_drapm: 'Daily-grain synthetic defensive RAPM estimate with the same historical refinement, where positive values mean better defense. Offensive and defensive attribution is less stable than total impact.',
     wowy_exposure: 'Model exposure at the latest observed game. It is a sample-support measure, not minutes or possessions.',

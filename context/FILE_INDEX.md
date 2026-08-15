@@ -115,6 +115,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `src/lib/utils/teamAbbreviations.js` - util
 - `src/lib/utils/teamRouteUtils.js` - util
 - `src/lib/utils/wideStickyTable.js` - util
+- `src/lib/utils/wowyPlayerId.js` - util
 - `src/lib/utils/wowySeasonContext.js` - util
 
 ## src/routes
@@ -195,6 +196,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `supabase/migrations/20260719_001_publish_wowy_final_cut_default.sql` - Supabase SQL migration.
 - `supabase/migrations/20260723_001_extend_wowy_publication_to_1978.sql` - Supabase SQL migration.
 - `supabase/migrations/20260724_001_sanitize_wowy_publication_method.sql` - Supabase SQL migration.
+- `supabase/migrations/20260814_001_publish_unified_wowy_from_1957.sql` - Supabase SQL migration.
 
 ## tests
 
@@ -245,6 +247,7 @@ For implementation work, request or paste raw source for the files you expect to
 - `tests/team-route-wrappers.test.js` - test
 - `tests/trajectories-mobile-layout.test.js` - test
 - `tests/trajectories-url-sync.test.js` - test
+- `tests/unified-1957-publication.test.js` - test
 - `tests/wide-sticky-table-layout.test.js` - test
 - `tests/wowy-article-page.test.js` - test
 - `tests/wowy-leaderboard-csv.test.js` - test

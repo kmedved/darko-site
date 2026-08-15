@@ -28,7 +28,9 @@ test('WOWY leaderboard loader defaults to all time and supports Current and URL-
     assert.match(contents, /url\.searchParams\.get\('view'\) === 'current'/);
     assert.match(contents, /requestedSeasonValue\.trim\(\) === 'current'/);
     assert.match(contents, /url\.searchParams\.get\('rating'\) === 'adjusted'/);
-    assert.match(contents, /selectedView === 'current' \? 'average' : requestedRatingMode/);
+    assert.match(contents, /publication\?\.season_adjusted_from/);
+    assert.match(contents, /selectedSeason >= seasonAdjustedFrom/);
+    assert.match(contents, /selectedView === 'current' \|\| !adjustedAvailable/);
     assert.match(contents, /let selectedView = selectedSeason !== null/);
     assert.match(contents, /'all-time'/);
     assert.match(contents, /getWowyAllTimePage\(\)/);

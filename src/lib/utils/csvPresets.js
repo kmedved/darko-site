@@ -40,6 +40,12 @@ function formatSeasonEndYearOrDash(value) {
     return formatSeasonEndYearLabel(value) || DASH;
 }
 
+function formatCrossLeagueLevel(value) {
+    if (value === true) return 'Identified';
+    if (value === false) return 'Unidentified';
+    return DASH;
+}
+
 export function formatNullable(value, fallback = DASH) {
     return value ?? fallback;
 }
@@ -164,6 +170,8 @@ export const wowyLeaderboardCsvColumns = [
 export const wowyOpeningGameLeaderboardCsvColumns = [
     { header: '#', accessor: 'rank' },
     { header: 'Player', accessor: 'player_name' },
+    { header: 'League', accessor: 'league', format: formatOrDash },
+    { header: 'Cross-League Level', accessor: 'cross_league_level_identified', format: formatCrossLeagueLevel },
     { header: 'Team Code', accessor: 'team_code', format: formatOrDash },
     { header: 'Team', accessor: 'team_name', format: formatOrDash },
     { header: 'Filter Position', accessor: 'filter_position', format: formatOrDash },
@@ -179,6 +187,8 @@ export const wowyOpeningGameLeaderboardCsvColumns = [
 export const wowyHistoricalLeaderboardCsvColumns = [
     { header: '#', accessor: 'rank' },
     { header: 'Player', accessor: 'player_name' },
+    { header: 'League', accessor: 'league', format: formatOrDash },
+    { header: 'Cross-League Level', accessor: 'cross_league_level_identified', format: formatCrossLeagueLevel },
     { header: 'Team Codes', accessor: 'team_codes', format: formatListOrDash },
     { header: 'Teams', accessor: 'team_names', format: formatListOrDash },
     { header: 'Filter Position', accessor: 'filter_position', format: formatOrDash },
@@ -214,6 +224,8 @@ export const wowyAllTimeLeaderboardCsvColumns = [
     { header: '#', accessor: 'rank' },
     { header: 'Player', accessor: 'player_name' },
     { header: 'Season', accessor: 'season', format: formatSeasonEndYearOrDash },
+    { header: 'League', accessor: 'league', format: formatOrDash },
+    { header: 'Cross-League Level', accessor: 'cross_league_level_identified', format: formatCrossLeagueLevel },
     { header: 'Team Codes', accessor: 'team_codes', format: formatListOrDash },
     { header: 'Teams', accessor: 'team_names', format: formatListOrDash },
     { header: 'Filter Position', accessor: 'filter_position', format: formatOrDash },
