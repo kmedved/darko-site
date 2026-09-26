@@ -12,6 +12,7 @@ npm run dev       # Dev server at localhost:5173
 npm run build     # Production build
 npm run preview   # Preview production build
 npm run validate  # test + svelte-check + build
+npm run validate:local  # test + svelte-check (skips the build, which fails on Windows without symlink rights)
 ```
 
 ## Runtime Notes
