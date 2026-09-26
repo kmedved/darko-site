@@ -1,0 +1,84 @@
+# DARKO redesign prototype (September 2026)
+
+Reference only. Nothing in this folder is built, tested or deployed by the site.
+
+- Live prototype: https://claude.ai/artifact/Gdac1cNaPRp4zvoF1DKXcM (private to the owner's
+  claude.ai account; share it from the artifact's Share menu before sending the link).
+- Built on the published DARKO tables as of Jul 26, 2026.
+- A single, framework-free page: plain JavaScript, D3 7 and a hash router, bundled with its
+  data into one HTML file. It is a design and behavior reference for porting features into
+  this SvelteKit app, not code to copy verbatim.
+
+## The ten features and where they live
+
+| Feature | Prototype source | Port target |
+|---|---|---|
+| The Daily: headline, movers, single-game shocks, age records, watchlist | `src/10-today.js` | new route; movers need a Postgres function |
+| Rewind: global date scrubber and weekly top-15 race since 1996-97 | `src/03-floor.js`, `src/16-rewind.js` | needs a precomputed weekly-top table |
+| Seismograph: every game's DPM update, split offense/defense | `drawSeismo` in `src/12-player.js` | player page; data already loaded (opponents need `opp_id`) |
+| Comps & Futures: historical matches and a five-year fan chart | `comps.py`, `drawFan` in `src/12-player.js` | needs a `player_comps` table from the pipeline |
+| Roster Lab: two-team trades, minutes, rating, wins, matchup odds | `src/14-lab.js` | new route on the existing team payload |
+| Team DNA: rating contributions, lineups, payroll vs value, core outlook | `src/13-teams.js` | existing `TeamDetailView.svelte` |
+| Fantasy Lab: ESPN, Yahoo, DraftKings, 9-cat or custom scoring, draft board | `src/15-fantasy.js` | `/projections` (currently "Not live yet") |
+| Ask DARKO: command bar for players, filters, trades and time travel | `src/19-ask.js` | site-wide layout component |
+| DARKOdle: daily mystery player from a career DPM curve | `src/17-darkodle.js` | needs season-end career rows |
+| Card Studio: shareable PNG player cards | `src/18-card.js` | client canvas, plus server-rendered share images |
+
+Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team ratings),
+`src/02-ui.js` (O/X split bar, sparkline, skill fingerprint glyph, tooltip) and
+`src/04-charts.js` (time-series chart with crosshair).
+
+## Agreed port order
+
+1. Fantasy Lab into `/projections`.
+2. Design foundations (offense/defense tokens for every theme, wide numerals, O/X split,
+   sparkline, fingerprint glyph) and the Seismograph on player pages.
+3. Ask DARKO.
+4. Team DNA additions, then Roster Lab.
+5. Card Studio and per-player share images.
+6. Pipeline-backed features in one batch: Comps & Futures, Rewind and the site-wide date,
+   The Daily, DARKOdle.
+
+## Porting notes
+
+- Fantasy per-game values use the same conversion as `nba_darko`'s props stage:
+  `poss = x_minutes * x_pace / 48`, `stat = x_stat_100 * poss / 100`.
+- The nightly publish (`nba_darko/1_historic_darko/push_website.py`) drops `player_ratings`
+  with CASCADE and recreates only the functions in `restore_player_ratings_rpcs()`. Any new
+  Postgres function built on that table must be added there, or it disappears overnight.
+- `players.draft_year` and `players.draft_slot` are empty for all 5,358 rows. The prototype
+  shows rookie season instead; the live Rate a Player page shows everyone as "Undrafted".
+- The Jul 26 offseason rows in `player_ratings` have no team (`tm_id = -999`), so the Roster
+  Lab starts from each team's late-season rotation.
+- Season-end rows in the prototype count playoff games in games and minutes.
+- Comps, Roster Lab team ratings and fantasy values are prototype calculations, not DARKO
+  outputs. The team-rating wins fit is computed in the page from the ratings it shows.
+
+## Color tokens
+
+Validated for color-vision deficiency and contrast with the dataviz palette checker.
+Offense is always paired with a circle glyph and defense with a cross, so color is never
+the only cue.
+
+| Token | Light | Dark |
+|---|---|---|
+| Offense | `#eb6834` | `#d95926` |
+| Defense | `#2a78d6` | `#3987e5` |
+| Maple (time, highlights) | `#B8812F` (text `#9A6A26`) | `#D9A566` |
+
+The site's themes (dark, black, light, white) need their own check before these tokens are
+added to `src/app.css`.
+
+## Rebuilding and viewing
+
+Requires the DARKO Python environment (polars, numpy) and read access to the shared runtime.
+
+```bash
+NBA_DARKO_RUNTIME_ROOT=/path/to/nba_darko_live python build_data.py   # writes data.json
+python build.py                                                      # writes dist/
+python -m http.server 8765 --directory dist
+```
+
+Then open http://localhost:8765/preview-std.html. `dist/darko-redesign.html` is the
+artifact version (no doctype or viewport tag; the artifact viewer adds them).
+`data.json` and `dist/` are ignored by git.
