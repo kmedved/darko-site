@@ -137,8 +137,7 @@ domains.
   states still work.
 - Desktop and mobile are checked in both views; wide-table overflow does not
   break sticky headers.
-- `npm run validate` passes. Run `npm run context:sync` after changing these
-  contracts or module boundaries.
+- `npm run validate` passes.
 
 For local review, use `?display=shiny` without changing saved preference. An
 explicit toggle click removes the preview parameter and saves the user's

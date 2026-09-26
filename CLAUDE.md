@@ -3,7 +3,6 @@
 This file is intentionally minimal. See the dedicated references:
 
 - [`AGENTS.md`](AGENTS.md) for agent-facing implementation rules and conventions.
-- [`context/START_HERE.md`](context/START_HERE.md) for the canonical context handoff flow.
 - [`SUPABASE_SCHEMA.md`](SUPABASE_SCHEMA.md) for Supabase table schemas, DB→frontend column mappings, pipeline scripts (`build_supabase_tables.py` / `upload_to_supabase.py`), and data pipeline debugging.
 
 ## Commands
@@ -21,14 +20,8 @@ npm run validate  # test + svelte-check + build
 - Documented repo commands use `npm run`; Bun is optional if you prefer it locally. Vercel serverless functions run on Node 22.x.
 - Elo rate-limit cleanup is handled by the Vercel cron endpoint `/api/internal/maintenance/elo-rate-limits/prune`.
 
-## LLM Context Artifacts
+## Versioning
 
-- `context/START_HERE.md` is the human guide if you are unsure what to paste.
-- Use `context/REPO_ARCHITECTURE.md` plus one `context/COMPRESSED_*.md` bundle as the default repo handoff.
-- For oracle workflows, use `context/REPO_ARCHITECTURE.md` plus `context/FILE_INDEX.md`.
-- For implementation work, include raw source for the touched files; compressed bundles are for navigation only.
-- Refresh checked-in context artifacts with `npm run context:sync` after changes to contracts, routing, module boundaries, or named invariants.
-- Refresh local split bundles and token budgets with `npm run context:build`.
 - Version policy is **Policy B**: only shipped/runtime behavior changes bump `package.json`'s version.
 
 ## Dev Server

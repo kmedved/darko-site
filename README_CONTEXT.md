@@ -1,6 +1,6 @@
 # README_CONTEXT.md
 
-Lightweight human overview only. Canonical LLM context artifacts live in `context/`.
+Lightweight human overview. Agent rules live in `AGENTS.md`.
 
 ## Darko Site
 
@@ -38,8 +38,6 @@ npm run validate
 - Compare supports up to four players via `?ids=...` query params.
 - Documented repo commands use `npm run`; Bun is optional if you prefer it locally. Vercel serverless functions run on Node 22.x.
 - Elo rate-limit cleanup runs daily through the Vercel cron endpoint at `/api/internal/maintenance/elo-rate-limits/prune`.
-- Repo context artifacts live in `context/`; default handoff is `context/REPO_ARCHITECTURE.md` plus one generated split bundle.
-- For implementation tasks, always include raw source for the files being changed.
 
 ## Data retrieval limits (current behavior)
 
@@ -48,10 +46,3 @@ npm run validate
 - Compare page preloads requested `?ids=...` players server-side so same-route URL changes stay in sync.
 - Full history remains an explicit opt-in path so default requests stay bounded.
 - For future expansion: prioritize full-history enablement for profile-like pages first, then paginate elsewhere.
-
-## LLM Context Artifacts
-
-- Start at `context/START_HERE.md`.
-- Canonical handoff is `context/REPO_ARCHITECTURE.md` plus one matching `context/COMPRESSED_*.md`.
-- For implementation work, include raw source for the files being changed.
-- Refresh checked-in artifacts with `npm run context:sync`; refresh local bundles with `npm run context:build`.

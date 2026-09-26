@@ -494,7 +494,6 @@ for constants. Keep the three consistent:
 4. Precedence when sources conflict: legacy source values (this document) →
    archived screenshots → taste. The "Preserve from the modern app" list is
    never weakened by a Shiny View change.
-5. Run `npm run context:sync` after changing these contracts (repo policy).
 
 ## Quick visual QA checklist
 
