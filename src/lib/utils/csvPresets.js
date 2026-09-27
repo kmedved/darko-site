@@ -1,4 +1,5 @@
 import { downloadCsv } from './csv.js';
+import { FANTASY_CATEGORIES } from './fantasyScoring.js';
 import { formatSeasonEndYearLabel } from './seasonUtils.js';
 
 const DASH = '\u2014';
@@ -396,3 +397,32 @@ export function getLineupsCsvColumns(playerCount = 5) {
 }
 
 export const lineupsCsvColumns = getLineupsCsvColumns(5);
+
+export function getFantasyCsvColumns(categories = false) {
+    const perGame = (header, accessor) => ({ header, accessor, format: (v) => formatFixed(v, 1) });
+    const columns = [
+        { header: 'Rank', accessor: 'rank' },
+        { header: 'Player', accessor: 'player_name' },
+        { header: 'Team', accessor: 'team_name', format: formatOrDash },
+        { header: 'Pos', accessor: 'position', format: formatOrDash },
+        perGame('Min', 'minutes'),
+        perGame('PTS', 'pts'),
+        perGame('REB', 'reb'),
+        perGame('AST', 'ast'),
+        perGame('STL', 'stl'),
+        perGame('BLK', 'blk'),
+        perGame('3PM', 'fg3m'),
+        { header: 'FG%', accessor: 'fg_pct', format: formatPercent },
+        { header: 'FT%', accessor: 'ft_pct', format: formatPercent },
+        perGame('TOV', 'tov'),
+        categories
+            ? { header: 'Total Z', accessor: 'value', format: (v) => formatFixed(v, 2) }
+            : { header: 'FP/G', accessor: 'value', format: (v) => formatFixed(v, 1) }
+    ];
+    if (categories) {
+        for (const { key, label } of FANTASY_CATEGORIES) {
+            columns.push({ header: `${label} z`, accessor: (row) => row.z?.[key], format: (v) => formatFixed(v, 2) });
+        }
+    }
+    return columns;
+}

@@ -292,7 +292,7 @@ test('all route families opt into the generalized Shiny surface contract', async
 	assert.match(shinyCss, /\[data-shiny-role='editorial-kicker'\]\s*\{[^}]*display:\s*none/);
 	assert.match(shinyCss, /\[data-shiny-table\]/);
 	assert.match(wowy, /class="wowy-eyebrow" data-shiny-role="editorial-kicker"/);
-	assert.match(projections, /class="status-eyebrow" data-shiny-role="editorial-kicker"/);
+	assert.match(projections, /class="fantasy-eyebrow" data-shiny-role="editorial-kicker"/);
 	assert.match(percentiles, /SHINY_SET1/);
 	assert.match(percentiles, /renderShinyChart/);
 	assert.match(scatterplot, /getShinyChartPreset\('scatter'\)/);

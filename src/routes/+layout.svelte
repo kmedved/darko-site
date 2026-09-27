@@ -29,7 +29,7 @@
 	];
 	const MORE_NAV_ITEMS = [
 		{ href: '/compare', label: 'Compare', match: (path) => path === '/compare' },
-		{ href: '/projections', label: 'Projections', match: (path) => path === '/projections' },
+		{ href: '/projections', label: 'Fantasy Lab', match: (path) => path === '/projections' },
 		{ href: '/rate', label: 'Rate a Player', match: (path) => path === '/rate' },
 		{ href: '/about', label: 'About', match: (path) => path.startsWith('/about') }
 	];

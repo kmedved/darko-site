@@ -37,6 +37,7 @@
 - Player profile trend chart: `src/lib/components/TalentTrendChart.svelte`
 - Client-side API helpers: `src/lib/api.js`
 - Metric tooltip definitions: `src/lib/utils/metricDefinitions.js`
+- Fantasy Lab (`/projections`) scoring and per-game conversion: `src/lib/utils/fantasyScoring.js`
 - Supabase schema, column mappings, API data layer, pipeline scripts, and freshness: `SUPABASE_SCHEMA.md`
 
 ## Workflow Notes
