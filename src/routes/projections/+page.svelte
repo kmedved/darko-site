@@ -151,8 +151,8 @@
 	function exportFantasyCsv() {
 		exportCsvRows({
 			rows: sortedRows,
-			columns: getFantasyCsvColumns(isCategories),
-			filename: `darko-fantasy-${preset}.csv`
+			columns: getFantasyCsvColumns(isCategories, FANTASY_PRESETS[preset].csvHeader),
+			filename: `darko-fantasy-${FANTASY_PRESETS[preset].file ?? preset}.csv`
 		});
 	}
 
@@ -242,6 +242,9 @@
 					</button>
 				{/each}
 			</div>
+			{#if FANTASY_PRESETS[preset].note}
+				<p class="scoring-note">{FANTASY_PRESETS[preset].note}</p>
+			{/if}
 
 			<label class="control-field search-control" for="fantasy-search">
 				<span class="sr-only">Search players</span>
@@ -498,6 +501,14 @@
 		align-items: center;
 		gap: 10px;
 		margin-bottom: 14px;
+	}
+
+	.scoring-note {
+		flex-basis: 100%;
+		order: 10;
+		margin: 0;
+		color: var(--text-secondary);
+		font-size: 12px;
 	}
 
 	.scoring-control {

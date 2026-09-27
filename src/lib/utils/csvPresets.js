@@ -51,6 +51,13 @@ export function formatNullable(value, fallback = DASH) {
     return value ?? fallback;
 }
 
+/** A 0-1 fraction as a percentage number (0.78 -> "78.0"), for columns headed %. */
+export function formatFractionAsPercent(value, decimals = 1) {
+    if (value === null || value === undefined || value === '') return DASH;
+    const n = Number.parseFloat(value);
+    return Number.isFinite(n) ? (n * 100).toFixed(decimals) : DASH;
+}
+
 export function formatFixed(value, decimals = 1) {
     if (value === null || value === undefined) return DASH;
     const n = Number.parseFloat(value);
@@ -309,7 +316,7 @@ export const standingsExpandedCsvColumns = [
     { header: 'Win Finals%', accessor: 'Win Finals', format: (v) => formatFixed(v, 1) },
     { header: 'Lottery%', accessor: 'Lottery%', format: (v) => formatFixed(v, 1) },
     { header: 'E[Pick]', accessor: 'ExpPick', format: (v) => formatFixed(v, 1) },
-    { header: 'W/L%', accessor: 'W/L%', format: (v) => formatFixed(v, 1) },
+    { header: 'W/L%', accessor: 'W/L%', format: formatFractionAsPercent },
     { header: 'Remain', accessor: 'Remain' },
     { header: 'Best', accessor: 'Best' },
     { header: 'Worst', accessor: 'Worst' },
@@ -398,7 +405,7 @@ export function getLineupsCsvColumns(playerCount = 5) {
 
 export const lineupsCsvColumns = getLineupsCsvColumns(5);
 
-export function getFantasyCsvColumns(categories = false) {
+export function getFantasyCsvColumns(categories = false, pointsHeader = 'FP/G') {
     const perGame = (header, accessor) => ({ header, accessor, format: (v) => formatFixed(v, 1) });
     const columns = [
         { header: 'Rank', accessor: 'rank' },
@@ -417,7 +424,7 @@ export function getFantasyCsvColumns(categories = false) {
         perGame('TOV', 'tov'),
         categories
             ? { header: 'Total Z', accessor: 'value', format: (v) => formatFixed(v, 2) }
-            : { header: 'FP/G', accessor: 'value', format: (v) => formatFixed(v, 1) }
+            : { header: pointsHeader, accessor: 'value', format: (v) => formatFixed(v, 1) }
     ];
     if (categories) {
         for (const { key, label } of FANTASY_CATEGORIES) {

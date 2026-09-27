@@ -301,6 +301,8 @@
     let allTimeLoadError = $state('');
     let allTimeAppliedQuery = $state('');
     let allTimeRequestSequence = 0;
+    // Complete all-time team and height choices by rating mode, fetched once each (see below).
+    let allTimeFilterOptions = $state({});
     let wowyTableRoot = $state(null);
     let wowyBodyScroller = $state(null);
     let wowyBodyTable = $state(null);
@@ -318,6 +320,21 @@
                 : []
     );
     const publication = $derived(data.publication || null);
+    const allTimeRatingKey = $derived(data.selectedRatingMode === 'adjusted' ? 'adjusted' : 'average');
+
+    // The all-time table loads 100 player-seasons at a time, so its filter choices come from the
+    // whole publication instead of the loaded rows (else most teams would be missing).
+    $effect(() => {
+        if (data.selectedView !== 'all-time') return;
+        const key = allTimeRatingKey;
+        if (untrack(() => allTimeFilterOptions[key])) return;
+        fetch(`/api/wowy/filter-options?rating=${key}`)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((options) => {
+                if (options) allTimeFilterOptions = { ...allTimeFilterOptions, [key]: options };
+            })
+            .catch(() => {});
+    });
     const seasonOptions = $derived(data.seasons || []);
     const seasonAdjustedFrom = $derived.by(() => {
         const value = Number(publication?.season_adjusted_from);
@@ -388,6 +405,9 @@
     const dateColumnKey = $derived(isSeasonSummaryHistory ? 'last_date' : 'date');
     const teamOptions = $derived.by(() => {
         const teams = new Map();
+        if (isAllTimeView) {
+            for (const team of allTimeFilterOptions[allTimeRatingKey]?.teams ?? []) teams.set(team.value, team);
+        }
         for (const player of players) {
             for (const team of teamOptionEntries(player)) {
                 if (!team.value || teams.has(team.value)) continue;
@@ -409,7 +429,7 @@
             : 'all'
     );
     const heightOptions = $derived.by(() => {
-        const heights = new Set();
+        const heights = new Set(isAllTimeView ? (allTimeFilterOptions[allTimeRatingKey]?.heights ?? []) : []);
         for (const player of players) {
             const height = playerHeightInches(player);
             if (height !== null && height > 0) heights.add(height);

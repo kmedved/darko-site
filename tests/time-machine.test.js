@@ -16,11 +16,15 @@ import { firstFrameOfSeason, lastName, reignsThrough, seasonWeek } from '../src/
 import {
     TEAM_MINUTES,
     MAX_PLAYER_MINUTES,
+    addToScenario,
+    dedupeEdits,
     defaultRoster,
     gameWinProbability,
     normalCdf,
     rateRoster,
     rebalance,
+    resetScenarioTeam,
+    scenarioRoster,
     seriesWinProbability,
     winsFor
 } from '../src/lib/utils/rosterLab.js';
@@ -204,4 +208,87 @@ test('the time colour is each theme accent, not a colour of its own', async () =
     assert.match(css, /--time: var\(--accent\);/);
     assert.match(css, /--time-text: var\(--accent\);/);
     assert.equal((css.match(/--time(-text)?:/g) ?? []).length, 2, 'no theme overrides the time colour');
+});
+
+test('rebalancing shrinks capped players when the moved one fills the room', () => {
+    const roster = [42, 42, 42, 42, 42, 30].map((minutes, index) => ({ id: index + 1, minutes }));
+    roster[5].minutes = 42;
+    const balanced = rebalance(roster, 6);
+    assert.deepEqual(balanced.map((row) => row.minutes), [39.6, 39.6, 39.6, 39.6, 39.6, 42]);
+});
+
+test('rebalanced minutes total exactly 240 after rounding, and a short roster stays short', () => {
+    const uneven = rebalance([10, 20, 33, 7, 12, 25, 9].map((minutes, index) => ({ id: index + 1, minutes })));
+    assert.equal(Math.round(uneven.reduce((sum, row) => sum + row.minutes, 0) * 10) / 10, TEAM_MINUTES);
+    const short = rebalance([30, 30, 30, 30].map((minutes, index) => ({ id: index + 1, minutes })));
+    assert.deepEqual(short.map((row) => row.minutes), [42, 42, 42, 42]);
+});
+
+function labFixture() {
+    const home = new Map([[1, 'NYK'], [2, 'SAS'], [3, 'MIL'], [4, 'NYK'], [5, 'SAS'], [6, 'MIL']]);
+    const baseRosters = new Map([
+        ['NYK', [{ id: 1, minutes: 30 }, { id: 4, minutes: 30 }]],
+        ['SAS', [{ id: 2, minutes: 30 }, { id: 5, minutes: 30 }]],
+        ['MIL', [{ id: 3, minutes: 30 }, { id: 6, minutes: 30 }]]
+    ]);
+    return { baseRosters, homeOf: (id) => home.get(id) ?? null };
+}
+
+function owners(edits, baseRosters) {
+    const seen = new Map();
+    for (const abbr of baseRosters.keys()) {
+        for (const row of scenarioRoster(abbr, edits, baseRosters)) {
+            seen.set(row.id, [...(seen.get(row.id) ?? []), abbr]);
+        }
+    }
+    return seen;
+}
+
+test('a Lab trade then a reset leaves every player on one team', () => {
+    const { baseRosters, homeOf } = labFixture();
+    let edits = addToScenario({}, baseRosters, { to: 'NYK', id: 2, homeOf });
+    assert.deepEqual(owners(edits, baseRosters).get(2), ['NYK']);
+    edits = resetScenarioTeam(edits, baseRosters, 'SAS', { homeOf });
+    assert.deepEqual(owners(edits, baseRosters).get(2), ['SAS'], 'resetting SAS brings its player home');
+    assert.ok([...owners(edits, baseRosters).values()].every((teams) => teams.length === 1));
+});
+
+test('adding a player from an off-screen team takes them off that team', () => {
+    const { baseRosters, homeOf } = labFixture();
+    const edits = addToScenario({}, baseRosters, { to: 'NYK', id: 3, homeOf });
+    assert.deepEqual(owners(edits, baseRosters).get(3), ['NYK']);
+    const milwaukee = scenarioRoster('MIL', edits, baseRosters);
+    assert.deepEqual(milwaukee.map((row) => [row.id, row.minutes]), [[6, 42]], 'MIL rebalances without them');
+    assert.equal(edits.NYK.find((row) => row.id === 3).from, 'MIL');
+});
+
+test('resetting a team sends acquired players back to an edited home team', () => {
+    const { baseRosters, homeOf } = labFixture();
+    let edits = addToScenario({}, baseRosters, { to: 'SAS', id: 1, homeOf });
+    edits = addToScenario(edits, baseRosters, { to: 'NYK', id: 3, homeOf });
+    edits = resetScenarioTeam(edits, baseRosters, 'SAS', { homeOf });
+    const map = owners(edits, baseRosters);
+    assert.deepEqual(map.get(1), ['NYK']);
+    assert.deepEqual(map.get(3), ['NYK']);
+    assert.ok([...map.values()].every((teams) => teams.length === 1));
+});
+
+test('saved edits that list a player twice keep the first team only', () => {
+    const edits = dedupeEdits({ NYK: [{ id: 2, minutes: 30 }], SAS: [{ id: 2, minutes: 30 }, { id: 5, minutes: 30 }] });
+    assert.deepEqual(edits, { NYK: [{ id: 2, minutes: 30 }], SAS: [{ id: 5, minutes: 30 }] });
+});
+
+test('on the leaderboard the Time Machine replaces the season picker in both directions', () => {
+    const rewound = new URL('https://darko.app/?season=2016&asof=2016-02-22');
+    assert.equal(relativeHref(withAsOf(rewound, null)), '/', 'Back to today opens the current leaderboard');
+    assert.equal(relativeHref(withAsOf(new URL('https://darko.app/?season=2016'), '2016-02-22')), '/?asof=2016-02-22');
+    assert.equal(relativeHref(withAsOf(new URL('https://darko.app/wowy?season=2016'), null)), '/wowy?season=2016');
+});
+
+test('Rewind says where its weeks begin rather than showing a later week for an earlier date', async () => {
+    const page = await fs.readFile('src/routes/rewind/+page.svelte', 'utf8');
+    assert.doesNotMatch(page, /Math\.max\(0, frameIndexAtOrBefore\(/);
+    assert.match(page, /\{:else if !frame\}\s*<div class="empty-state rewind-before"/);
+    assert.match(page, /onclick=\{\(\) => goTo\(0\)\}/);
+    assert.equal(frameIndexAtOrBefore(['1996-11-07', '1996-11-14'], '1996-11-01'), -1);
 });

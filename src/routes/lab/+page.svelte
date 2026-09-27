@@ -13,13 +13,17 @@
 		SLIDER_MAX_MINUTES,
 		TEAM_MINUTES,
 		WINS_PER_POINT,
+		addToScenario,
 		addedPlayerMinutes,
+		dedupeEdits,
 		defaultRoster,
 		gameWinProbability,
 		leagueRank,
 		playersByTeam,
 		rateRoster,
 		rebalance,
+		resetScenarioTeam,
+		scenarioRoster,
 		seriesWinProbability,
 		winsFor
 	} from '$lib/utils/rosterLab.js';
@@ -87,9 +91,18 @@
 		asOf ? [] : SCENARIOS.filter((scenario) => scenario.moves.every(([, name]) => findPlayer(name)))
 	);
 
+	// Every team's roster comes from the scenario, so a player is never on two teams at once.
 	function rosterFor(abbr) {
-		return edits[abbr] ?? baseRosters.get(abbr) ?? [];
+		return scenarioRoster(abbr, edits, baseRosters, auto);
 	}
+
+	function homeOf(id) {
+		return teamAbbr(playersById.get(id)?.team_name) || null;
+	}
+
+	const scenarioRatings = $derived(
+		new Map(NBA_TEAMS.map((team) => [team.abbr, rateRoster(rosterFor(team.abbr), playersById)]))
+	);
 
 	function salaryOf(roster) {
 		return roster.reduce((total, row) => total + (Number.parseFloat(playersById.get(row.id)?.actual_salary) || 0), 0);
@@ -103,10 +116,9 @@
 			const roster = rosterFor(abbr);
 			const rating = rateRoster(roster, playersById);
 			const base = baseRatings.get(abbr) ?? rating;
-			const others = NBA_TEAMS.filter((team) => team.abbr !== abbr && team.abbr !== otherAbbr).map(
-				(team) => baseRatings.get(team.abbr)?.rating ?? 0
+			const others = NBA_TEAMS.filter((team) => team.abbr !== abbr).map(
+				(team) => scenarioRatings.get(team.abbr)?.rating ?? 0
 			);
-			if (otherAbbr !== abbr) others.push(rateRoster(rosterFor(otherAbbr), playersById).rating);
 			result[side] = {
 				abbr,
 				team: TEAM_BY_ABBR.get(abbr),
@@ -119,7 +131,7 @@
 				minutes: roster.reduce((total, row) => total + row.minutes, 0),
 				salary: salaryOf(roster),
 				baseSalary: salaryOf(baseRosters.get(abbr) ?? []),
-				edited: Boolean(edits[abbr])
+				edited: roster !== baseRosters.get(abbr)
 			};
 		}
 		return result;
@@ -164,9 +176,7 @@
 	}
 
 	function resetTeam(side) {
-		const next = { ...edits };
-		delete next[sides[side]];
-		edits = next;
+		edits = resetScenarioTeam(edits, baseRosters, sides[side], { homeOf, auto });
 	}
 
 	function setMinutes(side, id, minutes) {
@@ -184,28 +194,16 @@
 	}
 
 	function addPlayer(side, id, minutes = null) {
-		const abbr = sides[side];
-		const otherAbbr = sides[side === 'a' ? 'b' : 'a'];
 		const player = playersById.get(id);
-		if (!player || rosterFor(abbr).some((row) => row.id === id)) return;
-		let carried = minutes;
-		if (otherAbbr !== abbr) {
-			const otherRoster = rosterFor(otherAbbr);
-			const moving = otherRoster.find((row) => row.id === id);
-			if (moving) {
-				carried ??= moving.minutes;
-				let remaining = otherRoster.filter((row) => row.id !== id);
-				if (auto) remaining = rebalance(remaining);
-				setRoster(otherAbbr, remaining);
-			}
-		}
-		const from = teamAbbr(player.team_name);
-		let roster = [
-			...rosterFor(abbr),
-			{ id, minutes: carried ?? addedPlayerMinutes(player), from: from && from !== abbr ? from : 'FA' }
-		];
-		if (auto) roster = rebalance(roster, id);
-		setRoster(abbr, roster);
+		if (!player) return;
+		edits = addToScenario(edits, baseRosters, {
+			to: sides[side],
+			id,
+			minutes,
+			defaultMinutes: addedPlayerMinutes(player),
+			homeOf,
+			auto
+		});
 	}
 
 	function movePlayer(side, id) {
@@ -239,9 +237,8 @@
 
 	function runScenario(scenario) {
 		sides = { a: scenario.a, b: scenario.b };
-		const next = { ...edits };
-		delete next[scenario.a];
-		delete next[scenario.b];
+		let next = resetScenarioTeam(edits, baseRosters, scenario.a, { homeOf, auto });
+		next = resetScenarioTeam(next, baseRosters, scenario.b, { homeOf, auto });
 		edits = next;
 		for (const [side, name] of scenario.moves) {
 			const player = findPlayer(name);
@@ -280,7 +277,7 @@
 			[fromUrl[side], saved?.sides?.[side], DEFAULT_SIDES[side]].find((abbr) => TEAM_BY_ABBR.has(abbr));
 		sides = { a: pick('a'), b: pick('b') };
 		auto = saved?.auto ?? true;
-		edits = saved?.key === dataKey && saved?.edits ? saved.edits : {};
+		edits = saved?.key === dataKey && saved?.edits ? dedupeEdits(saved.edits) : {};
 		restoredKey = dataKey;
 	});
 
@@ -309,7 +306,7 @@
 	});
 
 	const stripScale = $derived.by(() => {
-		const values = [...baseRatings.values()].map((rating) => rating.rating);
+		const values = [...scenarioRatings.values()].map((rating) => rating.rating);
 		values.push(view.a.rating.rating, view.b.rating.rating);
 		const low = Math.min(-10, ...values) - 0.5;
 		const high = Math.max(10, ...values) + 0.5;
@@ -551,9 +548,9 @@
 							<text class="lab-tick" x={stripScale.x(tick)} y="98" text-anchor="middle">{tick > 0 ? `+${tick}` : tick}</text>
 						{/each}
 						{#each NBA_TEAMS as team (team.abbr)}
-							{#if team.abbr !== sides.a && team.abbr !== sides.b && baseRatings.get(team.abbr)?.minutes}
-								<circle class="lab-dot" cx={stripScale.x(baseRatings.get(team.abbr).rating)} cy="58" r="4.5">
-									<title>{team.name} {formatSigned(baseRatings.get(team.abbr).rating, 1)}</title>
+							{#if team.abbr !== sides.a && team.abbr !== sides.b && scenarioRatings.get(team.abbr)?.minutes}
+								<circle class="lab-dot" cx={stripScale.x(scenarioRatings.get(team.abbr).rating)} cy="58" r="4.5">
+									<title>{team.name} {formatSigned(scenarioRatings.get(team.abbr).rating, 1)}</title>
 								</circle>
 							{/if}
 						{/each}

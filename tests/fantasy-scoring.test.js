@@ -138,3 +138,13 @@ test('fantasy player view keeps projection inputs and drops ratings and salary',
     assert.equal('dpm' in row, false);
     assert.equal('surplus_value' in row, false);
 });
+
+test('the DraftKings preset is labelled as base scoring and says its bonuses are left out', () => {
+    const draftkings = FANTASY_PRESETS.draftkings;
+    assert.equal(draftkings.label, 'DraftKings base');
+    assert.match(draftkings.note, /double-double \(\+1\.5\) or triple-double \(\+3\)/);
+    const headers = getFantasyCsvColumns(false, draftkings.csvHeader).map((column) => column.header);
+    assert.ok(headers.includes('FP/G (DraftKings base, no bonuses)'));
+    assert.equal(draftkings.file, 'draftkings-base');
+    assert.ok(getFantasyCsvColumns(false).map((column) => column.header).includes('FP/G'), 'other presets keep FP/G');
+});

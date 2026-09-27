@@ -46,8 +46,14 @@ export const FANTASY_PRESETS = Object.freeze({
         label: 'Yahoo points',
         weights: Object.freeze({ pts: 1, reb: 1.2, ast: 1.5, stl: 3, blk: 3, fg3m: 0, tov: -1, fgm: 0, fga: 0, ftm: 0, fta: 0 })
     },
+    // DraftKings also pays +1.5 for a double-double and +3 for a triple-double. Projected averages
+    // cannot say how often a player reaches 10 in two stats, so those bonuses are left out, and
+    // the label, a note on the page and the CSV header all say so.
     draftkings: {
-        label: 'DraftKings',
+        label: 'DraftKings base',
+        note: 'DraftKings base scoring: no double-double (+1.5) or triple-double (+3) bonus. DARKO projects per-game averages, which cannot tell how often a player reaches 10 in two stats.',
+        csvHeader: 'FP/G (DraftKings base, no bonuses)',
+        file: 'draftkings-base',
         weights: Object.freeze({ pts: 1, reb: 1.25, ast: 1.5, stl: 2, blk: 2, fg3m: 0.5, tov: -0.5, fgm: 0, fga: 0, ftm: 0, fta: 0 })
     },
     categories: { label: '9-cat', categories: true },

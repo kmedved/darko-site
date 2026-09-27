@@ -39,3 +39,10 @@ test('lineup ratings cache separates possession thresholds', async () => {
         'lineup ratings cache key should include minPoss so 2/3/4/5-man cutoffs cannot collide'
     );
 });
+
+test('lineups donut center totals every size, matching its legend', async () => {
+    const contents = await read(LINEUPS_PAGE);
+    assert.match(contents, /distributionTotal = \$derived\(sizeDistribution\.reduce\(\(sum, item\) => sum \+ item\.count, 0\)\)/);
+    assert.match(contents, /<strong>\{formatFixed\(distributionTotal, 0\)\}<\/strong>\s*<span>Total<br \/>Lineups<\/span>/);
+    assert.doesNotMatch(contents, /activeSizeCount/);
+});

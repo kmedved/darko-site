@@ -178,9 +178,8 @@
     let summaryCards = $derived(buildSummaryCards());
     let sizeDistribution = $derived(buildSizeDistribution());
     let distributionGradient = $derived(buildDistributionGradient(sizeDistribution));
-    let activeSizeCount = $derived(
-        sizeDistribution.find((item) => item.lineupSize === data.lineupSize)?.count ?? selectedLineups.length
-    );
+    // The donut spans every size tab, so its center is the sum of the legend below it.
+    let distributionTotal = $derived(sizeDistribution.reduce((sum, item) => sum + item.count, 0));
     let teamLeaders = $derived(buildTeamLeaders(filteredLineups));
     let teamLeaderMax = $derived(Math.max(...teamLeaders.map((leader) => Math.max(0, leader.avgNet)), 1));
 
@@ -855,7 +854,7 @@
                         <div class="distribution-layout">
                             <div class="donut-chart" style={`background: ${distributionGradient};`}>
                                 <div>
-                                    <strong>{formatFixed(activeSizeCount, 0)}</strong>
+                                    <strong>{formatFixed(distributionTotal, 0)}</strong>
                                     <span>Total<br />Lineups</span>
                                 </div>
                             </div>

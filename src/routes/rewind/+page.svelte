@@ -37,10 +37,12 @@
 	const frameDates = $derived(frames.map((frame) => frame.date));
 	const urlDate = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
 	const activeDate = $derived(browser ? (timeMachine.date ?? urlDate) : urlDate);
+	// -1 for a date before the first weekly frame: showing that later week as if it were the
+	// chosen date would misstate the rankings, so the page says where they begin instead.
 	const index = $derived.by(() => {
 		if (!frames.length) return -1;
 		if (!activeDate) return frames.length - 1;
-		return Math.max(0, frameIndexAtOrBefore(frameDates, activeDate));
+		return frameIndexAtOrBefore(frameDates, activeDate);
 	});
 	const frame = $derived(index >= 0 ? frames[index] : null);
 	const week = $derived(index >= 0 ? seasonWeek(frames, index) : null);
@@ -149,9 +151,19 @@
 		</p>
 	</header>
 
-	{#if !data.available || !frame}
+	{#if !data.available || !frames.length}
 		<div class="empty-state" data-shiny-surface="panel">
 			Rewind needs DARKO's history tables, which arrive with the next data publish.
+		</div>
+	{:else if !frame}
+		<div class="empty-state rewind-before" data-shiny-surface="panel">
+			<p>
+				DARKO's weekly rankings start with the week of {formatAsOfDate(frames[0].date)}, once players
+				have three games; {formatAsOfDate(activeDate)} is earlier.
+			</p>
+			<button type="button" class="rw-btn primary" onclick={() => goTo(0)}>
+				Go to {formatAsOfDate(frames[0].date, { short: true })}
+			</button>
 		</div>
 	{:else}
 		<section class="rewind-stage" data-shiny-surface="well" aria-label="Rewind controls">
@@ -376,6 +388,16 @@
 	.rw-btn:disabled {
 		opacity: 0.45;
 		cursor: not-allowed;
+	}
+
+	.rewind-before {
+		display: grid;
+		justify-items: center;
+		gap: 12px;
+	}
+
+	.rewind-before p {
+		margin: 0;
 	}
 
 	.rw-btn.primary {

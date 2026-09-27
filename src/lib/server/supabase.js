@@ -11,6 +11,7 @@ import {
 } from './lineupRatings.js';
 import { createActivePlayersAccessor } from './activePlayersCache.js';
 import { asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
+import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilterOptions.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -923,6 +924,37 @@ export async function getWowyAllTimePlayers(options = {}) {
 
 export async function getWowyAdjustedAllTimePlayers(options = {}) {
     return (await getWowyAdjustedAllTimePage(options)).players;
+}
+
+/**
+ * Every team and height the all-time WOWY filters can match, for one rating mode. Reads only the
+ * team columns of each published player-season, once an hour.
+ */
+export async function getWowyAllTimeFilterOptions(ratingMode = 'average') {
+    const table = ratingMode === 'adjusted' ? 'wowy_season_adjusted_ratings' : 'wowy_season_player_averages';
+    const key = cacheKey('wowyAllTimeFilterOptions', table);
+    return runCached(key, CACHE_MS.wowyAllTimePlayers, async () => {
+        const [teamRows, heightRows] = await Promise.all([
+            fetchAllPages(
+                (options) =>
+                    supabase
+                        .from(table)
+                        .select('team_codes, team_names', options)
+                        .order('season', { ascending: true })
+                        .order('nba_id', { ascending: true }),
+                { guessPages: 8 }
+            ),
+            fetchAllPages((options) =>
+                supabase
+                    .from('players')
+                    .select('height', options)
+                    .gte('height', 60)
+                    .lte('height', 96)
+                    .order('nba_id', { ascending: true })
+            )
+        ]);
+        return { teams: teamOptionsFromRows(teamRows), heights: heightOptionsFromRows(heightRows) };
+    });
 }
 
 /**

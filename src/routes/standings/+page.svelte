@@ -74,7 +74,8 @@
     ];
 
     const expandedStandingsColumns = [
-        { key: 'W/L%', label: 'W/L%', alignClass: 'num', dataType: 'percent' },
+        // W/L% arrives as a fraction (0.78); the odds columns are already 0-100.
+        { key: 'W/L%', label: 'W/L%', alignClass: 'num', dataType: 'percent', fraction: true },
         { key: 'Remain', label: 'Remain', alignClass: 'rec', dataType: 'text' },
         { key: 'Best', label: 'Best', alignClass: 'rec', dataType: 'text' },
         { key: 'Worst', label: 'Worst', alignClass: 'rec', dataType: 'text' },
@@ -259,10 +260,15 @@
         return value || '—';
     }
 
+    function percentValue(column, value) {
+        const n = Number.parseFloat(value);
+        return column.fraction && Number.isFinite(n) ? n * 100 : value;
+    }
+
     function formatCellValue(column, value) {
         if (column.dataType === 'conference') return formatConference(value);
         if (value === null || value === undefined || value === '') return '—';
-        if (column.dataType === 'percent') return formatPercent(value);
+        if (column.dataType === 'percent') return formatPercent(percentValue(column, value));
         if (column.format === 'integer') return formatFixed(value, 0);
         if (column.format === 'decimal') return formatFixed(value, column.decimals ?? 1);
         return String(value);
@@ -285,7 +291,7 @@
 
     function getCellClass(column, value) {
         const classes = ['standings-cell', column.alignClass || 'num'];
-        if (column.dataType === 'percent') classes.push('pct', pctClass(value));
+        if (column.dataType === 'percent') classes.push('pct', pctClass(percentValue(column, value)));
         if (column.key === 'SRS') classes.push(srsClass(value));
         return classes.filter(Boolean).join(' ');
     }

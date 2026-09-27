@@ -40,10 +40,13 @@ export function daysBetween(from, to) {
 }
 
 /** The same URL with the Time Machine set to `date`, or cleared when `date` is null. */
+// On the leaderboard a Time Machine date stands in for the season picker, so setting or clearing
+// the date drops a leftover ?season= (else "Back to today" would reopen that old season).
 export function withAsOf(url, date) {
 	const next = new URL(url);
 	if (date) next.searchParams.set(AS_OF_PARAM, date);
 	else next.searchParams.delete(AS_OF_PARAM);
+	if (next.pathname === '/') next.searchParams.delete('season');
 	return next;
 }
 
