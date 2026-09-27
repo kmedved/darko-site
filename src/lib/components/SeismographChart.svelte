@@ -9,7 +9,8 @@
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 	import OffenseDefenseGlyph from '$lib/components/OffenseDefenseGlyph.svelte';
 
-	let { seismograph = null, playerName = '' } = $props();
+	// markerDate: the Time Machine date, drawn as a line when it falls inside the season.
+	let { seismograph = null, playerName = '', markerDate = null } = $props();
 
 	let containerEl = $state(null);
 	let svgEl = $state(null);
@@ -410,6 +411,31 @@
 			.style('fill', axisColor)
 			.text((tick) => (d3.timeMonth(tick) < tick ? dayFormat(tick) : monthFormat(tick)));
 
+		if (markerDate) {
+			const markerTime = new Date(`${markerDate}T12:00:00`).getTime();
+			const [domainStart, domainEnd] = x.domain();
+			if (markerTime >= domainStart.getTime() && markerTime <= domainEnd.getTime()) {
+				const markerX = x(markerTime);
+				root.append('line')
+					.attr('class', 'seismo-marker')
+					.attr('x1', markerX)
+					.attr('x2', markerX)
+					.attr('y1', -4)
+					.attr('y2', axisY)
+					.attr('stroke', 'var(--time)')
+					.attr('stroke-width', 1.5)
+					.attr('stroke-dasharray', '5,3');
+				root.append('text')
+					.attr('x', markerX + (markerX > plotWidth - 90 ? -6 : 6))
+					.attr('y', 6)
+					.attr('text-anchor', markerX > plotWidth - 90 ? 'end' : 'start')
+					.attr('font-size', fontSize)
+					.attr('font-weight', 600)
+					.style('fill', 'var(--time-text)')
+					.text(formatGameDate(markerDate));
+			}
+		}
+
 		svg.append('text')
 			.attr('x', margin.left + plotWidth / 2)
 			.attr('y', height - 8)
@@ -478,6 +504,7 @@
 		if (!svgEl || !containerEl) return;
 		void points;
 		void title;
+		void markerDate;
 		void displayMode.view;
 		activeIndex = null;
 		renderChart();

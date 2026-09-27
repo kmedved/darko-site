@@ -12,3 +12,4 @@ build
 ".tools/" 
 .tools
 .DS_Store
+.local-data/

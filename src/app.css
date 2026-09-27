@@ -17,12 +17,22 @@
     --negative-bg: rgba(248, 113, 113, 0.08);
     --offense: #d95926;
     --defense: #3987e5;
+    /* Time Machine and as-of marks use each theme's accent. */
+    --time: var(--accent);
+    --time-text: var(--accent);
     --logo-image: url('/logo-white-nav.png');
     --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-mono: 'DM Mono', 'SF Mono', 'Consolas', monospace;
     --radius: 10px;
     --radius-sm: 6px;
-    --nav-sticky-offset: 96px;
+    --nav-bar-height: 96px;
+    --time-machine-height: 36px;
+    --nav-sticky-offset: calc(var(--nav-bar-height) + var(--time-machine-height));
+}
+
+/* A folded Time Machine takes no height; app.html restores the choice before first paint. */
+:root[data-time-machine='collapsed'] {
+    --time-machine-height: 0px;
 }
 
 :root[data-theme='black'] {
@@ -164,10 +174,10 @@ a:hover { color: var(--accent-hover); }
     z-index: -1;
 }
 
-.site-nav .container {
+.site-nav > .container {
     display: flex;
     align-items: center;
-    height: var(--nav-sticky-offset);
+    height: var(--nav-bar-height);
     gap: 12px;
 }
 
@@ -252,7 +262,7 @@ a:hover { color: var(--accent-hover); }
 }
 
 @media (max-width: 1320px) {
-	    .site-nav .container {
+	    .site-nav > .container {
         gap: 8px;
     }
 
@@ -268,14 +278,14 @@ a:hover { color: var(--accent-hover); }
 
 @media (max-width: 768px) {
     :root {
-        --nav-sticky-offset: 56px;
+        --nav-bar-height: 56px;
     }
 
     .container {
         padding: 0 16px;
     }
 
-	    .site-nav .container {
+	    .site-nav > .container {
         gap: 10px;
         height: 56px;
     }

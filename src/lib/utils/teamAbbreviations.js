@@ -77,6 +77,13 @@ export function teamAbbr(teamName) {
 	return TEAM_ABBR[teamName] ?? teamName;
 }
 
+/** All 30 NBA teams by full name: [{ name, abbr, id }]. */
+export const NBA_TEAMS = Object.freeze(
+	Object.keys(TEAM_ABBR)
+		.map((name) => Object.freeze({ name, abbr: TEAM_ABBR[name], id: TEAM_ID[name] }))
+		.sort((a, b) => a.name.localeCompare(b.name))
+);
+
 const TEAM_ABBR_BY_ID = new Map(
 	Object.entries(TEAM_ID).map(([teamName, id]) => [id, TEAM_ABBR[teamName]])
 );

@@ -80,5 +80,18 @@ test('player page load prefers separately loaded snapshot metadata', async () =>
     });
 
     assert.equal(result.playerInfo, playerInfo);
-    assert.equal(result.historyRows, historyRows);
+    assert.deepEqual(result.historyRows, historyRows);
+});
+
+test('player history ships at four decimals', async () => {
+    const result = await loadPlayerPageData({
+        nbaIdParam: '7',
+        loadFullHistory: async () => ({
+            rows: [{ nba_id: 7, date: '2025-01-01', dpm: 5.82380151, age: 38.3665534990691, season: 2025 }],
+            truncated: false,
+            maxRows: 5000
+        })
+    });
+
+    assert.deepEqual(result.historyRows, [{ nba_id: 7, date: '2025-01-01', dpm: 5.8238, age: 38.3666, season: 2025 }]);
 });

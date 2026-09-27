@@ -40,6 +40,11 @@
 					document.documentElement.dataset.theme = 'white';
 				}
 				try {
+					if (localStorage.getItem('darko-time-machine') === 'collapsed') {
+						document.documentElement.dataset.timeMachine = 'collapsed';
+					}
+				} catch (e) {}
+				try {
 					var FONT_KEY = 'darko-font';
 						var FONTS = ['inter', 'roboto', 'lato', 'opensans', 'sourcesans', 'nunito', 'worksans', 'raleway', 'outfit', 'jakarta', 'spacegrotesk', 'system'];
 						var savedFont = localStorage.getItem(FONT_KEY);

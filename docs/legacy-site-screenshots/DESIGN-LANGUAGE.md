@@ -428,6 +428,7 @@ bespoke. Families are implemented as presets in `src/lib/utils/shinyDesign.js`.
 | Two metrics across a population | scatter | `#0C39CE` base points, `#EF2D56` highlight, `#363537` trendline or dashed quadrants |
 | Distribution of one metric | distribution | Single-series curve or Set1 positional densities; reference line for the anchor value; suppressed y labels |
 | Rate of change | derivative | `#ED7D3A` line over a `#636166` zero |
+| A ranking that changes over time | race | `#0C39CE` bars with the leader in `#EF2D56`, a fixed value scale so eras compare |
 | One entity's rating and its per-game changes, split into offense and defense | seismograph | Black rating line with offense `#ED7D3A` and defense `#385BBB` lines above stacked update bars on a `#636166` zero; offense is always a ring and defense a cross |
 
 If none fits, compose from the foundation instead of inventing freely:

@@ -1,5 +1,6 @@
 <script>
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import LongevityCareerLengthChart from '$lib/components/LongevityCareerLengthChart.svelte';
 	import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
@@ -18,6 +19,9 @@
 		seasonLabel
 	} from '$lib/utils/seismograph.js';
 	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
+	import { unpackRows } from '$lib/utils/columnar.js';
+	import { AS_OF_PARAM, formatAsOfDate, parseAsOfDate } from '$lib/utils/timeMachine.js';
+	import { seasonOfRow } from '$lib/utils/seismograph.js';
 
 	let { data } = $props();
 
@@ -67,23 +71,39 @@
 
 	const nbaId = $derived(data.nbaId ?? data.playerInfo?.nba_id ?? null);
 	const playerInfo = $derived(data.playerInfo ?? null);
-	const historyRows = $derived(data.historyRows ?? []);
+	const historyRows = $derived(data.history ? unpackRows(data.history) : (data.historyRows ?? []));
 	const historyMeta = $derived(data.historyMeta ?? { truncated: false, maxRows: null });
 
+	// With the Time Machine set, the sidebar rating and the Seismograph follow that date.
+	const asOfDate = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
+	const asOfRow = $derived.by(() => {
+		if (!asOfDate) return null;
+		let latest = null;
+		for (const row of historyRows) {
+			const date = typeof row?.date === 'string' ? row.date.slice(0, 10) : null;
+			if (date && date <= asOfDate && Number(row.tm_id) > 0) latest = row;
+		}
+		return latest;
+	});
+	const ratingRow = $derived(asOfDate ? asOfRow : playerInfo);
+
 	const playerRating = $derived.by(() => {
-		const dpm = Number.parseFloat(playerInfo?.dpm);
-		const offense = Number.parseFloat(playerInfo?.o_dpm);
-		let defense = Number.parseFloat(playerInfo?.d_dpm);
+		const dpm = Number.parseFloat(ratingRow?.dpm);
+		const offense = Number.parseFloat(ratingRow?.o_dpm);
+		let defense = Number.parseFloat(ratingRow?.d_dpm);
 		if (!Number.isFinite(defense)) defense = dpm - offense;
 		return [dpm, offense, defense].every(Number.isFinite) ? { dpm, offense, defense } : null;
 	});
 
 	// A picked season sticks only for the player it was picked on.
 	const seismographSeasons = $derived(getSeismographSeasons(historyRows));
+	const asOfSeason = $derived(asOfRow ? seasonOfRow(asOfRow) : null);
 	const seismographSeason = $derived(
 		pickedSeason?.nbaId === nbaId && seismographSeasons.includes(pickedSeason.season)
 			? pickedSeason.season
-			: (seismographSeasons[0] ?? null)
+			: seismographSeasons.includes(asOfSeason)
+				? asOfSeason
+				: (seismographSeasons[0] ?? null)
 	);
 	const seismograph = $derived(
 		seismographSeason === null ? null : buildSeismograph(historyRows, seismographSeason)
@@ -297,10 +317,17 @@
 						{[playerInfo.team_name, playerInfo.position || '?'].filter(Boolean).join(' · ')}
 					</p>
 					<p class="player-detail">{playerDetailText}</p>
+					{#if asOfDate && !playerRating}
+						<p class="sidebar-rating sidebar-rating-note">
+							No DARKO rating yet on {formatAsOfDate(asOfDate)}.
+						</p>
+					{/if}
 					{#if playerRating}
 						<div class="sidebar-rating">
 							<p class="sidebar-rating-head">
-								<span class="sidebar-label">DPM</span>
+								<span class="sidebar-label">
+									DPM{#if asOfDate && asOfRow}<span class="sidebar-asof">{' · '}{formatAsOfDate(asOfRow.date.slice(0, 10), { short: true })}</span>{/if}
+								</span>
 								<span class="sidebar-rating-value">{formatSigned(playerRating.dpm, 1)}</span>
 							</p>
 							<OffenseDefenseBar offense={playerRating.offense} defense={playerRating.defense} />
@@ -375,7 +402,11 @@
 
 						<div class="seismograph-body">
 							<div class="seismograph-chart">
-								<SeismographChart {seismograph} playerName={playerInfo.player_name} />
+								<SeismographChart
+									{seismograph}
+									playerName={playerInfo.player_name}
+									markerDate={asOfDate}
+								/>
 							</div>
 							{#if seismographSummary}
 								<dl class="seismograph-callouts">
@@ -716,6 +747,17 @@
 		padding-top: 12px;
 		border-top: 1px solid var(--border-subtle);
 		font-size: 12px;
+	}
+
+	.sidebar-rating-note {
+		color: var(--time-text);
+		font-weight: 600;
+	}
+
+	.sidebar-asof {
+		color: var(--time-text);
+		text-transform: none;
+		letter-spacing: 0;
 	}
 
 	.sidebar-rating-head {

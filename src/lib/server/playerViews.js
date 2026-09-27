@@ -41,6 +41,20 @@ const PLAYER_VIEW_FIELDS = Object.freeze({
         'actual_salary',
         'surplus_value'
     ],
+    lab: [
+        'nba_id',
+        'player_name',
+        'team_name',
+        'tm_id',
+        'position',
+        'age',
+        'dpm',
+        'o_dpm',
+        'd_dpm',
+        'x_minutes',
+        'x_pace',
+        'actual_salary'
+    ],
     fantasy: [
         'nba_id',
         'player_name',

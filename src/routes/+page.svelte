@@ -18,6 +18,9 @@
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { formatSeasonEndYearLabel } from '$lib/utils/seasonUtils.js';
+    import { AS_OF_PARAM, formatAsOfDate } from '$lib/utils/timeMachine.js';
+    import { unpackRows } from '$lib/utils/columnar.js';
+    import { timeMachine } from '$lib/timeMachineState.svelte.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
     import {
@@ -49,7 +52,7 @@
 
     const TOP_POSITION_MIN_GAMES = 20;
     const LEADERBOARD_PAGE_SIZE = 50;
-    const players = $derived(data.players || []);
+    const players = $derived(Array.isArray(data.players) ? data.players : unpackRows(data.players));
     const playerColumns = LEADERBOARD_COLUMNS;
     const textSortColumns = new Set(['_rank', 'player_name', 'team_name', 'position']);
     const positionTabs = [
@@ -74,13 +77,20 @@
     ];
 
     const seasonOptions = $derived(data.seasons || []);
+    const asOf = $derived(data.asOf ?? null);
     const activeSeason = $derived(
-        data.selectedSeason === null || data.selectedSeason === undefined
-            ? 'current'
-            : String(data.selectedSeason)
+        asOf
+            ? 'asof'
+            : data.selectedSeason === null || data.selectedSeason === undefined
+              ? 'current'
+              : String(data.selectedSeason)
     );
     const activeSeasonLabel = $derived(
-        activeSeason === 'current' ? 'Current' : formatSeasonLabel(activeSeason)
+        asOf
+            ? `As of ${formatAsOfDate(asOf.date, { short: true })}`
+            : activeSeason === 'current'
+              ? 'Current'
+              : formatSeasonLabel(activeSeason)
     );
 
     const teamOptions = $derived.by(() => {
@@ -200,8 +210,15 @@
         return label ? `${label} Season` : `${season} Season`;
     }
 
+    function datedHref(path) {
+        return asOf ? `${path}?${AS_OF_PARAM}=${asOf.date}` : path;
+    }
+
     function selectSeason(event) {
         const season = event.currentTarget.value;
+        if (season === 'asof') return;
+        // A season pick leaves the Time Machine, which would otherwise override it.
+        timeMachine.date = null;
         const suffix = season === 'current' ? '' : `?season=${encodeURIComponent(season)}`;
         goto(`/${suffix}`, { keepFocus: true });
     }
@@ -442,7 +459,14 @@
                 </div>
                 <div>
                     <h1 id="leaderboard-title">DPM Leaderboard</h1>
-                    <p>Daily Player Metrics for every NBA player, updated nightly.</p>
+                    {#if asOf}
+                        <p class="leaderboard-asof">
+                            DARKO as of {formatAsOfDate(asOf.date)}{asOf.season ? ` · ${formatSeasonEndYearLabel(asOf.season)} season` : ''}.
+                            Each player's latest rating on that date.
+                        </p>
+                    {:else}
+                        <p>Daily Player Metrics for every NBA player, updated nightly.</p>
+                    {/if}
                 </div>
             </div>
 
@@ -453,7 +477,7 @@
                             <p>{card.title}</p>
                             <strong class={statClass(card.metric, card.value)}>{card.displayValue}</strong>
                             {#if card.player}
-                                <a class="leader-player" href="/player/{card.player.nba_id}">
+                                <a class="leader-player" href={datedHref(`/player/${card.player.nba_id}`)}>
                                     {#if teamLogoUrl(card.player)}
                                         <img src={teamLogoUrl(card.player)} alt="" loading="lazy" onerror={hideBrokenImage} />
                                     {/if}
@@ -489,6 +513,9 @@
                                 onchange={selectSeason}
                                 aria-label="Season"
                             >
+                                {#if asOf}
+                                    <option value="asof">{activeSeasonLabel}</option>
+                                {/if}
                                 <option value="current">Current</option>
                                 {#each seasonOptions as season (season)}
                                     <option value={String(season)}>{formatSeasonLabel(season)}</option>
@@ -574,7 +601,7 @@
                                                     {@const value = getLeaderboardCellValue(player, column, globalIndex)}
                                                     {#if column.key === 'player_name'}
                                                         <td class={cellClass(column, value)}>
-                                                            <a class="player-link" href="/player/{player.nba_id}">
+                                                            <a class="player-link" href={datedHref(`/player/${player.nba_id}`)}>
                                                                 {#if isShinyView && playerHeadshotUrl(player)}
                                                                     <img
                                                                         src={playerHeadshotUrl(player)}
@@ -718,7 +745,7 @@
                                 <div class="empty-mini">No matching players.</div>
                             {:else}
                                 {#each topPositionPlayers as player, index (player.nba_id)}
-                                    <a class="position-player" href="/player/{player.nba_id}">
+                                    <a class="position-player" href={datedHref(`/player/${player.nba_id}`)}>
                                         <span class="position-rank">{index + 1}</span>
                                         <span class="mini-headshot">
                                             {#if playerHeadshotUrl(player)}
@@ -888,6 +915,11 @@
         font-size: 17px;
         margin-top: 8px;
         overflow-wrap: anywhere;
+    }
+
+    .leaderboard-title-block p.leaderboard-asof {
+        color: var(--time-text);
+        font-weight: 600;
     }
 
     .leader-card-grid {

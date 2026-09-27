@@ -14,10 +14,10 @@ Reference only. Nothing in this folder is built, tested or deployed by the site.
 | Feature | Prototype source | Port target |
 |---|---|---|
 | The Daily: headline, movers, single-game shocks, age records, watchlist | `src/10-today.js` | new route; movers need a Postgres function |
-| Rewind: global date scrubber and weekly top-15 race since 1996-97 | `src/03-floor.js`, `src/16-rewind.js` | needs a precomputed weekly-top table |
+| Rewind: global date scrubber and weekly top-15 race since 1996-97 | `src/03-floor.js`, `src/16-rewind.js` | `/rewind` and the Time Machine strip, on the `rating_frames` table |
 | Seismograph: every game's DPM update, split offense/defense | `drawSeismo` in `src/12-player.js` | Live on player pages, with opponents from `player_ratings.opp_id` |
 | Comps & Futures: historical matches and a five-year fan chart | `comps.py`, `drawFan` in `src/12-player.js` | needs a `player_comps` table from the pipeline |
-| Roster Lab: two-team trades, minutes, rating, wins, matchup odds | `src/14-lab.js` | new route on the existing team payload |
+| Roster Lab: two-team trades, minutes, rating, wins, matchup odds | `src/14-lab.js` | `/lab`, today's rosters or any Time Machine date |
 | Team DNA: rating contributions, lineups, payroll vs value, core outlook | `src/13-teams.js` | existing `TeamDetailView.svelte` |
 | Fantasy Lab: ESPN, Yahoo, DraftKings, 9-cat or custom scoring, draft board | `src/15-fantasy.js` | Live at `/projections`, without the draft board |
 | Ask DARKO: command bar for players, filters, trades and time travel | `src/19-ask.js` | site-wide layout component |
@@ -35,10 +35,10 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
    sparkline, fingerprint glyph) and the Seismograph on player pages (done: tokens, O/X
    split and split bar; the sparkline and fingerprint wait for the features that use them).
 3. Ask DARKO.
-4. Team DNA additions, then Roster Lab.
+4. Team DNA additions, then Roster Lab (Roster Lab done ahead of Team DNA).
 5. Card Studio and per-player share images.
-6. Pipeline-backed features in one batch: Comps & Futures, Rewind and the site-wide date,
-   The Daily, DARKOdle.
+6. Pipeline-backed features: Rewind and the site-wide date (done, as the Time Machine),
+   then Comps & Futures, The Daily and DARKOdle.
 
 ## Porting notes
 
@@ -72,6 +72,9 @@ the only cue.
 
 The site's themes (dark, black, light, white) need their own check before these tokens are
 added to `src/app.css`.
+
+Maple stayed in the prototype: on the site, the Time Machine and its as-of marks use each
+theme's accent (`--time: var(--accent)` in `src/app.css`).
 
 ## Rebuilding and viewing
 

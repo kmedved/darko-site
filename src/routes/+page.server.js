@@ -3,8 +3,11 @@ import {
     getLeaderboardSeasons,
     getSeasonStartPlayers
 } from '$lib/server/supabase.js';
+import { AS_OF_EDGE_CACHE, getPlayersOnDate } from '$lib/server/history.js';
 import { projectPlayers } from '$lib/server/playerViews.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
+import { AS_OF_PARAM, parseAsOfDate } from '$lib/utils/timeMachine.js';
+import { packRows } from '$lib/utils/columnar.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -13,27 +16,41 @@ export const config = {
 };
 
 export async function load({ url, setHeaders }) {
-    setEdgeCache(setHeaders, {
+    const asOfDate = parseAsOfDate(url.searchParams.get(AS_OF_PARAM));
+    setEdgeCache(setHeaders, asOfDate ? AS_OF_EDGE_CACHE : {
         edgeSMaxAge: 3600,
         swr: 86400,
         sie: 86400
     });
 
-    const seasons = await getLeaderboardSeasons();
-    const requestedSeason = parseSeasonEndYear(url.searchParams.get('season'));
-    const selectedSeason = seasons.includes(requestedSeason) ? requestedSeason : null;
-    const snapshot = selectedSeason === null
-        ? await getActivePlayers()
-        : await getSeasonStartPlayers(selectedSeason);
+    let seasons;
+    let snapshot;
+    let asOf = null;
+    let selectedSeason = null;
+    if (asOfDate) {
+        const [allSeasons, result] = await Promise.all([getLeaderboardSeasons(), getPlayersOnDate(asOfDate)]);
+        seasons = allSeasons;
+        snapshot = result.rows;
+        asOf = { date: asOfDate, dataDate: result.dataDate, season: result.season };
+    } else {
+        seasons = await getLeaderboardSeasons();
+        const requestedSeason = parseSeasonEndYear(url.searchParams.get('season'));
+        selectedSeason = seasons.includes(requestedSeason) ? requestedSeason : null;
+        snapshot = selectedSeason === null
+            ? await getActivePlayers()
+            : await getSeasonStartPlayers(selectedSeason);
+    }
     const players = projectPlayers(snapshot, 'leaderboard');
 
     return {
-        players: players.map((player, index) => ({
+        // Column by column: every player repeats the same ~22 field names.
+        players: packRows(players.map((player, index) => ({
             ...player,
             _rank: index + 1
-        })),
+        }))),
         seasons,
-        selectedSeason
+        selectedSeason,
+        asOf
     };
 }
 

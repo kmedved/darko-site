@@ -8,6 +8,7 @@ import {
     groupLineupRows
 } from './lineupRatings.js';
 import { createActivePlayersAccessor } from './activePlayersCache.js';
+import { asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -36,6 +37,7 @@ const CACHE_MS = {
     wowyAdjustedSeasonPlayers: 300_000,
     leaderboardSeasons: 3_600_000,
     seasonStartPlayers: 3_600_000,
+    playersAsOf: 3_600_000,
     playersIndex: 300_000,
     playerCurrent: 60_000,
     playerHistory: 300_000,
@@ -1042,6 +1044,161 @@ export async function getSeasonStartPlayers(season) {
         return sortByDpmDesc(
             rows.map((row) => mergeWithPlayerDim(row, playersMap.get(row.nba_id)))
         );
+    });
+}
+
+// A rostered player has a row on every team game day, rest days included, so two weeks of
+// rows find everyone on a roster (the All-Star break is the longest regular pause).
+const PLAYERS_AS_OF_WINDOW_DAYS = 14;
+const PLAYERS_AS_OF_ID_CHUNK = 150;
+const PLAYERS_AS_OF_CONCURRENCY = 12;
+// Only what the date-aware views (leaderboard, Roster Lab) and the player merge read.
+const PLAYERS_AS_OF_COLUMNS = [
+    'nba_id',
+    'date',
+    'season',
+    'team_name',
+    'tm_id',
+    'position',
+    'age',
+    'career_game_num',
+    'dpm',
+    'o_dpm',
+    'd_dpm',
+    'box_dpm',
+    'on_off_dpm',
+    'x_minutes',
+    'x_pace',
+    'x_pts_100',
+    'x_ast_100',
+    'x_fg_pct',
+    'x_fg3_pct',
+    'x_ft_pct',
+    'sal_market_fixed',
+    'actual_salary',
+    'surplus_value'
+].join(', ');
+
+async function mapWithConcurrency(items, limit, worker) {
+    const results = new Array(items.length);
+    let next = 0;
+    const run = async () => {
+        while (next < items.length) {
+            const index = next;
+            next += 1;
+            results[index] = await worker(items[index]);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+    return results;
+}
+
+/**
+ * Every page of a query in (usually) one round trip: the row count and the first few pages
+ * load together, and only a larger result waits for a second round of pages.
+ */
+async function fetchAllPages(buildQuery, { pageSize = 1_000, guessPages = 4 } = {}) {
+    const page = (index) => buildQuery().range(index * pageSize, (index + 1) * pageSize - 1);
+    const [counted, ...first] = await Promise.all([
+        buildQuery({ count: 'exact', head: true }),
+        ...Array.from({ length: guessPages }, (_, index) => page(index))
+    ]);
+    if (counted.error) throw counted.error;
+    const pages = Math.ceil((counted.count ?? 0) / pageSize);
+    const rest = await Promise.all(
+        Array.from({ length: Math.max(0, pages - guessPages) }, (_, index) => page(guessPages + index))
+    );
+    const results = [...first, ...rest];
+    for (const result of results) if (result.error) throw result.error;
+    return results.flatMap((result) => result.data ?? []);
+}
+
+async function latestRatingDateOnOrBefore(date) {
+    const { data, error } = await supabase
+        .from('player_ratings')
+        .select('date, season')
+        .lte('date', date)
+        .gt('tm_id', 0)
+        .order('date', { ascending: false })
+        .limit(1);
+    if (error) throw error;
+    const row = data?.[0];
+    return row ? { date: row.date, season: Number.parseInt(row.season, 10) } : null;
+}
+
+function fetchAsOfWindow(season, anchorDate, calendarRow) {
+    const windowStart = asOfWindowStart(anchorDate, calendarRow, PLAYERS_AS_OF_WINDOW_DAYS);
+    return fetchAllPages((options) =>
+        supabase
+            .from('player_ratings')
+            .select('nba_id, date', options)
+            .eq('season', season)
+            .gte('date', windowStart)
+            .lte('date', anchorDate)
+            .gt('tm_id', 0)
+            .order('date', { ascending: false })
+            .order('nba_id', { ascending: true })
+    );
+}
+
+/**
+ * Every player's latest rating on or before `asOf` (the Time Machine date), in the same shape
+ * as getActivePlayers() for the fields the date-aware views read. A player needs a row (a game,
+ * or a day on a roster) in the two weeks of play before the date; once any team's season has
+ * ended, the window reaches back past every team's final regular-season game. With the season
+ * calendar the season comes straight from the date; without it, or inside a pause in play
+ * (the 2020 hiatus), the latest rated date anchors the window. Returns { rows, dataDate, season }.
+ */
+export async function getPlayersAsOf(asOf, calendar = null) {
+    const key = cacheKey('playersAsOf', asOf);
+    return runCached(key, CACHE_MS.playersAsOf, async () => {
+        const located = calendar ? locateDate(calendar, asOf) : null;
+        let season = located?.season ?? null;
+        let calendarRow = located?.row ?? null;
+        let anchorDate = located ? (asOf < calendarRow.last_game ? asOf : calendarRow.last_game) : null;
+        let windowRows = season ? await fetchAsOfWindow(season, anchorDate, calendarRow) : [];
+        if (windowRows.length === 0) {
+            const anchor = await latestRatingDateOnOrBefore(asOf);
+            if (!anchor) return { rows: [], dataDate: null, season: null };
+            season = anchor.season;
+            anchorDate = anchor.date;
+            calendarRow = calendar?.find((row) => row.season === season) ?? null;
+            windowRows = await fetchAsOfWindow(season, anchorDate, calendarRow);
+        }
+
+        const latestDateById = new Map();
+        for (const row of windowRows) {
+            if (!latestDateById.has(row.nba_id)) latestDateById.set(row.nba_id, row.date);
+        }
+        const idsByDate = new Map();
+        for (const [nbaId, date] of latestDateById) {
+            if (!idsByDate.has(date)) idsByDate.set(date, []);
+            idsByDate.get(date).push(nbaId);
+        }
+        const requests = [];
+        for (const [date, ids] of idsByDate) {
+            for (let start = 0; start < ids.length; start += PLAYERS_AS_OF_ID_CHUNK) {
+                requests.push({ date, ids: ids.slice(start, start + PLAYERS_AS_OF_ID_CHUNK) });
+            }
+        }
+        const [chunks, playersMap] = await Promise.all([
+            mapWithConcurrency(requests, PLAYERS_AS_OF_CONCURRENCY, async ({ date, ids }) => {
+                const { data, error } = await supabase
+                    .from('player_ratings')
+                    .select(PLAYERS_AS_OF_COLUMNS)
+                    .eq('date', date)
+                    .in('nba_id', ids);
+                if (error) throw error;
+                return data ?? [];
+            }),
+            getPlayersMapByIds([...latestDateById.keys()])
+        ]);
+        const rows = chunks.flat();
+        return {
+            rows: sortByDpmDesc(rows.map((row) => mergeWithPlayerDim(row, playersMap.get(row.nba_id)))),
+            dataDate: windowRows[0]?.date ?? anchorDate,
+            season
+        };
     });
 }
 

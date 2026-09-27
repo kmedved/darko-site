@@ -2,9 +2,19 @@
 	import '../app.css';
 	import '../shiny-view.css';
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { beforeNavigate, goto, preloadData } from '$app/navigation';
+	import { navigating, page } from '$app/stores';
 	import { setContext } from 'svelte';
+	import TimeMachine from '$lib/components/TimeMachine.svelte';
+	import { setTimeMachineCollapsed, timeMachine } from '$lib/timeMachineState.svelte.js';
+	import {
+		AS_OF_PARAM,
+		formatAsOfDate,
+		isDateAwarePath,
+		parseAsOfDate,
+		relativeHref,
+		withAsOf
+	} from '$lib/utils/timeMachine.js';
 	import {
 		DISPLAY_VIEW_CONTEXT,
 		DISPLAY_VIEW_QUERY_KEY,
@@ -28,6 +38,8 @@
 		{ href: '/scatterplot', label: 'Scatterplot', match: (path) => path === '/scatterplot' }
 	];
 	const MORE_NAV_ITEMS = [
+		{ href: '/rewind', label: 'Rewind', match: (path) => path === '/rewind' },
+		{ href: '/lab', label: 'Roster Lab', match: (path) => path === '/lab' },
 		{ href: '/compare', label: 'Compare', match: (path) => path === '/compare' },
 		{ href: '/projections', label: 'Fantasy Lab', match: (path) => path === '/projections' },
 		{ href: '/rate', label: 'Rate a Player', match: (path) => path === '/rate' },
@@ -104,6 +116,65 @@
 	function closeMobileMenu() {
 		mobileMenuOpen = false;
 	}
+
+	// The Time Machine date comes from ?asof= and sticks to every in-app navigation until the
+	// reader returns to today (which clears timeMachine.date before navigating).
+	const urlAsOf = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
+	$effect(() => {
+		timeMachine.date = urlAsOf;
+	});
+
+	// While rewound, links carry the date, and hovering any in-app link preloads its dated page
+	// (SvelteKit's own hover preload would fetch today's version).
+	function navHref(href) {
+		return timeMachine.date ? `${href}?${AS_OF_PARAM}=${timeMachine.date}` : href;
+	}
+
+	let lastPreloaded = '';
+	function preloadDated(event) {
+		const date = timeMachine.date;
+		const anchor = date && event.target instanceof Element ? event.target.closest('a[href]') : null;
+		if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+		const url = new URL(anchor.href, window.location.href);
+		if (url.origin !== window.location.origin || url.pathname.startsWith('/api/')) return;
+		if (url.searchParams.has(AS_OF_PARAM)) return;
+		const href = relativeHref(withAsOf(url, date));
+		if (href === lastPreloaded) return;
+		lastPreloaded = href;
+		preloadData(href).catch(() => {});
+	}
+
+	$effect(() => {
+		if (!browser) return;
+		document.addEventListener('pointerover', preloadDated, { passive: true });
+		document.addEventListener('focusin', preloadDated);
+		return () => {
+			document.removeEventListener('pointerover', preloadDated);
+			document.removeEventListener('focusin', preloadDated);
+		};
+	});
+
+	// A thin bar under the header while a navigation waits on data (after a beat, so
+	// instant navigations never flash it).
+	let showProgress = $state(false);
+	$effect(() => {
+		if (!$navigating) {
+			showProgress = false;
+			return;
+		}
+		const timer = setTimeout(() => (showProgress = true), 120);
+		return () => clearTimeout(timer);
+	});
+
+	beforeNavigate((navigation) => {
+		const date = timeMachine.date;
+		const target = navigation.to?.url;
+		if (!date || !target || navigation.type === 'popstate' || navigation.willUnload) return;
+		if (!navigation.to?.route?.id || target.origin !== $page.url.origin) return;
+		if (target.searchParams.has(AS_OF_PARAM)) return;
+		navigation.cancel();
+		void goto(relativeHref(withAsOf(target, date)));
+	});
 
 	// Close mobile menu on navigation
 	$effect(() => {
@@ -237,6 +308,19 @@
 	}
 
 	const currentPageLabel = $derived(getCurrentPageLabel($page.url.pathname));
+
+	// The folded Time Machine's nav button: a clock, or the rewound date in the time colour.
+	const foldedDateLabel = $derived(timeMachine.date ? formatAsOfDate(timeMachine.date, { short: true }) : null);
+	const foldedTitle = $derived(
+		foldedDateLabel
+			? `Time Machine: ${foldedDateLabel}${isDateAwarePath($page.url.pathname) ? '' : ". This page shows today's data"}`
+			: 'Show the Time Machine'
+	);
+
+	function showTimeMachine() {
+		setTimeMachineCollapsed(false);
+		requestAnimationFrame(() => document.querySelector('#time-machine .tm-collapse')?.focus());
+	}
 	const moreMenuActive = $derived(MORE_NAV_ITEMS.some((item) => isNavItemActive(item, $page.url.pathname)));
 </script>
 
@@ -247,7 +331,7 @@
 			<span class="hamburger-line" class:open={mobileMenuOpen}></span>
 			<span class="hamburger-line" class:open={mobileMenuOpen}></span>
 		</button>
-		<a href="/" class="logo" aria-label="DARKO DPM">
+		<a href={navHref('/')} class="logo" aria-label="DARKO DPM">
             <span class="sr-only">DARKO DPM</span>
             <span class="logo-mark" aria-hidden="true"></span>
             <span class="legacy-logo-lockup" aria-hidden="true">
@@ -263,13 +347,13 @@
 		<span class="mobile-current-page">{currentPageLabel}</span>
         <div class="links desktop-links">
 			{#each PRIMARY_NAV_ITEMS as item (item.href)}
-				<a href={item.href} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
+				<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
 			{/each}
 			<details class="nav-more" class:active={moreMenuActive}>
 				<summary>More</summary>
 				<div class="nav-more-menu">
 					{#each MORE_NAV_ITEMS as item (item.href)}
-						<a href={item.href} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
+						<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
 					{/each}
 				</div>
 			</details>
@@ -332,7 +416,29 @@
 				</div>
 			</details>
 		</div>
+		<button
+			type="button"
+			id="tm-nav-toggle"
+			class="tm-nav-toggle"
+			class:rewound={foldedDateLabel}
+			aria-controls="time-machine"
+			aria-expanded="false"
+			aria-label={foldedTitle}
+			title={foldedTitle}
+			onclick={showTimeMachine}
+		>
+			<svg viewBox="0 0 20 20" aria-hidden="true">
+				<path d="M4.2 7.2A6.5 6.5 0 1 1 3.5 12" />
+				<path d="M3.2 3.6v3.9h3.9" />
+				<path d="M10 6.2V10l2.6 1.7" />
+			</svg>
+			<span class="tm-nav-label">{foldedDateLabel ?? 'Time Machine'}</span>
+		</button>
     </div>
+	<TimeMachine />
+	{#if showProgress}
+		<div class="nav-progress" class:rewound={timeMachine.date} aria-hidden="true"></div>
+	{/if}
 </nav>
 
 {#if mobileMenuOpen}
@@ -348,7 +454,7 @@
 >
 	<div class="mobile-drawer-links">
 		{#each ALL_NAV_ITEMS as item (item.href)}
-			<a href={item.href} class:active={isNavItemActive(item, $page.url.pathname)} onclick={closeMobileMenu}>{item.label}</a>
+			<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)} onclick={closeMobileMenu}>{item.label}</a>
 		{/each}
 	</div>
 	<div class="mobile-drawer-controls">
@@ -404,6 +510,120 @@
 <!-- Product decision: the former global credits footer is intentionally absent in both display modes. -->
 
 <style>
+	/* Shown only while the Time Machine strip is folded (see TimeMachine.svelte). */
+	.tm-nav-toggle {
+		display: none;
+		flex: none;
+		align-items: center;
+		gap: 6px;
+		height: 30px;
+		padding: 0 11px 0 9px;
+		font-family: var(--font-sans);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		white-space: nowrap;
+		background: transparent;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		cursor: pointer;
+	}
+
+	:global(:root[data-time-machine='collapsed']) .tm-nav-toggle {
+		display: inline-flex;
+	}
+
+	.tm-nav-toggle:hover {
+		color: var(--text);
+		border-color: var(--text-muted);
+	}
+
+	.tm-nav-toggle:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.tm-nav-toggle.rewound {
+		color: var(--time-text);
+		background: color-mix(in srgb, var(--time) 8%, transparent);
+		border-color: color-mix(in srgb, var(--time) 45%, transparent);
+	}
+
+	.tm-nav-toggle.rewound .tm-nav-label {
+		font-family: var(--font-mono);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.tm-nav-toggle svg {
+		width: 15px;
+		height: 15px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.7;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	@media (max-width: 720px) {
+		.tm-nav-toggle:not(.rewound) {
+			padding: 0 7px;
+		}
+
+		.tm-nav-toggle:not(.rewound) .tm-nav-label {
+			display: none;
+		}
+	}
+
+	:global(:root[data-view='shiny']) .tm-nav-toggle {
+		border-radius: 4px;
+		background: #ffffff;
+		border-color: #cccccc;
+		color: #333333;
+		font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	}
+
+	.nav-progress {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: -2px;
+		height: 2px;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	.nav-progress::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 38%;
+		background: var(--accent);
+		animation: nav-progress 1.1s ease-in-out infinite;
+	}
+
+	.nav-progress.rewound::before {
+		background: var(--time);
+	}
+
+	@keyframes nav-progress {
+		from {
+			left: -38%;
+		}
+		to {
+			left: 100%;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.nav-progress::before {
+			left: 0;
+			width: 100%;
+			animation: none;
+			opacity: 0.6;
+		}
+	}
+
 	.theme-slider {
 		display: inline-flex;
 		align-items: center;
@@ -806,10 +1026,10 @@
 		}
 
 		:global(:root) {
-			--nav-sticky-offset: 56px;
+			--nav-bar-height: 56px;
 		}
 
-			:global(.site-nav .container) {
+			:global(.site-nav > .container) {
 			gap: 10px;
 			height: 56px;
 			padding: 0 16px;

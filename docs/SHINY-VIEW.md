@@ -94,6 +94,8 @@ source-derived preset for specialized charts:
 - `probability`: black curve/points over roster-probability zones.
 - `seismograph`: black rating line with offense/defense lines above
   stacked per-game update bars, each panel bordered.
+- Rewind's ranking race uses the population-highlight colors directly:
+  `#0C39CE` bars with the leader in `#EF2D56`.
 
 Add a named preset to `shinyDesign.js` when a new chart belongs to a new
 recurring family. Keep D3 color values in the shared preset or CSS variables,

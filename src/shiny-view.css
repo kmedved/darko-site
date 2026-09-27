@@ -28,7 +28,7 @@
     --font-mono: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     --radius: 4px;
     --radius-sm: 4px;
-    --nav-sticky-offset: 64px;
+    --nav-bar-height: 64px;
     --shiny-primary: #337ab7;
     --shiny-primary-hover: #286090;
     --shiny-well-bg: #f5f5f5;
@@ -48,6 +48,9 @@
     /* Offense and defense reuse the DARKO series orange and blue. */
     --offense: #ed7d3a;
     --defense: #385bbb;
+    /* The Time Machine marks dates like any other emphatic reference. */
+    --time: #363537;
+    --time-text: #363537;
     --shiny-panel-bg: #ffffff;
     --shiny-panel-border: #dddddd;
     --shiny-control-bg: #ffffff;
@@ -215,7 +218,7 @@
     background: #f8f8f8;
 }
 
-:root[data-view='shiny'] .site-nav .container {
+:root[data-view='shiny'] .site-nav > .container {
     height: 64px;
 }
 
@@ -1557,10 +1560,10 @@
 
 @media (max-width: 1180px) {
     :root[data-view='shiny'] {
-        --nav-sticky-offset: 56px;
+        --nav-bar-height: 56px;
     }
 
-    :root[data-view='shiny'] .site-nav .container {
+    :root[data-view='shiny'] .site-nav > .container {
         height: 56px;
     }
 

@@ -40,7 +40,18 @@
 - Fantasy Lab (`/projections`) scoring and per-game conversion: `src/lib/utils/fantasyScoring.js`
 - Player-page Seismograph: `src/lib/utils/seismograph.js`. Each `player_ratings` row is the forecast going
   into that day's game, so a game's update is the next row minus that row; offseason rows (`tm_id` -999) end a season.
-  Opponents come from `opp_id`, published nightly by nba_darko's `push_website.py`.
+  Opponents come from `opp_id`, published by nba_darko's `push_website.py`.
+- Time Machine (`?asof=YYYY-MM-DD`): helpers in `src/lib/utils/timeMachine.js`, the strip in
+  `src/lib/components/TimeMachine.svelte`, kept across navigation by `beforeNavigate` in `+layout.svelte`.
+  Date-aware routes: `/`, `/player/*`, `/lab`, `/rewind`; snapshots come from `getPlayersAsOf` in `supabase.js`.
+  The strip folds into a nav button; `app.html` restores that choice (`darko-time-machine` in localStorage)
+  before first paint, and `--time-machine-height` drops to 0 so sticky offsets follow.
+- History tables `season_calendar` and `rating_frames` (Rewind, the strip's trace) come from nba_darko's
+  `push_website.py` (`build_season_calendar`, `build_rating_frames`), read in `src/lib/server/history.js`.
+  In `npm run dev` only, `DARKO_LOCAL_DATA_DIR` points at JSON files from the same builder.
+- Roster Lab math: `src/lib/utils/rosterLab.js`; Rewind helpers: `src/lib/utils/rewind.js`.
+- The leaderboard's players and a player page's career history ship column by column
+  (`packRows` in the loader, `unpackRows` in the page; `src/lib/utils/columnar.js`).
 - Supabase schema, column mappings, API data layer, pipeline scripts, and freshness: `SUPABASE_SCHEMA.md`
 
 ## Workflow Notes
