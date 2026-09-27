@@ -612,7 +612,8 @@ a:hover { color: var(--accent-hover); }
 }
 
 /* A table wider than its box fades at the edge that hides columns (utils/scrollEdges.js marks
-   the wrapper). The fade sits above the sticky header row, below the site nav. */
+   the wrapper). A soft border-coloured band at the very edge keeps the cue visible when the cut
+   falls on blank space. The fade sits above the sticky header row, below the site nav. */
 [data-overflow-left],
 [data-overflow-right] {
     position: relative;
@@ -631,12 +632,16 @@ a:hover { color: var(--accent-hover); }
 
 [data-overflow-left]::before {
     left: 0;
-    background: linear-gradient(to left, transparent, color-mix(in srgb, var(--bg-surface) 94%, transparent));
+    background:
+        linear-gradient(to right, var(--border), transparent 8px),
+        linear-gradient(to left, transparent, color-mix(in srgb, var(--bg-surface) 94%, transparent));
 }
 
 [data-overflow-right]::after {
     right: 0;
-    background: linear-gradient(to right, transparent, color-mix(in srgb, var(--bg-surface) 94%, transparent));
+    background:
+        linear-gradient(to left, var(--border), transparent 8px),
+        linear-gradient(to right, transparent, color-mix(in srgb, var(--bg-surface) 94%, transparent));
 }
 
 /* Zeros and missing values recede so the eye skips them. */

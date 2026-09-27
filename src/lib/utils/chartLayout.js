@@ -8,15 +8,17 @@ const CHART_HEIGHT = 500;
 /** Returns margin, tick counts, and font sizes based on chart width. */
 export function getChartLayout(width) {
 	const isMobile = width < 500;
+	// The left margin fits the rotated y-axis label beside signed ticks such as "+4.0".
+	const margin = {
+		top: 50,
+		right: isMobile ? 15 : 30,
+		bottom: 65,
+		left: isMobile ? 56 : 60
+	};
 	return {
 		isMobile,
-		margin: {
-			top: 50,
-			right: isMobile ? 15 : 30,
-			bottom: 65,
-			left: isMobile ? 45 : 60
-		},
-		plotWidth: width - (isMobile ? 60 : 90),
+		margin,
+		plotWidth: width - margin.left - margin.right,
 		plotHeight: CHART_HEIGHT - 115,
 		xTicks: isMobile ? 5 : 8,
 		yTicks: isMobile ? 6 : 8,

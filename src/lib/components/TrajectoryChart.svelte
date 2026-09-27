@@ -329,11 +329,12 @@
 			.selectAll('.tick line')
 			.attr('stroke', chartTheme.axisColor);
 
-		// Y axis label
+		// Y axis label, hung 4px inside the chart's left edge whatever the margin.
 			g.append('text')
 				.attr('transform', 'rotate(-90)')
 				.attr('x', -h / 2)
-				.attr('y', -45)
+				.attr('y', -margin.left + 4)
+				.attr('dy', '0.9em')
 				.attr('text-anchor', 'middle')
 				.attr('font-size', chartTheme.axisLabelSize)
 				.attr('font-weight', chartTheme.axisLabelWeight)

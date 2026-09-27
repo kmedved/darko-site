@@ -295,11 +295,12 @@
 		yAxisG.selectAll('.tick line')
 			.attr('stroke', 'var(--border, #555)');
 
-		// Y axis label
+		// Y axis label, hung 4px inside the chart's left edge whatever the margin.
 		g.append('text')
 			.attr('transform', 'rotate(-90)')
 			.attr('x', -h / 2)
-			.attr('y', -45)
+			.attr('y', -margin.left + 4)
+			.attr('dy', '0.9em')
 			.attr('text-anchor', 'middle')
 			.attr('font-size', isShinyView ? '16px' : '13px')
 			.attr('font-weight', isShinyView ? '400' : '600')
@@ -347,10 +348,10 @@
 			});
 		}
 
-		// Player count
+		// Player count; phones give it a line of its own under the title.
 		svg.append('text')
 			.attr('x', margin.left + 4)
-			.attr('y', 24)
+			.attr('y', isMobile ? 42 : 24)
 			.attr('text-anchor', 'start')
 			.attr('font-size', '11px')
 			.style('fill', 'var(--text-muted)')

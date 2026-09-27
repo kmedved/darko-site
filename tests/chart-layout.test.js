@@ -12,7 +12,7 @@ import {
 test('getChartLayout returns mobile layout for width < 500', () => {
 	const layout = getChartLayout(375);
 	assert.equal(layout.isMobile, true);
-	assert.equal(layout.margin.left, 45);
+	assert.equal(layout.margin.left, 56);
 	assert.equal(layout.margin.right, 15);
 	assert.equal(layout.xTicks, 5);
 	assert.equal(layout.yTicks, 6);
