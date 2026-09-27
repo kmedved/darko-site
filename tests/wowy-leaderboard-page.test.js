@@ -53,15 +53,15 @@ test('WOWY leaderboard shows Season-Adjusted ratings by season, all time, and Cu
     assert.match(contents, /const hasAllTimeRanks/);
     assert.match(contents, /return hasAllTimeRanks \? 'all-time' : 'current';/);
     assert.match(contents, /const isAllTimeView/);
-    assert.match(contents, /All Season-Adjusted WOWY RAPM player-seasons, loaded 100 at a time/);
-    assert.match(contents, /Every Season-Adjusted WOWY RAPM player-season/);
-    assert.match(contents, /All-time adjusted seasons/);
+    assert.match(contents, /All WOWY RAPM player-seasons, loaded 100 at a time/);
+    assert.match(contents, /Every WOWY RAPM player-season/);
+    assert.match(contents, /'All-time seasons'/);
     assert.match(contents, /no default possession cutoff/);
     assert.match(contents, /<option value="all-time">All time<\/option>/);
     assert.match(contents, /<option value="current">Current<\/option>/);
     assert.match(contents, /Latest observed/);
     assert.match(contents, /isCurrentView[\s\S]*Latest observed WOWY RAPM ratings for current active NBA players/);
-    assert.match(contents, /Season-Adjusted WOWY RAPM ratings for NBA players/);
+    assert.match(contents, /WOWY RAPM ratings for one NBA season/);
     assert.match(contents, /does not use DARKO projection rows/);
     assert.match(contents, /Current active players/);
     assert.match(contents, /id="wowy-season-filter"/);
@@ -76,6 +76,10 @@ test('WOWY leaderboard shows Season-Adjusted ratings by season, all time, and Cu
     assert.doesNotMatch(contents, /seasonAverageTableColumns|openingGameTableColumns|\ballTimeTableColumns\b/);
     assert.doesNotMatch(contents, /Avg WOWY RAPM|unweighted average|Opening-game snapshot/i);
     assert.doesNotMatch(contents, /isSeasonSummaryHistory|historicalSnapshotContext/);
+    // With one kind of rating left, nothing on the page calls it "Adjusted".
+    assert.doesNotMatch(contents.slice(contents.lastIndexOf('</script>')), /adjust/i);
+    assert.doesNotMatch(contents, /(label|tooltip|header): '[^']*adjust/i);
+    assert.doesNotMatch(contents, /adjusted seasons|adjusted ratings|'Season adjusted'|Season-Adjusted (WOWY|RAPM|player-season)/);
 
     // Seasons and teams are links: a season opens it, a team opens its season filtered to that team.
     assert.match(contents, /function playerSeasonHref\(player\)/);
@@ -110,9 +114,6 @@ test('WOWY leaderboard shows Season-Adjusted ratings by season, all time, and Cu
     assert.match(contents, /formatPlayerSeason\(player\)/);
     assert.match(contents, /allTimeAdjustedTableColumns/);
     assert.match(contents, /label: 'Season'/);
-    assert.match(contents, /Adjusted WOWY RAPM/);
-    assert.match(contents, /Adjusted O-RAPM/);
-    assert.match(contents, /Adjusted D-RAPM/);
     assert.match(contents, /label: 'Minutes'/);
     assert.match(contents, /label: 'BPM'/);
     assert.match(contents, /publication\.data_through/);
@@ -132,6 +133,9 @@ test('single-season Adjusted uses the same Minutes and BPM context as all-time',
     const adjustedColumns = contents.slice(adjustedStart, adjustedEnd);
 
     assert.ok(adjustedStart >= 0 && adjustedEnd > adjustedStart);
+    assert.match(adjustedColumns, /label: 'WOWY RAPM'/);
+    assert.match(adjustedColumns, /label: 'O-RAPM'/);
+    assert.match(adjustedColumns, /label: 'D-RAPM'/);
     assert.match(adjustedColumns, /label: 'Minutes'/);
     assert.match(adjustedColumns, /label: 'BPM'/);
     assert.doesNotMatch(adjustedColumns, /label: 'Possessions'/);
@@ -215,7 +219,8 @@ test('WOWY leaderboard supports sorting, filtering, loaded CSV export, and mobil
     assert.match(contents, /wowyAdjustedHistoricalLeaderboardCsvColumns/);
     assert.match(contents, /wowyLeaderboardCsvColumns/);
     assert.match(contents, /isAllTimeView[\s\S]*wowyAdjustedAllTimeLeaderboardCsvColumns[\s\S]*isCurrentView[\s\S]*wowyLeaderboardCsvColumns[\s\S]*wowyAdjustedHistoricalLeaderboardCsvColumns/);
-    assert.match(contents, /-season-adjusted`/);
+    assert.match(contents, /'all-time-loaded'/);
+    assert.match(contents, /\?\? activeSeason\}-season`;/);
     assert.match(contents, /class:wowy-table--all-time=\{isAllTimeView\}/);
     assert.match(contents, /setupWideStickyTable/);
     assert.match(contents, /class="sticky-header-shell"/);

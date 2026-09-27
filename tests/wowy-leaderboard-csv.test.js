@@ -57,7 +57,7 @@ test('WOWY leaderboard CSV preserves signed ratings and model exposure', () => {
     assert.equal(height.format(77), '77');
 });
 
-test('Season-Adjusted WOWY CSV labels modeled ratings and season possessions', () => {
+test('single-season WOWY CSV labels modeled ratings and season possessions', () => {
     assert.deepEqual(
         wowyAdjustedHistoricalLeaderboardCsvColumns.map((column) => column.header),
         [
@@ -67,9 +67,9 @@ test('Season-Adjusted WOWY CSV labels modeled ratings and season possessions', (
             'Teams',
             'Filter Position',
             'Height (in)',
-            'Adjusted WOWY RAPM',
-            'Adjusted WOWY O-RAPM',
-            'Adjusted WOWY D-RAPM',
+            'WOWY RAPM',
+            'WOWY O-RAPM',
+            'WOWY D-RAPM',
             'Possessions',
             'Games',
             'Playoff Games',

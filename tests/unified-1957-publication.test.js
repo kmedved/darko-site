@@ -104,7 +104,7 @@ test('the leaderboard offers only Season-Adjusted seasons; trajectories disclose
 
     assert.match(loader, /publication\?\.season_adjusted_from/);
     assert.match(loader, /publishedSeasons\.filter\(\(season\) => season >= seasonAdjustedFrom\)/);
-    assert.match(leaderboard, /Season-Adjusted WOWY begins in 1977-78/);
+    assert.match(leaderboard, /Season ratings begin in 1977-78/);
     // Adjusted ratings start after the merger, so ABA seasons appear only in daily WOWY charts.
     assert.doesNotMatch(leaderboard, /ABA seasons are included/);
     assert.match(trajectories, /ABA-to-NBA level is explicitly unidentified from 1967-68 through\s+1970-71/);

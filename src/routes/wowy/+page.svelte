@@ -111,21 +111,21 @@
         { key: 'team_sort_label', label: 'Teams', align: 'left' },
         {
             key: 'wowy_rapm',
-            label: 'Adjusted WOWY RAPM',
+            label: 'WOWY RAPM',
             align: 'right',
             tooltip: 'Season-average WOWY RAPM after updating the season baseline with season-specific game, quarter, box, and play-by-play-era evidence.'
         },
         {
             key: 'wowy_orapm',
-            label: 'Adjusted O-RAPM',
+            label: 'O-RAPM',
             align: 'right',
-            tooltip: 'Season-Adjusted offensive WOWY RAPM.'
+            tooltip: 'Offensive WOWY RAPM for the season.'
         },
         {
             key: 'wowy_drapm',
-            label: 'Adjusted D-RAPM',
+            label: 'D-RAPM',
             align: 'right',
-            tooltip: 'Season-Adjusted defensive WOWY RAPM.'
+            tooltip: 'Defensive WOWY RAPM for the season.'
         },
         {
             key: 'minutes',
@@ -390,21 +390,21 @@
     );
     const viewStatusDetail = $derived(
         isAllTimeView
-            ? 'Every modeled Season-Adjusted player-season, loaded 100 at a time.'
+            ? 'Every modeled player-season, loaded 100 at a time.'
             : isCurrentView
                 ? freshnessLabel
-                : 'Each rating starts from the season WOWY baseline and adds a bounded season-specific performance adjustment.'
+                : 'Each rating starts from the season WOWY baseline and shifts it a bounded amount for how the player performed that season.'
     );
     let methodOpen = $state(false);
     const viewSubtitle = $derived(
         isAllTimeView
-            ? 'Every Season-Adjusted WOWY RAPM player-season.'
+            ? 'Every WOWY RAPM player-season.'
             : isCurrentView
                 ? 'Synthetic game-level RAPM for current active players.'
-                : `Season-Adjusted RAPM for ${activeSeasonLabel}.`
+                : `WOWY RAPM for ${activeSeasonLabel}.`
     );
     const viewStatusLabel = $derived(
-        isAllTimeView ? 'All adjusted seasons' : isCurrentView ? 'Latest observed' : 'Season adjusted'
+        isAllTimeView ? 'All seasons' : isCurrentView ? 'Latest observed' : 'Single season'
     );
 
     $effect(() => {
@@ -891,10 +891,10 @@
 
     function exportPlayersCsv() {
         const seasonFileLabel = isAllTimeView
-            ? 'adjusted-all-time-loaded'
+            ? 'all-time-loaded'
             : isCurrentView
                 ? 'current-active'
-                : `${formatSeasonEndYearLabel(activeSeason) ?? activeSeason}-season-adjusted`;
+                : `${formatSeasonEndYearLabel(activeSeason) ?? activeSeason}-season`;
         exportCsvRows({
             rows: sortedPlayers.map((player, index) => ({
                 ...player,
@@ -962,10 +962,10 @@
     <meta
         name="description"
         content={isAllTimeView
-            ? 'All Season-Adjusted WOWY RAPM player-seasons, loaded 100 at a time.'
+            ? 'All WOWY RAPM player-seasons, loaded 100 at a time.'
             : isCurrentView
                 ? 'Latest observed WOWY RAPM ratings for current active NBA players.'
-                : 'Season-Adjusted WOWY RAPM ratings for NBA players.'}
+                : 'WOWY RAPM ratings for one NBA season.'}
     />
 </svelte:head>
 
@@ -975,7 +975,7 @@
             <PageHeader id="wowy-title" eyebrow="Game-level impact" title="WOWY RAPM" lede={viewSubtitle}>
                 <p class="wowy-status"><strong>{viewStatusLabel}</strong> <span>{viewStatusDetail}</span></p>
                 <p class="page-note">
-                    Observed games only; this page does not use DARKO projection rows. Season-Adjusted WOWY begins in 1977-78; daily WOWY, back to 1956-57, is on each player’s trajectory.
+                    Observed games only; this page does not use DARKO projection rows. Season ratings begin in 1977-78; daily WOWY, back to 1956-57, is on each player’s trajectory.
                 </p>
             </PageHeader>
 
@@ -994,11 +994,11 @@
                 <p>{getMetricDefinition('wowy_rapm')}</p>
                 <p>
                     {#if isAllTimeView}
-                        Each row is one modeled player-season, ranked by Season-Adjusted WOWY RAPM. The adjustment estimates how the player performed in that season relative to the underlying daily WOWY baseline. Regular-season and playoff evidence are included. BPM is the ordinary box-score baseline; WOWY adds non-box evidence. Results load 100 at a time, with no default possession cutoff.
+                        Each row is one modeled player-season, ranked by WOWY RAPM. Each rating starts from the underlying daily WOWY baseline and shifts it for how the player performed in that season. Regular-season and playoff evidence are included. BPM is the ordinary box-score baseline; WOWY adds non-box evidence. Results load 100 at a time, with no default possession cutoff.
                     {:else if isCurrentView}
                         Each player row is dated to that player’s most recent observed game; team and position reflect the current DARKO roster.
                     {:else}
-                        Each row is the player’s Season-Adjusted O-RAPM, D-RAPM, and total RAPM for {activeSeasonLabel}. The table includes every player-season emitted by the model and uses both regular-season and playoff games.
+                        Each row is the player’s O-RAPM, D-RAPM, and total RAPM for {activeSeasonLabel}. The table includes every player-season emitted by the model and uses both regular-season and playoff games.
                     {/if}
                     Click a season to open it, or a team to see that team’s season.
                 </p>
@@ -1015,21 +1015,21 @@
                     <p class="wowy-eyebrow" data-shiny-role="editorial-kicker">Leaderboard</p>
                     <h2 id="wowy-table-title">
                         {isAllTimeView
-                            ? 'All-time adjusted seasons'
+                            ? 'All-time seasons'
                             : isCurrentView
                                 ? 'Current active players'
-                                : `${activeSeasonLabel} adjusted ratings`}
+                                : activeSeasonLabel}
                     </h2>
                     <p>
                         {#if sortedPlayers.length === 0}
                             No players match this season and these filters.
                         {:else}
                             {#if isAllTimeView}
-                                Showing {rangeStart}–{rangeEnd} of {allTimeTotal} matching player-seasons, ranked by Season-Adjusted WOWY RAPM.
+                                Showing {rangeStart}–{rangeEnd} of {allTimeTotal} matching player-seasons, ranked by WOWY RAPM.
                             {:else if isCurrentView}
                                 Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} current active players with an observed WOWY rating.
                             {:else}
-                                Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} players with a modeled Season-Adjusted rating in {activeSeasonLabel}.
+                                Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} players with a modeled rating in {activeSeasonLabel}.
                             {/if}
                         {/if}
                     </p>
@@ -1425,11 +1425,11 @@
 
             <p class="wowy-table-note">
                 {#if isAllTimeView}
-                    All modeled player-seasons are available in 100-row batches. Adjusted ratings include regular-season and playoff evidence and use actual season possessions; no possession cutoff is applied unless you set one. Appearance-only player-seasons without the model’s required season baseline are not rated.
+                    All modeled player-seasons are available in 100-row batches. Ratings include regular-season and playoff evidence and use actual season possessions; no possession cutoff is applied unless you set one. Appearance-only player-seasons without the model’s required season baseline are not rated.
                 {:else if isCurrentView}
                     Exposure is shown without a cutoff. Sample games include the available WOWY regular-season and postseason appearances.
                 {:else}
-                    Ratings are the season model’s adjusted O/D/T values. Minutes and BPM include regular-season and playoff contributions. Multiple teams indicate that the player appeared for each listed historical team.
+                    Ratings are the season model’s O/D/T values. Minutes and BPM include regular-season and playoff contributions. Multiple teams indicate that the player appeared for each listed historical team.
                 {/if}
             </p>
         </section>
