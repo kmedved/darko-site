@@ -1,0 +1,5 @@
+# Text is stored with LF line endings, so an edit never rewrites every line ending in a file.
+* text=auto eol=lf
+
+# Vendored font files (and the font licence) stay byte-for-byte as published.
+static/fonts/** -text

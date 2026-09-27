@@ -13,3 +13,4 @@ build
 .tools
 .DS_Store
 .local-data/
+.agents/
