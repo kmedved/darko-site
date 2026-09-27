@@ -57,7 +57,7 @@ test('WOWY leaderboard loader defaults to all time and supports Current and URL-
 test('WOWY leaderboard defaults to all seasons and preserves Current and season semantics', async () => {
     const contents = await read(WOWY_PAGE);
 
-    assert.match(contents, /import \{ goto \} from '\$app\/navigation';/);
+    assert.match(contents, /import \{ goto(, preloadData)? \} from '\$app\/navigation';/);
     assert.match(contents, /formatSeasonEndYearLabel/);
     assert.match(contents, /data\.selectedView === 'all-time'/);
     assert.match(contents, /const hasAllTimeRanks/);

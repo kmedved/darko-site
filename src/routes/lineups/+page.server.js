@@ -1,6 +1,7 @@
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 import { loadLineupsPageData } from '$lib/server/lineupsPage.js';
-import { getLineupRatings } from '$lib/server/supabase.js';
+import { getLineupRatings, getLineupSizeCounts } from '$lib/server/supabase.js';
+import { packLineups } from '$lib/utils/lineupTransport.js';
 import { VALID_LINEUP_SIZES, DEFAULT_LINEUP_SIZE } from '$lib/server/lineupRatings.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
@@ -14,10 +15,12 @@ export async function load({ url, setHeaders }) {
     const rawSize = Number(url.searchParams.get('size'));
     const lineupSize = VALID_LINEUP_SIZES.includes(rawSize) ? rawSize : DEFAULT_LINEUP_SIZE;
 
-    return loadLineupsPageData({
+    const payload = await loadLineupsPageData({
         setHeaders,
         setCacheHeaders: setEdgeCache,
         loadLineupRatings: (opts) => getLineupRatings(opts),
+        loadLineupSizeCounts: () => getLineupSizeCounts(),
         lineupSize
     });
+    return { ...payload, lineupsByVariant: packLineups(payload.lineupsByVariant, payload.lineupSize) };
 }

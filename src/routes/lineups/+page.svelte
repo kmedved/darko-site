@@ -1,8 +1,9 @@
 <script>
-    import { goto } from '$app/navigation';
+    import { goto, preloadData } from '$app/navigation';
     import { getContext } from 'svelte';
     import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
     import { exportCsvRows, formatFixed, formatSignedMetric, getLineupsCsvColumns } from '$lib/utils/csvPresets.js';
+    import { unpackLineups } from '$lib/utils/lineupTransport.js';
     import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
@@ -112,12 +113,13 @@
         return configs;
     });
 
-    let selectedLineups = $derived(data.lineupsByVariant?.[selectedVariant] ?? []);
+    let lineupsByVariant = $derived(unpackLineups(data.lineupsByVariant));
+    let selectedLineups = $derived(lineupsByVariant[selectedVariant] ?? []);
     let lineupHeatScales = $derived.by(() =>
         buildPresetHeatScales(selectedLineups, 'lineup')
     );
     let hasAnyVariantLineups = $derived(
-        variantOptions.some((option) => (data.lineupsByVariant?.[option.value] ?? []).length > 0)
+        variantOptions.some((option) => (lineupsByVariant[option.value] ?? []).length > 0)
     );
 
     let currentSizeLabel = $derived(
@@ -262,9 +264,19 @@
         return finite.reduce((sum, value) => sum + value, 0) / finite.length;
     }
 
+    function sizeHref(size) {
+        return `/lineups?size=${size}`;
+    }
+
     function selectSize(size) {
         if (size === data.lineupSize) return;
-        goto(`/lineups?size=${size}`, { keepFocus: true });
+        goto(sizeHref(size), { keepFocus: true });
+    }
+
+    // Start loading a size on hover or focus, so the click usually finds its rows already here.
+    function preloadSize(size) {
+        if (size === data.lineupSize) return;
+        preloadData(sizeHref(size)).catch(() => {});
     }
 
     function setVariant(value) {
@@ -424,8 +436,8 @@
                 lineupSize: option.value,
                 label: option.label,
                 minPoss: data.minPoss ?? 100,
-                piCount: option.value === data.lineupSize ? (data.lineupsByVariant?.pi?.length ?? 0) : 0,
-                npiCount: option.value === data.lineupSize ? (data.lineupsByVariant?.npi?.length ?? 0) : 0
+                piCount: option.value === data.lineupSize ? lineupsByVariant.pi.length : 0,
+                npiCount: option.value === data.lineupSize ? lineupsByVariant.npi.length : 0
             }));
 
         const counts = summaries.map((summary) => ({
@@ -627,6 +639,8 @@
                                             type="button"
                                             class:active={data.lineupSize === option.value}
                                             onclick={() => selectSize(option.value)}
+                                            onpointerenter={() => preloadSize(option.value)}
+                                            onfocus={() => preloadSize(option.value)}
                                         >
                                             {option.label}
                                         </button>

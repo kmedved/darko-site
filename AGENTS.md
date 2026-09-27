@@ -52,6 +52,8 @@
 - Roster Lab math: `src/lib/utils/rosterLab.js`; Rewind helpers: `src/lib/utils/rewind.js`.
 - The leaderboard's players and a player page's career history ship column by column
   (`packRows` in the loader, `unpackRows` in the page; `src/lib/utils/columnar.js`).
+- `/lineups` loads the selected size's rows plus every size's counts (`getLineupSizeCounts`), and ships
+  them packed (`packLineups` / `unpackLineups` in `src/lib/utils/lineupTransport.js`).
 - Supabase schema, column mappings, API data layer, pipeline scripts, and freshness: `SUPABASE_SCHEMA.md`
 
 ## Workflow Notes

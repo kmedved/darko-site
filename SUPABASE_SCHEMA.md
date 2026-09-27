@@ -425,7 +425,8 @@ Comma-joined string of all 69 fetched `player_ratings` column names (66 original
 | `getLongevityTrajectory(id)` | `player_ratings` filtered to one player, maps to chart fields | Array of trajectory points | `/api/player/[id]/longevity` |
 | `getWowyPlayerHistory(id)` | Paginates `wowy_ratings` in 1,000-row ranges, orders by `career_game_num`, and merges player metadata | `{ rows, truncated, maxRows }` | `/api/player/[id]/wowy-history`, Trajectories |
 | `getWowyPublication()` | Reads singleton `wowy_publication` row | Publication freshness/provenance | `/api/wowy-publication`, Trajectories |
-| `getLineupRatings()` | `lineup_ratings` with explicit projection, `min_season_poss > 100`, variants in `('pi', 'raw', 'npi')`. Retries without `team_name` if the column is not available yet, drops rows missing `total_*_rating`, and normalizes `raw` + `npi` into the NPI bucket. | `{ pi: LineupRow[], npi: LineupRow[] }` | `/lineups` |
+| `getLineupRatings({ lineupSize, minPoss })` | `lineup_ratings` with explicit projection for one lineup size above its possession cutoff (default 5-man, `min_season_poss > 100`), variants in `('pi', 'raw', 'npi')`. Fetches its 1,000-row pages in parallel, ordered by `min_season_poss` with `variant`, `group_key` and `tm_id` tie-breakers so no page repeats or skips a row. Resolves team names from `tm_id`, drops rows missing `total_*_rating`, and normalizes `raw` + `npi` into the NPI bucket. | `{ pi: LineupRow[], npi: LineupRow[] }` | `/lineups`, team pages |
+| `getLineupSizeCounts()` | Row counts (`count: 'exact', head: true`) of PI and NPI lineups for each lineup size above its cutoff, so `/lineups` loads only the selected size's rows. | `{ [size]: { pi, npi } }` | `/lineups` size tabs |
 | `getConferenceStandings()` / `getTeamSimulation()` | `season_sim` with public read-only RLS. Conference standings filter by `conference`; team pages filter by `team_name`. | Standings/team simulation rows | `/standings`, team pages |
 | `getTeamWinDistribution()` | `win_distribution` with public read-only RLS, filtered by `team_name` and ordered by `wins`. | Team win-distribution rows | Team pages |
 
@@ -458,7 +459,8 @@ All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. 
 | playersIndex | 5min |
 | longevityRows | 5min |
 | longevityTrajectory | 10min |
-| lineupRatings | 60s |
+| lineupRatings | 1h |
+| lineupSizeCounts | 1h |
 | playerCurrent | 60s |
 | playerHistory | 5min |
 | activeWowyPlayers | 5min |

@@ -1,5 +1,5 @@
 <script>
-    import { goto } from '$app/navigation';
+    import { goto, preloadData } from '$app/navigation';
     import { untrack } from 'svelte';
     import {
         exportCsvRows,
@@ -730,11 +730,22 @@
         });
     }
 
+    function ratingModeHref(nextRatingMode) {
+        const params = new URLSearchParams();
+        if (isSeasonView) {
+            params.set('season', String(data.selectedSeason));
+        }
+        if (nextRatingMode === 'adjusted') {
+            params.set('rating', 'adjusted');
+        }
+        const suffix = params.size > 0 ? `?${params.toString()}` : '';
+        return `/wowy${suffix}`;
+    }
+
     function selectRatingMode(event) {
         const nextRatingMode = event.currentTarget.value === 'adjusted'
             ? 'adjusted'
             : 'average';
-        const params = new URLSearchParams();
         teamFilter = 'all';
         positionFilter = 'all';
         minHeight = '';
@@ -743,14 +754,14 @@
         maxPossessions = '';
         searchQuery = '';
         leaderboardPage = 1;
-        if (isSeasonView) {
-            params.set('season', String(data.selectedSeason));
-        }
-        if (nextRatingMode === 'adjusted') {
-            params.set('rating', 'adjusted');
-        }
-        const suffix = params.size > 0 ? `?${params.toString()}` : '';
-        goto(`/wowy${suffix}`, { keepFocus: true });
+        goto(ratingModeHref(nextRatingMode), { keepFocus: true });
+    }
+
+    // Start loading the other rating on hover or focus; its first load can take a second or more.
+    function preloadRatingMode(nextRatingMode) {
+        if ((nextRatingMode === 'adjusted') === isAdjustedRatings) return;
+        if (nextRatingMode === 'adjusted' && !adjustedAvailable) return;
+        preloadData(ratingModeHref(nextRatingMode)).catch(() => {});
     }
 
     function buildAllTimeQuerySignature() {
@@ -1267,7 +1278,11 @@
                 {#if !isCurrentView}
                     <fieldset class="wowy-rating-mode">
                         <legend class="sr-only">Rating type</legend>
-                        <label class:active={!isAdjustedRatings}>
+                        <label
+                            class:active={!isAdjustedRatings}
+                            onpointerenter={() => preloadRatingMode('average')}
+                            onfocusin={() => preloadRatingMode('average')}
+                        >
                             <input
                                 type="radio"
                                 name="wowy-rating-mode"
@@ -1280,6 +1295,8 @@
                         <label
                             class:active={isAdjustedRatings}
                             class:unavailable={!adjustedAvailable}
+                            onpointerenter={() => preloadRatingMode('adjusted')}
+                            onfocusin={() => preloadRatingMode('adjusted')}
                             title={!adjustedAvailable ? 'Season-Adjusted WOWY begins in 1977-78.' : undefined}
                         >
                             <input

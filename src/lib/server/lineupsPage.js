@@ -29,8 +29,13 @@ function resolveLineupSizeConfig(lineupSize) {
     };
 }
 
+/**
+ * Rows for the selected lineup size only; the other sizes contribute their counts, which the size
+ * tabs show. Loading every size's rows just to count them tripled a cold load.
+ */
 export async function getLineupsPagePayload({
     loadLineupRatings,
+    loadLineupSizeCounts,
     lineupSize = DEFAULT_LINEUP_SIZE
 }) {
     const {
@@ -38,35 +43,25 @@ export async function getLineupsPagePayload({
         config: sizeConfig
     } = resolveLineupSizeConfig(lineupSize);
     const minPoss = sizeConfig.minPoss;
-    const sizePayloads = await Promise.all(
-        VALID_LINEUP_SIZES.map(async (size) => {
-            const config = LINEUP_SIZE_CONFIG[size] ?? LINEUP_SIZE_CONFIG[DEFAULT_LINEUP_SIZE];
-            const lineupsByVariant = normalizeLineupsByVariant(
-                await loadLineupRatings({ lineupSize: size, minPoss: config.minPoss })
-            );
+    const [selectedPayload, sizeCounts] = await Promise.all([
+        loadLineupRatings({ lineupSize: resolvedLineupSize, minPoss }),
+        loadLineupSizeCounts ? loadLineupSizeCounts() : null
+    ]);
+    const lineupsByVariant = normalizeLineupsByVariant(selectedPayload);
+    const lineupSizeSummaries = VALID_LINEUP_SIZES.map((size) => {
+        const config = LINEUP_SIZE_CONFIG[size] ?? LINEUP_SIZE_CONFIG[DEFAULT_LINEUP_SIZE];
+        const counts = size === resolvedLineupSize
+            ? { pi: lineupsByVariant.pi.length, npi: lineupsByVariant.npi.length }
+            : sizeCounts?.[size];
 
-            return {
-                lineupSize: size,
-                label: config.label,
-                minPoss: config.minPoss,
-                lineupsByVariant
-            };
-        })
-    );
-    const lineupsBySize = Object.fromEntries(
-        sizePayloads.map((payload) => [payload.lineupSize, payload.lineupsByVariant])
-    );
-    const lineupsByVariant = lineupsBySize[resolvedLineupSize] ?? {
-        pi: [],
-        npi: []
-    };
-    const lineupSizeSummaries = sizePayloads.map((payload) => ({
-        lineupSize: payload.lineupSize,
-        label: payload.label,
-        minPoss: payload.minPoss,
-        piCount: payload.lineupsByVariant.pi.length,
-        npiCount: payload.lineupsByVariant.npi.length
-    }));
+        return {
+            lineupSize: size,
+            label: config.label,
+            minPoss: config.minPoss,
+            piCount: counts?.pi ?? 0,
+            npiCount: counts?.npi ?? 0
+        };
+    });
 
     return {
         lineupsByVariant,
@@ -81,6 +76,7 @@ export async function loadLineupsPageData({
     setHeaders,
     setCacheHeaders,
     loadLineupRatings,
+    loadLineupSizeCounts,
     lineupSize = DEFAULT_LINEUP_SIZE
 }) {
     if (setHeaders && setCacheHeaders) {
@@ -89,6 +85,7 @@ export async function loadLineupsPageData({
 
     return getLineupsPagePayload({
         loadLineupRatings,
+        loadLineupSizeCounts,
         lineupSize
     });
 }

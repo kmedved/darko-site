@@ -5,7 +5,9 @@ import { teamId as nbaTeamId } from '$lib/utils/teamAbbreviations.js';
 import {
     LINEUP_MIN_POSSESSIONS,
     LINEUP_QUERY_VARIANTS,
-    groupLineupRows
+    LINEUP_SIZE_CONFIG,
+    groupLineupRows,
+    normalizeLineupVariant
 } from './lineupRatings.js';
 import { createActivePlayersAccessor } from './activePlayersCache.js';
 import { asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
@@ -50,7 +52,8 @@ const CACHE_MS = {
     conferenceStandings: 60_000,
     teamSimulation: 60_000,
     teamWinDistribution: 60_000,
-    lineupRatings: 60_000,
+    lineupRatings: 3_600_000,
+    lineupSizeCounts: 3_600_000,
     eloLeaderboard: 30_000
 };
 
@@ -1633,34 +1636,23 @@ export async function getConferenceStandings(conference) {
 }
 
 async function fetchLineupRatingsRows({ lineupSize = 5, minPoss = LINEUP_MIN_POSSESSIONS } = {}) {
-    const rows = [];
-    let page = 0;
-    const pageSize = 1_000;
-
-    while (true) {
-        const { data, error } = await supabase
-            .from('lineup_ratings')
-            .select(LINEUP_RATING_COLUMNS)
-            .in('variant', LINEUP_QUERY_VARIANTS)
-            .eq('lineup_size', lineupSize)
-            .gt('min_season_poss', minPoss)
-            .order('min_season_poss', { ascending: false })
-            .range(page * pageSize, (page + 1) * pageSize - 1);
-
-        if (error) {
-            throw error;
-        }
-
-        rows.push(...(data || []));
-
-        if (!data || data.length < pageSize) {
-            break;
-        }
-
-        page += 1;
-    }
-
-    return rows;
+    // Possession counts are whole numbers and tie often, so the order needs tie-breakers: without
+    // them, a row at a page boundary could land on two pages and another on none (the 2-Man list
+    // lost two lineups that way).
+    return fetchAllPages(
+        (options) =>
+            supabase
+                .from('lineup_ratings')
+                .select(LINEUP_RATING_COLUMNS, options)
+                .in('variant', LINEUP_QUERY_VARIANTS)
+                .eq('lineup_size', lineupSize)
+                .gt('min_season_poss', minPoss)
+                .order('min_season_poss', { ascending: false })
+                .order('variant', { ascending: true })
+                .order('group_key', { ascending: true })
+                .order('tm_id', { ascending: true }),
+        { guessPages: 3 }
+    );
 }
 
 export async function getLineupRatings({ lineupSize = 5, minPoss = LINEUP_MIN_POSSESSIONS } = {}) {
@@ -1668,6 +1660,42 @@ export async function getLineupRatings({ lineupSize = 5, minPoss = LINEUP_MIN_PO
     return runCached(key, CACHE_MS.lineupRatings, async () => {
         const rows = await fetchLineupRatingsRows({ lineupSize, minPoss });
         return groupLineupRows(rows, { minPoss, playerCount: lineupSize });
+    });
+}
+
+const LINEUP_COUNT_BUCKETS = ['pi', 'npi'].map((bucket) => [
+    bucket,
+    LINEUP_QUERY_VARIANTS.filter((variant) => normalizeLineupVariant(variant) === bucket)
+]);
+
+/**
+ * PI and NPI lineup counts for every lineup size, from row counts alone: the size tabs show them
+ * without loading every size's rows. They match the grouped lineups while each lineup has one row
+ * per variant, as the published table does.
+ */
+export async function getLineupSizeCounts() {
+    return runCached(cacheKey('lineupSizeCounts', 'all'), CACHE_MS.lineupSizeCounts, async () => {
+        const queries = Object.entries(LINEUP_SIZE_CONFIG).flatMap(([size, { minPoss }]) =>
+            LINEUP_COUNT_BUCKETS.map(([bucket, variants]) => ({ size: Number(size), minPoss, bucket, variants }))
+        );
+        const results = await Promise.all(
+            queries.map(({ size, minPoss, variants }) =>
+                supabase
+                    .from('lineup_ratings')
+                    .select('variant', { count: 'exact', head: true })
+                    .in('variant', variants)
+                    .eq('lineup_size', size)
+                    .gt('min_season_poss', minPoss)
+            )
+        );
+        const counts = {};
+        results.forEach((result, index) => {
+            if (result.error) throw result.error;
+            const { size, bucket } = queries[index];
+            counts[size] ??= { pi: 0, npi: 0 };
+            counts[size][bucket] = result.count ?? 0;
+        });
+        return counts;
     });
 }
 

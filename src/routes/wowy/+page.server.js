@@ -15,7 +15,10 @@ export const config = {
     maxDuration: 60
 };
 
+const ADJUSTED_SEASON_FLOOR = 1978;
+
 export async function load({ url, setHeaders }) {
+    prefetchRequestedPlayers(url);
     const [seasons, publication] = await Promise.all([
         getWowyLeaderboardSeasons(),
         getWowyPublication()
@@ -35,9 +38,9 @@ export async function load({ url, setHeaders }) {
         url.searchParams.get('rating') === 'adjusted' ? 'adjusted' : 'average';
     const publishedSeasonAdjustedFrom = Number(publication?.season_adjusted_from);
     const seasonAdjustedFrom =
-        Number.isInteger(publishedSeasonAdjustedFrom) && publishedSeasonAdjustedFrom >= 1978
+        Number.isInteger(publishedSeasonAdjustedFrom) && publishedSeasonAdjustedFrom >= ADJUSTED_SEASON_FLOOR
             ? publishedSeasonAdjustedFrom
-            : 1978;
+            : ADJUSTED_SEASON_FLOOR;
     const adjustedAvailable =
         selectedView === 'all-time' ||
         (selectedView === 'season' && selectedSeason >= seasonAdjustedFrom);
@@ -102,6 +105,27 @@ export async function load({ url, setHeaders }) {
         allTimeTotal,
         allTimeHasMore
     };
+}
+
+// Start the player query the URL asks for alongside the season list and publication, rather than
+// after them, so a cold load waits for one round of database calls instead of two. The checks in
+// load() still decide what is shown; the matching call there reuses this in-flight request.
+function prefetchRequestedPlayers(url) {
+    const seasonValue = url.searchParams.get('season');
+    const season = parseSeasonEndYear(seasonValue);
+    const adjusted = url.searchParams.get('rating') === 'adjusted';
+    let request;
+    if (season !== null) {
+        if (season < 1947 || season > new Date().getUTCFullYear() + 1) return;
+        request = adjusted && season >= ADJUSTED_SEASON_FLOOR
+            ? getWowyAdjustedSeasonPlayers(season)
+            : getWowySeasonPlayers(season);
+    } else if (url.searchParams.get('view') === 'current' || seasonValue?.trim() === 'current') {
+        request = getActiveWowyPlayers();
+    } else {
+        request = adjusted ? getWowyAdjustedAllTimePage() : getWowyAllTimePage();
+    }
+    request.catch(() => {});
 }
 
 function parseSeasonEndYear(value) {
