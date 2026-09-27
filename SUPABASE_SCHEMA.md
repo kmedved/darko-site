@@ -247,6 +247,11 @@ game-count cutoff. Each response includes `total_count`, `loaded_count`, and
 universe. Migration 20260711 adds the same filter-only player-dimension fields
 to the leaderboard RPCs without changing ratings or historical team
 provenance.
+Migration `20260927_001_speed_up_wowy_all_time_page.sql` rewrites the private
+base function for speed without changing its output: each listed position is
+normalized once instead of once per player-season, only keys and sort fields
+pass the filter, the page is a bounded top-N sort, and full rows are built for
+the returned page alone.
 
 | Column | Postgres type | Notes |
 |---|---|---|
