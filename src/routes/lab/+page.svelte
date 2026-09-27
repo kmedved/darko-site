@@ -1,4 +1,5 @@
 <script>
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { browser } from '$app/environment';
 	import { afterNavigate, replaceState } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -324,12 +325,8 @@
 </svelte:head>
 
 <div class="container lab-page" data-shiny-page>
-	<header class="page-header lab-hero" data-shiny-surface="hero">
-		<p class="lab-eyebrow" data-shiny-role="editorial-kicker">
-			{asOf ? `Rosters as of ${formatAsOfDate(asOf.date)}` : 'Trade machine'}
-		</p>
-		<h1>Roster Lab</h1>
-		<p>
+	<PageHeader eyebrow={asOf ? `Rosters as of ${formatAsOfDate(asOf.date)}` : 'Trade machine'} title="Roster Lab">
+		<p class="page-lede">
 			Start from each team's rotation in DARKO's projected minutes, then trade, sign and re-slot
 			minutes. A team's rating is its players' DPM weighted by minutes; wins are 41 plus {WINS_PER_POINT}
 			for every point above the league's average team.
@@ -339,11 +336,11 @@
 			<div class="lab-scenarios">
 				<span>Try a what-if</span>
 				{#each scenarios as scenario (scenario.label)}
-					<button type="button" class="lab-btn" onclick={() => runScenario(scenario)}>{scenario.label}</button>
+					<button type="button" class="btn btn-sm" onclick={() => runScenario(scenario)}>{scenario.label}</button>
 				{/each}
 			</div>
 		{/if}
-	</header>
+	</PageHeader>
 
 	<div class="lab-sides">
 		{#each SIDES as side (side)}
@@ -358,7 +355,7 @@
 							<option value={team.abbr}>{team.name}</option>
 						{/each}
 					</select>
-					<button type="button" class="lab-btn" disabled={!state.edited} onclick={() => resetTeam(side)}>Reset</button>
+					<button type="button" class="btn btn-sm" disabled={!state.edited} onclick={() => resetTeam(side)}>Reset</button>
 				</div>
 
 				<div class="lab-score">
@@ -581,22 +578,6 @@
 		padding-bottom: 64px;
 	}
 
-	.lab-eyebrow {
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--time-text) !important;
-	}
-
-	.lab-hero h1 {
-		margin-top: 4px;
-	}
-
-	.lab-hero > p:not(.lab-eyebrow) {
-		max-width: 82ch;
-	}
-
 	.lab-scenarios {
 		display: flex;
 		flex-wrap: wrap;
@@ -614,33 +595,16 @@
 		color: var(--text-muted);
 	}
 
-	.lab-btn,
 	.lab-select,
 	.lab-search {
 		height: 32px;
 		padding: 0 12px;
 		font-family: var(--font-sans);
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--text);
 		background: var(--bg-elevated);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
-	}
-
-	.lab-btn {
-		font-weight: 600;
-		color: var(--text-secondary);
-		cursor: pointer;
-	}
-
-	.lab-btn:hover:not(:disabled) {
-		color: var(--text);
-		border-color: var(--text-muted);
-	}
-
-	.lab-btn:disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
 	}
 
 	.lab-sides {
@@ -695,7 +659,7 @@
 	}
 
 	.lab-stat-label {
-		font-size: 10.5px;
+		font-size: 11px;
 		font-weight: 700;
 		letter-spacing: 0.07em;
 		text-transform: uppercase;
@@ -704,7 +668,7 @@
 
 	.lab-stat-value {
 		font-family: var(--font-mono);
-		font-size: 24px;
+		font-size: 28px;
 		font-weight: 700;
 		line-height: 1.15;
 		color: var(--text);
@@ -790,7 +754,7 @@
 	.lab-row-head {
 		min-height: 28px;
 		border-top: 0;
-		font-size: 10.5px;
+		font-size: 11px;
 		font-weight: 700;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
@@ -815,7 +779,7 @@
 	}
 
 	.lab-meta {
-		font-size: 11.5px;
+		font-size: 12px;
 		color: var(--text-muted);
 	}
 
@@ -944,7 +908,7 @@
 
 	.lab-sub {
 		margin: 2px 0 12px;
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--text-muted);
 	}
 
@@ -960,7 +924,7 @@
 		flex: none;
 		gap: 6px;
 		align-items: center;
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--text-secondary);
 		white-space: nowrap;
 	}
@@ -988,7 +952,7 @@
 
 	.lab-pct {
 		font-family: var(--font-mono);
-		font-size: 30px;
+		font-size: 28px;
 		font-weight: 700;
 		line-height: 1.1;
 		color: var(--text);
@@ -1016,7 +980,7 @@
 
 	.lab-note {
 		margin-top: 10px;
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--text-secondary);
 	}
 
@@ -1061,12 +1025,11 @@
 
 	.lab-label {
 		font-family: var(--font-mono);
-		font-size: 11.5px;
+		font-size: 12px;
 		font-weight: 700;
 		fill: var(--text);
 	}
 
-	.lab-btn:focus-visible,
 	.lab-select:focus-visible,
 	.lab-search:focus-visible,
 	.lab-icon:focus-visible {

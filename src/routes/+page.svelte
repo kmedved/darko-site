@@ -20,6 +20,7 @@
     import { formatSeasonEndYearLabel } from '$lib/utils/seasonUtils.js';
     import { AS_OF_PARAM, formatAsOfDate } from '$lib/utils/timeMachine.js';
     import { unpackRows } from '$lib/utils/columnar.js';
+    import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
     import { timeMachine } from '$lib/timeMachineState.svelte.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
@@ -29,6 +30,8 @@
     } from '$lib/utils/metricHeatScales.js';
     import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
+    import PageHeader from '$lib/components/PageHeader.svelte';
+    import StatTile from '$lib/components/StatTile.svelte';
     import { getContext } from 'svelte';
 
     let { data } = $props();
@@ -138,6 +141,7 @@
     const leaderboardHeatScales = $derived.by(() =>
         buildPresetHeatScales(players, 'talent')
     );
+    const dpmTintLimit = $derived(tintLimit(players.map((player) => player?.dpm)));
     const leaderboardRangeStart = $derived(
         sortedPlayers.length === 0 ? 0 : (activeLeaderboardPage - 1) * LEADERBOARD_PAGE_SIZE + 1
     );
@@ -149,8 +153,8 @@
         buildLeaderCard(teamScopedPlayers, 'Best DPM', 'dpm'),
         buildLeaderCard(teamScopedPlayers, 'Best Offensive DPM', 'o_dpm'),
         buildLeaderCard(teamScopedPlayers, 'Best Defensive DPM', 'd_dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Best Three Point Shooter', 'x_fg3_pct', formatPercent),
-        buildLeaderCard(teamScopedPlayers, 'Best Free Throw Shooter', 'x_ft_pct', formatPercent)
+        buildLeaderCard(teamScopedPlayers, 'Best 3PT Shooter', 'x_fg3_pct', formatPercent),
+        buildLeaderCard(teamScopedPlayers, 'Best FT Shooter', 'x_ft_pct', formatPercent)
     ]);
 
     const selectedDistributionMetric = $derived(
@@ -245,31 +249,16 @@
         }
     });
 
-    function metricClass(value) {
-        const n = toNumber(value);
-        if (n === null) return '';
-        return n >= 0 ? 'metric-positive' : 'metric-negative';
-    }
-
-    function pctClass(value) {
-        const n = toNumber(value);
-        if (n === null) return '';
-        if (n >= 0.5) return 'metric-percentage metric-percentage-high';
-        if (n >= 0.35) return 'metric-percentage metric-percentage-mid';
-        if (n > 0) return 'metric-percentage metric-percentage-low';
-        return 'metric-muted';
-    }
-
+    // Numbers stay in neutral ink; DPM, the column the table ranks by, carries a diverging tint.
     function statClass(column, value) {
         const n = toNumber(value);
         if (n === null) return 'metric-muted';
+        return column === 'dpm' ? 'tint-cell' : '';
+    }
 
-        if (column.endsWith('_pct')) return pctClass(n);
-        if (column === 'sal_market_fixed' || column === 'actual_salary') return 'metric-neutral';
-        if (column === 'x_minutes' || column === 'x_pace' || column === 'x_pts_100' || column === 'x_ast_100') {
-            return 'metric-positive';
-        }
-        return metricClass(n);
+    function cellStyle(column, value) {
+        const shinyHeat = getMetricHeatVariables(column.key, value, leaderboardHeatScales);
+        return column.key === 'dpm' ? `${shinyHeat} ${divergingTint(value, dpmTintLimit)}` : shinyHeat;
     }
 
     function keyClass(key) {
@@ -450,54 +439,35 @@
 
 <div class="leaderboard-page" data-shiny-page>
     <div class="container leaderboard-container">
-        <section class="leaderboard-hero" data-shiny-surface="hero" aria-labelledby="leaderboard-title">
-            <div class="leaderboard-title-block">
-                <div class="leaderboard-icon" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-                <div>
-                    <h1 id="leaderboard-title">DPM Leaderboard</h1>
-                    {#if asOf}
-                        <p class="leaderboard-asof">
-                            DARKO as of {formatAsOfDate(asOf.date)}{asOf.season ? ` · ${formatSeasonEndYearLabel(asOf.season)} season` : ''}.
-                            Each player's latest rating on that date.
-                        </p>
-                    {:else}
-                        <p>Daily Player Metrics for every NBA player, updated nightly.</p>
-                    {/if}
-                </div>
-            </div>
+        <PageHeader id="leaderboard-title" title="DPM Leaderboard">
+            {#if asOf}
+                <p class="page-lede page-asof">
+                    DARKO as of {formatAsOfDate(asOf.date)}{asOf.season ? ` · ${formatSeasonEndYearLabel(asOf.season)} season` : ''}.
+                    Each player's latest rating on that date.
+                </p>
+            {:else}
+                <p class="page-lede">Daily Player Metrics for every NBA player, updated nightly.</p>
+            {/if}
+        </PageHeader>
 
-            <div class="leader-card-grid" aria-label="Leaderboard leaders">
-                {#each leaderCards as card (card.title)}
-                    <article class="leader-card">
-                        <div class="leader-card-copy">
-                            <p>{card.title}</p>
-                            <strong class={statClass(card.metric, card.value)}>{card.displayValue}</strong>
-                            {#if card.player}
-                                <a class="leader-player" href={datedHref(`/player/${card.player.nba_id}`)}>
-                                    {#if teamLogoUrl(card.player)}
-                                        <img src={teamLogoUrl(card.player)} alt="" loading="lazy" onerror={hideBrokenImage} />
-                                    {/if}
-                                    <span>
-                                        {card.player.player_name}
-                                        <small>{teamAbbr(card.player.team_name)}</small>
-                                    </span>
-                                </a>
-                            {:else}
-                                <span class="leader-player leader-player--empty">No player</span>
+        <section class="stat-strip" aria-label="Leaderboard leaders">
+            {#each leaderCards as card (card.title)}
+                <StatTile label={card.title} value={card.displayValue} photo={playerHeadshotUrl(card.player)}>
+                    {#if card.player}
+                        <a class="leader-player" href={datedHref(`/player/${card.player.nba_id}`)}>
+                            {#if teamLogoUrl(card.player)}
+                                <img src={teamLogoUrl(card.player)} alt="" loading="lazy" onerror={hideBrokenImage} />
                             {/if}
-                        </div>
-                        <div class="leader-photo" aria-hidden="true">
-                            {#if playerHeadshotUrl(card.player)}
-                                <img src={playerHeadshotUrl(card.player)} alt="" loading="lazy" onerror={hideBrokenImage} />
-                            {/if}
-                        </div>
-                    </article>
-                {/each}
-            </div>
+                            <span>
+                                {card.player.player_name}
+                                <small>{teamAbbr(card.player.team_name)}</small>
+                            </span>
+                        </a>
+                    {:else}
+                        <span class="leader-player leader-player--empty">No player</span>
+                    {/if}
+                </StatTile>
+            {/each}
         </section>
 
         {#if players.length === 0}
@@ -557,7 +527,7 @@
                         </div>
 
                         <button
-                            class="page-action-btn"
+                            class="btn"
                             type="button"
                             onclick={exportPlayersCsv}
                             disabled={sortedPlayers.length === 0}
@@ -633,7 +603,7 @@
                                                             {/if}
                                                         </td>
                                                     {:else}
-                                                        <td class={cellClass(column, value)} style={getMetricHeatVariables(column.key, value, leaderboardHeatScales)}>
+                                                        <td class={cellClass(column, value)} style={cellStyle(column, value)}>
                                                             {column.key === 'x_minutes' ? fmtMpg(value) : formatLeaderboardCell(column, value)}
                                                         </td>
                                                     {/if}
@@ -798,7 +768,18 @@
                     {:else}
                         <span>{column.label}</span>
                     {/if}
-                    <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
+                    <!-- The keyboard's way to sort; clicking anywhere else in the header works too. -->
+                    <button
+                        type="button"
+                        class="sort-button"
+                        aria-label={`Sort by ${column.label}`}
+                        onclick={(event) => {
+                            event.stopPropagation();
+                            toggleSort(column.key);
+                        }}
+                    >
+                        <span class="sort-indicator" aria-hidden="true">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
+                    </button>
                 </span>
             </th>
         {/each}
@@ -825,151 +806,23 @@
 <style>
     .leaderboard-page {
         min-height: calc(100dvh - var(--nav-sticky-offset));
-        background:
-            radial-gradient(circle at 74% 10%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 27rem),
-            linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 72%, var(--bg)), var(--bg) 19rem);
+        background: var(--bg);
     }
 
     .leaderboard-container {
         max-width: 1880px;
-        padding-top: 28px;
         padding-bottom: 28px;
-    }
-
-    .leaderboard-hero {
-        position: relative;
-        overflow: hidden;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius);
-        background:
-            radial-gradient(circle at 92% -12%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 24rem),
-            var(--bg);
-        box-shadow: 0 18px 48px color-mix(in srgb, var(--text) 10%, transparent);
-        padding: 26px 28px 30px;
-    }
-
-    .leaderboard-hero::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-            repeating-radial-gradient(circle at 72% 6%, transparent 0 34px, color-mix(in srgb, var(--border-subtle) 65%, transparent) 35px 36px);
-        opacity: 0.42;
-        pointer-events: none;
-    }
-
-    .leaderboard-title-block,
-    .leader-card-grid {
-        position: relative;
-        z-index: 1;
-    }
-
-    .leaderboard-title-block {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        margin-bottom: 24px;
-    }
-
-    .leaderboard-title-block > div:last-child {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .leaderboard-icon {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        display: grid;
-        grid-template-columns: repeat(3, 7px);
-        justify-content: center;
-        align-items: end;
-        gap: 5px;
-        padding-bottom: 20px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-subtle);
-        box-shadow: 0 12px 28px color-mix(in srgb, var(--text) 12%, transparent);
-    }
-
-    .leaderboard-icon span {
-        display: block;
-        width: 7px;
-        border-radius: 999px;
-        background: var(--accent);
-    }
-
-    .leaderboard-icon span:nth-child(1) { height: 10px; opacity: 0.68; }
-    .leaderboard-icon span:nth-child(2) { height: 18px; opacity: 0.82; }
-    .leaderboard-icon span:nth-child(3) { height: 28px; }
-
-    h1 {
-        font-size: clamp(30px, 3vw, 44px);
-        line-height: 0.98;
-        letter-spacing: 0;
-        color: var(--text);
-        font-weight: 850;
-    }
-
-    .leaderboard-title-block p {
-        color: var(--text-secondary);
-        font-size: 17px;
-        margin-top: 8px;
-        overflow-wrap: anywhere;
-    }
-
-    .leaderboard-title-block p.leaderboard-asof {
-        color: var(--time-text);
-        font-weight: 600;
-    }
-
-    .leader-card-grid {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    .leader-card {
-        min-height: 124px;
-        overflow: hidden;
-        position: relative;
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-sm);
-        background: color-mix(in srgb, var(--bg-surface) 88%, var(--bg));
-        box-shadow: 0 10px 24px color-mix(in srgb, var(--text) 7%, transparent);
-        padding: 16px 0 0 16px;
-    }
-
-    .leader-card-copy {
-        min-width: 0;
-        padding-bottom: 16px;
-    }
-
-    .leader-card-copy p {
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 700;
-        margin-bottom: 8px;
-    }
-
-    .leader-card-copy strong {
-        display: block;
-        font-family: var(--font-mono);
-        font-size: 25px;
-        line-height: 1;
-        margin-bottom: 10px;
     }
 
     .leader-player {
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        margin-top: 6px;
         color: var(--text);
         min-width: 0;
-        font-size: 12px;
-        font-weight: 800;
+        font-size: 13px;
+        font-weight: 600;
     }
 
     .leader-player:hover {
@@ -989,37 +842,13 @@
     }
 
     .leader-player small {
-        color: var(--text-secondary);
+        color: var(--text-muted);
         font-size: 11px;
-        font-weight: 700;
+        font-weight: 600;
     }
 
     .leader-player--empty {
         color: var(--text-muted);
-    }
-
-    .leader-photo {
-        align-self: stretch;
-        width: 98px;
-        min-width: 74px;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        color: var(--text-muted);
-        font-weight: 800;
-    }
-
-    .leader-photo img {
-        position: relative;
-        z-index: 1;
-        width: 118px;
-        max-width: none;
-        object-fit: contain;
-        object-position: center bottom;
-        transform: translateY(8px);
-        filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--text) 16%, transparent));
     }
 
     .leaderboard-workspace {
@@ -1124,12 +953,9 @@
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
     }
 
-    .page-action-btn {
+    /* The toolbar's button matches its 42px inputs. */
+    .leaderboard-controls .btn {
         height: 42px;
-        padding: 0 18px;
-        font-size: 13px;
-        font-weight: 800;
-        white-space: nowrap;
     }
 
     .leaderboard-pagination {
@@ -1152,7 +978,7 @@
         border-radius: var(--radius-sm);
         background: var(--bg-surface);
         color: var(--text);
-        font-size: 22px;
+        font-size: 20px;
         line-height: 1;
     }
 
@@ -1202,7 +1028,7 @@
     table {
         border-collapse: separate;
         border-spacing: 0;
-        font-size: 12px;
+        font-size: 13px;
         width: max-content;
         min-width: 100%;
     }
@@ -1212,9 +1038,9 @@
         background: color-mix(in srgb, var(--bg-elevated) 86%, var(--bg));
         box-shadow: inset 0 -1px 0 var(--border);
         border-bottom: 1px solid var(--border);
-        padding: 0 12px;
+        padding: 0 7px;
         text-align: left;
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 850;
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -1222,9 +1048,10 @@
         white-space: nowrap;
     }
 
+    /* 7px a side keeps all eighteen columns on a 1440px screen. */
     td {
         height: 48px;
-        padding: 7px 12px;
+        padding: 7px;
         border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 72%, transparent);
         white-space: nowrap;
         background: var(--bg);
@@ -1256,7 +1083,7 @@
     .sort-indicator {
         margin-left: 2px;
         opacity: 0.55;
-        font-size: 9px;
+        font-size: 11px;
         color: var(--text-muted);
     }
 
@@ -1285,7 +1112,7 @@
         color: var(--text-secondary);
         text-align: center;
         font-family: var(--font-mono);
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 700;
     }
 
@@ -1318,8 +1145,12 @@
     .leaderboard-cell--num {
         text-align: right;
         font-family: var(--font-mono);
-        font-size: 12px;
-        font-weight: 850;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .leaderboard-cell--dpm {
+        font-weight: 700;
     }
 
     th.num {
@@ -1375,26 +1206,9 @@
         object-fit: contain;
     }
 
-    .metric-positive {
-        color: var(--positive);
-    }
-
-    .metric-negative {
-        color: var(--negative);
-    }
-
-    .metric-percentage {
-        color: var(--accent);
-    }
-
-    .metric-percentage-low,
     .metric-muted,
     .cell-muted {
         color: var(--text-muted);
-    }
-
-    .metric-neutral {
-        color: var(--text-secondary);
     }
 
     .empty-row,
@@ -1442,7 +1256,7 @@
     }
 
     .insight-card h2 {
-        font-size: 15px;
+        font-size: 16px;
         line-height: 1.1;
         font-weight: 850;
         letter-spacing: 0;
@@ -1606,7 +1420,7 @@
         overflow: hidden;
         background: var(--bg-surface);
         color: var(--text-secondary);
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 850;
     }
 
@@ -1632,6 +1446,11 @@
         font-weight: 850;
     }
 
+    /* A bare <small> would shrink to 10.8px, under the 11px floor. */
+    .position-player-position {
+        font-size: 11px;
+    }
+
     .position-player-main small {
         color: var(--text-secondary);
         margin-left: 3px;
@@ -1655,7 +1474,7 @@
     .position-player strong {
         color: var(--accent);
         font-family: var(--font-mono);
-        font-size: 15px;
+        font-size: 14px;
     }
 
     .insight-note {
@@ -1664,11 +1483,9 @@
         font-size: 12px;
     }
 
-    @media (max-width: 1280px) {
-        .leader-card-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-
+    /* The insight cards move under the table until the screen is wide enough for both (about
+       1840px), so the table keeps its full width and every column. */
+    @media (max-width: 1839px) {
         .leaderboard-workspace {
             grid-template-columns: 1fr;
         }
@@ -1685,7 +1502,7 @@
         }
 
         .control-field--search,
-        .page-action-btn {
+        .btn {
             grid-column: span 2;
         }
 
@@ -1728,7 +1545,7 @@
             min-width: 100%;
         }
 
-        .page-action-btn {
+        .btn {
             display: none;
         }
     }
@@ -1736,66 +1553,7 @@
 
     @media (max-width: 768px) {
         .leaderboard-container {
-            padding: 18px 12px 24px;
-        }
-
-        .leaderboard-hero {
-            padding: 20px 16px;
-        }
-
-        .leaderboard-title-block {
-            align-items: flex-start;
-            gap: 12px;
-        }
-
-        .leaderboard-icon {
-            width: 54px;
-            height: 54px;
-            grid-template-columns: repeat(3, 5px);
-            gap: 4px;
-            padding-bottom: 14px;
-        }
-
-        .leaderboard-icon span {
-            width: 5px;
-        }
-
-        .leaderboard-title-block p {
-            font-size: 14px;
-            line-height: 1.35;
-            max-width: 100%;
-        }
-
-        h1 {
-            font-size: 28px;
-            overflow-wrap: anywhere;
-        }
-
-        .leader-card-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .leader-card {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 74px;
-            padding: 16px 0 0 16px;
-        }
-
-        .leader-card-copy p,
-        .leader-player span,
-        .leader-player small {
-            overflow-wrap: anywhere;
-        }
-
-        .leader-photo {
-            width: 74px;
-            min-width: 0;
-        }
-
-        .leader-photo img {
-            width: 88px;
-            max-width: 100%;
-            transform: translateY(6px);
+            padding: 0 12px 24px;
         }
 
         .leaderboard-controls {
@@ -1803,7 +1561,7 @@
         }
 
         .control-field--search,
-        .page-action-btn {
+        .btn {
             grid-column: auto;
         }
 

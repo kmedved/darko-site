@@ -2,7 +2,7 @@
     import * as d3 from 'd3';
 	import { getContext } from 'svelte';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
-    import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+    import { formatDollarsMillions, getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { SHINY_COLORS, getShinyChartPreset } from '$lib/utils/shinyDesign.js';
     import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
@@ -44,7 +44,7 @@
         const n = parseFloat(val);
         if (!Number.isFinite(n)) return '—';
         if (activeStat === 'sal_market_fixed') {
-            return `$${(n / 1e6).toFixed(1)}M`;
+            return formatDollarsMillions(n, 1);
         }
         if (activeStat === 'x_fg_pct' || activeStat === 'x_fg3_pct' || activeStat === 'x_ft_pct') {
             return `${(n * 100).toFixed(1)}%`;
@@ -276,8 +276,8 @@
 			{#each stats as s (s.key)}
 				<button
 					type="button"
-					class="chart-toggle-btn"
-					class:active={activeStat === s.key}
+					class="btn btn-sm"
+					aria-pressed={activeStat === s.key}
 					onclick={() => activeStat = s.key}
 				>
 					{s.label}

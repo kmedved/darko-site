@@ -4,7 +4,9 @@
     import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
     import { formatMinutes, formatSignedMetric, formatPercent, formatFixed } from '$lib/utils/csvPresets.js';
 
-    let { player, onRemove, historyRows } = $props();
+    // `color` is this player's series colour on the Compare page, so each card's sparkline matches
+    // its player rather than turning green or red with the sign of their DPM.
+    let { player, onRemove, historyRows, color = 'var(--accent)' } = $props();
 
     let history = $state([]);
     let historyLoading = $state(true);
@@ -53,11 +55,6 @@
         return n >= 0 ? 'pos' : 'neg';
     }
 
-    function dpmColor(val) {
-        const n = Number.parseFloat(val);
-        if (!Number.isFinite(n)) return 'var(--text-muted)';
-        return n >= 0 ? 'var(--positive)' : 'var(--negative)';
-    }
 </script>
 
 <div class="player-card">
@@ -66,7 +63,7 @@
         <div class="info">
             <h2>{player.player_name}</h2>
             <div class="sub">
-                {player.team_name} · {player.position || '?'} · Age {formatFixed(player.age, 0)}
+                {[player.team_name, player.position || '?', `Age ${formatFixed(player.age, 0)}`].filter(Boolean).join(' · ')}
             </div>
         </div>
         <button type="button" class="remove-btn" onclick={onRemove} title="Remove">✕</button>
@@ -82,7 +79,7 @@
     {#if !historyLoading && history.length > 10}
         <DpmChart
             data={history}
-            color={dpmColor(player.dpm)}
+            {color}
             height={120}
             playerName={player.player_name}
         />
@@ -125,7 +122,7 @@
     <div class="stat-section">
         <div class="stat-section-title">Context</div>
         <div class="stat-row">
-            <span class="label">Minutes</span>
+            <span class="label">Minutes (trend)</span>
             <span class="value">{formatMinutes(player.tr_minutes)}</span>
         </div>
         <div class="stat-row">

@@ -2,6 +2,10 @@
     import { goto, preloadData } from '$app/navigation';
     import { getContext } from 'svelte';
     import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+    import PageHeader from '$lib/components/PageHeader.svelte';
+    import MetricTooltip from '$lib/components/MetricTooltip.svelte';
+    import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
+    import StatTile from '$lib/components/StatTile.svelte';
     import { exportCsvRows, formatFixed, formatSignedMetric, getLineupsCsvColumns } from '$lib/utils/csvPresets.js';
     import { unpackLineups } from '$lib/utils/lineupTransport.js';
     import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
@@ -57,32 +61,13 @@
         Array.from({ length: data.lineupSize ?? 5 }, (_, i) => `player_${i + 1}`)
     );
 
+    // One Lineup column of names in both views (the Shiny composition), rather than a column per
+    // player that could only fit an initial.
     let baseColumns = $derived.by(() => {
-        const playerCount = data.lineupSize ?? 5;
-        const playerCols = Array.from({ length: playerCount }, (_, i) => ({
-            key: `player_${i + 1}`,
-            label: `Player ${i + 1}`,
-            alignClass: 'player-col',
-            type: 'text',
-            dataType: 'text',
-            slotIndex: i,
-            sortable: true
-        }));
-        const lineupColumns = isShinyView
-            ? [{
-                key: 'lineup_label',
-                label: 'Lineup',
-                alignClass: 'lineup-col',
-                type: 'text',
-                dataType: 'text',
-                sortable: true
-            }]
-            : playerCols;
-
         return [
             { key: '_rank', label: '#', alignClass: 'rank-col', sortable: false },
             { key: 'team_name', label: 'Team', alignClass: 'team-col', type: 'text', dataType: 'text', sortable: true },
-            ...lineupColumns,
+            { key: 'lineup_label', label: 'Lineup', alignClass: 'lineup-col', type: 'text', dataType: 'text', sortable: true },
             { key: 'possessions', label: 'Poss', alignClass: 'num', type: 'number', dataType: 'number', sortable: true },
             { key: 'net_pm', label: 'Net +/-', alignClass: 'num', type: 'number', dataType: 'number', sortable: true },
             { key: 'off_pm', label: 'Off +/-', alignClass: 'num', type: 'number', dataType: 'number', sortable: true },
@@ -118,6 +103,7 @@
     let lineupHeatScales = $derived.by(() =>
         buildPresetHeatScales(selectedLineups, 'lineup')
     );
+    let netTintLimit = $derived(tintLimit(selectedLineups.map((lineup) => lineup?.net_pm)));
     let hasAnyVariantLineups = $derived(
         variantOptions.some((option) => (lineupsByVariant[option.value] ?? []).length > 0)
     );
@@ -332,6 +318,13 @@
         return parsed >= 0 ? 'pos' : 'neg';
     }
 
+    // pos/neg drive the Shiny view's heat cells; the modern view keeps numbers neutral and tints
+    // only Net +/-, the column the table ranks by.
+    function cellStyle(column, value) {
+        const shinyHeat = getMetricHeatVariables(column.key, value, lineupHeatScales);
+        return column.key === 'net_pm' ? `${shinyHeat} ${divergingTint(value, netTintLimit)}` : shinyHeat;
+    }
+
     function isMetricColumn(key) {
         return key === 'net_pm' || key === 'off_pm' || key === 'def_pm'
             || key === 'off_synergy' || key === 'def_synergy';
@@ -349,11 +342,23 @@
         return row[column.key] ?? '—';
     }
 
-    function abbrevName(name) {
-        if (!name) return '—';
-        const parts = name.trim().split(/\s+/);
-        if (parts.length < 2) return name;
-        return `${parts[0][0]}. ${parts.slice(1).join(' ')}`;
+    const NAME_SUFFIXES = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
+
+    // "Jaren Jackson Jr." -> "Jackson Jr."; "Shai Gilgeous-Alexander" -> "Gilgeous-Alexander".
+    function lastName(name) {
+        const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+        if (parts.length === 0) return '—';
+        if (parts.length === 1) return parts[0];
+        const hasSuffix = parts.length > 2 && NAME_SUFFIXES.has(parts.at(-1).toLowerCase());
+        return parts.slice(hasSuffix ? -2 : -1).join(' ');
+    }
+
+    // Last names, except teammates who share one keep their full names.
+    function lineupShortNames(players) {
+        const lasts = players.map((player) => lastName(player?.name));
+        return players.map((player, index) =>
+            lasts.filter((last) => last === lasts[index]).length > 1 ? (player?.name ?? lasts[index]) : lasts[index]
+        );
     }
 
     function lineupSearchText(row) {
@@ -370,11 +375,7 @@
 
     function lineupCaption(row, maxPlayers = data.lineupSize ?? 5) {
         if (!row?.players?.length) return 'No lineup selected';
-        return row.players
-            .slice(0, maxPlayers)
-            .map((player) => abbrevName(player?.name))
-            .filter(Boolean)
-            .join(' · ');
+        return lineupShortNames(row.players.slice(0, maxPlayers)).join(' · ');
     }
 
     function lineupFullNames(row, maxPlayers = data.lineupSize ?? 5) {
@@ -386,37 +387,38 @@
             .join(' · ');
     }
 
+    function lineupDetail(row) {
+        if (!row) return 'No lineup selected';
+        return [row.team_name ? teamAbbr(row.team_name) : '', lineupCaption(row)].filter(Boolean).join(' · ');
+    }
+
     function buildSummaryCards() {
         return [
             {
                 title: `Best ${currentSizeLabel} Lineup`,
                 row: bestNetLineup,
                 value: formatSignedMetric(bestNetLineup?.net_pm),
-                caption: lineupCaption(bestNetLineup)
-            },
-            {
-                title: 'Highest Net +/-',
-                row: bestNetLineup,
-                value: formatSignedMetric(bestNetLineup?.net_pm),
-                caption: `${teamAbbr(bestNetLineup?.team_name)} · ${currentSizeLabel}`
+                detail: lineupDetail(bestNetLineup),
+                hint: 'Best visible lineup by Net +/-'
             },
             {
                 title: 'Best Offensive Lineup',
                 row: bestOffLineup,
                 value: formatSignedMetric(bestOffLineup?.off_pm),
-                caption: `${teamAbbr(bestOffLineup?.team_name)} · Offensive +/-`
+                detail: lineupDetail(bestOffLineup),
+                hint: 'Best visible lineup by Offensive +/-'
             },
             {
                 title: 'Best Defensive Lineup',
                 row: bestDefLineup,
                 value: formatSignedMetric(bestDefLineup?.def_pm),
-                caption: `${teamAbbr(bestDefLineup?.team_name)} · Defensive +/-`
+                detail: lineupDetail(bestDefLineup),
+                hint: 'Best visible lineup by Defensive +/-'
             },
             {
                 title: 'Lineups Tracked',
                 value: formatFixed(filteredLineups.length, 0),
-                caption: `${currentSizeLabel} lineups`,
-                icon: 'tracked'
+                detail: `${currentSizeLabel} lineups`
             }
         ];
     }
@@ -578,20 +580,9 @@
 
 <div class="lineups-page" data-shiny-page>
     <div class="container lineups-container">
-        <section class="lineups-hero" data-shiny-surface="hero" aria-labelledby="lineups-title">
-            <div class="lineups-title-block">
-                <div class="lineups-icon" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-                <div>
-                    <h1 id="lineups-title">Lineup Projections</h1>
-                    <p>Lineup Plus/Minus in Relation to League Average</p>
-                    <p class="subtitle-note">Table limited to lineups with more than {data.minPoss ?? 100} possessions.</p>
-                </div>
-            </div>
-        </section>
+        <PageHeader id="lineups-title" title="Lineup Projections" lede="Lineup Plus/Minus in Relation to League Average">
+            <p class="page-note">Table limited to lineups with more than {data.minPoss ?? 100} possessions.</p>
+        </PageHeader>
 
         {#if !hasAnyVariantLineups}
             <div class="empty-state">
@@ -601,30 +592,15 @@
         {:else}
             <div class="lineups-dashboard">
                 <main class="lineups-main">
-                    <section class="summary-card-grid" aria-label="Lineup summary">
+                    <section class="stat-strip" aria-label="Lineup summary">
                         {#each summaryCards as card (card.title)}
-                            <article class="summary-card" data-shiny-surface="summary">
-                                {#if card.row?.tm_id}
-                                    <img
-                                        src="/api/img/logo/{card.row.tm_id}"
-                                        alt=""
-                                        class="summary-team-logo"
-                                        loading="lazy"
-                                    />
-                                {:else}
-                                    <div class="summary-icon {card.icon ?? 'lineup'}" aria-hidden="true">
-                                        <span></span>
-                                    </div>
-                                {/if}
-                                <div class="summary-copy">
-                                    <p>{card.title} <span class="info-dot" title={card.caption}>i</span></p>
-                                    <strong>{card.value}</strong>
-                                    <small>{card.row?.team_name ? teamAbbr(card.row.team_name) : card.caption}</small>
-                                    {#if card.row && card.title.startsWith('Best')}
-                                        <em>{card.caption}</em>
-                                    {/if}
-                                </div>
-                            </article>
+                            <StatTile
+                                label={card.title}
+                                value={card.value}
+                                detail={card.detail}
+                                hint={card.hint}
+                                logo={card.row?.tm_id ? `/api/img/logo/${card.row.tm_id}` : ''}
+                            />
                         {/each}
                     </section>
 
@@ -648,7 +624,7 @@
                             </fieldset>
 
                             <fieldset class="control-group">
-                                <legend>Variant <span class="info-dot" title="PI includes player interaction effects; NPI excludes them.">i</span></legend>
+                                <legend>Variant <MetricTooltip text="PI includes player interaction effects; NPI excludes them." label="About the variants"><span class="info-dot" aria-hidden="true">i</span></MetricTooltip></legend>
                                 <div class="segmented-control variant-segment">
                                     {#each variantOptions as option (option.value)}
                                         <button
@@ -701,7 +677,7 @@
                             </label>
 
                             <button
-                                class="page-action-btn export-btn"
+                                class="btn export-btn"
                                 type="button"
                                 onclick={exportVisibleLineups}
                                 disabled={sortedLineups.length === 0}
@@ -728,9 +704,11 @@
 
                             <div class="table-body-scroll" bind:this={lineupsBodyScroller}>
                                 <table bind:this={lineupsBodyTable}>
+                                    <!-- The sizing row comes first: a fixed-layout table takes its column widths
+                                         from its first row, and the screen-reader row has none. -->
                                     <thead class="table-sizing-head" bind:this={lineupsSourceHead}>
-                                        {@render lineupsSemanticHeaderRow()}
                                         {@render lineupsHeaderRow()}
+                                        {@render lineupsSemanticHeaderRow()}
                                     </thead>
                                     <tbody>
                                         {#if pageRows.length === 0}
@@ -743,37 +721,23 @@
                                                     {#each tableColumns as column (column.key)}
                                                         <td
                                                             headers={`lineups-column-${column.key}`}
-                                                            class="{column.alignClass} {isMetricColumn(column.key) ? metricToneClass(lineup[column.key]) : ''}"
-                                                            style={getMetricHeatVariables(column.key, lineup[column.key], lineupHeatScales)}
+                                                            class="{column.alignClass} {isMetricColumn(column.key) ? metricToneClass(lineup[column.key]) : ''} {column.key === 'net_pm' ? 'tint-cell' : ''}"
+                                                            style={cellStyle(column, lineup[column.key])}
                                                         >
                                                             {#if column.key === '_rank'}
                                                                 {pageStart + index}
                                                             {:else if column.key === 'lineup_label'}
+                                                                {@const shortNames = lineupShortNames(lineup.players ?? [])}
                                                                 <div class="lineup-player-links" title={lineupFullNames(lineup)}>
                                                                     {#each lineup.players ?? [] as player, playerIndex (player?.id ?? `${lineup.row_key}-${playerIndex}`)}
-                                                                        {#if playerIndex > 0}<span class="lineup-separator" aria-hidden="true">|</span>{/if}
+                                                                        {#if playerIndex > 0}<span class="lineup-separator" aria-hidden="true">{isShinyView ? '|' : '·'}</span>{/if}
                                                                         {#if player?.id}
-                                                                            <a href="/player/{player.id}">{player.name}</a>
+                                                                            <a href="/player/{player.id}">{isShinyView ? player.name : shortNames[playerIndex]}</a>
                                                                         {:else}
-                                                                            <span>{player?.name ?? '—'}</span>
+                                                                            <span>{(isShinyView ? player?.name : shortNames[playerIndex]) ?? '—'}</span>
                                                                         {/if}
                                                                     {/each}
                                                                 </div>
-                                                            {:else if column.slotIndex != null}
-                                                                {@const p = lineup.players[column.slotIndex]}
-                                                                {#if p?.id}
-                                                                    <a href="/player/{p.id}" class="player-cell-link">
-                                                                        <img
-                                                                            src="/api/img/headshot/{p.id}"
-                                                                            alt=""
-                                                                            class="player-headshot"
-                                                                            loading="lazy"
-                                                                        />
-                                                                        <span>{abbrevName(p.name)}</span>
-                                                                    </a>
-                                                                {:else}
-                                                                    <span>{abbrevName(p?.name)}</span>
-                                                                {/if}
                                                             {:else if column.key === 'team_name'}
                                                                 {#if lineup.team_name && lineup.team_name !== TEAM_PENDING_LABEL}
                                                                     <a href="/team/{encodeURIComponent(lineup.team_name)}" class="team-cell-link">
@@ -809,7 +773,7 @@
                                 ({filteredLineups.length === selectedLineups.length
                                     ? `${selectedLineups.length} lineups`
                                     : `${filteredLineups.length} of ${selectedLineups.length} lineups`})
-                                <span class="info-dot" title={`Minimum ${effectiveMinimumPossessions}+ possessions`}>i</span>
+                                <MetricTooltip text={`Minimum ${effectiveMinimumPossessions}+ possessions`} label="About the possession minimum"><span class="info-dot" aria-hidden="true">i</span></MetricTooltip>
                             </p>
 
                             <div class="pagination-controls" aria-label="Lineup pagination">
@@ -849,7 +813,7 @@
                     <section class="insight-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
                             <h2>Lineup Distribution by Size</h2>
-                            <span class="info-dot" title={`${selectedVariantLabel} lineups across all size tabs`}>i</span>
+                            <MetricTooltip text={`${selectedVariantLabel} lineups across all size tabs`} label="About the size distribution"><span class="info-dot" aria-hidden="true">i</span></MetricTooltip>
                         </div>
                         <div class="distribution-layout">
                             <div class="donut-chart" style={`background: ${distributionGradient};`}>
@@ -873,7 +837,7 @@
                     <section class="insight-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
                             <h2>Top Net +/- by Team ({currentSizeLabel})</h2>
-                            <span class="info-dot" title="Average lineup net rating by team for the current filters">i</span>
+                            <MetricTooltip text="Average lineup net rating by team for the current filters" label="About the team leaders"><span class="info-dot" aria-hidden="true">i</span></MetricTooltip>
                         </div>
                         {#if teamLeaders.length === 0}
                             <p class="rail-empty">No teams match the current filters.</p>
@@ -898,7 +862,7 @@
                     <section class="insight-card snapshot-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
                             <h2>Best {currentSizeLabel} Lineup Snapshot</h2>
-                            <span class="info-dot" title="Best visible lineup by Net +/-">i</span>
+                            <MetricTooltip text="Best visible lineup by Net +/-" label="About the lineup snapshot"><span class="info-dot" aria-hidden="true">i</span></MetricTooltip>
                         </div>
                         {#if bestNetLineup}
                             <div class="snapshot-layout">
@@ -925,99 +889,12 @@
 <style>
     .lineups-page {
         min-height: calc(100dvh - var(--nav-sticky-offset));
-        padding: 24px 0 34px;
-        background:
-            radial-gradient(circle at 92% 3%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 24rem),
-            var(--bg);
+        padding: 0 0 34px;
+        background: var(--bg);
     }
 
     .lineups-container {
         max-width: 1880px;
-        display: grid;
-        gap: 18px;
-    }
-
-    .lineups-hero {
-        position: relative;
-        overflow: hidden;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius);
-        background:
-            radial-gradient(circle at 90% -8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 24rem),
-            var(--bg);
-        box-shadow: 0 18px 48px color-mix(in srgb, var(--text) 10%, transparent);
-        padding: 24px 28px;
-    }
-
-    .lineups-hero::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-            repeating-radial-gradient(circle at 72% 6%, transparent 0 34px, color-mix(in srgb, var(--border-subtle) 65%, transparent) 35px 36px);
-        opacity: 0.42;
-        pointer-events: none;
-    }
-
-    .lineups-title-block {
-        position: relative;
-        z-index: 1;
-        display: flex;
-        align-items: center;
-        gap: 18px;
-    }
-
-    .lineups-title-block > div:last-child {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .lineups-icon {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        display: grid;
-        grid-template-columns: repeat(3, 7px);
-        justify-content: center;
-        align-items: end;
-        gap: 5px;
-        padding-bottom: 20px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-subtle);
-        box-shadow: 0 12px 28px color-mix(in srgb, var(--text) 12%, transparent);
-        flex: 0 0 auto;
-    }
-
-    .lineups-icon span {
-        display: block;
-        width: 7px;
-        border-radius: 999px;
-        background: var(--accent);
-    }
-
-    .lineups-icon span:nth-child(1) { height: 10px; opacity: 0.68; }
-    .lineups-icon span:nth-child(2) { height: 18px; opacity: 0.82; }
-    .lineups-icon span:nth-child(3) { height: 28px; }
-
-    h1 {
-        font-size: clamp(30px, 3vw, 44px);
-        line-height: 0.98;
-        letter-spacing: 0;
-        color: var(--text);
-        font-weight: 850;
-    }
-
-    .lineups-title-block p {
-        color: var(--text-secondary);
-        font-size: 17px;
-        margin-top: 8px;
-        overflow-wrap: anywhere;
-    }
-
-    .subtitle-note {
-        color: var(--text-muted) !important;
-        font-size: 14px !important;
-        font-style: italic;
     }
 
     .lineups-dashboard {
@@ -1033,131 +910,8 @@
         min-width: 0;
     }
 
-    .summary-card-grid {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    .summary-card {
-        min-height: 126px;
-        display: grid;
-        grid-template-columns: 50px minmax(0, 1fr);
-        align-items: center;
-        gap: 12px;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-sm);
-        background: var(--bg-surface);
-        box-shadow: 0 10px 24px color-mix(in srgb, var(--text) 7%, transparent);
-        padding: 15px 16px;
-    }
-
-    .summary-team-logo {
-        width: 44px;
-        height: 44px;
-        object-fit: contain;
-    }
-
-    .summary-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        position: relative;
-        display: grid;
-        place-items: center;
-        background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
-        border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border-subtle));
-    }
-
-    .summary-icon::before,
-    .summary-icon::after,
-    .summary-icon span {
-        content: '';
-        position: absolute;
-        display: block;
-    }
-
-    .summary-icon.lineup::before,
-    .summary-icon.tracked::before {
-        width: 22px;
-        height: 14px;
-        border: 2px solid var(--accent);
-        border-radius: 999px 999px 6px 6px;
-        border-bottom: none;
-        top: 14px;
-    }
-
-    .summary-icon.lineup::after,
-    .summary-icon.tracked::after {
-        width: 28px;
-        height: 10px;
-        border: 2px solid var(--accent);
-        border-radius: 999px 999px 4px 4px;
-        border-bottom: none;
-        top: 22px;
-    }
-
-    .summary-icon span {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--accent);
-        top: 11px;
-        left: 18px;
-    }
-
-    .summary-copy {
-        min-width: 0;
-    }
-
-    .summary-copy p {
-        color: var(--text-muted);
-        font-size: 13px;
-        font-weight: 800;
-        line-height: 1.2;
-        margin-bottom: 8px;
-        overflow-wrap: anywhere;
-    }
-
-    .summary-copy strong {
-        display: block;
-        color: var(--accent);
-        font-family: var(--font-mono);
-        font-size: clamp(22px, 1.7vw, 30px);
-        line-height: 1;
-        font-weight: 900;
-    }
-
-    .summary-copy small,
-    .summary-copy em {
-        display: block;
-        color: var(--text-secondary);
-        font-size: 12px;
-        line-height: 1.35;
-        margin-top: 6px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .summary-copy em {
-        color: var(--text-muted);
-        font-style: normal;
-    }
-
-    .info-dot {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        display: inline-grid;
-        place-items: center;
-        border: 1px solid currentColor;
-        color: var(--text-muted);
-        font-family: var(--font-mono);
-        font-size: 10px;
-        font-weight: 900;
-        line-height: 1;
-        vertical-align: text-bottom;
+    .lineups-main > .stat-strip {
+        margin-bottom: 0;
     }
 
     .lineups-table-panel {
@@ -1169,12 +923,31 @@
         min-width: 0;
     }
 
+    /* The controls wrap rather than overflow: at 1440px the main column is too narrow for all six
+       in one row, and the search box takes whatever width is left. */
     .lineups-controls {
-        display: grid;
-        grid-template-columns: minmax(250px, 1.1fr) 128px minmax(240px, 1.2fr) 142px 170px auto;
-        align-items: end;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
         gap: 12px;
         margin-bottom: 14px;
+    }
+
+    .lineups-controls > .control-group:first-child {
+        flex: 0 0 250px;
+    }
+
+    .lineups-controls > .control-group:nth-child(2) {
+        flex: 0 0 128px;
+    }
+
+    .lineups-controls > .search-field {
+        flex: 1 1 220px;
+        min-width: 0;
+    }
+
+    .lineups-controls > .select-field {
+        flex: 0 0 150px;
     }
 
     .control-group {
@@ -1388,7 +1161,7 @@
 
     .sort-indicator {
         color: var(--accent);
-        font-size: 10px;
+        font-size: 11px;
         opacity: 0.8;
     }
 
@@ -1415,24 +1188,46 @@
         text-align: right;
         color: var(--text-secondary);
         font-family: var(--font-mono);
-        font-size: 12px;
+        font-size: 13px;
     }
 
     .team-col {
         width: 90px;
     }
 
-    .player-col {
-        width: 162px;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .lineup-col {
+        min-width: 16rem;
+    }
+
+    .lineup-player-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 5px;
+        font-weight: 600;
+    }
+
+    /* :where() keeps these below the Shiny view's link colours. */
+    .lineup-player-links :where(a) {
+        color: var(--text);
+    }
+
+    .lineup-player-links :where(a:hover) {
+        color: var(--accent);
+    }
+
+    .lineup-separator {
+        color: var(--text-muted);
     }
 
     .num {
-        width: 92px;
+        width: 84px;
         text-align: right;
         font-family: var(--font-mono);
-        font-size: 12px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    td.tint-cell {
         font-weight: 700;
     }
 
@@ -1440,7 +1235,6 @@
         justify-content: flex-end;
     }
 
-    .player-cell-link,
     .team-cell-link {
         display: inline-flex;
         align-items: center;
@@ -1448,34 +1242,13 @@
         min-width: 0;
     }
 
-    .player-cell-link {
-        gap: 7px;
-        max-width: 100%;
-    }
-
     .team-cell-link {
         gap: 6px;
         font-weight: 850;
     }
 
-    .player-cell-link span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .player-cell-link:hover,
     .team-cell-link:hover {
         color: var(--accent);
-    }
-
-    .player-headshot {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        object-fit: cover;
-        object-position: center top;
-        flex: 0 0 auto;
-        background: var(--bg-elevated);
     }
 
     .team-logo {
@@ -1488,14 +1261,6 @@
     .team-placeholder {
         color: var(--text-muted);
         font-style: italic;
-    }
-
-    td.pos {
-        color: var(--positive);
-    }
-
-    td.neg {
-        color: var(--negative);
     }
 
     .empty-row {
@@ -1595,7 +1360,7 @@
     }
 
     .insight-card h2 {
-        font-size: 15px;
+        font-size: 16px;
         line-height: 1.15;
         font-weight: 850;
         letter-spacing: 0;
@@ -1630,7 +1395,7 @@
     .donut-chart strong {
         color: var(--text);
         font-family: var(--font-mono);
-        font-size: 26px;
+        font-size: 28px;
         line-height: 1;
     }
 
@@ -1750,7 +1515,7 @@
     .snapshot-layout strong {
         color: var(--accent);
         font-family: var(--font-mono);
-        font-size: 30px;
+        font-size: 28px;
         line-height: 1;
     }
 
@@ -1770,7 +1535,7 @@
 
     .snapshot-card p {
         color: var(--text);
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 850;
         margin-bottom: 8px;
     }
@@ -1814,20 +1579,17 @@
             table-layout: auto;
         }
 
-        .player-col,
         .team-col,
         .num {
             width: auto;
             max-width: none;
         }
-
-        .player-col {
-            min-width: 9rem;
-        }
     }
     /* End touch/mobile scroll mode */
 
-    @media (max-width: 1400px) {
+    /* Below 1600px the side panels move under the table, which needs the width for its
+       one-line lineup names. */
+    @media (max-width: 1600px) {
         .lineups-dashboard {
             grid-template-columns: 1fr;
         }
@@ -1838,14 +1600,6 @@
     }
 
     @media (max-width: 1160px) {
-        .summary-card-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .lineups-controls {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
         .export-btn {
             width: 100%;
         }
@@ -1856,51 +1610,8 @@
     }
 
     @media (max-width: 820px) {
-        .lineups-page {
-            padding-top: 14px;
-        }
-
-        .lineups-hero {
-            padding: 20px 16px;
-        }
-
-        .lineups-title-block {
-            align-items: flex-start;
-        }
-
-        .lineups-title-block h1,
-        .lineups-title-block p {
-            max-width: 100%;
-            overflow-wrap: anywhere;
-        }
-
-        .lineups-icon {
-            width: 54px;
-            height: 54px;
-            grid-template-columns: repeat(3, 6px);
-            padding-bottom: 15px;
-        }
-
-        .lineups-title-block p {
-            font-size: 14px;
-            line-height: 1.35;
-        }
-
-        .summary-card-grid,
-        .lineups-controls {
-            grid-template-columns: 1fr;
-        }
-
-        .summary-card {
-            min-height: 110px;
-            grid-template-columns: 54px minmax(0, 1fr);
-            padding: 14px;
-        }
-
-        .summary-copy small,
-        .summary-copy em {
-            white-space: normal;
-            overflow-wrap: anywhere;
+        .lineups-controls > * {
+            flex: 1 1 100%;
         }
 
         .distribution-layout {

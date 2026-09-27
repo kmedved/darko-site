@@ -153,7 +153,7 @@
             .call(d3.axisBottom(x).ticks(7).tickSize(-h).tickFormat(d => d))
             .call(g => g.select('.domain').remove())
             .call(g => g.selectAll('.tick line').attr('stroke', 'var(--border-subtle)').attr('stroke-dasharray', '2,3'))
-            .call(g => g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '10px'));
+            .call(g => g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '11px'));
     }
 </script>
 

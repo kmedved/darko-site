@@ -1,6 +1,8 @@
 <script>
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import TrajectoryChart from '$lib/components/TrajectoryChart.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import StatTile from '$lib/components/StatTile.svelte';
 	import {
 		apiPlayerHistory,
 		apiActivePlayers,
@@ -41,6 +43,7 @@
 	let rangeFilterMax = $state(null);
 	let prevTalentType = $state('dpm');
 	let prevTimeScale = $state('games');
+	let chartOptionsOpen = $state(false);
 	let wowyPublication = $state(null);
 	let wowyPublicationRequested = false;
 	const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
@@ -321,14 +324,8 @@
 	}
 
 	function buildTrajectoryStats() {
-		const values = metricPoints.map((point) => point.value);
-		const minValue = values.length
-			? values.reduce((minimum, value) => Math.min(minimum, value), Infinity)
-			: null;
-		const maxValue = values.length
-			? values.reduce((maximum, value) => Math.max(maximum, value), -Infinity)
-			: null;
 		const peakPoint = bestBy(metricPoints, (point) => point.value);
+		const lowPoint = worstBy(metricPoints, (point) => point.value);
 		const bestRolling = bestBy(rollingSummaries, (summary) => summary.value);
 		const worstRolling = worstBy(rollingSummaries, (summary) => summary.value);
 		const consistent = mostConsistentPlayer(chartData);
@@ -337,40 +334,32 @@
 			{
 				label: 'Games Tracked',
 				value: formatInteger(metricPoints.length),
-				detail: 'Total',
-				tone: 'neutral'
-			},
-			{
-				label: `${selectedMetricLabel} Range`,
-				value: minValue == null || maxValue == null
-					? '-'
-					: `${formatMetricValue(minValue)} to ${formatMetricValue(maxValue)}`,
-				detail: 'Across selected players',
-				tone: 'accent'
+				detail: 'Total'
 			},
 			{
 				label: `Peak ${selectedMetricLabel}`,
 				value: peakPoint ? formatMetricValue(peakPoint.value) : '-',
-				detail: peakPoint?.player?.player_name || '-',
-				tone: 'positive'
+				detail: peakPoint?.player?.player_name || '-'
+			},
+			{
+				label: `Low ${selectedMetricLabel}`,
+				value: lowPoint ? formatMetricValue(lowPoint.value) : '-',
+				detail: lowPoint?.player?.player_name || '-'
 			},
 			{
 				label: `Best ${ROLLING_WINDOW_SIZE}-Game ${selectedMetricLabel}`,
 				value: bestRolling ? formatMetricValue(bestRolling.value) : '-',
-				detail: bestRolling?.player?.player_name || '-',
-				tone: 'positive'
+				detail: bestRolling?.player?.player_name || '-'
 			},
 			{
 				label: `Worst ${ROLLING_WINDOW_SIZE}-Game ${selectedMetricLabel}`,
 				value: worstRolling ? formatMetricValue(worstRolling.value) : '-',
-				detail: worstRolling?.player?.player_name || '-',
-				tone: 'negative'
+				detail: worstRolling?.player?.player_name || '-'
 			},
 			{
-				label: 'Most Consistent',
-				value: consistent?.player?.player_name || '-',
-				detail: consistent ? `Std Dev: ${formatFixed(consistent.deviation, 2)}` : '-',
-				tone: 'accent'
+				label: 'Most Consistent (Std Dev)',
+				value: consistent ? formatFixed(consistent.deviation, 2) : '-',
+				detail: consistent?.player?.player_name || '-'
 			}
 		];
 	}
@@ -619,148 +608,146 @@
 
 <div class="trajectory-page" data-shiny-page>
 	<div class="container trajectory-container">
-		<section class="trajectory-hero" data-shiny-surface="hero" aria-labelledby="trajectory-title">
-			<div class="trajectory-title-block">
-				<div class="trajectory-icon" aria-hidden="true">
-					<svg viewBox="0 0 48 48" role="presentation">
-						<path d="M8 38V10" />
-						<path d="M8 38H42" />
-						<path d="M13 31L22 22L29 26L39 14" />
-						<path d="M36 14H39V17" />
-					</svg>
-				</div>
-				<div>
-					<h1 id="trajectory-title">Player Career Trajectories</h1>
-					<p>Compare career arcs for any number of players.</p>
-				</div>
-			</div>
-		</section>
+		<PageHeader id="trajectory-title" title="Player Career Trajectories" lede="Compare career arcs for any number of players." />
 
 		<div class="trajectory-workspace" data-shiny-layout="sidebar">
 			<aside class="trajectory-controls" data-shiny-surface="well" aria-label="Trajectory controls">
-				<fieldset class="control-group">
-					<legend class="control-label">Time Scale</legend>
-					<div class="radio-stack">
-						{#each timeScaleOptions as opt (opt.key)}
-							<label class="radio-label">
-								<input
-									type="radio"
-									name="timeScale"
-									value={opt.key}
-									bind:group={timeScale}
-								/>
-								<span>{opt.label}</span>
-							</label>
-						{/each}
-					</div>
-				</fieldset>
+				<!-- On phones and tablets the chart settings fold away so the chart comes first. -->
+				<button
+					type="button"
+					class="btn chart-options-toggle"
+					aria-expanded={chartOptionsOpen}
+					aria-controls="trajectory-chart-options"
+					onclick={() => (chartOptionsOpen = !chartOptionsOpen)}
+				>
+					<span>Chart options</span>
+					<span class="chart-options-summary">{selectedMetricLabel} · by {timeScale === 'seasons' ? 'season' : timeScale === 'age' ? 'age' : 'game'}</span>
+				</button>
+				<div id="trajectory-chart-options" class="chart-options" class:open={chartOptionsOpen}>
+					<fieldset class="control-group">
+						<legend class="control-label">Time Scale</legend>
+						<div class="radio-stack">
+							{#each timeScaleOptions as opt (opt.key)}
+								<label class="radio-label">
+									<input
+										type="radio"
+										name="timeScale"
+										value={opt.key}
+										bind:group={timeScale}
+									/>
+									<span>{opt.label}</span>
+								</label>
+							{/each}
+						</div>
+					</fieldset>
 
-				<div class="control-group">
-					<label class="control-label" for="talent-type">Talent Type</label>
-					<select
-						id="talent-type"
-						class="control-select"
-						bind:value={talentType}
-					>
-						{#each talentTypes as tt (tt.key)}
-							<option value={tt.key}>{tt.label}</option>
-						{/each}
-					</select>
-					{#if isWowyMetric && wowyPublicationLabel}
-						<div class="metric-freshness">{wowyPublicationLabel}</div>
-					{/if}
-				</div>
-
-				<div class="control-group">
-					<span class="control-label">Y-Axis Range</span>
-					<div class="range-inputs">
-						<label class="range-field">
-							<span>Min</span>
-							<input
-								type="number"
-								step="any"
-								placeholder="Auto"
-								value={yAxisMin ?? ''}
-								oninput={handleYMinChange}
-							/>
-						</label>
-						<label class="range-field">
-							<span>Max</span>
-							<input
-								type="number"
-								step="any"
-								placeholder="Auto"
-								value={yAxisMax ?? ''}
-								oninput={handleYMaxChange}
-							/>
-						</label>
-					</div>
-				</div>
-
-				{#if showRangeFilter}
 					<div class="control-group">
-						<span class="control-label">{rangeLabel}</span>
+						<label class="control-label" for="talent-type">Talent Type</label>
+						<select
+							id="talent-type"
+							class="control-select"
+							bind:value={talentType}
+						>
+							{#each talentTypes as tt (tt.key)}
+								<option value={tt.key}>{tt.label}</option>
+							{/each}
+						</select>
+						{#if isWowyMetric && wowyPublicationLabel}
+							<div class="metric-freshness">{wowyPublicationLabel}</div>
+						{/if}
+					</div>
+
+					<div class="control-group">
+						<span class="control-label">Y-Axis Range</span>
 						<div class="range-inputs">
-							{#if timeScale === 'seasons'}
-								<label class="range-field">
-									<span>From</span>
-									<select
-										class="control-select"
-										value={rangeFilterMin ?? ''}
-										onchange={(e) => {
-											rangeFilterMin = e.currentTarget.value
-												? Number(e.currentTarget.value)
-												: null;
-										}}
-									>
-										<option value="">Earliest</option>
-										{#each availableSeasons as yr (yr)}
-											<option value={yr}>{formatSeasonLabel(yr)}</option>
-										{/each}
-									</select>
-								</label>
-								<label class="range-field">
-									<span>To</span>
-									<select
-										class="control-select"
-										value={rangeFilterMax ?? ''}
-										onchange={(e) => {
-											rangeFilterMax = e.currentTarget.value
-												? Number(e.currentTarget.value)
-												: null;
-										}}
-									>
-										<option value="">Latest</option>
-										{#each availableSeasons as yr (yr)}
-											<option value={yr}>{formatSeasonLabel(yr)}</option>
-										{/each}
-									</select>
-								</label>
-							{:else}
-								<label class="range-field">
-									<span>Min</span>
-									<input
-										type="number"
-										step={timeScale === 'age' ? 'any' : '1'}
-										placeholder="Auto"
-										value={rangeFilterMin ?? ''}
-										oninput={handleRangeMinChange}
-									/>
-								</label>
-								<label class="range-field">
-									<span>Max</span>
-									<input
-										type="number"
-										step={timeScale === 'age' ? 'any' : '1'}
-										placeholder="Auto"
-										value={rangeFilterMax ?? ''}
-										oninput={handleRangeMaxChange}
-									/>
-								</label>
-							{/if}
+							<label class="range-field">
+								<span>Min</span>
+								<input
+									type="number"
+									step="any"
+									placeholder="Auto"
+									value={yAxisMin ?? ''}
+									oninput={handleYMinChange}
+								/>
+							</label>
+							<label class="range-field">
+								<span>Max</span>
+								<input
+									type="number"
+									step="any"
+									placeholder="Auto"
+									value={yAxisMax ?? ''}
+									oninput={handleYMaxChange}
+								/>
+							</label>
 						</div>
 					</div>
-				{/if}
+
+					{#if showRangeFilter}
+						<div class="control-group">
+							<span class="control-label">{rangeLabel}</span>
+							<div class="range-inputs">
+								{#if timeScale === 'seasons'}
+									<label class="range-field">
+										<span>From</span>
+										<select
+											class="control-select"
+											value={rangeFilterMin ?? ''}
+											onchange={(e) => {
+												rangeFilterMin = e.currentTarget.value
+													? Number(e.currentTarget.value)
+													: null;
+											}}
+										>
+											<option value="">Earliest</option>
+											{#each availableSeasons as yr (yr)}
+												<option value={yr}>{formatSeasonLabel(yr)}</option>
+											{/each}
+										</select>
+									</label>
+									<label class="range-field">
+										<span>To</span>
+										<select
+											class="control-select"
+											value={rangeFilterMax ?? ''}
+											onchange={(e) => {
+												rangeFilterMax = e.currentTarget.value
+													? Number(e.currentTarget.value)
+													: null;
+											}}
+										>
+											<option value="">Latest</option>
+											{#each availableSeasons as yr (yr)}
+												<option value={yr}>{formatSeasonLabel(yr)}</option>
+											{/each}
+										</select>
+									</label>
+								{:else}
+									<label class="range-field">
+										<span>Min</span>
+										<input
+											type="number"
+											step={timeScale === 'age' ? 'any' : '1'}
+											placeholder="Auto"
+											value={rangeFilterMin ?? ''}
+											oninput={handleRangeMinChange}
+										/>
+									</label>
+									<label class="range-field">
+										<span>Max</span>
+										<input
+											type="number"
+											step={timeScale === 'age' ? 'any' : '1'}
+											placeholder="Auto"
+											value={rangeFilterMax ?? ''}
+											oninput={handleRangeMaxChange}
+										/>
+									</label>
+								{/if}
+							</div>
+						</div>
+					{/if}
+				</div>
 
 				<div class="control-group player-control-group">
 					<span class="control-label">Select Players to Compare</span>
@@ -849,18 +836,9 @@
 				</section>
 
 				{#if selectedPlayers.length > 0 && hasChartRows}
-					<section class="trajectory-stat-grid" aria-label="Trajectory summary">
+					<section class="stat-strip trajectory-stat-strip" aria-label="Trajectory summary">
 						{#each trajectoryStats as card (card.label)}
-							<article class="trajectory-stat-card {card.tone}" data-shiny-surface="summary">
-								<div class="stat-icon" aria-hidden="true">
-									<span></span>
-								</div>
-								<div>
-									<p>{card.label}</p>
-									<strong>{card.value}</strong>
-									<small>{card.detail}</small>
-								</div>
-							</article>
+							<StatTile label={card.label} value={card.value} detail={card.detail} />
 						{/each}
 					</section>
 				{/if}
@@ -872,88 +850,12 @@
 <style>
 	.trajectory-page {
 		min-height: calc(100dvh - var(--nav-sticky-offset));
-		padding: 24px 0 34px;
-		background:
-			radial-gradient(circle at 92% 4%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 24rem),
-			var(--bg);
+		padding: 0 0 34px;
+		background: var(--bg);
 	}
 
 	.trajectory-container {
 		max-width: 1880px;
-		display: grid;
-		gap: 18px;
-	}
-
-	.trajectory-hero {
-		position: relative;
-		overflow: hidden;
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius);
-		background:
-			radial-gradient(circle at 88% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 24rem),
-			var(--bg);
-		box-shadow: 0 18px 48px color-mix(in srgb, var(--text) 10%, transparent);
-		padding: 26px 28px;
-	}
-
-	.trajectory-hero::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background:
-			repeating-radial-gradient(circle at 72% 6%, transparent 0 34px, color-mix(in srgb, var(--border-subtle) 65%, transparent) 35px 36px);
-		opacity: 0.42;
-		pointer-events: none;
-	}
-
-	.trajectory-title-block {
-		position: relative;
-		z-index: 1;
-		display: flex;
-		align-items: center;
-		gap: 18px;
-	}
-
-	.trajectory-title-block > div:last-child {
-		min-width: 0;
-	}
-
-	.trajectory-icon {
-		width: 70px;
-		height: 70px;
-		border-radius: 50%;
-		display: grid;
-		place-items: center;
-		background: var(--bg-surface);
-		border: 1px solid var(--border-subtle);
-		box-shadow: 0 12px 28px color-mix(in srgb, var(--text) 12%, transparent);
-		color: var(--accent);
-		flex: 0 0 auto;
-	}
-
-	.trajectory-icon svg {
-		width: 42px;
-		height: 42px;
-		fill: none;
-		stroke: currentColor;
-		stroke-width: 3;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-	}
-
-	h1 {
-		font-size: 34px;
-		line-height: 1;
-		letter-spacing: 0;
-		color: var(--text);
-		font-weight: 850;
-	}
-
-	.trajectory-title-block p {
-		color: var(--text-secondary);
-		font-size: 17px;
-		margin-top: 8px;
-		overflow-wrap: anywhere;
 	}
 
 	.trajectory-workspace {
@@ -976,6 +878,10 @@
 	.trajectory-main,
 	.trajectory-chart-area {
 		min-width: 0;
+	}
+
+	.chart-options-toggle {
+		display: none;
 	}
 
 	.trajectory-chart-area {
@@ -1187,7 +1093,7 @@
 
 	.trajectory-empty-state strong {
 		color: var(--text);
-		font-size: 15px;
+		font-size: 16px;
 	}
 
 	.trajectory-empty-state span {
@@ -1292,115 +1198,9 @@
 		width: 46%;
 	}
 
-	.trajectory-stat-grid {
-		display: grid;
-		grid-template-columns: repeat(6, minmax(0, 1fr));
-		gap: 14px;
-		margin-top: 18px;
-	}
-
-	.trajectory-stat-card {
-		min-width: 0;
-		display: grid;
-		grid-template-columns: 44px minmax(0, 1fr);
-		align-items: center;
-		gap: 13px;
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-sm);
-		background: color-mix(in srgb, var(--bg-surface) 88%, var(--bg));
-		padding: 16px 16px;
-		box-shadow: 0 10px 24px color-mix(in srgb, var(--text) 7%, transparent);
-	}
-
-	.stat-icon {
-		width: 38px;
-		height: 38px;
-		border-radius: 50%;
-		display: grid;
-		place-items: center;
-		background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
-		color: var(--accent);
-		position: relative;
-	}
-
-	.stat-icon::before,
-	.stat-icon::after,
-	.stat-icon span {
-		content: '';
-		position: absolute;
-		display: block;
-	}
-
-	.stat-icon::before {
-		width: 17px;
-		height: 10px;
-		border-left: 2px solid currentColor;
-		border-bottom: 2px solid currentColor;
-		left: 10px;
-		bottom: 10px;
-	}
-
-	.stat-icon::after {
-		width: 16px;
-		height: 2px;
-		background: currentColor;
-		left: 15px;
-		top: 18px;
-		transform: rotate(-31deg);
-		transform-origin: left center;
-	}
-
-	.stat-icon span {
-		width: 6px;
-		height: 6px;
-		border-top: 2px solid currentColor;
-		border-right: 2px solid currentColor;
-		right: 9px;
-		top: 12px;
-		transform: rotate(0deg);
-	}
-
-	.trajectory-stat-card.positive .stat-icon {
-		background: color-mix(in srgb, var(--positive) 12%, var(--bg-surface));
-		color: var(--positive);
-	}
-
-	.trajectory-stat-card.negative .stat-icon {
-		background: color-mix(in srgb, var(--negative) 12%, var(--bg-surface));
-		color: var(--negative);
-	}
-
-	.trajectory-stat-card p {
-		color: var(--text-secondary);
-		font-size: 12px;
-		font-weight: 700;
-		line-height: 1.15;
-		margin-bottom: 6px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.trajectory-stat-card strong {
-		display: block;
-		color: var(--text);
-		font-size: 18px;
-		font-weight: 850;
-		line-height: 1.08;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.trajectory-stat-card small {
-		display: block;
-		color: var(--text-secondary);
-		font-size: 11px;
-		line-height: 1.2;
-		margin-top: 6px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+	.trajectory-stat-strip {
+		--stat-tile-min: 150px;
+		margin: 18px 0 0;
 	}
 
 	@keyframes trajectory-shimmer {
@@ -1418,10 +1218,6 @@
 			grid-template-columns: 320px minmax(0, 1fr);
 			gap: 24px;
 		}
-
-		.trajectory-stat-grid {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
 	}
 
 	@media (max-width: 980px) {
@@ -1433,14 +1229,28 @@
 			position: static;
 		}
 
-		.trajectory-stat-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+		.chart-options-toggle {
+			display: flex;
+			justify-content: space-between;
+			width: 100%;
+			margin-bottom: 14px;
+		}
+
+		.chart-options-summary {
+			overflow: hidden;
+			color: var(--text-muted);
+			font-weight: 500;
+			text-overflow: ellipsis;
+		}
+
+		.chart-options:not(.open) {
+			display: none;
 		}
 	}
 
 	@media (max-width: 768px) {
 		.trajectory-page {
-			padding: 16px 0 26px;
+			padding: 0 0 26px;
 		}
 
 		.trajectory-workspace {
@@ -1451,37 +1261,6 @@
 		.trajectory-chart-area {
 			width: 100%;
 			min-width: 0;
-		}
-
-		.trajectory-hero {
-			padding: 20px;
-		}
-
-		.trajectory-title-block {
-			align-items: flex-start;
-			gap: 14px;
-		}
-
-		.trajectory-icon {
-			width: 54px;
-			height: 54px;
-		}
-
-		.trajectory-icon svg {
-			width: 32px;
-			height: 32px;
-		}
-
-		h1 {
-			font-size: 26px;
-		}
-
-		.trajectory-title-block p {
-			font-size: 14px;
-		}
-
-		.trajectory-stat-grid {
-			grid-template-columns: 1fr;
 		}
 
 		.trajectory-starter-grid {

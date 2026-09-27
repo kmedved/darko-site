@@ -7,6 +7,7 @@ import {
     asOfWindowStart,
     frameIndexAtOrBefore,
     isDateAwarePath,
+    isTimeMachineFolded,
     locateDate,
     parseAsOfDate,
     relativeHref,
@@ -198,9 +199,19 @@ test('a folded Time Machine is restored before paint from the same storage key t
     ]);
     const key = state.match(/TIME_MACHINE_COLLAPSED_KEY = '([^']+)'/)?.[1];
     assert.ok(key, 'the state module names its storage key');
-    assert.ok(html.includes(`localStorage.getItem('${key}') === 'collapsed'`), 'app.html reads the same key');
+    assert.ok(html.includes(`tmChoice = localStorage.getItem('${key}');`), 'app.html reads the same key');
+    // app.html repeats isTimeMachineFolded: a saved choice wins, else folded unless dated or on Rewind.
+    assert.match(html, /tmChoice === 'collapsed'\s*\|\| \(tmChoice !== 'open' && !tmDated && window\.location\.pathname !== '\/rewind'\)/);
     assert.match(html, /dataset\.timeMachine = 'collapsed'/);
     assert.match(css, /:root\[data-time-machine='collapsed'\] \{\s*--time-machine-height: 0px;/);
+});
+
+test('the Time Machine starts folded and opens by itself only for a date or on Rewind', () => {
+    assert.equal(isTimeMachineFolded(null, { pathname: '/' }), true);
+    assert.equal(isTimeMachineFolded(null, { pathname: '/', rewound: true }), false);
+    assert.equal(isTimeMachineFolded(null, { pathname: '/rewind' }), false);
+    assert.equal(isTimeMachineFolded('open', { pathname: '/' }), false, 'a reader who opened it keeps it open');
+    assert.equal(isTimeMachineFolded('collapsed', { pathname: '/rewind', rewound: true }), true, 'and a folded choice sticks');
 });
 
 test('the time colour is each theme accent, not a colour of its own', async () => {

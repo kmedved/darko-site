@@ -16,7 +16,7 @@ test('getChartLayout returns mobile layout for width < 500', () => {
 	assert.equal(layout.margin.right, 15);
 	assert.equal(layout.xTicks, 5);
 	assert.equal(layout.yTicks, 6);
-	assert.equal(layout.tickFontSize, '9px');
+	assert.equal(layout.tickFontSize, '11px');
 });
 
 test('getChartLayout returns desktop layout for width >= 500', () => {

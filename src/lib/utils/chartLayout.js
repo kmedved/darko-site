@@ -20,7 +20,8 @@ export function getChartLayout(width) {
 		plotHeight: CHART_HEIGHT - 115,
 		xTicks: isMobile ? 5 : 8,
 		yTicks: isMobile ? 6 : 8,
-		tickFontSize: isMobile ? '9px' : '11px'
+		// 11px is the site's smallest text size, phones included.
+		tickFontSize: '11px'
 	};
 }
 

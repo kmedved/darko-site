@@ -1,4 +1,5 @@
 <script>
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ScatterplotChart from '$lib/components/ScatterplotChart.svelte';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 
@@ -9,6 +10,10 @@
 	let colorByPosition = $state(true);
 	let mpgMinimum = $state(0);
 	let filtersOpen = $state(false);
+	let innerHeight = $state(900);
+
+	// The chart takes the height the window has left under the header and controls.
+	const chartHeight = $derived(Math.min(760, Math.max(420, innerHeight - 340)));
 
 	const STAT_GROUPS = [
 		{
@@ -54,11 +59,10 @@
 	<title>Player scatterplot — DARKO DPM</title>
 </svelte:head>
 
+<svelte:window bind:innerHeight />
+
 <div class="container scatterplot-page" data-shiny-page>
-	<div class="page-header" data-shiny-surface="hero">
-		<h1>Player scatterplot</h1>
-		<p>Compare any two stats across all current-season NBA players.</p>
-	</div>
+	<PageHeader title="Player scatterplot" lede="Compare any two stats across all current-season NBA players." />
 
 	<div class="scatterplot-layout" data-shiny-layout="sidebar">
 		<button class="filters-toggle" onclick={() => filtersOpen = !filtersOpen}>
@@ -120,36 +124,57 @@
 				{xMetric}
 				{yMetric}
 				{colorByPosition}
+				height={chartHeight}
 			/>
 		</div>
 	</div>
 </div>
 
 <style>
+	/* The controls sit in one row above the chart so the chart gets the page's full width. The
+	   Shiny view keeps its archived sidebar (data-shiny-layout="sidebar"). */
 	.scatterplot-layout {
 		display: flex;
-		gap: 32px;
-		align-items: flex-start;
+		flex-direction: column;
+		gap: 16px;
 	}
 
 	.scatterplot-controls {
-		flex: 0 0 260px;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		gap: 12px 24px;
 		border: 1px solid var(--border);
 		border-radius: 6px;
-		padding: 20px;
+		padding: 14px 18px;
 		background: var(--bg-surface);
 	}
 
-	.scatterplot-chart-area {
-		flex: 1;
+	.scatterplot-controls .control-group {
+		flex: 0 1 220px;
 		min-width: 0;
 	}
 
-	.control-group {
+	.scatterplot-controls .control-group:last-child {
+		flex-basis: auto;
+		align-self: center;
+	}
+
+	.scatterplot-chart-area {
+		min-width: 0;
+	}
+
+	@media (min-width: 769px) {
+		:global(:root[data-view='shiny']) .scatterplot-controls {
+			display: block;
+		}
+	}
+
+	:global(:root[data-view='shiny']) .scatterplot-controls .control-group {
 		margin-bottom: 20px;
 	}
 
-	.control-group:last-child {
+	:global(:root[data-view='shiny']) .scatterplot-controls .control-group:last-child {
 		margin-bottom: 0;
 	}
 
@@ -220,13 +245,15 @@
 		}
 
 		.scatterplot-controls {
-			flex: none;
-			width: 100%;
 			display: none;
 		}
 
 		.scatterplot-controls.mobile-open {
-			display: block;
+			display: flex;
+		}
+
+		.scatterplot-controls .control-group {
+			flex-basis: 100%;
 		}
 
 		.scatterplot-chart-area {

@@ -21,6 +21,18 @@ export function isDateAwarePath(pathname) {
 	return DATE_AWARE_PATHS.some((matches) => matches(pathname ?? ''));
 }
 
+/**
+ * Whether the Time Machine strip is folded into its nav button. A reader's own choice
+ * ('collapsed' or 'open', remembered in localStorage) always wins. Without one the strip stays
+ * folded, and opens by itself while a date is set or on Rewind. app.html repeats this rule
+ * before first paint.
+ */
+export function isTimeMachineFolded(choice, { rewound = false, pathname = '' } = {}) {
+	if (choice === 'collapsed') return true;
+	if (choice === 'open') return false;
+	return !rewound && pathname !== '/rewind';
+}
+
 /** A real calendar date as YYYY-MM-DD, or null. */
 export function parseAsOfDate(value) {
 	if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return null;

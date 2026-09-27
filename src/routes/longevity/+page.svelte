@@ -1,9 +1,12 @@
 <script>
     import LongevityRosterChart from '$lib/components/LongevityRosterChart.svelte';
     import LongevityCareerLengthChart from '$lib/components/LongevityCareerLengthChart.svelte';
+    import PageHeader from '$lib/components/PageHeader.svelte';
+    import StatTile from '$lib/components/StatTile.svelte';
+    import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
     import { apiLongevity, apiPlayerLongevity } from '$lib/api.js';
     import { exportCsvRows, longevityCsvColumns } from '$lib/utils/csvPresets.js';
-    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
     import {
         buildPresetHeatScales,
@@ -58,6 +61,12 @@
     let teamFilter = $state('');
     let positionFilter = $state('');
     let showColumnFilters = $state(false);
+    let longevityTableRoot = $state(null);
+    let longevityBodyScroller = $state(null);
+    let longevityBodyTable = $state(null);
+    let longevitySourceHead = $state(null);
+    let longevityHeaderScroller = $state(null);
+    let longevityHeaderTable = $state(null);
     let trajectoryByPlayer = $state({});
     let loadingTrajectoryByPlayer = $state({});
 
@@ -288,32 +297,27 @@
             {
                 label: 'Estimated Retirement Age',
                 value: formatFixedValue(player?.est_retirement_age, 1),
-                detail: 'Years Old',
-                icon: 'calendar'
+                detail: 'Years Old'
             },
             {
                 label: 'Years Remaining',
                 value: formatFixedValue(player?.years_remaining, 1),
-                detail: 'Seasons',
-                icon: 'hourglass'
+                detail: 'Seasons'
             },
             {
                 label: 'Prob. Active in +5 Seasons',
                 value: formatPercentValue(player?.p5),
-                detail: retentionLabel(player?.p5),
-                icon: 'trend'
+                detail: retentionLabel(player?.p5)
             },
             {
                 label: 'Prob. Active in +10 Seasons',
                 value: formatPercentValue(player?.p10),
-                detail: retentionLabel(player?.p10),
-                icon: 'trend'
+                detail: retentionLabel(player?.p10)
             },
             {
                 label: 'Career Games (Proj.)',
                 value: formatWholeNumber(projectedCareerGames(player)),
-                detail: 'Projected Total',
-                icon: 'globe'
+                detail: 'Projected Total'
             }
         ];
     }
@@ -357,7 +361,78 @@
             filename: 'darko-longevity-projections.csv'
         });
     }
+
+    $effect(() => {
+        sortColumn;
+        sortDirection;
+        showColumnFilters;
+        pageRows.length;
+        activePlayerId;
+        longevityTableRoot;
+        longevityBodyScroller;
+        longevityBodyTable;
+        longevitySourceHead;
+        longevityHeaderScroller;
+        longevityHeaderTable;
+        return setupWideStickyTable({
+            root: longevityTableRoot,
+            bodyScroller: longevityBodyScroller,
+            bodyTable: longevityBodyTable,
+            sourceHead: longevitySourceHead,
+            headerScroller: longevityHeaderScroller,
+            headerTable: longevityHeaderTable,
+            wheelTarget: longevityHeaderScroller
+        });
+    });
 </script>
+
+{#snippet longevitySemanticHeaderRow()}
+    <tr class="table-semantic-row sr-only">
+        {#each tableColumns as column (column.key)}
+            <th
+                scope="col"
+                aria-sort={column.sortable === false ? undefined : getSortAriaValue(sortColumn, sortDirection, column.key)}
+            >{column.label}</th>
+        {/each}
+    </tr>
+{/snippet}
+
+{#snippet longevityHeaderRows()}
+    <tr class="header-row table-sizing-row">
+        {#each tableColumns as column (column.key)}
+            <th
+                class="{column.align === 'right' ? 'align-right' : ''} {sortColumn === column.key ? 'active' : ''}"
+                aria-sort={column.sortable === false ? undefined : getSortAriaValue(sortColumn, sortDirection, column.key)}
+            >
+                {#if column.sortable === false}
+                    {column.label}
+                {:else}
+                    <button type="button" onclick={() => toggleSort(column.key)}>
+                        <span>{column.label}</span>
+                        <span class="sort-indicator" aria-hidden="true">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
+                    </button>
+                {/if}
+            </th>
+        {/each}
+    </tr>
+    {#if showColumnFilters}
+        <tr class="filter-row table-sizing-row">
+            {#each tableColumns as column (column.key)}
+                <th class={column.align === 'right' ? 'align-right' : ''}>
+                    {#if column.filterable !== false}
+                        <input
+                            type="text"
+                            value={columnFilters[column.key]}
+                            oninput={(event) => setColumnFilter(column.key, event.currentTarget.value)}
+                            placeholder="All"
+                            aria-label={`Filter ${column.label}`}
+                        />
+                    {/if}
+                </th>
+            {/each}
+        </tr>
+    {/if}
+{/snippet}
 
 <svelte:head>
     <title>Longevity Projections — DARKO DPM</title>
@@ -365,36 +440,19 @@
 
 <div class="longevity-page" data-shiny-page>
     <div class="container longevity-container">
-        <section class="longevity-hero" data-shiny-surface="hero" aria-labelledby="longevity-title">
-            <div class="longevity-title-block">
-                <div class="longevity-icon" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-                <div>
-                    <h1 id="longevity-title">Longevity Projections</h1>
-                    <p>Active-player career-length outlooks and roster retention probabilities.</p>
-                </div>
-            </div>
+        <PageHeader
+            id="longevity-title"
+            title="Longevity Projections"
+            lede="Active-player career-length outlooks and roster retention probabilities."
+        />
 
-            {#if !loading && !error}
-                <div class="summary-card-grid" aria-label="Selected player longevity summary">
-                    {#each summaryCards as card (card.label)}
-                        <article class="summary-card" data-shiny-surface="summary">
-                            <div class="summary-icon {card.icon}" aria-hidden="true">
-                                <span></span>
-                            </div>
-                            <div class="summary-copy">
-                                <p>{card.label}</p>
-                                <strong>{card.value}</strong>
-                                <small>{card.detail}</small>
-                            </div>
-                        </article>
-                    {/each}
-                </div>
-            {/if}
-        </section>
+        {#if !loading && !error}
+            <section class="stat-strip" aria-label="Selected player longevity summary">
+                {#each summaryCards as card (card.label)}
+                    <StatTile label={card.label} value={card.value} detail={card.detail} />
+                {/each}
+            </section>
+        {/if}
 
         {#if loading}
             <div class="longevity-loading" aria-live="polite">
@@ -436,7 +494,7 @@
                         </p>
                     </div>
                     <button
-                        class="page-action-btn"
+                        class="btn"
                         type="button"
                         onclick={exportLongevityCsv}
                         disabled={sortedRows.length === 0}
@@ -487,7 +545,7 @@
 
                     <button
                         type="button"
-                        class="page-action-btn filter-toggle"
+                        class="btn filter-toggle"
                         aria-pressed={showColumnFilters}
                         onclick={() => (showColumnFilters = !showColumnFilters)}
                     >
@@ -496,7 +554,7 @@
 
                     <button
                         type="button"
-                        class="page-action-btn clear-filter-btn"
+                        class="btn clear-filter-btn"
                         onclick={clearFilters}
                     >
                         Clear
@@ -516,87 +574,74 @@
                     </label>
                 </div>
 
-                <div class="table-wrapper" data-shiny-table>
-                    <table>
-                        <thead>
-                            <tr class="header-row">
-                                {#each tableColumns as column (column.key)}
-                                    <th
-                                        class="{column.sortable === false ? '' : 'sortable'} {column.align === 'right' ? 'align-right' : ''} {sortColumn === column.key ? 'active' : ''}"
-                                        onclick={() => column.sortable === false ? null : toggleSort(column.key)}
-                                    >
-                                        {column.label}
-                                        {#if column.sortable !== false}
-                                            <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
-                                        {/if}
-                                    </th>
-                                {/each}
-                            </tr>
-                            {#if showColumnFilters}
-                                <tr class="filter-row">
-                                    {#each tableColumns as column (column.key)}
-                                        <th class={column.align === 'right' ? 'align-right' : ''}>
-                                            {#if column.filterable !== false}
-                                                <input
-                                                    type="text"
-                                                    value={columnFilters[column.key]}
-                                                    oninput={(event) => setColumnFilter(column.key, event.currentTarget.value)}
-                                                    placeholder="All"
-                                                />
-                                            {/if}
-                                        </th>
-                                    {/each}
-                                </tr>
-                            {/if}
-                        </thead>
-                        <tbody>
-                            {#if pageRows.length === 0}
-                                <tr>
-                                    <td class="empty-row" colspan={tableColumns.length}>No matching rows.</td>
-                                </tr>
-                            {:else}
-                                {#each pageRows as row, index (row.nba_id)}
-                                    <tr
-                                        class="data-row {activePlayerId === row.nba_id ? 'active-row' : ''}"
-                                        role="button"
-                                        tabindex="0"
-                                        aria-pressed={activePlayerId === row.nba_id}
-                                        onclick={() => setActivePlayer(row.nba_id)}
-                                        onkeydown={(event) => handleRowKeydown(event, row.nba_id)}
-                                    >
-                                        {#each tableColumns as column (column.key)}
-                                            <td
-                                                class="{column.align === 'right' ? 'align-right' : ''} {getCellClass(column, row)}"
-                                                style={getMetricHeatVariables(column.key, row[column.key], longevityHeatScales)}
-                                            >
-                                                {#if column.key === '_rank'}
-                                                    {pageRangeStart + index}
-                                                {:else if column.key === 'player_name'}
-                                                    <span class="player-name-cell">
-                                                        {row.player_name}
-                                                        {#if activePlayerId === row.nba_id}
-                                                            <span class="active-player-indicator" aria-hidden="true"></span>
-                                                        {/if}
-                                                    </span>
-                                                {:else if column.key === 'team_name'}
-                                                    <span class="team-cell">
-                                                        <span class="team-mark">
-                                                            {#if teamLogoUrl(row)}
-                                                                <img src={teamLogoUrl(row)} alt="" loading="lazy" onerror={hideBrokenImage} />
+                <!-- A detached header (and its filter row) stays pinned under the nav while the body
+                     scrolls sideways (utils/wideStickyTable.js), so no column is ever hidden to fit. -->
+                <div class="table-wrapper table-shell" data-shiny-table bind:this={longevityTableRoot}>
+                    <div class="sticky-header-shell">
+                        <div class="table-header-scroll" bind:this={longevityHeaderScroller}>
+                            <table class="sticky-header-table" role="presentation" bind:this={longevityHeaderTable}>
+                                <thead>
+                                    {@render longevityHeaderRows()}
+                                </thead>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="table-body-scroll" bind:this={longevityBodyScroller}>
+                        <table bind:this={longevityBodyTable}>
+                            <thead class="table-sizing-head" bind:this={longevitySourceHead}>
+                                {@render longevityHeaderRows()}
+                                {@render longevitySemanticHeaderRow()}
+                            </thead>
+                            <tbody>
+                                {#if pageRows.length === 0}
+                                    <tr>
+                                        <td class="empty-row" colspan={tableColumns.length}>No matching rows.</td>
+                                    </tr>
+                                {:else}
+                                    {#each pageRows as row, index (row.nba_id)}
+                                        <tr
+                                            class="data-row {activePlayerId === row.nba_id ? 'active-row' : ''}"
+                                            role="button"
+                                            tabindex="0"
+                                            aria-pressed={activePlayerId === row.nba_id}
+                                            onclick={() => setActivePlayer(row.nba_id)}
+                                            onkeydown={(event) => handleRowKeydown(event, row.nba_id)}
+                                        >
+                                            {#each tableColumns as column (column.key)}
+                                                <td
+                                                    class="{column.align === 'right' ? 'align-right' : ''} {getCellClass(column, row)}"
+                                                    style={getMetricHeatVariables(column.key, row[column.key], longevityHeatScales)}
+                                                >
+                                                    {#if column.key === '_rank'}
+                                                        {pageRangeStart + index}
+                                                    {:else if column.key === 'player_name'}
+                                                        <span class="player-name-cell">
+                                                            {row.player_name}
+                                                            {#if activePlayerId === row.nba_id}
+                                                                <span class="active-player-indicator" aria-hidden="true"></span>
                                                             {/if}
                                                         </span>
-                                                        {teamAbbr(row.team_name)}
-                                                    </span>
-                                                {:else}
-                                                    {formatLongevityDisplayValue(row, column.key)}
-                                                {/if}
-                                            </td>
-                                        {/each}
-                                    </tr>
-                                {/each}
-                            {/if}
-                        </tbody>
-                    </table>
+                                                    {:else if column.key === 'team_name'}
+                                                        <span class="team-cell">
+                                                            <span class="team-mark">
+                                                                {#if teamLogoUrl(row)}
+                                                                    <img src={teamLogoUrl(row)} alt="" loading="lazy" onerror={hideBrokenImage} />
+                                                                {/if}
+                                                            </span>
+                                                            {teamAbbr(row.team_name)}
+                                                        </span>
+                                                    {:else}
+                                                        {formatLongevityDisplayValue(row, column.key)}
+                                                    {/if}
+                                                </td>
+                                            {/each}
+                                        </tr>
+                                    {/each}
+                                {/if}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div class="table-footer">
@@ -604,11 +649,11 @@
                         Results based on active-player longevity projections.
                     </div>
                     <div class="pagination-controls">
-                        <button type="button" class="page-action-btn" onclick={previousPage} disabled={page <= 1}>
+                        <button type="button" class="btn" onclick={previousPage} disabled={page <= 1}>
                             Previous
                         </button>
                         <span>Page {page} of {totalPages}</span>
-                        <button type="button" class="page-action-btn" onclick={nextPage} disabled={page >= totalPages}>
+                        <button type="button" class="btn" onclick={nextPage} disabled={page >= totalPages}>
                             Next
                         </button>
                     </div>
@@ -621,235 +666,12 @@
 <style>
     .longevity-page {
         min-height: calc(100dvh - var(--nav-sticky-offset));
-        padding: 24px 0 34px;
-        background:
-            radial-gradient(circle at 92% 3%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 24rem),
-            var(--bg);
+        padding: 0 0 34px;
+        background: var(--bg);
     }
 
     .longevity-container {
         max-width: 1880px;
-        display: grid;
-        gap: 18px;
-    }
-
-    .longevity-hero {
-        position: relative;
-        overflow: hidden;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius);
-        background:
-            radial-gradient(circle at 90% -8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 24rem),
-            var(--bg);
-        box-shadow: 0 18px 48px color-mix(in srgb, var(--text) 10%, transparent);
-        padding: 24px 28px;
-    }
-
-    .longevity-hero::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-            repeating-radial-gradient(circle at 72% 6%, transparent 0 34px, color-mix(in srgb, var(--border-subtle) 65%, transparent) 35px 36px);
-        opacity: 0.42;
-        pointer-events: none;
-    }
-
-    .longevity-title-block,
-    .summary-card-grid {
-        position: relative;
-        z-index: 1;
-    }
-
-    .longevity-title-block {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-    }
-
-    .longevity-title-block > div:last-child {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .longevity-icon {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        display: grid;
-        grid-template-columns: repeat(3, 7px);
-        justify-content: center;
-        align-items: end;
-        gap: 5px;
-        padding-bottom: 20px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-subtle);
-        box-shadow: 0 12px 28px color-mix(in srgb, var(--text) 12%, transparent);
-        flex: 0 0 auto;
-    }
-
-    .longevity-icon span {
-        display: block;
-        width: 7px;
-        border-radius: 999px;
-        background: var(--accent);
-    }
-
-    .longevity-icon span:nth-child(1) { height: 10px; opacity: 0.68; }
-    .longevity-icon span:nth-child(2) { height: 18px; opacity: 0.82; }
-    .longevity-icon span:nth-child(3) { height: 28px; }
-
-    h1 {
-        font-size: clamp(30px, 3vw, 44px);
-        line-height: 0.98;
-        letter-spacing: 0;
-        color: var(--text);
-        font-weight: 850;
-    }
-
-    .longevity-title-block p {
-        color: var(--text-secondary);
-        font-size: 17px;
-        margin-top: 8px;
-        overflow-wrap: anywhere;
-    }
-
-    .summary-card-grid {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-        margin-top: 18px;
-    }
-
-    .summary-card {
-        min-height: 94px;
-        display: grid;
-        grid-template-columns: 48px minmax(0, 1fr);
-        align-items: center;
-        gap: 12px;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-sm);
-        background: color-mix(in srgb, var(--bg-surface) 88%, var(--bg));
-        box-shadow: 0 10px 24px color-mix(in srgb, var(--text) 7%, transparent);
-        padding: 13px 14px;
-    }
-
-    .summary-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
-        color: var(--accent);
-        position: relative;
-    }
-
-    .summary-icon::before,
-    .summary-icon::after,
-    .summary-icon span {
-        content: '';
-        position: absolute;
-        display: block;
-    }
-
-    .summary-icon.calendar::before {
-        width: 18px;
-        height: 16px;
-        border: 2px solid currentColor;
-        border-radius: 3px;
-    }
-
-    .summary-icon.calendar::after {
-        width: 18px;
-        height: 2px;
-        background: currentColor;
-        top: 14px;
-    }
-
-    .summary-icon.hourglass::before {
-        width: 16px;
-        height: 20px;
-        border: 2px solid currentColor;
-        clip-path: polygon(0 0, 100% 0, 62% 50%, 100% 100%, 0 100%, 38% 50%);
-    }
-
-    .summary-icon.trend::before {
-        width: 17px;
-        height: 10px;
-        border-left: 2px solid currentColor;
-        border-bottom: 2px solid currentColor;
-        left: 10px;
-        bottom: 10px;
-    }
-
-    .summary-icon.trend::after {
-        width: 16px;
-        height: 2px;
-        background: currentColor;
-        left: 15px;
-        top: 18px;
-        transform: rotate(-31deg);
-        transform-origin: left center;
-    }
-
-    .summary-icon.trend span {
-        width: 6px;
-        height: 6px;
-        border-top: 2px solid currentColor;
-        border-right: 2px solid currentColor;
-        right: 9px;
-        top: 12px;
-    }
-
-    .summary-icon.globe::before {
-        width: 20px;
-        height: 20px;
-        border: 2px solid currentColor;
-        border-radius: 50%;
-    }
-
-    .summary-icon.globe::after {
-        width: 2px;
-        height: 18px;
-        background: currentColor;
-    }
-
-    .summary-icon.globe span {
-        width: 18px;
-        height: 2px;
-        background: currentColor;
-    }
-
-    .summary-copy {
-        min-width: 0;
-    }
-
-    .summary-copy p {
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.15;
-        margin-bottom: 7px;
-        overflow-wrap: anywhere;
-    }
-
-    .summary-copy strong {
-        display: block;
-        color: var(--accent);
-        font-family: var(--font-mono);
-        font-size: 22px;
-        line-height: 1;
-        margin-bottom: 6px;
-    }
-
-    .summary-copy small {
-        display: block;
-        color: var(--text-secondary);
-        font-size: 11px;
-        font-weight: 700;
-        line-height: 1.15;
-        overflow-wrap: anywhere;
     }
 
     .longevity-loading {
@@ -894,6 +716,7 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 16px;
+        margin-bottom: 18px;
     }
 
     .chart-card {
@@ -914,7 +737,7 @@
     }
 
     .chart-card h2 {
-        font-size: 22px;
+        font-size: 20px;
         line-height: 1.05;
         letter-spacing: 0;
         color: var(--text);
@@ -946,7 +769,7 @@
     }
 
     .table-title-row h2 {
-        font-size: 22px;
+        font-size: 20px;
         line-height: 1.05;
         letter-spacing: 0;
         color: var(--text);
@@ -1009,6 +832,7 @@
     }
 
     .table-wrapper {
+        --wide-sticky-header-height: 40px;
         width: 100%;
         overflow: visible;
         border: 1px solid var(--border-subtle);
@@ -1016,23 +840,42 @@
         background: var(--bg-surface);
     }
 
+    .table-shell {
+        position: relative;
+    }
+
+    .sticky-header-shell {
+        position: sticky;
+        top: var(--nav-sticky-offset);
+        z-index: 30;
+        margin-bottom: calc(-1 * var(--wide-sticky-header-height));
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        overflow: hidden;
+    }
+
+    .table-header-scroll {
+        overflow: hidden;
+    }
+
+    .table-body-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     table {
         border-collapse: separate;
         border-spacing: 0;
         font-size: 13px;
-        width: 100%;
-        min-width: 1160px;
+        width: max-content;
+        min-width: 100%;
     }
 
     th {
-        position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 2;
         height: 40px;
         background: var(--bg);
         border-bottom: 1px solid var(--border);
         color: var(--text-secondary);
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 850;
         letter-spacing: 0.04em;
         text-transform: uppercase;
@@ -1042,7 +885,6 @@
     }
 
     .filter-row th {
-        top: calc(var(--nav-sticky-offset) + 40px);
         background: var(--bg-elevated);
         padding: 7px 8px;
         height: 42px;
@@ -1070,12 +912,33 @@
         text-align: right;
     }
 
-    th.sortable {
+    th button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
         cursor: pointer;
         user-select: none;
     }
 
-    th.sortable:hover {
+    th.align-right button {
+        justify-content: flex-end;
+    }
+
+    th button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+    }
+
+    th:has(button):hover {
         background: var(--bg-hover);
     }
 
@@ -1086,7 +949,7 @@
     .sort-indicator {
         margin-left: 5px;
         color: var(--text-secondary);
-        font-size: 10px;
+        font-size: 11px;
         opacity: 0.75;
     }
 
@@ -1100,8 +963,8 @@
         border-bottom: 1px solid var(--border-subtle);
         white-space: nowrap;
         font-family: var(--font-mono);
-        font-size: 12px;
-        font-weight: 700;
+        font-size: 13px;
+        font-weight: 500;
         color: var(--text);
         background: var(--bg-surface);
     }
@@ -1204,22 +1067,8 @@
         object-fit: contain;
     }
 
-    td.probability-elite {
-        color: var(--positive);
-    }
-
-    td.probability-high {
-        color: var(--positive);
-    }
-
-    td.probability-mid {
-        color: var(--accent);
-    }
-
-    td.probability-low {
-        color: var(--text-secondary);
-    }
-
+    /* The probability-* classes drive the Shiny heat cells. Here the numbers stay in neutral
+       ink; only near-zero odds recede. */
     td.probability-minimal {
         color: var(--text-muted);
     }
@@ -1267,54 +1116,7 @@
         }
     }
 
-    /* Touch/mobile scroll mode */
-    @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
-        (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        table {
-            width: max-content;
-            min-width: 100%;
-        }
-
-        th {
-            position: static;
-        }
-
-        .filter-row th,
-        td:nth-child(2),
-        th:nth-child(2),
-        .filter-row th:nth-child(2) {
-            position: static;
-            top: auto;
-            left: auto;
-            box-shadow: none;
-        }
-    }
-    /* End touch/mobile scroll mode */
-
-    @media (hover: hover) and (pointer: fine) and (max-width: 1380px) {
-        .table-wrapper th:nth-child(n + 12),
-        .table-wrapper td:nth-child(n + 12) {
-            display: none;
-        }
-    }
-
-    @media (hover: hover) and (pointer: fine) and (max-width: 1180px) {
-        .table-wrapper th:nth-child(n + 9),
-        .table-wrapper td:nth-child(n + 9) {
-            display: none;
-        }
-    }
-
     @media (max-width: 1180px) {
-        .summary-card-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-
         .charts-grid {
             grid-template-columns: 1fr;
         }
@@ -1332,39 +1134,14 @@
 
     @media (max-width: 768px) {
         .longevity-page {
-            padding: 16px 0 26px;
+            padding: 0 0 26px;
         }
 
-        .longevity-hero,
         .chart-card,
         .longevity-table-panel {
             padding: 18px;
         }
 
-        .longevity-title-block {
-            align-items: flex-start;
-            gap: 14px;
-        }
-
-        .longevity-icon {
-            width: 54px;
-            height: 54px;
-            padding-bottom: 14px;
-        }
-
-        .longevity-icon span {
-            width: 6px;
-        }
-
-        h1 {
-            font-size: 26px;
-        }
-
-        .longevity-title-block p {
-            font-size: 14px;
-        }
-
-        .summary-card-grid,
         .table-controls {
             grid-template-columns: 1fr;
         }
@@ -1375,23 +1152,11 @@
             align-items: flex-start;
         }
 
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        table {
-            width: max-content;
-            min-width: 1040px;
-        }
-
-        th,
-        .filter-row th,
+        /* The player column scrolls with the rest instead of pinning most of the screen. */
         td:nth-child(2),
         th:nth-child(2),
         .filter-row th:nth-child(2) {
             position: static;
-            top: auto;
             left: auto;
             box-shadow: none;
         }

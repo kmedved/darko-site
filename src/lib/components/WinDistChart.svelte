@@ -134,14 +134,14 @@
             .call(d3.axisBottom(x).tickValues(chartData.filter((_, i) => i % tickEvery === 0).map(d => d.wins)))
             .call(g => g.select('.domain').style('stroke', 'var(--border)'))
             .call(g => g.selectAll('.tick line').style('stroke', 'var(--border)'))
-            .call(g => g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '10px'));
+            .call(g => g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '11px'));
 
         // Y axis
         g.append('g')
             .call(d3.axisLeft(y).ticks(4).tickFormat(d => d.toFixed(0) + '%'))
             .call(g => g.select('.domain').remove())
             .call(g => g.selectAll('.tick line').style('stroke', 'var(--border)').attr('stroke-dasharray', '2,3').attr('x2', w))
-            .call(g => g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '10px'));
+            .call(g => g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '11px'));
     }
 </script>
 

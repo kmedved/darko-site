@@ -1,5 +1,5 @@
 <script>
-    let { text = '', children } = $props();
+    let { text = '', label = 'Show metric definition', children } = $props();
 
     const viewportPadding = 12;
     const tooltipGap = 10;
@@ -128,7 +128,7 @@
         type="button"
         class="metric-tooltip-trigger"
         bind:this={triggerEl}
-        aria-label="Show metric definition"
+        aria-label={label}
         aria-expanded={isOpen}
         aria-describedby={isOpen ? tooltipId : undefined}
         onpointerdown={handleTriggerPointerDown}

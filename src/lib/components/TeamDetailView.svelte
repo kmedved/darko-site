@@ -21,6 +21,10 @@
         teamPlayerSortConfig
     } from '$lib/utils/leaderboardColumns.js';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
+    import PageHeader from '$lib/components/PageHeader.svelte';
+    import StatTile from '$lib/components/StatTile.svelte';
+    import { NBA_TEAMS, teamId as teamIdFromName } from '$lib/utils/teamAbbreviations.js';
+    import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
 
     let {
         teamName = '',
@@ -34,7 +38,6 @@
 
     let sortColumn = $state('player_name');
     let sortDirection = $state('asc');
-    let logoFailed = $state(false);
     let teamTableRoot = $state(null);
     let teamBodyScroller = $state(null);
     let teamBodyTable = $state(null);
@@ -42,18 +45,17 @@
     let teamHeaderScroller = $state(null);
     let teamHeaderTable = $state(null);
 
-    const teamId = $derived(players?.[0]?.tm_id || null);
-
-    $effect(() => {
-        void teamName;
-        logoFailed = false;
-    });
+    const teamId = $derived(players?.[0]?.tm_id || teamIdFromName(teamName) || null);
+    const knownTeam = $derived(NBA_TEAMS.some((team) => team.name === teamName));
 
     const teamPlayers = $derived(players || []);
     const teamPlayerHeatScales = $derived(buildPresetHeatScales(teamPlayers, 'talent'));
+    const dpmTintLimit = $derived(tintLimit(teamPlayers.map((player) => player?.dpm)));
     const teamWinDist = $derived(winDist || []);
     const topLineups = $derived(lineups?.top ?? []);
     const worstLineups = $derived(lineups?.worst ?? []);
+    // Best and worst lineups share one scale so their tints compare directly.
+    const lineupTintLimit = $derived(tintLimit([...topLineups, ...worstLineups].map((lineup) => lineup?.net_pm)));
 
     function dpmClass(val) {
         const n = parseFloat(val);
@@ -61,13 +63,10 @@
         return n >= 0 ? 'pos' : 'neg';
     }
 
-    function pctClass(val) {
-        const n = parseFloat(val);
-        if (!Number.isFinite(n)) return '';
-        if (n >= 80) return 'high';
-        if (n >= 40) return 'mid';
-        if (n > 0) return 'low';
-        return 'zero';
+    function formatSignedSrs(value) {
+        const n = parseFloat(value);
+        if (!Number.isFinite(n)) return '—';
+        return `${n >= 0 ? '+' : ''}${formatFixed(n, 2)}`;
     }
 
     const teamPlayerColumns = TEAM_PLAYER_COLUMNS;
@@ -170,7 +169,18 @@
                     {:else}
                         <span>{column.label}</span>
                     {/if}
-                    <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
+                    <!-- The keyboard's way to sort; clicking anywhere else in the header works too. -->
+                    <button
+                        type="button"
+                        class="sort-button"
+                        aria-label={`Sort by ${column.label}`}
+                        onclick={(event) => {
+                            event.stopPropagation();
+                            toggleSort(column.key);
+                        }}
+                    >
+                        <span class="sort-indicator" aria-hidden="true">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
+                    </button>
                 </span>
             </th>
         {/each}
@@ -209,7 +219,7 @@
                                 </span>
                             </td>
                             <td class="lineup-cell lineup-num">{formatFixed(lineup.possessions, 0)}</td>
-                            <td class="lineup-cell lineup-num {dpmClass(lineup.net_pm)}">{formatSignedMetric(lineup.net_pm)}</td>
+                            <td class="lineup-cell lineup-num tint-cell {dpmClass(lineup.net_pm)}" style={divergingTint(lineup.net_pm, lineupTintLimit)}>{formatSignedMetric(lineup.net_pm)}</td>
                             <td class="lineup-cell lineup-num {dpmClass(lineup.off_pm)}">{formatSignedMetric(lineup.off_pm)}</td>
                             <td class="lineup-cell lineup-num {dpmClass(lineup.def_pm)}">{formatSignedMetric(lineup.def_pm)}</td>
                         </tr>
@@ -223,74 +233,53 @@
 <div class="container team-detail-page" data-shiny-page>
     <a class="back-link" href={backHref}>{backLabel}</a>
 
-    <div class="page-header" data-shiny-surface="hero">
-        <div class="page-header-toolbar">
-            <div class="team-header-info">
-                {#if teamId && !logoFailed}
-                    <img
-                        src="https://cdn.nba.com/logos/nba/{teamId}/global/L/logo.svg"
-                        alt=""
-                        class="team-logo"
-                        onerror={() => { logoFailed = true; }}
-                    />
-                {/if}
-                <div>
-                    <h1>{teamName || 'Team'}</h1>
-                    {#if sim}
-                        <p>{sim.conference}ern Conference · Current: {sim.Current} · Projected: {formatFixed(sim.W)}-{formatFixed(sim.L)}</p>
-                    {:else}
-                        <p>Current ratings for all current-season players on the team.</p>
-                    {/if}
-                </div>
-            </div>
-            <div class="page-header-actions">
-                <button
-                    class="page-action-btn"
-                    type="button"
-                    onclick={exportTeamCsv}
-                    disabled={sortedPlayers.length === 0}
-                >
-                    Download CSV
-                </button>
-            </div>
-        </div>
-    </div>
+    <PageHeader
+        title={teamName || 'Team'}
+        logo={teamId ? `https://cdn.nba.com/logos/nba/${teamId}/global/L/logo.svg` : ''}
+        lede={sim
+            ? `${sim.conference}ern Conference · Current: ${sim.Current} · Projected: ${formatFixed(sim.W)}-${formatFixed(sim.L)}`
+            : knownTeam
+                ? 'Current ratings for all current-season players on the team.'
+                : 'Team not found.'}
+    >
+        {#snippet actions()}
+            <button
+                class="btn"
+                type="button"
+                onclick={exportTeamCsv}
+                disabled={sortedPlayers.length === 0}
+            >
+                Download CSV
+            </button>
+        {/snippet}
+    </PageHeader>
 
     {#if sim}
-        <div class="stats-grid" data-shiny-surface="panel">
-            <div class="stat-box">
-                <div class="stat-label">Playoff%</div>
-                <div class="stat-value pct {pctClass(sim.Playoffs)}">{formatFixed(sim.Playoffs)}%</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Win Conf</div>
-                <div class="stat-value pct {pctClass(sim['Win Conf'])}">{formatFixed(sim['Win Conf'])}%</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Win Finals</div>
-                <div class="stat-value pct {pctClass(sim['Win Finals'])}">{formatFixed(sim['Win Finals'])}%</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">SRS</div>
-                <div class="stat-value { (() => {
-                    const n = parseFloat(sim.SRS);
-                    if (!Number.isFinite(n)) return '';
-                    return n >= 0 ? 'srs-pos' : 'srs-neg';
-                })() }">{formatFixed(sim.SRS, 2)}</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Lottery%</div>
-                <div class="stat-value pct {pctClass(sim['Lottery%'])}">{formatFixed(sim['Lottery%'])}%</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">E[Pick]</div>
-                <div class="stat-value">{formatFixed(sim.ExpPick)}</div>
-            </div>
-        </div>
+        <section class="stat-strip" aria-label="Season simulation">
+            <StatTile label="Playoff%" value={`${formatFixed(sim.Playoffs)}%`} />
+            <StatTile label="Win Conf" value={`${formatFixed(sim['Win Conf'])}%`} />
+            <StatTile label="Win Finals" value={`${formatFixed(sim['Win Finals'])}%`} />
+            <StatTile label="SRS" value={formatSignedSrs(sim.SRS)} />
+            <StatTile label="Lottery%" value={`${formatFixed(sim['Lottery%'])}%`} />
+            <StatTile label="E[Pick]" value={formatFixed(sim.ExpPick)} hint="Expected draft pick" />
+        </section>
     {/if}
 
     {#if teamPlayers.length === 0}
-        <div class="empty-state">No current-season players found for {teamName}.</div>
+        <!-- Not a dead end: an unknown or empty team page offers every team instead. -->
+        <div class="empty-state">
+            <p>
+                {knownTeam
+                    ? `No current-season players are listed for the ${teamName} right now.`
+                    : `No team called "${teamName}" was found.`}
+                Pick a team:
+            </p>
+            <ul class="team-index">
+                {#each NBA_TEAMS as team (team.abbr)}
+                    <li><a href="/team/{encodeURIComponent(team.name)}">{team.name}</a></li>
+                {/each}
+            </ul>
+        </div>
     {:else}
         <h2 class="section-title">Players</h2>
         <div class="table-wrapper table-shell" data-shiny-table bind:this={teamTableRoot}>
@@ -321,8 +310,10 @@
                                         </td>
                                     {:else}
                                         <td
-											class="{teamCellClass(column, value)} {teamPlayerHeatScales[column.key] ? 'shiny-heat-cell' : ''}"
-											style={getMetricHeatVariables(column.key, value, teamPlayerHeatScales)}
+											class="{teamCellClass(column, value)} {teamPlayerHeatScales[column.key] ? 'shiny-heat-cell' : ''} {column.key === 'dpm' ? 'tint-cell' : ''}"
+											style={column.key === 'dpm'
+												? `${getMetricHeatVariables(column.key, value, teamPlayerHeatScales)} ${divergingTint(value, dpmTintLimit)}`
+												: getMetricHeatVariables(column.key, value, teamPlayerHeatScales)}
 										>
                                             {formatPlayerTableCell(column, value)}
                                         </td>
@@ -371,65 +362,19 @@
 <style>
     .back-link {
         display: inline-block;
-        margin: 10px 0 22px;
+        margin: 20px 0 0;
         font-size: 13px;
         color: var(--text-muted);
+    }
+
+    /* The back link already opens the page, so the header needs less room above it. */
+    .team-detail-page > :global(.page-header) {
+        padding-top: 16px;
     }
 
     .back-link:hover {
         color: var(--accent);
     }
-
-    .team-header-info {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-    }
-
-    .team-logo {
-        width: 64px;
-        max-height: 80px;
-        object-fit: contain;
-        flex-shrink: 0;
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 12px;
-        margin-bottom: 28px;
-    }
-
-    .stat-box {
-        background: var(--bg-surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        padding: 14px 16px;
-        text-align: center;
-    }
-
-    .stat-label {
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--text-muted);
-        margin-bottom: 6px;
-    }
-
-    .stat-value {
-        font-family: var(--font-mono);
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--text);
-    }
-
-    .stat-value.pct.high { color: var(--positive); }
-    .stat-value.pct.mid { color: var(--accent); }
-    .stat-value.pct.low { color: var(--text-secondary); }
-    .stat-value.pct.zero { color: var(--text-muted); }
-    .stat-value.srs-pos { color: var(--positive); }
-    .stat-value.srs-neg { color: var(--negative); }
 
     .section-title {
         font-size: 16px;
@@ -507,8 +452,23 @@
         margin: 16px 0;
     }
 
-    .srs-pos { color: var(--positive); }
-    .srs-neg { color: var(--negative); }
+    .team-index {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 6px 24px;
+        margin-top: 14px;
+        list-style: none;
+    }
+
+    .team-index a {
+        color: var(--text);
+        font-weight: 500;
+    }
+
+    .team-index a:hover {
+        color: var(--accent);
+    }
+
     .chart-card {
         margin-bottom: 24px;
     }
@@ -539,33 +499,28 @@
     .num {
         text-align: right;
         font-family: var(--font-mono);
-        font-size: 12px;
-        font-weight: 600;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    td.tint-cell {
+        font-weight: 700;
     }
 
     th.num {
         text-align: right;
     }
 
-    .num.pos {
-        color: var(--positive);
-    }
-
-    .num.neg {
-        color: var(--negative);
-    }
-
     .sort-indicator {
         margin-left: 6px;
         opacity: 0.6;
-        font-size: 10px;
+        font-size: 11px;
     }
 
     th.active .sort-indicator {
         color: var(--accent);
         opacity: 1;
     }
-
 
     /* Lineup sections */
     .lineups-grid {
@@ -583,7 +538,7 @@
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        font-size: 12px;
+        font-size: 13px;
         table-layout: fixed;
     }
 
@@ -592,7 +547,7 @@
         border-bottom: 1px solid var(--border);
         padding: 8px 8px;
         text-align: left;
-        font-size: 9.5px;
+        font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.07em;
@@ -619,13 +574,11 @@
     .lineup-cell.lineup-num {
         text-align: right;
         font-family: var(--font-mono);
-        font-size: 11.5px;
-        font-weight: 600;
+        font-size: 13px;
+        font-weight: 500;
         white-space: nowrap;
     }
 
-    .lineup-cell.pos { color: var(--positive); }
-    .lineup-cell.neg { color: var(--negative); }
 
     .lineup-names {
         display: block;
@@ -650,23 +603,9 @@
         background: var(--bg-hover);
     }
 
-    @media (max-width: 1024px) {
-        .stats-grid {
-            grid-template-columns: repeat(3, 1fr);
-        }
-    }
-
     @media (max-width: 600px) {
-        .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
         .lineups-grid {
             grid-template-columns: minmax(0, 1fr);
-        }
-
-        .stat-value {
-            font-size: 16px;
         }
     }
 

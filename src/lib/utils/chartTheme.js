@@ -1,16 +1,19 @@
 import { SHINY_SERIES, getShinyChartPreset } from './shinyDesign.js';
 
+// Categorical series colours, in a fixed order checked for colour-blind separation between
+// neighbours (dataviz reference palette, mid-lightness steps). Red and green sit last so a second
+// or third series never reads as "bad" or "good". Drawn solid, every slot clears 3:1 against the
+// white, dark and black themes (the cream theme dips to 2.9:1 for yellow and violet, so charts
+// keep legends); translucent marks do not, which is why the scatterplot's dots are opaque.
 const MODERN_SERIES = Object.freeze([
-	'#5b8def',
-	'#ef4444',
-	'#34d399',
-	'#f59e0b',
-	'#a78bfa',
-	'#06b6d4',
-	'#f97316',
-	'#22c55e',
-	'#ec4899',
-	'#eab308'
+	'#3987e5', // blue
+	'#d95926', // orange
+	'#199e70', // aqua
+	'#c98500', // yellow
+	'#d55181', // magenta
+	'#008300', // green
+	'#9085e9', // violet
+	'#e66767' // red
 ]);
 
 // DARKO's original five-color comparison palette from the Shiny app source.

@@ -1,3 +1,5 @@
+import { withLatestTeam } from '../utils/latestTeam.js';
+
 function resolveHistoryRows(payload) {
     if (Array.isArray(payload)) {
         return payload;
@@ -68,7 +70,7 @@ export async function loadComparePageData({
             continue;
         }
 
-        const currentRow = rows.at(-1) ?? {};
+        const currentRow = withLatestTeam(rows.at(-1) ?? {}, rows);
         preloadedPlayers.push(
             buildComparePlayer({
                 currentRow,

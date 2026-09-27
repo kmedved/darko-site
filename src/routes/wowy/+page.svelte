@@ -26,6 +26,8 @@
         isWowySeasonAverageContext
     } from '$lib/utils/wowySeasonContext.js';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
+    import PageHeader from '$lib/components/PageHeader.svelte';
+    import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
 
     let { data } = $props();
 
@@ -510,6 +512,7 @@
     const heatScales = $derived.by(() =>
         buildPresetHeatScales(players, 'wowy')
     );
+    const rapmTintLimit = $derived(tintLimit(players.map((player) => player?.wowy_rapm)));
     const rangeStart = $derived(
         sortedPlayers.length === 0
             ? 0
@@ -539,6 +542,33 @@
                     ? 'Each rating starts from the season WOWY baseline and adds a bounded season-specific performance adjustment.'
                     : 'Each value is a simple, unweighted average of the player\'s observed game-level WOWY ratings for the season.'
                 : "Opening-game snapshot of players who appeared in their teams' first games."
+    );
+    let methodOpen = $state(false);
+    const viewSubtitle = $derived(
+        isAllTimeView
+            ? isAdjustedRatings
+                ? 'Every Season-Adjusted WOWY RAPM player-season.'
+                : 'Every single-season WOWY RAPM average.'
+            : isCurrentView
+            ? 'Synthetic game-level RAPM for current active players.'
+            : isSeasonSummaryHistory
+                ? isAdjustedRatings
+                    ? `Season-Adjusted RAPM for ${activeSeasonLabel}.`
+                    : `Unweighted season-average RAPM for ${activeSeasonLabel}.`
+                : `Opening-game snapshot RAPM for ${activeSeasonLabel}.`
+    );
+    const viewStatusLabel = $derived(
+        isAllTimeView
+            ? isAdjustedRatings
+                ? 'All adjusted seasons'
+                : 'All average seasons'
+            : isCurrentView
+            ? 'Latest observed'
+            : isSeasonSummaryHistory
+                ? isAdjustedRatings
+                    ? 'Season adjusted'
+                    : 'Unweighted season average'
+                : 'Opening-game snapshot'
     );
 
     $effect(() => {
@@ -1145,62 +1175,25 @@
 
 <div class="wowy-page" data-shiny-page>
     <div class="container wowy-container">
-        <section class="wowy-hero" data-shiny-surface="hero" aria-labelledby="wowy-title">
-            <div class="wowy-hero-copy">
-                <p class="wowy-eyebrow" data-shiny-role="editorial-kicker">Game-level impact</p>
-                <div class="wowy-title-row">
-                    <div class="wowy-icon" aria-hidden="true">
-                        <svg viewBox="0 0 64 64" role="presentation">
-                            <path d="M9 45V13" />
-                            <path d="M9 45H56" />
-                            <path d="M15 37L27 25L36 32L53 15" />
-                            <circle cx="15" cy="37" r="2.5" />
-                            <circle cx="27" cy="25" r="2.5" />
-                            <circle cx="36" cy="32" r="2.5" />
-                            <circle cx="53" cy="15" r="2.5" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h1 id="wowy-title">WOWY RAPM</h1>
-                        <p class="wowy-subtitle">
-                            {#if isAllTimeView}
-                                {isAdjustedRatings
-                                    ? 'Every Season-Adjusted WOWY RAPM player-season.'
-                                    : 'Every single-season WOWY RAPM average.'}
-                            {:else if isCurrentView}
-                                Synthetic game-level RAPM for current active players.
-                            {:else if isSeasonSummaryHistory}
-                                {isAdjustedRatings
-                                    ? `Season-Adjusted RAPM for ${activeSeasonLabel}.`
-                                    : `Unweighted season-average RAPM for ${activeSeasonLabel}.`}
-                            {:else}
-                                Opening-game snapshot RAPM for {activeSeasonLabel}.
-                            {/if}
-                        </p>
-                    </div>
-                </div>
-                <div class="wowy-status">
-                    <strong>
-                        {isAllTimeView
-                            ? isAdjustedRatings
-                                ? 'All adjusted seasons'
-                                : 'All average seasons'
-                            : isCurrentView
-                                ? 'Latest observed'
-                                : isSeasonSummaryHistory
-                                ? isAdjustedRatings
-                                    ? 'Season adjusted'
-                                    : 'Unweighted season average'
-                                : 'Opening-game snapshot'}
-                    </strong>
-                    <span>{viewStatusDetail}</span>
-                </div>
-                <p class="wowy-projection-note">
+        <div class="wowy-intro">
+            <PageHeader id="wowy-title" eyebrow="Game-level impact" title="WOWY RAPM" lede={viewSubtitle}>
+                <p class="wowy-status"><strong>{viewStatusLabel}</strong> <span>{viewStatusDetail}</span></p>
+                <p class="page-note">
                     Observed player-game ratings only; this page does not use DARKO projection rows. Daily and season-average WOWY begin in 1956-57. Season-Adjusted WOWY remains available from 1977-78.
                 </p>
-            </div>
+            </PageHeader>
 
-            <aside class="wowy-method" data-shiny-surface="well" aria-label="How to read WOWY RAPM">
+            <!-- On narrow screens the explainer folds away so the table comes first. -->
+            <button
+                type="button"
+                class="btn wowy-method-toggle"
+                aria-expanded={methodOpen}
+                aria-controls="wowy-method"
+                onclick={() => (methodOpen = !methodOpen)}
+            >
+                How to read this table
+            </button>
+            <aside id="wowy-method" class="wowy-method" class:open={methodOpen} data-shiny-surface="well" aria-label="How to read WOWY RAPM">
                 <p class="wowy-method-label">Reading the table</p>
                 <p>{getMetricDefinition('wowy_rapm')}</p>
                 <p>
@@ -1230,7 +1223,7 @@
                     <a href="/trajectories?metric=wowy_rapm">Explore career trajectories <span aria-hidden="true">→</span></a>
                 </div>
             </aside>
-        </section>
+        </div>
 
         <section class="wowy-table-panel" data-shiny-surface="panel" aria-labelledby="wowy-table-title">
             <div class="wowy-table-heading">
@@ -1581,8 +1574,8 @@
                                     </td>
                                     <td
                                         headers="wowy-column-wowy_rapm"
-                                        class={`align-right wowy-metric-cell ${metricTone(player.wowy_rapm)}`}
-                                        style={getMetricHeatVariables('dpm', player.wowy_rapm, heatScales)}
+                                        class={`align-right wowy-metric-cell wowy-rapm-cell tint-cell ${metricTone(player.wowy_rapm)}`}
+                                        style={`${getMetricHeatVariables('dpm', player.wowy_rapm, heatScales)} ${divergingTint(player.wowy_rapm, rapmTintLimit)}`}
                                     >
                                         {formatSignedMetric(player.wowy_rapm)}
                                     </td>
@@ -1691,7 +1684,7 @@
 <style>
     .wowy-page {
         min-height: calc(100dvh - var(--nav-sticky-offset));
-        padding: 20px 0 36px;
+        padding: 0 0 36px;
         background: var(--bg);
     }
 
@@ -1701,133 +1694,42 @@
         gap: 14px;
     }
 
-    .wowy-hero {
-        position: relative;
-        isolation: isolate;
-        overflow: hidden;
+    /* The standard page header, with the "Reading the table" panel beside it. */
+    .wowy-intro {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(320px, 410px);
-        gap: 20px;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius);
-        background: var(--bg-surface);
-        box-shadow: 0 10px 30px color-mix(in srgb, var(--text) 7%, transparent);
-        padding: 22px 24px;
+        align-items: start;
+        gap: 24px;
+        padding: 40px 0 10px;
     }
 
-    .wowy-hero::before {
-        content: '';
-        position: absolute;
-        z-index: -1;
-        inset: 0 0 0 66%;
-        opacity: 0.32;
-        background-image:
-            linear-gradient(color-mix(in srgb, var(--border-subtle) 82%, transparent) 1px, transparent 1px),
-            linear-gradient(90deg, color-mix(in srgb, var(--border-subtle) 82%, transparent) 1px, transparent 1px);
-        background-size: 28px 28px;
-        mask-image: linear-gradient(90deg, transparent, black 22%, black);
-        pointer-events: none;
-    }
-
-    .wowy-hero-copy {
-        min-width: 0;
+    .wowy-intro > :global(.page-header) {
+        padding: 0;
     }
 
     .wowy-eyebrow,
     .wowy-method-label {
-        color: var(--accent);
-        font-family: var(--font-mono);
-        font-size: 10px;
-        font-weight: 850;
-        letter-spacing: 0.12em;
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
         line-height: 1.2;
         text-transform: uppercase;
     }
 
-    .wowy-title-row {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-top: 8px;
-    }
-
-    .wowy-icon {
-        width: 52px;
-        height: 52px;
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-        border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
-        border-radius: 50%;
-        background: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
-        color: var(--accent);
-    }
-
-    .wowy-icon svg {
-        width: 32px;
-        height: 32px;
-        fill: none;
-        stroke: currentColor;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-width: 3.5;
-    }
-
-    .wowy-icon circle {
-        fill: var(--bg-surface);
-    }
-
-    h1 {
-        color: var(--text);
-        font-size: clamp(32px, 2.7vw, 40px);
-        font-weight: 875;
-        letter-spacing: -0.04em;
-        line-height: 0.95;
-    }
-
-    .wowy-subtitle {
-        margin-top: 8px;
-        color: var(--text-secondary);
-        font-size: 16px;
-        line-height: 1.35;
-    }
-
     .wowy-status {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 16px;
+        margin-top: 14px;
         color: var(--text-secondary);
-        font-size: 12px;
+        font-size: 13px;
     }
 
     .wowy-status strong {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
+        margin-right: 4px;
         color: var(--text);
-        font-family: var(--font-mono);
         font-size: 11px;
-        letter-spacing: 0.04em;
+        font-weight: 700;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
-    }
-
-    .wowy-status strong::before {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--positive);
-        box-shadow: 0 0 0 4px color-mix(in srgb, var(--positive) 14%, transparent);
-        content: '';
-    }
-
-    .wowy-projection-note {
-        max-width: 580px;
-        margin-top: 8px;
-        color: var(--text-muted);
-        font-size: 12px;
-        line-height: 1.45;
     }
 
     .wowy-method {
@@ -1908,7 +1810,7 @@
     .wowy-table-heading h2 {
         margin-top: 5px;
         color: var(--text);
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 850;
         letter-spacing: -0.025em;
         line-height: 1;
@@ -2110,7 +2012,7 @@
         border-radius: 999px;
         color: var(--accent);
         font-family: var(--font-mono);
-        font-size: 9px;
+        font-size: 11px;
         font-weight: 750;
         letter-spacing: 0.04em;
         padding: 2px 6px;
@@ -2153,7 +2055,7 @@
 
     .wowy-filter-field > span {
         color: var(--text-secondary);
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 800;
     }
 
@@ -2226,7 +2128,7 @@
         border-bottom: 1px solid var(--border);
         background: var(--bg);
         color: var(--text-secondary);
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 850;
         letter-spacing: 0.06em;
         text-align: left;
@@ -2298,7 +2200,7 @@
         border-radius: 50%;
         color: var(--text-muted);
         font-family: var(--font-sans);
-        font-size: 8px;
+        font-size: 11px;
         font-weight: 850;
         letter-spacing: 0;
         line-height: 1;
@@ -2309,7 +2211,7 @@
         border-bottom: 1px solid var(--border-subtle);
         background: var(--bg-surface);
         color: var(--text);
-        font-size: 12px;
+        font-size: 13px;
         padding: 11px 10px;
         white-space: nowrap;
     }
@@ -2332,7 +2234,7 @@
     .wowy-season-cell,
     .wowy-date-cell {
         font-family: var(--font-mono);
-        font-weight: 750;
+        font-weight: 500;
     }
 
     .wowy-rank-cell,
@@ -2367,7 +2269,7 @@
         flex: 0 0 auto;
         color: var(--text-secondary);
         font-family: var(--font-mono);
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 750;
     }
 
@@ -2407,22 +2309,16 @@
         overflow: hidden;
         color: var(--text-secondary);
         font-family: var(--font-sans);
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 650;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
-    .metric-positive {
-        color: var(--positive) !important;
-    }
-
-    .metric-negative {
-        color: var(--negative) !important;
-    }
-
-    .metric-neutral {
-        color: var(--text-secondary) !important;
+    /* metricTone's classes drive the Shiny heat cells; here numbers stay in neutral ink and only
+       the WOWY RAPM column carries a tint. */
+    .wowy-rapm-cell {
+        font-weight: 700;
     }
 
     .metric-muted {
@@ -2501,7 +2397,6 @@
             width: max-content;
             min-width: 900px;
         }
-
     }
     /* End touch/mobile scroll mode */
 
@@ -2527,57 +2422,36 @@
             width: max-content;
             min-width: 720px;
         }
+    }
 
+    .wowy-method-toggle {
+        display: none;
     }
 
     @media (max-width: 900px) {
-        .wowy-hero {
+        .wowy-intro {
             grid-template-columns: 1fr;
+            gap: 16px;
+            padding-top: 24px;
         }
 
-        .wowy-hero::before {
-            inset: 46% 0 0;
-            mask-image: linear-gradient(transparent, black 25%);
+        .wowy-method-toggle {
+            display: inline-flex;
+            justify-self: start;
         }
 
-        .wowy-method {
-            border-top: 1px solid var(--border);
-            padding: 16px 18px;
+        .wowy-method:not(.open) {
+            display: none;
         }
-
     }
 
     @media (max-width: 680px) {
         .wowy-page {
-            padding: 16px 0 26px;
+            padding: 0 0 26px;
         }
 
-        .wowy-hero,
         .wowy-table-panel {
             padding: 18px;
-        }
-
-        .wowy-title-row {
-            align-items: flex-start;
-            gap: 12px;
-        }
-
-        .wowy-icon {
-            width: 52px;
-            height: 52px;
-        }
-
-        .wowy-icon svg {
-            width: 33px;
-            height: 33px;
-        }
-
-        h1 {
-            font-size: 30px;
-        }
-
-        .wowy-subtitle {
-            font-size: 14px;
         }
 
         .wowy-table-heading {

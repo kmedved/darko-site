@@ -5,12 +5,16 @@
         standingsExpandedCsvColumns,
         formatFixed
     } from '$lib/utils/csvPresets.js';
-    import { getNextSortState, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
+    import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr, teamId } from '$lib/utils/teamAbbreviations.js';
     import {
         buildMetricHeatScales,
         getMetricHeatVariables
     } from '$lib/utils/metricHeatScales.js';
+    import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
+    import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
+    import PageHeader from '$lib/components/PageHeader.svelte';
+    import StatTile from '$lib/components/StatTile.svelte';
 
     let { data } = $props();
 
@@ -19,6 +23,12 @@
     let sortDirection = $state('asc');
     let showExpandedStandings = $state(false);
     let teamSearch = $state('');
+    let standingsTableRoot = $state(null);
+    let standingsBodyScroller = $state(null);
+    let standingsBodyTable = $state(null);
+    let standingsSourceHead = $state(null);
+    let standingsHeaderScroller = $state(null);
+    let standingsHeaderTable = $state(null);
 
     const PLAYOFF_LOCK_THRESHOLD = 95;
     const PLAYOFF_LIKELY_THRESHOLD = 70;
@@ -134,6 +144,7 @@
     );
 
     const summaryCards = $derived(buildSummaryCards(standings));
+    const srsTintLimit = $derived(tintLimit(standings.map((team) => team?.SRS)));
     const playoffDistribution = $derived(buildPlayoffDistribution(standings));
     const conferenceFavorites = $derived(
         standings
@@ -194,32 +205,27 @@
             {
                 title: 'Best Record Projection',
                 team: bestRecord,
-                value: formatRecordProjection(bestRecord),
-                caption: 'Projected W-L'
+                value: formatRecordProjection(bestRecord)
             },
             {
                 title: 'Top Finals Favorite',
                 team: finalsFavorite,
-                value: formatPercent(numberValue(finalsFavorite?.['Win Finals'])),
-                caption: 'Win Finals'
+                value: formatPercent(numberValue(finalsFavorite?.['Win Finals']))
             },
             {
                 title: 'Highest SRS',
                 team: highestSrs,
-                value: formatSigned(numberValue(highestSrs?.SRS), 2),
-                caption: 'Rating'
+                value: formatSigned(numberValue(highestSrs?.SRS), 2)
             },
             {
                 title: 'Top Lottery Odds',
                 team: topLottery,
-                value: formatPercent(numberValue(topLottery?.['Lottery%'])),
-                caption: 'Lotto Odds'
+                value: formatPercent(numberValue(topLottery?.['Lottery%']))
             },
             {
                 title: 'Playoff Locks',
                 value: String(rows.filter((team) => numberValue(team?.Playoffs) >= PLAYOFF_LOCK_THRESHOLD).length),
-                caption: 'Teams',
-                lock: true
+                caption: `Teams at ${PLAYOFF_LOCK_THRESHOLD}%+ playoff odds`
             }
         ];
     }
@@ -274,19 +280,28 @@
         return String(value);
     }
 
+    // These class names drive the Shiny view's heat cells. The modern view prints every number in
+    // neutral ink, mutes zeros, and tints only the projected rating (see srsStyle).
     function pctClass(value) {
         const n = Number.parseFloat(value);
         if (!Number.isFinite(n)) return '';
         if (n >= 80) return 'metric-positive';
         if (n >= 40) return 'metric-accent';
         if (n > 0) return 'metric-muted';
-        return 'metric-muted';
+        return 'metric-muted num-quiet';
     }
 
     function srsClass(value) {
         const n = Number.parseFloat(value);
         if (!Number.isFinite(n)) return '';
-        return n >= 0 ? 'metric-positive metric-highlight-positive' : 'metric-negative metric-highlight-negative';
+        return n >= 0
+            ? 'metric-positive metric-highlight-positive tint-cell'
+            : 'metric-negative metric-highlight-negative tint-cell';
+    }
+
+    function cellStyle(column, value) {
+        const shinyHeat = getMetricHeatVariables(column.key, value, standingsHeatScales);
+        return column.key === 'SRS' ? `${shinyHeat} ${divergingTint(value, srsTintLimit)}` : shinyHeat;
     }
 
     function getCellClass(column, value) {
@@ -327,7 +342,55 @@
         const max = Math.max(...rows.map((row) => numberValue(row?.[key])), 1);
         return Math.max(6, Math.min(100, (numberValue(value) / max) * 100));
     }
+
+    $effect(() => {
+        sortColumn;
+        sortDirection;
+        conference;
+        showExpandedStandings;
+        teamSearch;
+        sortedStandings.length;
+        standingsTableRoot;
+        standingsBodyScroller;
+        standingsBodyTable;
+        standingsSourceHead;
+        standingsHeaderScroller;
+        standingsHeaderTable;
+        return setupWideStickyTable({
+            root: standingsTableRoot,
+            bodyScroller: standingsBodyScroller,
+            bodyTable: standingsBodyTable,
+            sourceHead: standingsSourceHead,
+            headerScroller: standingsHeaderScroller,
+            headerTable: standingsHeaderTable,
+            wheelTarget: standingsHeaderScroller
+        });
+    });
 </script>
+
+{#snippet standingsSemanticHeaderRow()}
+    <tr class="table-semantic-row sr-only">
+        {#each visibleStandingsColumns as column (column.key)}
+            <th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}>{column.label}</th>
+        {/each}
+    </tr>
+{/snippet}
+
+{#snippet standingsHeaderRow()}
+    <tr class="table-sizing-row">
+        {#each visibleStandingsColumns as column (column.key)}
+            <th
+                class="{column.alignClass} {column.dataType === 'percent' ? 'pct' : ''} {sortColumn === column.key ? 'active' : ''}"
+                aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
+            >
+                <button type="button" onclick={() => toggleSort(column.key)}>
+                    <span>{column.label}</span>
+                    <span class="sort-indicator" aria-hidden="true">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
+                </button>
+            </th>
+        {/each}
+    </tr>
+{/snippet}
 
 <svelte:head>
     <title>Standings — DARKO DPM</title>
@@ -335,40 +398,25 @@
 
 <div class="standings-page" data-shiny-page>
     <div class="container standings-container">
-        <section class="standings-hero" data-shiny-surface="hero" aria-labelledby="standings-title">
-            <div class="standings-title-block">
-                <div class="standings-icon" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-                <div>
-                    <h1 id="standings-title">Season Simulation</h1>
-                    <p>Win projections, playoff odds, and championship probabilities from 10,000 simulations.</p>
-                </div>
-            </div>
+        <PageHeader
+            id="standings-title"
+            title="Season Simulation"
+            lede="Win projections, playoff odds, and championship probabilities from 10,000 simulations."
+        />
 
-            <div class="summary-card-grid" aria-label="Simulation leaders">
-                {#each summaryCards as card (card.title)}
-                    <article class="summary-card" data-shiny-surface="summary">
-                        <div class="summary-media" aria-hidden="true">
-                            {#if card.team && teamLogoUrl(card.team.team_name)}
-                                <img src={teamLogoUrl(card.team.team_name)} alt="" loading="lazy" onerror={hideBrokenImage} />
-                            {:else}
-                                <span class="summary-lock"></span>
-                            {/if}
-                        </div>
-                        <div class="summary-copy">
-                            <p>{card.title}</p>
-                            {#if card.team}
-                                <a href="/standings/{encodeURIComponent(card.team.team_name)}">{card.team.team_name}</a>
-                            {/if}
-                            <strong>{card.value}</strong>
-                            <small>{card.caption}</small>
-                        </div>
-                    </article>
-                {/each}
-            </div>
+        <section class="stat-strip" aria-label="Simulation leaders">
+            {#each summaryCards as card (card.title)}
+                <StatTile
+                    label={card.title}
+                    value={card.value}
+                    detail={card.caption}
+                    logo={card.team ? teamLogoUrl(card.team.team_name) : ''}
+                >
+                    {#if card.team}
+                        <a href="/standings/{encodeURIComponent(card.team.team_name)}">{card.team.team_name}</a>
+                    {/if}
+                </StatTile>
+            {/each}
         </section>
 
         {#if standings.length === 0}
@@ -401,7 +449,7 @@
                         </div>
 
                         <button
-                            class="page-action-btn"
+                            class="btn"
                             type="button"
                             onclick={exportStandingsCsv}
                             disabled={sortedStandings.length === 0}
@@ -410,22 +458,28 @@
                         </button>
                     </div>
 
-                    <div class="table-scroll-region" class:scrollable={showExpandedStandings}>
-                        <div class="table-wrapper {showExpandedStandings ? 'expanded' : ''}" data-shiny-table>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        {#each visibleStandingsColumns as column (column.key)}
-                                            <th
-                                                class="{column.alignClass} {column.dataType === 'percent' ? 'pct' : ''} sortable {sortColumn === column.key ? 'active' : ''}"
-                                                onclick={() => toggleSort(column.key)}
-                                                aria-sort={sortColumn === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
-                                            >
-                                                <span>{column.label}</span>
-                                                <span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
-                                            </th>
-                                        {/each}
-                                    </tr>
+                    <!-- A detached header stays pinned under the nav while the body scrolls sideways
+                         (utils/wideStickyTable.js), so no column is ever hidden to fit. -->
+                    <div
+                        class="table-wrapper table-shell {showExpandedStandings ? 'expanded' : ''}"
+                        data-shiny-table
+                        bind:this={standingsTableRoot}
+                    >
+                        <div class="sticky-header-shell">
+                            <div class="table-header-scroll" bind:this={standingsHeaderScroller}>
+                                <table class="sticky-header-table" role="presentation" bind:this={standingsHeaderTable}>
+                                    <thead>
+                                        {@render standingsHeaderRow()}
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="table-body-scroll" bind:this={standingsBodyScroller}>
+                            <table bind:this={standingsBodyTable}>
+                                <thead class="table-sizing-head" bind:this={standingsSourceHead}>
+                                    {@render standingsHeaderRow()}
+                                    {@render standingsSemanticHeaderRow()}
                                 </thead>
                                 <tbody>
                                     {#if sortedStandings.length === 0}
@@ -438,7 +492,7 @@
                                                 {#each visibleStandingsColumns as column (column.key)}
                                                     <td
                                                         class="{getCellClass(column, team?.[column.key])} {standingsHeatScales[column.key] ? 'shiny-heat-cell' : ''}"
-                                                        style={getMetricHeatVariables(column.key, team?.[column.key], standingsHeatScales)}
+                                                        style={cellStyle(column, team?.[column.key])}
                                                     >
                                                         {#if column.isTeam}
                                                             <a class="team-link" href="/standings/{encodeURIComponent(team.team_name)}">
@@ -536,202 +590,8 @@
 <style>
     .standings-page {
         min-height: calc(100dvh - var(--nav-sticky-offset));
-        padding: 24px 0 34px;
-        background:
-            radial-gradient(circle at 92% 2%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 24rem),
-            var(--bg);
-    }
-
-    .standings-container {
-        display: grid;
-        gap: 18px;
-    }
-
-    .standings-hero {
-        position: relative;
-        overflow: hidden;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius);
-        background:
-            radial-gradient(circle at 90% -8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 24rem),
-            var(--bg);
-        box-shadow: 0 18px 48px color-mix(in srgb, var(--text) 10%, transparent);
-        padding: 26px 28px 28px;
-    }
-
-    .standings-hero::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-            repeating-radial-gradient(circle at 72% 6%, transparent 0 34px, color-mix(in srgb, var(--border-subtle) 65%, transparent) 35px 36px);
-        opacity: 0.42;
-        pointer-events: none;
-    }
-
-    .standings-title-block,
-    .summary-card-grid {
-        position: relative;
-        z-index: 1;
-    }
-
-    .standings-title-block {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        margin-bottom: 24px;
-    }
-
-    .standings-title-block > div:last-child {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .standings-icon {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        display: grid;
-        grid-template-columns: repeat(3, 7px);
-        justify-content: center;
-        align-items: end;
-        gap: 5px;
-        padding-bottom: 20px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-subtle);
-        box-shadow: 0 12px 28px color-mix(in srgb, var(--text) 12%, transparent);
-    }
-
-    .standings-icon span {
-        display: block;
-        width: 7px;
-        border-radius: 999px;
-        background: var(--accent);
-    }
-
-    .standings-icon span:nth-child(1) { height: 10px; opacity: 0.68; }
-    .standings-icon span:nth-child(2) { height: 18px; opacity: 0.82; }
-    .standings-icon span:nth-child(3) { height: 28px; }
-
-    h1 {
-        font-size: clamp(30px, 3vw, 44px);
-        line-height: 0.98;
-        letter-spacing: 0;
-        color: var(--text);
-        font-weight: 850;
-    }
-
-    .standings-title-block p {
-        color: var(--text-secondary);
-        font-size: 17px;
-        margin-top: 8px;
-        overflow-wrap: anywhere;
-    }
-
-    .summary-card-grid {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    .summary-card {
-        min-height: 120px;
-        display: grid;
-        grid-template-columns: 58px minmax(0, 1fr);
-        align-items: center;
-        gap: 12px;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-sm);
-        background: color-mix(in srgb, var(--bg-surface) 88%, var(--bg));
-        box-shadow: 0 10px 24px color-mix(in srgb, var(--text) 7%, transparent);
-        padding: 14px 14px;
-    }
-
-    .summary-media {
-        width: 54px;
-        height: 54px;
-        display: grid;
-        place-items: center;
-    }
-
-    .summary-media img {
-        max-width: 54px;
-        max-height: 54px;
-        object-fit: contain;
-    }
-
-    .summary-lock {
-        width: 42px;
-        height: 42px;
-        display: block;
-        border-radius: 50%;
-        background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
-        color: var(--accent);
-        position: relative;
-    }
-
-    .summary-lock::before,
-    .summary-lock::after {
-        content: '';
-        position: absolute;
-        display: block;
-    }
-
-    .summary-lock::before {
-        left: 12px;
-        top: 8px;
-        width: 18px;
-        height: 15px;
-        border: 2px solid currentColor;
-        border-bottom: 0;
-        border-radius: 10px 10px 0 0;
-    }
-
-    .summary-lock::after {
-        left: 10px;
-        top: 20px;
-        width: 22px;
-        height: 16px;
-        border-radius: 2px;
-        background: currentColor;
-    }
-
-    .summary-copy {
-        min-width: 0;
-    }
-
-    .summary-copy p {
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 800;
-        margin-bottom: 8px;
-    }
-
-    .summary-copy a {
-        display: block;
-        color: var(--text);
-        font-weight: 850;
-        font-size: 13px;
-        line-height: 1.2;
-        margin-bottom: 4px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .summary-copy strong {
-        display: block;
-        color: var(--accent);
-        font-family: var(--font-mono);
-        font-size: 23px;
-        line-height: 1;
-        margin-bottom: 6px;
-    }
-
-    .summary-copy small {
-        color: var(--text-muted);
-        font-weight: 700;
-        font-size: 12px;
+        padding: 0 0 34px;
+        background: var(--bg);
     }
 
     .standings-workspace {
@@ -816,16 +676,8 @@
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
     }
 
-    .table-scroll-region {
-        width: 100%;
-    }
-
-    .table-scroll-region.scrollable {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
     .table-wrapper {
+        --wide-sticky-header-height: 44px;
         width: 100%;
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius-sm);
@@ -833,24 +685,37 @@
         overflow: visible;
     }
 
-    .table-scroll-region.scrollable .table-wrapper,
-    .table-scroll-region.scrollable table {
-        width: max-content;
-        min-width: 100%;
+    .table-shell {
+        position: relative;
+    }
+
+    .sticky-header-shell {
+        position: sticky;
+        top: var(--nav-sticky-offset);
+        z-index: 30;
+        margin-bottom: calc(-1 * var(--wide-sticky-header-height));
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        overflow: hidden;
+    }
+
+    .table-header-scroll {
+        overflow: hidden;
+    }
+
+    .table-body-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     table {
         border-collapse: separate;
         border-spacing: 0;
         font-size: 13px;
-        width: 100%;
+        width: max-content;
         min-width: 100%;
     }
 
     th {
-        position: sticky;
-        top: var(--nav-sticky-offset);
-        z-index: 3;
         height: 44px;
         cursor: pointer;
         user-select: none;
@@ -874,14 +739,30 @@
         color: var(--text);
     }
 
-    .table-scroll-region.scrollable th,
-    .table-scroll-region.scrollable td.rk,
-    .table-scroll-region.scrollable td.name,
-    .table-scroll-region.scrollable th:nth-child(1),
-    .table-scroll-region.scrollable th:nth-child(2) {
-        position: static;
-        left: auto;
-        box-shadow: none;
+    th button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+        cursor: pointer;
+    }
+
+    th.num button,
+    th.rec button {
+        justify-content: flex-end;
+    }
+
+    th button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
     }
 
     th.num,
@@ -895,7 +776,7 @@
         margin-left: 5px;
         color: var(--accent);
         opacity: 0.8;
-        font-size: 10px;
+        font-size: 11px;
     }
 
     td {
@@ -914,12 +795,20 @@
         background: var(--bg-elevated);
     }
 
+    td.num-quiet {
+        color: var(--text-muted);
+    }
+
     .rk,
     .num,
     .rec {
         font-family: var(--font-mono);
+        font-weight: 500;
+        font-size: 13px;
+    }
+
+    td.tint-cell {
         font-weight: 700;
-        font-size: 12px;
     }
 
     td.rk,
@@ -981,37 +870,6 @@
         object-fit: contain;
     }
 
-    .metric-positive {
-        color: var(--positive);
-    }
-
-    .metric-negative {
-        color: var(--negative);
-    }
-
-    .metric-accent {
-        color: var(--accent);
-    }
-
-    .metric-muted {
-        color: var(--text-secondary);
-    }
-
-    td.metric-highlight-positive {
-        background: color-mix(in srgb, var(--positive-bg) 82%, var(--bg-surface));
-    }
-
-    td.metric-highlight-negative {
-        background: color-mix(in srgb, var(--negative-bg) 82%, var(--bg-surface));
-    }
-
-    tbody tr:hover td.metric-highlight-positive {
-        background: color-mix(in srgb, var(--positive-bg) 70%, var(--bg-elevated));
-    }
-
-    tbody tr:hover td.metric-highlight-negative {
-        background: color-mix(in srgb, var(--negative-bg) 70%, var(--bg-elevated));
-    }
 
     .standings-note,
     .empty-row {
@@ -1054,7 +912,7 @@
     }
 
     .insight-card h2 {
-        font-size: 15px;
+        font-size: 16px;
         line-height: 1.1;
         font-weight: 850;
         letter-spacing: 0;
@@ -1217,11 +1075,8 @@
         font-size: 13px;
     }
 
-    @media (max-width: 1180px) {
-        .summary-card-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
+    /* Below 1460px the side panels move under the table so all eleven columns fit. */
+    @media (max-width: 1460px) {
         .standings-workspace {
             grid-template-columns: 1fr;
         }
@@ -1232,37 +1087,9 @@
         }
     }
 
-    @media (hover: hover) and (pointer: fine) and (max-width: 1460px) {
-        .table-scroll-region:not(.scrollable) .table-wrapper th:nth-child(n + 10),
-        .table-scroll-region:not(.scrollable) .table-wrapper td:nth-child(n + 10) {
-            display: none;
-        }
-    }
-
-    @media (hover: hover) and (pointer: fine) and (max-width: 1240px) {
-        .table-scroll-region:not(.scrollable) .table-wrapper th:nth-child(n + 8),
-        .table-scroll-region:not(.scrollable) .table-wrapper td:nth-child(n + 8) {
-            display: none;
-        }
-    }
-
-    /* Touch/mobile scroll mode */
-    @media (hover: none) and (pointer: coarse) and (max-width: 1024px),
-        (any-hover: none) and (any-pointer: coarse) and (max-width: 1024px) {
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        table {
-            width: max-content;
-            min-width: 100%;
-        }
-
-        th {
-            position: static;
-        }
-
+    /* On a phone the rank and team columns scroll with the rest instead of pinning most of the
+       screen. */
+    @media (max-width: 768px) {
         td.rk,
         td.name,
         th:nth-child(1),
@@ -1271,53 +1098,16 @@
             left: auto;
             box-shadow: none;
         }
+
+        td.name,
+        th:nth-child(2) {
+            min-width: 0;
+        }
     }
-    /* End touch/mobile scroll mode */
 
     @media (max-width: 820px) {
-        .standings-page {
-            padding-top: 14px;
-        }
-
-        .standings-hero {
-            padding: 20px 16px;
-        }
-
-        .standings-title-block {
-            align-items: flex-start;
-        }
-
-        .standings-title-block h1,
-        .standings-title-block p {
-            max-width: 100%;
-            overflow-wrap: anywhere;
-        }
-
-        .standings-icon {
-            width: 54px;
-            height: 54px;
-            grid-template-columns: repeat(3, 6px);
-            padding-bottom: 15px;
-        }
-
-        .standings-title-block p {
-            font-size: 14px;
-            line-height: 1.35;
-        }
-
-        .summary-card-grid,
         .standings-rail {
             grid-template-columns: 1fr;
-        }
-
-        .summary-card {
-            grid-template-columns: 54px minmax(0, 1fr);
-            padding: 14px;
-        }
-
-        .summary-copy strong,
-        .summary-copy small {
-            overflow-wrap: anywhere;
         }
 
         .standings-controls {

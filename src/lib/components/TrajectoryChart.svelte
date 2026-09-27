@@ -2,7 +2,7 @@
 	import * as d3 from 'd3';
 	import { loess } from '$lib/utils/loess.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
-	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import { formatDollarsMillions, getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 	import { getChartLayout, getSeasonTickStep, getAgeTickCount } from '$lib/utils/chartLayout.js';
 	import { getChartTheme } from '$lib/utils/chartTheme.js';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
@@ -80,7 +80,7 @@
 		if (val === null || val === undefined) return '—';
 		const n = Number.parseFloat(val);
 		if (!Number.isFinite(n)) return '—';
-		if (MONEY_METRICS.has(talentType)) return `$${(n / 1e6).toFixed(1)}M`;
+		if (MONEY_METRICS.has(talentType)) return formatDollarsMillions(n, 1);
 		if (PERCENT_METRICS.has(talentType)) return `${(n * 100).toFixed(1)}%`;
 		if (SIGNED_METRICS.has(talentType)) return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
 		return n.toFixed(1);
@@ -308,14 +308,14 @@
 			.attr('x', w / 2)
 			.attr('y', h + 55)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '10px')
+			.attr('font-size', '11px')
 			.style('fill', 'var(--text-muted)')
 			.text('@kmedved | www.darko.app | @anpatt7');
 
 		// Y axis
 		const yAxis = d3.axisLeft(y).ticks(layout.yTicks);
 		if (MONEY_METRICS.has(talentType)) {
-			yAxis.tickFormat((d) => `$${(d / 1e6).toFixed(0)}M`);
+			yAxis.tickFormat((d) => formatDollarsMillions(d, 0));
 		} else if (PERCENT_METRICS.has(talentType)) {
 			yAxis.tickFormat((d) => `${(d * 100).toFixed(0)}%`);
 		}

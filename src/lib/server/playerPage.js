@@ -1,5 +1,7 @@
 import { error } from '@sveltejs/kit';
 
+import { withLatestTeam } from '../utils/latestTeam.js';
+
 const PLAYER_HISTORY_CACHE = {
     edgeSMaxAge: 3600,
     swr: 86400,
@@ -48,7 +50,7 @@ export async function loadPlayerPageData({
 
     return {
         nbaId,
-        playerInfo: payload?.playerInfo ?? historyRows.at(-1) ?? null,
+        playerInfo: withLatestTeam(payload?.playerInfo ?? historyRows.at(-1) ?? null, historyRows),
         historyRows,
         historyMeta: {
             truncated: Boolean(payload?.truncated),

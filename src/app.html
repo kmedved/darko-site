@@ -4,9 +4,9 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="icon" type="image/png" href="/favicon.png" />
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-			<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Lato:wght@400;700&family=Open+Sans:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&family=Work+Sans:wght@400;500;600;700&family=Raleway:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+		<!-- The number font is self-hosted (src/app.css); an optional interface font loads when chosen. -->
+		<link rel="preload" href="/fonts/dm-mono/dm-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+		<link rel="preload" href="/fonts/dm-mono/dm-mono-500-latin.woff2" as="font" type="font/woff2" crossorigin>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
@@ -39,11 +39,18 @@
 				} catch (e) {
 					document.documentElement.dataset.theme = 'white';
 				}
+				// Mirror of isTimeMachineFolded (src/lib/utils/timeMachine.js): the reader's own choice
+				// wins; without one the strip starts folded unless a date is set or the page is Rewind.
+				var tmChoice = null;
 				try {
-					if (localStorage.getItem('darko-time-machine') === 'collapsed') {
-						document.documentElement.dataset.timeMachine = 'collapsed';
-					}
+					tmChoice = localStorage.getItem('darko-time-machine');
 				} catch (e) {}
+				var tmDated = /^\d{4}-\d{2}-\d{2}$/.test(params.get('asof') || '');
+				var tmFolded = tmChoice === 'collapsed'
+					|| (tmChoice !== 'open' && !tmDated && window.location.pathname !== '/rewind');
+				if (tmFolded) {
+					document.documentElement.dataset.timeMachine = 'collapsed';
+				}
 				try {
 					var FONT_KEY = 'darko-font';
 						var FONTS = ['inter', 'roboto', 'lato', 'opensans', 'sourcesans', 'nunito', 'worksans', 'raleway', 'outfit', 'jakarta', 'spacegrotesk', 'system'];
@@ -55,6 +62,27 @@
 						var font = FONTS.indexOf(savedFont) !== -1 ? savedFont : 'system';
 						document.documentElement.dataset.font = font;
 						localStorage.setItem(FONT_KEY, font);
+						// Mirror of OPTIONAL_FONT_FAMILIES in src/lib/fonts.js.
+						var FONT_FAMILIES = {
+							inter: 'Inter:wght@400;500;600;700',
+							roboto: 'Roboto:wght@400;500;700',
+							lato: 'Lato:wght@400;700',
+							opensans: 'Open+Sans:wght@400;500;600;700',
+							sourcesans: 'Source+Sans+3:wght@400;500;600;700',
+							nunito: 'Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700',
+							worksans: 'Work+Sans:wght@400;500;600;700',
+							raleway: 'Raleway:wght@400;500;600;700',
+							outfit: 'Outfit:wght@400;500;600;700',
+							jakarta: 'Plus+Jakarta+Sans:wght@400;500;600;700',
+							spacegrotesk: 'Space+Grotesk:wght@400;500;600;700'
+						};
+						if (FONT_FAMILIES[font]) {
+							var fontLink = document.createElement('link');
+							fontLink.rel = 'stylesheet';
+							fontLink.href = 'https://fonts.googleapis.com/css2?family=' + FONT_FAMILIES[font] + '&display=swap';
+							fontLink.setAttribute('data-font-family', font);
+							document.head.appendChild(fontLink);
+						}
 					} catch (e) {
 						document.documentElement.dataset.font = 'system';
 					}

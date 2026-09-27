@@ -1,4 +1,5 @@
 <script>
+    import PageHeader from '$lib/components/PageHeader.svelte';
     import { apiRateVote, apiRateLeaderboard } from '$lib/api.js';
     import RatePlayerCard from '$lib/components/RatePlayerCard.svelte';
 
@@ -133,10 +134,7 @@
 </svelte:head>
 
 <div class="container rate-page" data-shiny-page>
-    <div class="page-header" data-shiny-surface="hero">
-        <h1>Rate a Player</h1>
-        <p class="page-subtitle">Who is the better player? Click to vote.</p>
-    </div>
+    <PageHeader title="Rate a Player" lede="Who is the better player? Click to vote." />
 
     {#if errorMsg}
         <div class="error-msg">{errorMsg}</div>
@@ -236,24 +234,6 @@
     .rate-page {
         max-width: 860px;
         padding-bottom: 80px;
-    }
-
-    .page-header {
-        text-align: center;
-        margin-bottom: 32px;
-    }
-
-    .page-header h1 {
-        font-size: 28px;
-        font-weight: 700;
-        letter-spacing: -0.03em;
-        margin: 0 0 6px;
-    }
-
-    .page-subtitle {
-        font-size: 14px;
-        color: var(--text-secondary);
-        margin: 0;
     }
 
     .rate-versus {
@@ -365,7 +345,7 @@
     }
 
     .leaderboard-header h2 {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 700;
         margin: 0;
         letter-spacing: -0.02em;
@@ -461,10 +441,6 @@
 
         .versus-divider {
             padding: 2px 0;
-        }
-
-        .page-header h1 {
-            font-size: 22px;
         }
 
         .lb-player-meta {

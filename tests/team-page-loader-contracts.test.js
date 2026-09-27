@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { canonicalTeamName } from '../src/lib/utils/teamRouteUtils.js';
 
 test('team detail page loaders delegate to the shared team page helper', async () => {
     const loaderFiles = [
@@ -23,4 +24,26 @@ test('team detail API route reuses the shared team payload helper and cache help
 
     assert.match(contents, /getTeamPagePayload/, 'API route should reuse the shared team payload helper');
     assert.match(contents, /setTeamPageCacheHeaders/, 'API route should reuse the shared cache helper');
+});
+
+test('team pages accept abbreviations and any-case names', async () => {
+    assert.equal(canonicalTeamName('OKC'), 'Oklahoma City Thunder');
+    assert.equal(canonicalTeamName('den'), 'Denver Nuggets');
+    assert.equal(canonicalTeamName('oklahoma city thunder'), 'Oklahoma City Thunder');
+    assert.equal(canonicalTeamName('Denver Nuggets'), 'Denver Nuggets');
+    assert.equal(canonicalTeamName('Seattle SuperSonics'), 'Seattle SuperSonics');
+
+    const helper = await fs.readFile(path.resolve(process.cwd(), 'src/lib/server/teamPage.js'), 'utf8');
+    assert.match(helper, /return canonicalTeamName\(teamName\);/, 'the shared loader should resolve the team name');
+});
+
+test('an offseason projection row keeps its ratings but takes the last real team', async () => {
+    const { withLatestTeam } = await import('../src/lib/utils/latestTeam.js');
+    const rows = [
+        { date: '2026-04-30', team_name: 'Denver Nuggets', tm_id: 1610612743, dpm: 6.5 },
+        { date: '2026-07-26', team_name: null, tm_id: -999, dpm: 6.8 }
+    ];
+    assert.deepEqual(withLatestTeam(rows[1], rows), { date: '2026-07-26', team_name: 'Denver Nuggets', tm_id: -999, dpm: 6.8 });
+    assert.equal(withLatestTeam(rows[0], rows), rows[0], 'a row with a team is left alone');
+    assert.equal(withLatestTeam({ team_name: null }, []).team_name, null, 'no team anywhere stays empty');
 });

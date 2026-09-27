@@ -1,4 +1,5 @@
 <script>
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { browser } from '$app/environment';
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -141,15 +142,13 @@
 </svelte:head>
 
 <div class="container rewind-page" data-shiny-page>
-	<header class="page-header rewind-hero" data-shiny-surface="hero">
-		<p class="rewind-eyebrow" data-shiny-role="editorial-kicker">Time Machine</p>
-		<h1>Rewind</h1>
-		<p>
+	<PageHeader eyebrow="Time Machine" title="Rewind">
+		<p class="page-lede">
 			DARKO has a rating for every player on every day since November 1996. Press play to watch
 			the top 15 of every regular season, one week per beat. Each step moves the Time Machine
 			above, so the rest of the site follows the date you land on.
 		</p>
-	</header>
+	</PageHeader>
 
 	{#if !data.available || !frames.length}
 		<div class="empty-state" data-shiny-surface="panel">
@@ -161,7 +160,7 @@
 				DARKO's weekly rankings start with the week of {formatAsOfDate(frames[0].date)}, once players
 				have three games; {formatAsOfDate(activeDate)} is earlier.
 			</p>
-			<button type="button" class="rw-btn primary" onclick={() => goTo(0)}>
+			<button type="button" class="btn btn-primary" onclick={() => goTo(0)}>
 				Go to {formatAsOfDate(frames[0].date, { short: true })}
 			</button>
 		</div>
@@ -181,7 +180,7 @@
 				{/if}
 			</div>
 			<div class="rewind-controls">
-				<button type="button" class="rw-btn primary" aria-pressed={playing} onclick={togglePlay}>
+				<button type="button" class="btn btn-primary rewind-play" onclick={togglePlay}>
 					{#if playing}
 						<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3" width="3" height="10" rx="1" /><rect x="9.5" y="3" width="3" height="10" rx="1" /></svg>
 						Pause
@@ -190,8 +189,8 @@
 						Play
 					{/if}
 				</button>
-				<button type="button" class="rw-btn" aria-label="Previous week" onclick={() => step(-1)} disabled={index <= 0}>‹ Week</button>
-				<button type="button" class="rw-btn" aria-label="Next week" onclick={() => step(1)} disabled={index >= frames.length - 1}>Week ›</button>
+				<button type="button" class="btn" aria-label="Previous week" onclick={() => step(-1)} disabled={index <= 0}>‹ Week</button>
+				<button type="button" class="btn" aria-label="Next week" onclick={() => step(1)} disabled={index >= frames.length - 1}>Week ›</button>
 				<div class="rw-seg" role="group" aria-label="Speed">
 					{#each RACE_SPEEDS as option (option)}
 						<button type="button" aria-pressed={speed === option} onclick={() => setSpeed(option)}>{option}×</button>
@@ -217,8 +216,8 @@
 				{#each jumps as jump (jump.index)}
 					<button
 						type="button"
-						class="rw-chip"
-						class:active={jump.index === index}
+						class="btn btn-sm"
+						class:is-active={jump.index === index}
 						onclick={() => {
 							stop();
 							goTo(jump.index);
@@ -272,22 +271,6 @@
 		padding-bottom: 64px;
 	}
 
-	.rewind-eyebrow {
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--time-text) !important;
-	}
-
-	.rewind-hero h1 {
-		margin-top: 4px;
-	}
-
-	.rewind-hero p:last-child {
-		max-width: 78ch;
-	}
-
 	.rewind-stage {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
@@ -316,7 +299,7 @@
 
 	.rewind-date {
 		font-family: var(--font-mono);
-		font-size: 34px;
+		font-size: 28px;
 		font-weight: 700;
 		line-height: 1.1;
 		letter-spacing: -0.02em;
@@ -350,14 +333,12 @@
 		justify-content: flex-end;
 	}
 
-	.rw-btn,
-	.rw-chip,
 	.rw-seg button,
 	.rw-select {
 		height: 32px;
 		padding: 0 12px;
 		font-family: var(--font-sans);
-		font-size: 12.5px;
+		font-size: 13px;
 		font-weight: 600;
 		color: var(--text-secondary);
 		background: var(--bg-elevated);
@@ -366,28 +347,19 @@
 		cursor: pointer;
 	}
 
-	.rw-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
+	.rewind-play {
+		min-width: 92px;
 	}
 
-	.rw-btn svg {
+	.rewind-play svg {
 		width: 13px;
 		height: 13px;
 		fill: currentColor;
 	}
 
-	.rw-btn:hover:not(:disabled),
-	.rw-chip:hover,
 	.rw-seg button:hover {
 		color: var(--text);
 		border-color: var(--text-muted);
-	}
-
-	.rw-btn:disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
 	}
 
 	.rewind-before {
@@ -398,19 +370,6 @@
 
 	.rewind-before p {
 		margin: 0;
-	}
-
-	.rw-btn.primary {
-		min-width: 92px;
-		justify-content: center;
-		color: #fff;
-		background: var(--time-text);
-		border-color: var(--time-text);
-	}
-
-	.rw-btn.primary:hover {
-		color: #fff;
-		filter: brightness(1.06);
 	}
 
 	.rw-seg {
@@ -462,20 +421,6 @@
 		color: var(--text-muted);
 	}
 
-	.rw-chip {
-		height: 28px;
-		padding: 0 10px;
-		font-size: 12px;
-		font-weight: 500;
-	}
-
-	.rw-chip.active {
-		color: var(--time-text);
-		border-color: var(--time);
-	}
-
-	.rw-btn:focus-visible,
-	.rw-chip:focus-visible,
 	.rw-seg button:focus-visible,
 	.rw-select:focus-visible {
 		outline: 2px solid var(--accent);
@@ -505,7 +450,7 @@
 
 	.rewind-panel p {
 		margin: 2px 0 14px;
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--text-muted);
 	}
 
@@ -518,7 +463,7 @@
 
 	.rewind-link {
 		flex: none;
-		font-size: 12.5px;
+		font-size: 13px;
 		font-weight: 600;
 		white-space: nowrap;
 	}
@@ -590,7 +535,7 @@
 
 	@media (max-width: 560px) {
 		.rewind-date {
-			font-size: 26px;
+			font-size: 20px;
 		}
 
 		.rewind-panel,
@@ -608,9 +553,4 @@
 		}
 	}
 
-	:global(:root[data-view='shiny']) .rw-btn.primary {
-		color: #ffffff;
-		background: #337ab7;
-		border-color: #2e6da4;
-	}
 </style>

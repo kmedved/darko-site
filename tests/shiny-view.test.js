@@ -81,11 +81,12 @@ test('app shell stamps the saved or query-selected view before hydration', async
 });
 
 test('Shiny longevity charts restore archived chart language without forking components', async () => {
-    const [chart, rosterChart, shinyCss, page] = await Promise.all([
+    const [chart, rosterChart, shinyCss, page, appCss] = await Promise.all([
         read('src/lib/components/LongevityCareerLengthChart.svelte'),
         read('src/lib/components/LongevityRosterChart.svelte'),
         read('src/shiny-view.css'),
-        read('src/routes/longevity/+page.svelte')
+        read('src/routes/longevity/+page.svelte'),
+        read('src/app.css')
     ]);
 
     assert.match(chart, /getContext\(DISPLAY_VIEW_CONTEXT\)/);
@@ -100,7 +101,11 @@ test('Shiny longevity charts restore archived chart language without forking com
     assert.match(rosterChart, /--shiny-longevity-points/);
     assert.match(rosterChart, /buildLoessConfidenceBand/);
     assert.match(rosterChart, /shinySinglePlayer\.pointOpacity/);
-    assert.doesNotMatch(page.match(/\.summary-copy p \{[\s\S]*?\n    \}/)?.[0] ?? '', /text-overflow:\s*ellipsis/);
+    // Longevity's summary uses the shared tiles, whose labels wrap instead of truncating.
+    assert.match(page, /<StatTile label=\{card\.label\}/);
+    const tileLabel = appCss.match(/\.stat-tile-label \{[\s\S]*?\n\}/)?.[0] ?? '';
+    assert.ok(tileLabel, 'app.css should style the shared tile label');
+    assert.doesNotMatch(tileLabel, /text-overflow:\s*ellipsis|white-space:\s*nowrap/);
 });
 
 test('single-player confidence ribbons share finite source-length geometry', () => {
@@ -222,12 +227,15 @@ test('Shiny lineup and longevity tables use stable source-level quantile heat sc
 
 	assert.match(lineups, /buildPresetHeatScales\(selectedLineups, 'lineup'\)/);
 	assert.doesNotMatch(lineups, /buildPresetHeatScales\((?:filteredLineups|sortedLineups|pageRows),/);
-    assert.match(lineups, /getMetricHeatVariables\(column\.key, lineup\[column\.key\], lineupHeatScales\)/);
+    // Cells get their Shiny heat through cellStyle, which also adds the modern Net +/- tint.
+    assert.match(lineups, /style=\{cellStyle\(column, lineup\[column\.key\]\)\}/);
+    assert.match(lineups, /getMetricHeatVariables\(column\.key, value, lineupHeatScales\)/);
 	assert.match(longevity, /buildPresetHeatScales\(rows, 'longevity'\)/);
 	assert.doesNotMatch(longevity, /buildPresetHeatScales\((?:filteredRows|sortedRows|pageRows),/);
     assert.match(longevity, /getMetricHeatVariables\(column\.key, row\[column\.key\], longevityHeatScales\)/);
 	assert.match(standings, /buildMetricHeatScales\(standings, standingsHeatAccessors, \{ quantileStep: 0\.1 \}\)/);
-	assert.match(standings, /getMetricHeatVariables\(column\.key, team\?\.\[column\.key\], standingsHeatScales\)/);
+	assert.match(standings, /style=\{cellStyle\(column, team\?\.\[column\.key\]\)\}/);
+	assert.match(standings, /getMetricHeatVariables\(column\.key, value, standingsHeatScales\)/);
     assert.match(shinyCss, /\.lineups-page td:is\(\.pos, \.neg\)[\s\S]*background:\s*var\(--shiny-cell-bg/);
     assert.match(shinyCss, /\.longevity-page td\[class\*='probability-'\][\s\S]*color:\s*var\(--shiny-cell-color/);
 });
@@ -276,14 +284,15 @@ test('all route families opt into the generalized Shiny surface contract', async
 		'src/routes/about/+page.svelte',
 		'src/routes/player/[nbaId]/+page.svelte'
 	];
-	const [files, teamView, shinyCss, percentiles, scatterplot, wowy, projections] = await Promise.all([
+	const [files, teamView, shinyCss, percentiles, scatterplot, wowy, projections, pageHeader] = await Promise.all([
 		Promise.all(routeFiles.map(read)),
 		read('src/lib/components/TeamDetailView.svelte'),
 		read('src/shiny-view.css'),
 		read('src/lib/components/TalentPercentilesChart.svelte'),
 		read('src/lib/components/ScatterplotChart.svelte'),
 		read('src/routes/wowy/+page.svelte'),
-		read('src/routes/projections/+page.svelte')
+		read('src/routes/projections/+page.svelte'),
+		read('src/lib/components/PageHeader.svelte')
 	]);
 
 	for (const file of [...files, teamView]) assert.match(file, /data-shiny-page/);
@@ -291,8 +300,12 @@ test('all route families opt into the generalized Shiny surface contract', async
 	assert.match(shinyCss, /\[data-shiny-layout='sidebar'\]/);
 	assert.match(shinyCss, /\[data-shiny-role='editorial-kicker'\]\s*\{[^}]*display:\s*none/);
 	assert.match(shinyCss, /\[data-shiny-table\]/);
+	// Page eyebrows come from the shared header, which marks them as editorial kickers for Shiny.
+	assert.match(pageHeader, /class="page-eyebrow" data-shiny-role="editorial-kicker"/);
+	assert.match(pageHeader, /data-shiny-surface="hero"/);
+	assert.match(wowy, /<PageHeader id="wowy-title" eyebrow="Game-level impact"/);
 	assert.match(wowy, /class="wowy-eyebrow" data-shiny-role="editorial-kicker"/);
-	assert.match(projections, /class="fantasy-eyebrow" data-shiny-role="editorial-kicker"/);
+	assert.match(projections, /<PageHeader eyebrow="Projections"/);
 	assert.match(percentiles, /SHINY_SET1/);
 	assert.match(percentiles, /renderShinyChart/);
 	assert.match(scatterplot, /getShinyChartPreset\('scatter'\)/);

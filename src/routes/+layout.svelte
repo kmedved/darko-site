@@ -6,7 +6,8 @@
 	import { navigating, page } from '$app/stores';
 	import { setContext } from 'svelte';
 	import TimeMachine from '$lib/components/TimeMachine.svelte';
-	import { setTimeMachineCollapsed, timeMachine } from '$lib/timeMachineState.svelte.js';
+	import { loadOptionalFont } from '$lib/fonts.js';
+	import { setTimeMachineCollapsed, syncTimeMachineFold, timeMachine } from '$lib/timeMachineState.svelte.js';
 	import {
 		AS_OF_PARAM,
 		formatAsOfDate,
@@ -122,6 +123,12 @@
 	const urlAsOf = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
 	$effect(() => {
 		timeMachine.date = urlAsOf;
+	});
+
+	// Without a saved choice the strip opens while a date is set or on Rewind, and folds otherwise.
+	$effect(() => {
+		if (!browser) return;
+		syncTimeMachineFold({ rewound: Boolean(timeMachine.date), pathname: $page.url.pathname });
 	});
 
 	// While rewound, links carry the date, and hovering any in-app link preloads its dated page
@@ -283,6 +290,7 @@
 		if (!browser) return;
 
 		document.documentElement.dataset.font = normalizedFont;
+		loadOptionalFont(normalizedFont);
 		try {
 			localStorage.setItem(FONT_KEY, normalizedFont);
 		} catch {}
@@ -863,7 +871,7 @@
 	.display-mode-note {
 		margin: 0;
 		color: var(--text-muted);
-		font-size: 10.5px;
+		font-size: 11px;
 		font-weight: 500;
 		line-height: 1.35;
 	}

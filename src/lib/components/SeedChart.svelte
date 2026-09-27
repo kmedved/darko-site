@@ -79,7 +79,7 @@
 			.attr('y', (d) => y(d.prob) - 4)
 			.attr('text-anchor', 'middle')
 			.style('fill', 'var(--text-muted)')
-			.attr('font-size', '10px')
+			.attr('font-size', '11px')
 			.attr('font-family', 'var(--font-mono)')
 			.text((d) => (d.prob >= 1 ? d.prob.toFixed(0) + '%' : '<1%'));
 
@@ -89,7 +89,7 @@
 			.call((g) => g.select('.domain').style('stroke', 'var(--border)'))
 			.call((g) => g.selectAll('.tick line').remove())
 			.call((g) =>
-				g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '10px')
+				g.selectAll('.tick text').style('fill', 'var(--text-muted)').attr('font-size', '11px')
 			);
 	}
 </script>

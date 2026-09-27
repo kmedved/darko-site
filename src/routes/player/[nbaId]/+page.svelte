@@ -339,7 +339,7 @@
 						</div>
 					{/if}
 				</div>
-				<a href="/compare?ids={nbaId}" class="compare-link">Compare this player</a>
+				<a href="/compare?ids={nbaId}" class="btn compare-link">Compare this player</a>
 			{/if}
 
 			<div class="sidebar-section">
@@ -463,7 +463,7 @@
 
 						<button
 							type="button"
-							class="seismograph-log-toggle"
+							class="btn btn-sm seismograph-log-toggle"
 							aria-expanded={showGameLog}
 							aria-controls="seismograph-game-log"
 							onclick={() => (showGameLog = !showGameLog)}
@@ -569,7 +569,7 @@
 		flex-direction: column;
 		gap: 20px;
 		position: sticky;
-		top: 230px;
+		top: calc(var(--nav-sticky-offset) + 24px);
 	}
 
 	.sidebar-player-info {
@@ -580,7 +580,7 @@
 	}
 
 	.sidebar-player-info h1 {
-		font-size: 18px;
+		font-size: 20px;
 		font-weight: 700;
 		color: var(--text);
 	}
@@ -612,20 +612,7 @@
 	}
 
 	.compare-link {
-		display: block;
-		text-align: center;
-		padding: 8px 12px;
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--accent);
-		border: 1px solid var(--accent);
-		border-radius: var(--radius-sm);
-		text-decoration: none;
-	}
-
-	.compare-link:hover {
-		background: var(--accent);
-		color: var(--bg);
+		width: 100%;
 	}
 
 	.player-meta {
@@ -768,7 +755,7 @@
 
 	.sidebar-rating-value {
 		font-family: var(--font-mono);
-		font-size: 24px;
+		font-size: 28px;
 		font-weight: 700;
 		letter-spacing: -0.02em;
 		line-height: 1;
@@ -799,7 +786,7 @@
 	}
 
 	.seismograph-header h2 {
-		font-size: 18px;
+		font-size: 16px;
 		font-weight: 700;
 		letter-spacing: -0.01em;
 		color: var(--text);
@@ -859,7 +846,7 @@
 
 	.seismograph-callout-value {
 		font-family: var(--font-mono);
-		font-size: 22px;
+		font-size: 20px;
 		font-weight: 600;
 		line-height: 1.2;
 		color: var(--text);
@@ -873,24 +860,6 @@
 
 	.seismograph-log-toggle {
 		align-self: flex-start;
-		padding: 6px 12px;
-		font-family: var(--font-sans);
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--accent);
-		background: transparent;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-	}
-
-	.seismograph-log-toggle:hover {
-		border-color: var(--accent);
-	}
-
-	.seismograph-log-toggle:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
 	}
 
 	.seismograph-log {
@@ -903,7 +872,7 @@
 	.seismograph-log-table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 12px;
+		font-size: 13px;
 		font-variant-numeric: tabular-nums;
 	}
 

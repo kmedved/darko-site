@@ -1,3 +1,5 @@
+import { trackScrollEdges } from './scrollEdges.js';
+
 export function setupWideStickyTable({
     root,
     bodyScroller,
@@ -100,11 +102,16 @@ export function setupWideStickyTable({
 
     scheduleSync();
 
+    // Fade whichever edge of the table hides columns.
+    const stopEdgeCues = trackScrollEdges(root, bodyScroller);
+
     return () => {
         if (rafId) {
             cancelAnimationFrame(rafId);
             rafId = 0;
         }
+
+        stopEdgeCues();
 
         bodyScroller.removeEventListener('scroll', handleBodyScroll);
         (wheelTarget || headerScroller).removeEventListener('wheel', handleHeaderWheel);

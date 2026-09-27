@@ -3,17 +3,19 @@
 	import { getContext } from 'svelte';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
-	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import { formatDollarsMillions, getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 	import { getChartLayout } from '$lib/utils/chartLayout.js';
 	import { getPositionCategory, getPositionPaletteIndex } from '$lib/utils/positionCategories.js';
 	import { SHINY_COLORS, SHINY_SET1, getShinyChartPreset } from '$lib/utils/shinyDesign.js';
+	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
 	let {
 		players = [],
 		xMetric = 'o_dpm',
 		yMetric = 'd_dpm',
-		colorByPosition = true
+		colorByPosition = true,
+		height = 500
 	} = $props();
 
 	let containerEl = $state(null);
@@ -26,7 +28,7 @@
 
 	const exportFilenameBase = $derived(`scatterplot-${xMetric}-vs-${yMetric}`);
 
-	const HEIGHT = 500;
+	const HEIGHT = $derived(Math.round(height));
 
 	const PERCENT_METRICS = new Set(['x_fg_pct', 'x_fg3_pct', 'x_ft_pct', 'tr_fg3_pct', 'tr_ft_pct']);
 	const MONEY_METRICS = new Set(['sal_market_fixed']);
@@ -38,25 +40,27 @@
 		'surplus_value'
 	]);
 
-	const POSITION_COLORS = {
-		'G': '#3b82f6',
-		'F': '#ef4444',
-		'C': '#34d399',
-		'G-F': '#f59e0b',
-		'F-G': '#f59e0b',
-		'F-C': '#a78bfa',
-		'C-F': '#a78bfa'
+	// Three groups, because on a scatter every pair of colours has to stay distinguishable and a
+	// fourth colour can't (the Shiny view keeps its archived five-group legend).
+	const POSITION_GROUPS = {
+		'G': 'guard',
+		'G-F': 'wing',
+		'F-G': 'wing',
+		'F': 'wing',
+		'F-C': 'big',
+		'C-F': 'big',
+		'C': 'big'
 	};
 	const POSITION_LEGEND_ITEMS = [
-		{ pos: 'G', label: 'Guard', color: '#3b82f6' },
-		{ pos: 'F', label: 'Forward', color: '#ef4444' },
-		{ pos: 'C', label: 'Center', color: '#34d399' },
-		{ pos: 'G-F / F-G', label: 'Wing', color: '#f59e0b' },
-		{ pos: 'F-C / C-F', label: 'Big', color: '#a78bfa' }
+		{ group: 'guard', label: 'Guards', color: getSeriesColor(0) },
+		{ group: 'wing', label: 'Wings & forwards', color: getSeriesColor(1) },
+		{ group: 'big', label: 'Bigs', color: getSeriesColor(2) }
 	];
+	const SHINY_POSITION_LEGEND_LABELS = ['Guard', 'Forward', 'Center', 'Wing', 'Big'];
 
 	function getPositionColor(position) {
-		return POSITION_COLORS[getPositionCategory(position)] || '#888';
+		const group = POSITION_GROUPS[getPositionCategory(position)];
+		return POSITION_LEGEND_ITEMS.find((item) => item.group === group)?.color || '#888';
 	}
 
 	function getShinyPositionColor(position) {
@@ -68,7 +72,7 @@
 		if (val === null || val === undefined) return '—';
 		const n = Number.parseFloat(val);
 		if (!Number.isFinite(n)) return '—';
-		if (MONEY_METRICS.has(metric)) return `$${(n / 1e6).toFixed(1)}M`;
+		if (MONEY_METRICS.has(metric)) return formatDollarsMillions(n, 1);
 		if (metric === 'surplus_value') return `${n >= 0 ? '+' : '-'}$${(Math.abs(n) / 1e6).toFixed(1)}M`;
 		if (PERCENT_METRICS.has(metric)) return `${(n * 100).toFixed(1)}%`;
 		if (SIGNED_METRICS.has(metric)) return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
@@ -76,7 +80,7 @@
 	}
 
 	function tickFormat(metric) {
-		if (MONEY_METRICS.has(metric)) return (d) => `$${(d / 1e6).toFixed(0)}M`;
+		if (MONEY_METRICS.has(metric)) return (d) => formatDollarsMillions(d, 0);
 		if (metric === 'surplus_value') return (d) => `${d >= 0 ? '+' : '-'}$${(Math.abs(d) / 1e6).toFixed(0)}M`;
 		if (PERCENT_METRICS.has(metric)) return (d) => `${(d * 100).toFixed(0)}%`;
 		if (SIGNED_METRICS.has(metric)) return (d) => `${d >= 0 ? '+' : ''}${d.toFixed(1)}`;
@@ -111,6 +115,7 @@
 		void colorByPosition;
 		void players;
 		void displayMode.view;
+		void HEIGHT;
 		renderChart();
 		return withResizeObserver({ element: containerEl, onResize: renderChart });
 	});
@@ -239,9 +244,11 @@
 					? (isShinyView ? getShinyPositionColor(d.player.position) : getPositionColor(d.player.position))
 					: (isShinyView ? SHINY_COLORS.scatterBase : 'var(--accent)')
 			)
-			.attr('opacity', isShinyView ? shinyScatter.pointOpacity : 0.6)
+			// Modern dots are solid, since translucency pulls the palette under 3:1 contrast; a ring in
+			// the background colour keeps overlapping players apart.
+			.attr('opacity', isShinyView ? shinyScatter.pointOpacity : 1)
 			.attr('stroke', 'var(--bg-surface)')
-			.attr('stroke-width', 0.5);
+			.attr('stroke-width', isShinyView ? 0.5 : 1);
 
 		// X axis
 		const xAxisCall = d3.axisBottom(x).ticks(layout.xTicks);
@@ -272,7 +279,7 @@
 			.attr('x', w / 2)
 			.attr('y', h + 55)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '10px')
+			.attr('font-size', '11px')
 			.style('fill', 'var(--text-muted)')
 			.text('@kmedved | www.darko.app | @anpatt7');
 
@@ -311,10 +318,15 @@
 
 		// Position legend (inside SVG when coloring)
 		if (colorByPosition) {
+			// Room for the longest label ("Wings & forwards") at 11px.
+			const legendWidth = isShinyView ? 90 : 120;
 			const legendG = g.append('g')
-				.attr('transform', `translate(${w - (isMobile ? 70 : 90)}, ${isMobile ? 10 : 5})`);
+				.attr('transform', `translate(${w - legendWidth}, ${isMobile ? 10 : 5})`);
 
-			POSITION_LEGEND_ITEMS.forEach((item, i) => {
+			const legendItems = isShinyView
+				? SHINY_POSITION_LEGEND_LABELS.map((label, i) => ({ label, color: SHINY_SET1[i] }))
+				: POSITION_LEGEND_ITEMS;
+			legendItems.forEach((item, i) => {
 				const row = legendG.append('g')
 					.attr('transform', `translate(0, ${i * 18})`);
 
@@ -322,15 +334,15 @@
 					.attr('cx', 0)
 					.attr('cy', 0)
 					.attr('r', 4)
-					.attr('fill', isShinyView ? SHINY_SET1[i] : item.color)
+					.attr('fill', item.color)
 					.attr('opacity', 0.8);
 
 				row.append('text')
 					.attr('x', 10)
 					.attr('y', 0)
 					.attr('dy', '0.35em')
-					.attr('font-size', isMobile ? '9px' : '11px')
-					.style('fill', 'var(--text-muted)')
+					.attr('font-size', '11px')
+					.style('fill', 'var(--text-secondary)')
 					.text(item.label);
 			});
 		}

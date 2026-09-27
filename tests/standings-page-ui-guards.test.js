@@ -13,12 +13,15 @@ test('standings percent formatter does not append percent signs to missing value
     assert.match(formatter[0], /formatted\s*===\s*'—'\s*\?\s*formatted/, 'missing percent values should stay as a dash');
 });
 
-test('standings playoff lock summary icon uses visible lock geometry', async () => {
+test('standings summary uses the shared tiles and explains the playoff-lock count', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), STANDINGS_PAGE), 'utf8');
-    const lockBlock = contents.match(/\.summary-lock\s*\{[\s\S]*?\n\s*\}/);
 
-    assert.ok(lockBlock, 'standings page should style the playoff lock summary icon');
-    assert.doesNotMatch(lockBlock[0], /clip-path/, 'playoff lock icon should not depend on clipped border geometry');
-    assert.match(contents, /\.summary-lock::before/, 'playoff lock icon should draw a shackle');
-    assert.match(contents, /\.summary-lock::after[\s\S]*background:\s*currentColor;/, 'playoff lock icon should draw a visible body');
+    assert.match(contents, /<section class="stat-strip" aria-label="Simulation leaders">/);
+    assert.match(contents, /<StatTile\b/, 'summary tiles should use the shared StatTile component');
+    assert.match(
+        contents,
+        /caption: `Teams at \$\{PLAYOFF_LOCK_THRESHOLD\}%\+ playoff odds`/,
+        'the playoff-lock tile should say what counts as a lock'
+    );
+    assert.doesNotMatch(contents, /summary-lock|summary-card/, 'the old summary-card markup should be gone');
 });

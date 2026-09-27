@@ -146,7 +146,7 @@
 		const plotWidth = Math.max(40, width - margin.left - margin.right);
 		const axisColor = 'var(--text-muted)';
 		const labelColor = isShinyView ? 'var(--text)' : 'var(--text-muted)';
-		const fontSize = isMobile ? '10px' : '11px';
+		const fontSize = '11px';
 		const lineWidth = isShinyView ? shinySeismograph.lineWidth : 2;
 		const splitLineWidth = isShinyView ? shinySeismograph.splitLineWidth : 1.5;
 
@@ -440,7 +440,7 @@
 			.attr('x', margin.left + plotWidth / 2)
 			.attr('y', height - 8)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '10px')
+			.attr('font-size', '11px')
 			.style('fill', 'var(--text-muted)')
 			.text('@kmedved | www.darko.app | @anpatt7');
 

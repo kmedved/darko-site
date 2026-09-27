@@ -1,4 +1,6 @@
 <script>
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { scrollEdges } from '$lib/utils/scrollEdges.js';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { exportCsvRows, getFantasyCsvColumns } from '$lib/utils/csvPresets.js';
@@ -205,18 +207,16 @@
 </svelte:head>
 
 <div class="container fantasy-page" data-shiny-page>
-	<header class="page-header" data-shiny-surface="hero">
-		<p class="fantasy-eyebrow" data-shiny-role="editorial-kicker">Projections</p>
-		<h1>Fantasy Lab</h1>
-		<p class="fantasy-lede">
+	<PageHeader eyebrow="Projections" title="Fantasy Lab">
+		<p class="page-lede">
 			DARKO projects every box-score stat per 100 possessions. Pick your league's scoring and this page turns those
 			projections into per-game fantasy values. Your scoring settings stay in this browser.
 		</p>
-		<p class="fantasy-note">
+		<p class="page-note">
 			Per-game stats use DARKO's projected minutes and pace{asOfLabel ? ` as of ${asOfLabel}` : ''}. Players projected
 			for fewer than {MIN_PROJECTED_MINUTES} minutes are left out.
 		</p>
-	</header>
+	</PageHeader>
 
 	<section class="fantasy-panel" data-shiny-surface="panel" aria-labelledby="fantasy-board-title">
 		<div class="table-title-row">
@@ -224,7 +224,7 @@
 				<h2 id="fantasy-board-title">Fantasy values</h2>
 				<p>{sortedRows.length} players · {FANTASY_PRESETS[preset].label}</p>
 			</div>
-			<button class="page-action-btn" type="button" onclick={exportFantasyCsv} disabled={sortedRows.length === 0}>
+			<button class="btn" type="button" onclick={exportFantasyCsv} disabled={sortedRows.length === 0}>
 				Download CSV
 			</button>
 		</div>
@@ -312,7 +312,7 @@
 						</label>
 					{/each}
 				</div>
-				<button class="page-action-btn" type="button" onclick={resetWeights}>Reset to ESPN</button>
+				<button class="btn" type="button" onclick={resetWeights}>Reset to ESPN</button>
 			</div>
 		{/if}
 
@@ -324,98 +324,100 @@
 			</p>
 		{/if}
 
-		<div class="table-wrapper" data-shiny-table>
-			<table>
-				<thead>
-					<tr class="header-row">
-						<th scope="col" class="align-right" aria-sort={getSortAriaValue(sortColumn, sortDirection, 'rank')}>
-							<button type="button" class="sort-button" onclick={() => toggleSort('rank')}>
-								#<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, 'rank')}</span>
-							</button>
-						</th>
-						<th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, 'player_name')}>
-							<button type="button" class="sort-button" onclick={() => toggleSort('player_name')}>
-								Player<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, 'player_name')}</span>
-							</button>
-						</th>
-						<th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, 'team_name')}>
-							<button type="button" class="sort-button" onclick={() => toggleSort('team_name')}>
-								Team<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, 'team_name')}</span>
-							</button>
-						</th>
-						{#each STAT_COLUMNS as column (column.key)}
-							<th
-								scope="col"
-								class="align-right"
-								class:active={sortColumn === column.key}
-								aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
-							>
-								<button type="button" class="sort-button" onclick={() => toggleSort(column.key)}>
-									{column.label}<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
+		<div class="table-scroll-host" use:scrollEdges={'.table-wrapper'}>
+			<div class="table-wrapper" data-shiny-table>
+				<table>
+					<thead>
+						<tr class="header-row">
+							<th scope="col" class="align-right" aria-sort={getSortAriaValue(sortColumn, sortDirection, 'rank')}>
+								<button type="button" class="sort-button" onclick={() => toggleSort('rank')}>
+									#<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, 'rank')}</span>
 								</button>
 							</th>
-						{/each}
-						<th
-							scope="col"
-							class="align-right value-col"
-							class:active={sortColumn === 'value'}
-							aria-sort={getSortAriaValue(sortColumn, sortDirection, 'value')}
-						>
-							<button type="button" class="sort-button" onclick={() => toggleSort('value')}>
-								{valueLabel}<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, 'value')}</span>
-							</button>
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#if pageRows.length === 0}
-						<tr>
-							<td class="empty-row" colspan={STAT_COLUMNS.length + 4}>No players match these filters.</td>
+							<th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, 'player_name')}>
+								<button type="button" class="sort-button" onclick={() => toggleSort('player_name')}>
+									Player<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, 'player_name')}</span>
+								</button>
+							</th>
+							<th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, 'team_name')}>
+								<button type="button" class="sort-button" onclick={() => toggleSort('team_name')}>
+									Team<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, 'team_name')}</span>
+								</button>
+							</th>
+							{#each STAT_COLUMNS as column (column.key)}
+								<th
+									scope="col"
+									class="align-right"
+									class:active={sortColumn === column.key}
+									aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
+								>
+									<button type="button" class="sort-button" onclick={() => toggleSort(column.key)}>
+										{column.label}<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
+									</button>
+								</th>
+							{/each}
+							<th
+								scope="col"
+								class="align-right value-col"
+								class:active={sortColumn === 'value'}
+								aria-sort={getSortAriaValue(sortColumn, sortDirection, 'value')}
+							>
+								<button type="button" class="sort-button" onclick={() => toggleSort('value')}>
+									{valueLabel}<span class="sort-indicator">{getSortGlyph(sortColumn, sortDirection, 'value')}</span>
+								</button>
+							</th>
 						</tr>
-					{:else}
-						{#each pageRows as row (row.nba_id)}
+					</thead>
+					<tbody>
+						{#if pageRows.length === 0}
 							<tr>
-								<td class="align-right rank-cell">{row.rank}</td>
-								<td>
-									<span class="player-cell">
-										<a href={`/player/${row.nba_id}`}>{row.player_name}</a>
-										{#if row.position}<span class="position-tag">{row.position}</span>{/if}
-									</span>
-								</td>
-								<td>
-									<span class="team-cell">
-										<span class="team-mark">
-											{#if teamLogoUrl(row)}
-												<img src={teamLogoUrl(row)} alt="" loading="lazy" onerror={hideBrokenImage} />
-											{/if}
-										</span>
-										{teamAbbr(row.team_name) || '—'}
-									</span>
-								</td>
-								{#each STAT_COLUMNS as column (column.key)}
-									<td class="align-right">
-										{#if isCategories && column.category}
-											<span class="z-cell" title={`${column.label} z-score ${formatZ(row.z?.[column.category] ?? 0)}`}>
-												<span>{formatStat(row[column.key], column)}</span>
-												<span class="z-track" aria-hidden="true">
-													<span
-														class="z-fill"
-														class:negative={(row.z?.[column.category] ?? 0) < 0}
-														style={zWidth(row.z?.[column.category])}
-													></span>
-												</span>
-											</span>
-										{:else}
-											{formatStat(row[column.key], column)}
-										{/if}
-									</td>
-								{/each}
-								<td class="align-right value-cell">{formatValue(row.value)}</td>
+								<td class="empty-row" colspan={STAT_COLUMNS.length + 4}>No players match these filters.</td>
 							</tr>
-						{/each}
-					{/if}
-				</tbody>
-			</table>
+						{:else}
+							{#each pageRows as row (row.nba_id)}
+								<tr>
+									<td class="align-right rank-cell">{row.rank}</td>
+									<td>
+										<span class="player-cell">
+											<a href={`/player/${row.nba_id}`}>{row.player_name}</a>
+											{#if row.position}<span class="position-tag">{row.position}</span>{/if}
+										</span>
+									</td>
+									<td>
+										<span class="team-cell">
+											<span class="team-mark">
+												{#if teamLogoUrl(row)}
+													<img src={teamLogoUrl(row)} alt="" loading="lazy" onerror={hideBrokenImage} />
+												{/if}
+											</span>
+											{teamAbbr(row.team_name) || '—'}
+										</span>
+									</td>
+									{#each STAT_COLUMNS as column (column.key)}
+										<td class="align-right">
+											{#if isCategories && column.category}
+												<span class="z-cell" title={`${column.label} z-score ${formatZ(row.z?.[column.category] ?? 0)}`}>
+													<span>{formatStat(row[column.key], column)}</span>
+													<span class="z-track" aria-hidden="true">
+														<span
+															class="z-fill"
+															class:negative={(row.z?.[column.category] ?? 0) < 0}
+															style={zWidth(row.z?.[column.category])}
+														></span>
+													</span>
+												</span>
+											{:else}
+												{formatStat(row[column.key], column)}
+											{/if}
+										</td>
+									{/each}
+									<td class="align-right value-cell">{formatValue(row.value)}</td>
+								</tr>
+							{/each}
+						{/if}
+					</tbody>
+				</table>
+			</div>
 		</div>
 
 		<div class="table-footer">
@@ -435,9 +437,9 @@
 				players
 			</label>
 			<div class="pagination-controls">
-				<button type="button" class="page-action-btn" onclick={() => (page -= 1)} disabled={page <= 1}>Previous</button>
+				<button type="button" class="btn" onclick={() => (page -= 1)} disabled={page <= 1}>Previous</button>
 				<span>Page {page} of {totalPages}</span>
-				<button type="button" class="page-action-btn" onclick={() => (page += 1)} disabled={page >= totalPages}>Next</button>
+				<button type="button" class="btn" onclick={() => (page += 1)} disabled={page >= totalPages}>Next</button>
 			</div>
 		</div>
 	</section>
@@ -446,26 +448,6 @@
 <style>
 	.fantasy-page {
 		padding-bottom: 40px;
-	}
-
-	.fantasy-eyebrow {
-		color: var(--accent);
-		font-size: 11px;
-		font-weight: 850;
-		letter-spacing: 0.04em;
-		margin-bottom: 8px;
-		text-transform: uppercase;
-	}
-
-	.page-header p.fantasy-lede {
-		max-width: 760px;
-		font-size: 15px;
-	}
-
-	.page-header p.fantasy-note {
-		max-width: 760px;
-		color: var(--text-muted);
-		font-size: 13px;
 	}
 
 	.fantasy-panel {
@@ -486,7 +468,7 @@
 
 	.table-title-row h2 {
 		color: var(--text);
-		font-size: 17px;
+		font-size: 20px;
 		font-weight: 800;
 	}
 
@@ -607,7 +589,7 @@
 
 	.table-note {
 		color: var(--text-muted);
-		font-size: 12.5px;
+		font-size: 13px;
 		margin-bottom: 12px;
 		max-width: 900px;
 	}
@@ -636,7 +618,7 @@
 		background: var(--bg);
 		border-bottom: 1px solid var(--border);
 		color: var(--text-secondary);
-		font-size: 10px;
+		font-size: 11px;
 		font-weight: 850;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
@@ -668,7 +650,7 @@
 
 	.sort-indicator {
 		margin-left: 4px;
-		font-size: 10px;
+		font-size: 11px;
 		opacity: 0.75;
 	}
 
@@ -682,7 +664,7 @@
 		border-bottom: 1px solid var(--border-subtle);
 		white-space: nowrap;
 		font-family: var(--font-mono);
-		font-size: 12px;
+		font-size: 13px;
 		font-weight: 700;
 		color: var(--text);
 		background: var(--bg-surface);
@@ -739,7 +721,7 @@
 	.position-tag {
 		color: var(--text-muted);
 		font-family: var(--font-mono);
-		font-size: 10.5px;
+		font-size: 11px;
 		font-weight: 600;
 	}
 

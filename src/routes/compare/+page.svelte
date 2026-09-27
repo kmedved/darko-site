@@ -1,10 +1,16 @@
 <script>
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { goto } from '$app/navigation';
 	import PlayerSearch from '$lib/components/PlayerSearch.svelte';
 	import PlayerCard from '$lib/components/PlayerCard.svelte';
 	import { exportCsvRows, compareCsvColumns } from '$lib/utils/csvPresets.js';
+	import { getContext } from 'svelte';
+	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 
 	let { data } = $props();
+
+	const displayMode = getContext(DISPLAY_VIEW_CONTEXT);
 
 	const STARTER_COMPARISONS = [
 		{
@@ -110,25 +116,19 @@
 </svelte:head>
 
 <div class="container compare-page" data-shiny-page>
-	<div class="page-header" data-shiny-surface="hero">
-		<div class="page-header-toolbar">
-			<div>
-				<h1>Compare Players</h1>
-				<p>Side-by-side DPM ratings and history for up to 4 players.</p>
-			</div>
-			<div class="page-header-actions">
-				<button
-					class="page-action-btn"
-					type="button"
-					onclick={exportCompareCsv}
-					disabled={selectedPlayers.length === 0}
-					title={selectedPlayers.length === 0 ? 'Add a player to enable CSV export' : 'Download selected players as CSV'}
-				>
-					Download CSV
-				</button>
-			</div>
-		</div>
-	</div>
+	<PageHeader title="Compare Players" lede="Side-by-side DPM ratings and history for up to 4 players.">
+		{#snippet actions()}
+			<button
+				class="btn"
+				type="button"
+				onclick={exportCompareCsv}
+				disabled={selectedPlayers.length === 0}
+				title={selectedPlayers.length === 0 ? 'Add a player to enable CSV export' : 'Download selected players as CSV'}
+			>
+				Download CSV
+			</button>
+		{/snippet}
+	</PageHeader>
 
 	<div class="compare-search-panel" data-shiny-surface="well">
 		<PlayerSearch onSelect={addPlayer} exclude={excludeIds} />
@@ -153,8 +153,13 @@
 
 	{#if selectedPlayers.length > 0}
 		<div class="compare-grid" style="grid-template-columns: {gridCols};">
-			{#each selectedPlayers as player (player.nba_id)}
-				<PlayerCard {player} historyRows={player.rows} onRemove={() => removePlayer(player.nba_id)} />
+			{#each selectedPlayers as player, index (player.nba_id)}
+				<PlayerCard
+					{player}
+					historyRows={player.rows}
+					color={getSeriesColor(index, displayMode?.view)}
+					onRemove={() => removePlayer(player.nba_id)}
+				/>
 			{/each}
 		</div>
 	{:else if !loading}
@@ -203,7 +208,7 @@
 
 	.compare-empty-state .empty-state strong {
 		color: var(--text);
-		font-size: 15px;
+		font-size: 16px;
 	}
 
 	.compare-empty-state .empty-state span {

@@ -81,10 +81,10 @@
 
 	.story-kicker {
 		margin: 0 0 16px;
-		color: var(--accent);
-		font-size: 13px;
-		font-weight: 800;
-		letter-spacing: 0;
+		color: var(--text-muted);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
 
@@ -102,7 +102,7 @@
 		max-width: 760px;
 		margin: 24px 0 0;
 		color: var(--text-secondary);
-		font-size: 21px;
+		font-size: 20px;
 		line-height: 1.55;
 	}
 
@@ -157,7 +157,7 @@
 
 	.story-facts strong {
 		color: var(--text);
-		font-size: 22px;
+		font-size: 20px;
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -400,7 +400,7 @@
 
 		.story-body :global(p),
 		.story-body :global(li) {
-			font-size: 15px;
+			font-size: 16px;
 		}
 	}
 </style>

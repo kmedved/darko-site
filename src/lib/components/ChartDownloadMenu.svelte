@@ -160,7 +160,7 @@
 <div class="chart-download-menu" bind:this={menuRootEl}>
     <button
         type="button"
-        class="page-action-btn chart-download-trigger"
+        class="btn chart-download-trigger"
         aria-haspopup="menu"
         aria-expanded={menuOpen ? 'true' : 'false'}
         aria-label={buttonAriaLabel}

@@ -276,86 +276,91 @@
 			{#if contextText}<span class="tm-context">{contextText}</span>{/if}
 		</div>
 
-		<div class="tm-track" class:empty={!calendar.length} bind:clientWidth={stripWidth}>
-			{#if stripWidth > 0 && calendar.length}
-				<svg
-					bind:this={svgEl}
-					class="tm-svg"
-					class:dragging
-					width={stripWidth}
-					height="30"
-					viewBox={`0 0 ${stripWidth} 30`}
-					role="slider"
-					tabindex="0"
-					aria-label="Time Machine date. Arrow keys move a week, Shift+arrow a season, End returns to today."
-					aria-valuemin={0}
-					aria-valuemax={frameDates.length}
-					aria-valuenow={shown ? Math.max(0, frameIndexAtOrBefore(frameDates, shown)) : frameDates.length}
-					aria-valuetext={shown ? formatAsOfDate(shown) : 'Today'}
-					onpointerdown={handlePointerDown}
-					onpointermove={handlePointerMove}
-					onpointerup={handlePointerUp}
-					onpointercancel={() => (dragging = false)}
-					onpointerleave={handlePointerLeave}
-					onkeydown={handleKeydown}
-				>
-					{#each seasonBands as band (band.season)}
-						<rect
-							class="tm-band"
-							x={band.x0}
-							y="26"
-							width={Math.max(1, band.x1 - band.x0)}
-							height="3"
-							rx="1"
-						/>
-					{/each}
-					{#each decadeTicks as tick (tick.label)}
-						<text class="tm-tick" x={tick.x + 2} y="9">{tick.label}</text>
-					{/each}
-					{#if tracePath}<path class="tm-trace" d={tracePath} />{/if}
-					{#if hover && !dragging}
-						<line class="tm-hover" x1={hover.left} x2={hover.left} y1="2" y2="29" />
-					{/if}
-					<g class="tm-handle" class:today={!shown} transform={`translate(${handleX},0)`}>
-						<line y1="1" y2="29" />
-						<circle cy="24.5" r="4.5" />
-					</g>
-				</svg>
-				{#if hover}
-					{@const label = hoverLabel(hover.date)}
-					<div
-						class="tm-tooltip"
-						style:left={`${Math.min(Math.max(hover.left, 90), stripWidth - 90)}px`}
-						aria-hidden="true"
+		<div class="tm-track" class:empty={!calendar.length}>
+			<!-- Measured without the track's phone padding, so the timeline ends on screen. -->
+			<div class="tm-track-inner" bind:clientWidth={stripWidth}>
+				{#if stripWidth > 0 && calendar.length}
+					<svg
+						bind:this={svgEl}
+						class="tm-svg"
+						class:dragging
+						width={stripWidth}
+						height="30"
+						viewBox={`0 0 ${stripWidth} 30`}
+						role="slider"
+						tabindex="0"
+						aria-label="Time Machine date. Arrow keys move a week, Shift+arrow a season, End returns to today."
+						aria-valuemin={0}
+						aria-valuemax={frameDates.length}
+						aria-valuenow={shown ? Math.max(0, frameIndexAtOrBefore(frameDates, shown)) : frameDates.length}
+						aria-valuetext={shown ? formatAsOfDate(shown) : 'Today'}
+						onpointerdown={handlePointerDown}
+						onpointermove={handlePointerMove}
+						onpointerup={handlePointerUp}
+						onpointercancel={() => (dragging = false)}
+						onpointerleave={handlePointerLeave}
+						onkeydown={handleKeydown}
 					>
-						{#if typeof label === 'string'}
-							<b>{label}</b>
-						{:else}
-							<b>{label.date}</b> · {label.season}
-							{#if label.leader}<span class="tm-leader">No. 1: {label.leader[2]} {label.leader[1] >= 0 ? '+' : ''}{label.leader[1].toFixed(1)}</span>{/if}
+						{#each seasonBands as band (band.season)}
+							<rect
+								class="tm-band"
+								x={band.x0}
+								y="26"
+								width={Math.max(1, band.x1 - band.x0)}
+								height="3"
+								rx="1"
+							/>
+						{/each}
+						{#each decadeTicks as tick (tick.label)}
+							<text class="tm-tick" x={tick.x + 2} y="9">{tick.label}</text>
+						{/each}
+						{#if tracePath}<path class="tm-trace" d={tracePath} />{/if}
+						{#if hover && !dragging}
+							<line class="tm-hover" x1={hover.left} x2={hover.left} y1="2" y2="29" />
 						{/if}
-					</div>
+						<g class="tm-handle" class:today={!shown} transform={`translate(${handleX},0)`}>
+							<line y1="1" y2="29" />
+							<circle cy="24.5" r="4.5" />
+						</g>
+					</svg>
+					{#if hover}
+						{@const label = hoverLabel(hover.date)}
+						<div
+							class="tm-tooltip"
+							style:left={`${Math.min(Math.max(hover.left, 90), stripWidth - 90)}px`}
+							aria-hidden="true"
+						>
+							{#if typeof label === 'string'}
+								<b>{label}</b>
+							{:else}
+								<b>{label.date}</b> · {label.season}
+								{#if label.leader}<span class="tm-leader">No. 1: {label.leader[2]} {label.leader[1] >= 0 ? '+' : ''}{label.leader[1].toFixed(1)}</span>{/if}
+							{/if}
+						</div>
+					{/if}
 				{/if}
-			{/if}
+			</div>
 		</div>
 
 		<div class="tm-actions">
 			{#if rewound && !dateAware}
 				<span class="tm-note" title="This page always shows today's data">Page shows today's data</span>
 			{/if}
+			<!-- Phones hide the timeline behind this toggle, so it says what it opens. -->
 			<button
 				type="button"
-				class="tm-btn tm-icon-btn tm-expand"
+				class="btn btn-sm tm-expand"
+				aria-label="Timeline"
 				aria-expanded={expanded}
-				aria-label="Show the timeline"
 				onclick={() => (expanded = !expanded)}
 			>
-				<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h12" /><circle cx="10" cy="8" r="2.2" /></svg>
+				<svg class="btn-glyph" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h12" /><circle cx="10" cy="8" r="2.2" /></svg>
+				<span class="tm-expand-label">Timeline</span>
 			</button>
 			<div class="tm-picker">
 				<button
 					type="button"
-					class="tm-btn tm-icon-btn"
+					class="btn btn-sm btn-icon"
 					aria-expanded={pickerOpen}
 					aria-haspopup="dialog"
 					aria-label="Pick a date"
@@ -380,21 +385,23 @@
 							/>
 						</label>
 						<div class="tm-popover-actions">
-							<button type="button" class="tm-btn" onclick={() => (pickerOpen = false)}>Cancel</button>
-							<button type="submit" class="tm-btn primary">Go</button>
+							<button type="button" class="btn btn-sm" onclick={() => (pickerOpen = false)}>Cancel</button>
+							<button type="submit" class="btn btn-sm btn-primary">Go</button>
 						</div>
 					</form>
 					</div>
 				{/if}
 			</div>
 			{#if rewound}
-				<button type="button" class="tm-btn primary" onclick={() => commit(null)}>Back to today</button>
+				<button type="button" class="btn btn-sm btn-primary" aria-label="Back to today" onclick={() => commit(null)}>
+					<span class="tm-wide-label">Back to today</span><span class="tm-narrow-label" aria-hidden="true">Today</span>
+				</button>
 			{:else if pathname !== '/rewind'}
-				<a class="tm-btn" href="/rewind">Rewind</a>
+				<a class="btn btn-sm" href="/rewind">Rewind</a>
 			{/if}
 			<button
 				type="button"
-				class="tm-btn tm-icon-btn tm-collapse"
+				class="btn btn-sm btn-icon tm-collapse"
 				aria-controls="time-machine"
 				aria-expanded="true"
 				aria-label="Hide the Time Machine"
@@ -458,7 +465,7 @@
 	}
 
 	.tm-title {
-		font-size: 10.5px;
+		font-size: 11px;
 		font-weight: 700;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -487,6 +494,15 @@
 		height: 30px;
 	}
 
+	.tm-track-inner {
+		position: relative;
+		height: 30px;
+	}
+
+	.tm-narrow-label {
+		display: none;
+	}
+
 	.tm-svg {
 		display: block;
 		cursor: pointer;
@@ -512,16 +528,15 @@
 	}
 
 	.tm-tick {
-		font-size: 9px;
-		fill: var(--text-muted);
+		font-size: 11px;
+		fill: var(--text-secondary);
 	}
 
 	.tm-trace {
 		fill: none;
-		stroke: var(--text-muted);
-		stroke-width: 1.2;
+		stroke: var(--text-secondary);
+		stroke-width: 1.5;
 		stroke-linejoin: round;
-		opacity: 0.85;
 	}
 
 	.tm-hover {
@@ -541,12 +556,13 @@
 		stroke-width: 2;
 	}
 
+	/* At today the handle is neutral but still clearly visible; rewound, it takes the accent. */
 	.tm-handle.today line {
-		stroke: var(--text-muted);
+		stroke: var(--text-secondary);
 	}
 
 	.tm-handle.today circle {
-		fill: var(--text-muted);
+		fill: var(--text);
 	}
 
 	.tm-tooltip {
@@ -579,63 +595,9 @@
 
 	.tm-note {
 		color: var(--text-secondary);
-		font-size: 11.5px;
-		font-weight: 600;
-		white-space: nowrap;
-	}
-
-	.tm-btn {
-		display: inline-flex;
-		align-items: center;
-		height: 26px;
-		padding: 0 10px;
-		font-family: var(--font-sans);
 		font-size: 12px;
 		font-weight: 600;
-		color: var(--text-secondary);
 		white-space: nowrap;
-		text-decoration: none;
-		background: transparent;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-	}
-
-	.tm-btn:hover {
-		color: var(--text);
-		border-color: var(--text-muted);
-	}
-
-	.tm-btn:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	.tm-btn.primary {
-		color: #fff;
-		background: var(--time-text);
-		border-color: var(--time-text);
-	}
-
-	.tm-btn.primary:hover {
-		color: #fff;
-		filter: brightness(1.08);
-	}
-
-	.tm-icon-btn {
-		justify-content: center;
-		width: 28px;
-		padding: 0;
-	}
-
-	.tm-icon-btn svg {
-		width: 14px;
-		height: 14px;
-		fill: none;
-		stroke: currentColor;
-		stroke-width: 1.6;
-		stroke-linecap: round;
-		stroke-linejoin: round;
 	}
 
 	.tm-expand {
@@ -643,8 +605,7 @@
 	}
 
 	.expanded .tm-expand {
-		color: var(--text);
-		border-color: var(--text-muted);
+		border-color: var(--accent);
 	}
 
 	.tm-picker {
@@ -736,8 +697,25 @@
 			display: inline-flex;
 		}
 
+		/* The date never gives way: the actions are sized so it always fits from 360px up. */
 		.tm-label {
-			flex: 1;
+			flex: 1 0 auto;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.tm-wide-label {
+			display: none;
+		}
+
+		.tm-narrow-label {
+			display: inline;
+		}
+	}
+
+	@media (max-width: 359px) {
+		.tm-expand-label {
+			display: none;
 		}
 	}
 
@@ -750,18 +728,5 @@
 
 	:global(:root[data-view='shiny']) .time-machine.rewound {
 		background: color-mix(in srgb, #337ab7 7%, #f5f5f5);
-	}
-
-	:global(:root[data-view='shiny']) .tm-btn {
-		border-radius: 4px;
-		background: #ffffff;
-		border-color: #cccccc;
-		color: #333333;
-	}
-
-	:global(:root[data-view='shiny']) .tm-btn.primary {
-		color: #ffffff;
-		background: #337ab7;
-		border-color: #2e6da4;
 	}
 </style>

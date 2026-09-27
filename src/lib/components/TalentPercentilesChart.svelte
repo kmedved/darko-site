@@ -236,12 +236,15 @@
 			{ label: 'Poor <25', fill: ZONE_DEFS[0].fill, color: ZONE_DEFS[0].labelColor }
 		];
 
+		// Centred rows that wrap on a narrow chart instead of running off both edges.
 		const legendY = data.length * ROW_HEIGHT + 10;
+		const legendRowGap = 18;
 		const legendG = g.append('g').attr('transform', `translate(0,${legendY})`);
+		const legendRows = [[]];
+		let rowWidth = 0;
 
-		let legendX = 0;
 		legendItems.forEach((item) => {
-			const itemG = legendG.append('g').attr('transform', `translate(${legendX},0)`);
+			const itemG = legendG.append('g');
 			itemG.append('rect')
 				.attr('width', 12)
 				.attr('height', 12)
@@ -252,22 +255,34 @@
 			itemG.append('text')
 				.attr('x', 16)
 				.attr('y', 10)
-				.attr('font-size', '10px')
+				.attr('font-size', '11px')
 				.style('fill', 'var(--text-muted)')
 				.text(item.label);
-			legendX += itemG.node().getBBox().width + 14;
+			const itemWidth = itemG.node().getBBox().width;
+			if (rowWidth > 0 && rowWidth + itemWidth > w) {
+				legendRows.push([]);
+				rowWidth = 0;
+			}
+			legendRows.at(-1).push({ node: itemG, x: rowWidth, width: itemWidth });
+			rowWidth += itemWidth + 14;
 		});
 
-		// Center legend
-		const legendWidth = legendG.node().getBBox().width;
-		legendG.attr('transform', `translate(${(w - legendWidth) / 2},${legendY})`);
+		legendRows.forEach((row, rowIndex) => {
+			const last = row.at(-1);
+			const offset = (w - (last.x + last.width)) / 2;
+			row.forEach((item) => item.node.attr('transform', `translate(${offset + item.x},${rowIndex * legendRowGap})`));
+		});
+
+		// Extra legend rows push the attribution down and grow the chart to match.
+		const legendExtra = (legendRows.length - 1) * legendRowGap;
+		svg.attr('height', chartHeight + legendExtra);
 
 		// Chart title
 		svg.append('text')
 			.attr('x', width / 2)
 			.attr('y', 22)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '18px')
+			.attr('font-size', '16px')
 			.attr('font-weight', '700')
 			.style('fill', 'var(--text)')
 			.text(playerName + ' \u2014 Talent Percentiles');
@@ -285,12 +300,12 @@
 			.text(`${posLabel} (${dateLabel})`);
 
 		// Attribution
-		const attrY = margin.top + data.length * ROW_HEIGHT + 45;
+		const attrY = margin.top + data.length * ROW_HEIGHT + 45 + legendExtra;
 		svg.append('text')
 			.attr('x', width / 2)
 			.attr('y', attrY)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '10px')
+			.attr('font-size', '11px')
 			.style('fill', 'var(--text-muted)')
 			.text('@kmedved | www.darko.app | @anpatt7');
 	}
@@ -358,7 +373,7 @@
 		xAxis.selectAll('.tick line').attr('stroke', 'var(--shiny-season-rule)');
 		xAxis
 			.selectAll('.tick text')
-			.attr('font-size', isMobile ? '9px' : '11px')
+			.attr('font-size', '11px')
 			.attr('transform', data.length > 5 || isMobile ? 'rotate(-28)' : null)
 			.style('text-anchor', data.length > 5 || isMobile ? 'end' : 'middle')
 			.attr('dx', data.length > 5 || isMobile ? '-0.4em' : null)
@@ -370,7 +385,7 @@
 			.call(d3.axisLeft(y).tickValues(d3.range(0, 101, 10)).tickFormat((value) => `${value}%`));
 		yAxis.select('.domain').attr('stroke', 'var(--shiny-season-rule)');
 		yAxis.selectAll('.tick line').attr('stroke', 'var(--shiny-season-rule)');
-		yAxis.selectAll('.tick text').attr('font-size', isMobile ? '9px' : '11px').style('fill', 'var(--text)');
+		yAxis.selectAll('.tick text').attr('font-size', '11px').style('fill', 'var(--text)');
 
 		g.append('text')
 			.attr('transform', 'rotate(-90)')
@@ -404,7 +419,7 @@
 			.attr('x', width / 2)
 			.attr('y', height - 8)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '10px')
+			.attr('font-size', '11px')
 			.style('fill', 'var(--text-muted)')
 			.text('@kmedved | www.darko.app | @anpatt7');
 	}

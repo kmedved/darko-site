@@ -274,7 +274,7 @@
 
 	.about-article p {
 		color: var(--text-secondary);
-		font-size: 15px;
+		font-size: 16px;
 		line-height: 1.7;
 		margin-bottom: 16px;
 	}
@@ -287,7 +287,7 @@
 
 	.about-article li {
 		color: var(--text-secondary);
-		font-size: 15px;
+		font-size: 16px;
 		line-height: 1.7;
 		margin-bottom: 12px;
 		padding-left: 20px;
@@ -330,10 +330,10 @@
 			padding: 32px 0 48px;
 		}
 		.about-article h1 {
-			font-size: 22px;
+			font-size: 28px;
 		}
 		.about-article h2 {
-			font-size: 18px;
+			font-size: 20px;
 		}
 	}
 </style>

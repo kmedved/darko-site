@@ -138,7 +138,7 @@
                 group
                     .selectAll('.tick text')
                     .style('fill', 'var(--text-muted)')
-                    .attr('font-size', isMobile ? '10px' : '11px')
+                    .attr('font-size', '11px')
             );
 
         const xTickValues = isMobile
@@ -154,7 +154,7 @@
         xAxis
             .selectAll('.tick text')
             .style('fill', 'var(--text-muted)')
-            .attr('font-size', '10px')
+            .attr('font-size', '11px')
             .attr('transform', 'rotate(-42)')
             .style('text-anchor', 'end')
             .attr('dx', '-0.35em')
@@ -241,7 +241,7 @@
                 .attr('y', (point) => y(point.projected_retirement_age) - 11)
                 .attr('text-anchor', 'middle')
                 .attr('fill', 'var(--text)')
-                .attr('font-size', '10px')
+                .attr('font-size', '11px')
                 .attr('font-weight', '700')
                 .text((point) => point.projected_retirement_age.toFixed(1));
         }

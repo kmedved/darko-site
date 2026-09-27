@@ -5,7 +5,7 @@
 	import { loess } from '$lib/utils/loess.js';
 	import { buildLoessConfidenceBand } from '$lib/utils/loessConfidenceBand.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
-	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import { formatDollarsMillions, getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 	import { formatSeasonLabel, getSeasonStartYear } from '$lib/utils/seasonUtils.js';
 	import { getShinyChartPreset } from '$lib/utils/shinyDesign.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
@@ -14,7 +14,7 @@
 		rows = [],
 		talentType = 'dpm',
 		playerName = '',
-		playerColor = '#5b8def'
+		playerColor = '#3987e5'
 	} = $props();
 
 	let containerEl = $state(null);
@@ -67,7 +67,7 @@
 		if (val === null || val === undefined) return '';
 		const n = parseFloat(val);
 		if (!Number.isFinite(n)) return '';
-		if (MONEY_METRICS.has(talentType)) return `$${(n / 1e6).toFixed(1)}M`;
+		if (MONEY_METRICS.has(talentType)) return formatDollarsMillions(n, 1);
 		if (PERCENT_METRICS.has(talentType)) return `${(n * 100).toFixed(1)}%`;
 		if (SIGNED_METRICS.has(talentType)) return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
 		return n.toFixed(1);
@@ -370,14 +370,14 @@
 			.attr('x', w / 2)
 			.attr('y', h + (isShinyView ? 83 : 45))
 			.attr('text-anchor', 'middle')
-			.attr('font-size', '10px')
+			.attr('font-size', '11px')
 			.style('fill', 'var(--text-muted)')
 			.text('@kmedved | www.darko.app | @anpatt7');
 
 		// Y axis
 		const yAxis = d3.axisLeft(y).ticks(8);
 		if (MONEY_METRICS.has(talentType)) {
-			yAxis.tickFormat((d) => `$${(d / 1e6).toFixed(0)}M`);
+			yAxis.tickFormat((d) => formatDollarsMillions(d, 0));
 		} else if (PERCENT_METRICS.has(talentType)) {
 			yAxis.tickFormat((d) => `${(d * 100).toFixed(0)}%`);
 		}
@@ -391,11 +391,12 @@
 			.selectAll('.tick line')
 			.attr('stroke', 'var(--border, #555)');
 
-		// Y axis label
+		// Y axis label, hung 4px inside the chart's left edge whatever the margin.
 		g.append('text')
 			.attr('transform', 'rotate(-90)')
 			.attr('x', -h / 2)
-			.attr('y', -45)
+			.attr('y', -margin.left + 4)
+			.attr('dy', '0.9em')
 			.attr('text-anchor', 'middle')
 				.attr('font-size', isShinyView ? '16px' : '13px')
 				.attr('font-weight', isShinyView ? '400' : '600')

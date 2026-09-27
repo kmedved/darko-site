@@ -40,14 +40,15 @@
             .toUpperCase();
     }
 
+    // Position badges use the series palette (guards, wings, bigs) rather than red and green.
     const POSITION_COLORS = {
-        'G': { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' },
-        'F': { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
-        'C': { bg: 'rgba(52, 211, 153, 0.15)', text: '#34d399' },
-        'F-G': { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' },
-        'G-F': { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' },
-        'F-C': { bg: 'rgba(167, 139, 250, 0.15)', text: '#a78bfa' },
-        'C-F': { bg: 'rgba(167, 139, 250, 0.15)', text: '#a78bfa' }
+        'G': { bg: 'rgba(57, 135, 229, 0.15)', text: '#3987e5' },
+        'F': { bg: 'rgba(217, 89, 38, 0.15)', text: '#d95926' },
+        'C': { bg: 'rgba(25, 158, 112, 0.15)', text: '#199e70' },
+        'F-G': { bg: 'rgba(217, 89, 38, 0.15)', text: '#d95926' },
+        'G-F': { bg: 'rgba(217, 89, 38, 0.15)', text: '#d95926' },
+        'F-C': { bg: 'rgba(25, 158, 112, 0.15)', text: '#199e70' },
+        'C-F': { bg: 'rgba(25, 158, 112, 0.15)', text: '#199e70' }
     };
 
     const placeholderColors = $derived.by(() => {
@@ -213,7 +214,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 28px;
         font-weight: 700;
         color: var(--text-muted);
         letter-spacing: 0.04em;
@@ -286,7 +287,7 @@
     .rate-card-elo-result {
         margin-top: 10px;
         font-family: var(--font-mono);
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 700;
         letter-spacing: -0.01em;
     }
@@ -306,7 +307,7 @@
         }
 
         .rate-card-name {
-            font-size: 18px;
+            font-size: 20px;
         }
 
         .rate-card-headshot {

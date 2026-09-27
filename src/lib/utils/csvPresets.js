@@ -4,11 +4,12 @@ import { formatSeasonEndYearLabel } from './seasonUtils.js';
 
 const DASH = '\u2014';
 
-export function formatMinutes(seconds) {
-    if (seconds === null || seconds === undefined) return DASH;
-    const n = Number.parseFloat(seconds);
+// tr_minutes is already minutes per game (a time-decayed running average), not seconds.
+export function formatMinutes(minutes) {
+    if (minutes === null || minutes === undefined) return DASH;
+    const n = Number.parseFloat(minutes);
     if (!Number.isFinite(n)) return DASH;
-    return (n / 60).toFixed(1);
+    return n.toFixed(1);
 }
 
 export function formatSignedMetric(value, decimals = 1) {
@@ -65,11 +66,22 @@ export function formatFixed(value, decimals = 1) {
     return n.toFixed(decimals);
 }
 
-export function formatMillions(value) {
+/**
+ * Dollars in millions for tables, exports and chart axes. The sign goes before the dollar sign
+ * (-$1.9M, not $-1.9M), and a value that rounds to zero carries none.
+ */
+export function formatDollarsMillions(value, decimals = 1) {
     if (value === null || value === undefined) return DASH;
     const n = Number.parseFloat(value);
     if (!Number.isFinite(n)) return DASH;
-    return `$${(n / 1e6).toFixed(1)}M`;
+    const millions = (Math.abs(n) / 1e6).toFixed(decimals);
+    const sign = n < 0 && Number(millions) !== 0 ? '-' : '';
+    return `${sign}$${millions}M`;
+}
+
+// One argument only: CSV columns call format(value, row).
+export function formatMillions(value) {
+    return formatDollarsMillions(value, 1);
 }
 
 export function formatSignedMillions(value) {
@@ -106,7 +118,7 @@ export const metricDisplayLabels = Object.freeze({
     bayes_rapm_off: 'RAPM Off',
     bayes_rapm_def: 'RAPM Def',
     rapm_exposure: 'RAPM Exposure',
-    tr_minutes: 'Min',
+    tr_minutes: 'Min (trend)',
     x_minutes: 'MPG',
     x_pace: 'Pace',
     x_pts_100: 'Pts per 100',
@@ -141,7 +153,7 @@ export const leaderboardCsvColumns = [
     { header: 'Player', accessor: 'player_name' },
     { header: 'Team', accessor: 'team_name' },
     { header: 'Pos', accessor: 'position', format: formatOrDash },
-    { header: 'Min', accessor: 'tr_minutes', format: formatMinutes },
+    { header: 'Min (trend)', accessor: 'tr_minutes', format: formatMinutes },
     { header: 'DPM', accessor: 'dpm', format: formatSignedMetric },
     { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
     { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },
@@ -265,7 +277,7 @@ export const compareCsvColumns = [
     { header: 'Team', accessor: 'team_name' },
     { header: 'Pos', accessor: 'position', format: formatOrDash },
     { header: 'Age', accessor: 'age', format: formatNullable },
-    { header: 'Min', accessor: 'tr_minutes', format: formatMinutes },
+    { header: 'Min (trend)', accessor: 'tr_minutes', format: formatMinutes },
     { header: 'Career Games', accessor: 'career_game_num', format: formatNullable },
     { header: 'DPM', accessor: 'dpm', format: formatSignedMetric },
     { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
@@ -368,7 +380,7 @@ export const longevityCsvColumns = [
 export const teamPlayersCsvColumns = [
     { header: 'Player', accessor: 'player_name' },
     { header: 'Pos', accessor: 'position', format: formatOrDash },
-    { header: 'Min', accessor: 'tr_minutes', format: formatMinutes },
+    { header: 'Min (trend)', accessor: 'tr_minutes', format: formatMinutes },
     { header: 'DPM', accessor: 'dpm', format: formatSignedMetric },
     { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
     { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },

@@ -295,7 +295,7 @@
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-:root[data-view='shiny'] .page-action-btn,
+:root[data-view='shiny'] .btn,
 :root[data-view='shiny'] .control-select,
 :root[data-view='shiny'] .search-input {
     border: 1px solid #cccccc;
@@ -307,10 +307,77 @@
     font-weight: 400;
 }
 
-:root[data-view='shiny'] .page-action-btn:hover:not(:disabled) {
+:root[data-view='shiny'] .btn:hover:not(:disabled) {
     border-color: #adadad;
     background: #e6e6e6;
     color: #333333;
+}
+
+:root[data-view='shiny'] .btn-sm {
+    font-size: 12px;
+}
+
+:root[data-view='shiny'] .btn-primary,
+:root[data-view='shiny'] .btn-primary:hover:not(:disabled) {
+    border-color: #2e6da4;
+    background: #337ab7;
+    color: #ffffff;
+}
+
+:root[data-view='shiny'] .btn[aria-pressed='true'],
+:root[data-view='shiny'] .btn.is-active {
+    border-color: #adadad;
+    background: #e6e6e6;
+    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+}
+
+/* Stat strips read as one row of source-style value boxes. */
+:root[data-view='shiny'] .stat-strip {
+    gap: 0;
+    border: 1px solid #dddddd;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+:root[data-view='shiny'] .stat-tile {
+    min-height: 82px;
+    padding: 12px 14px;
+    border: 0;
+    border-right: 1px solid #dddddd;
+    border-radius: 0;
+    background: #ffffff;
+    box-shadow: none;
+}
+
+:root[data-view='shiny'] .stat-tile:last-child {
+    border-right: 0;
+}
+
+:root[data-view='shiny'] .stat-tile-label {
+    color: #777777;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+:root[data-view='shiny'] .stat-tile-value {
+    color: #333333;
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 500;
+}
+
+:root[data-view='shiny'] .stat-tile-detail {
+    color: #777777;
+}
+
+:root[data-view='shiny'] .stat-tile-body a {
+    color: #337ab7;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+:root[data-view='shiny'] .stat-tile-photo {
+    display: none;
 }
 
 :root[data-view='shiny'] input:focus,
@@ -328,79 +395,7 @@
 
 :root[data-view='shiny'] .leaderboard-container {
     max-width: 1920px;
-    padding-top: 20px;
     padding-bottom: 20px;
-}
-
-:root[data-view='shiny'] .leaderboard-hero {
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
-    background: #ffffff;
-    box-shadow: none;
-    padding: 0;
-}
-
-:root[data-view='shiny'] .leaderboard-hero::before,
-:root[data-view='shiny'] .leaderboard-icon {
-    display: none;
-}
-
-:root[data-view='shiny'] .leaderboard-title-block {
-    margin-bottom: 18px;
-}
-
-:root[data-view='shiny'] .leaderboard-title-block h1 {
-    color: #222222;
-    font-size: 30px;
-    font-weight: 500;
-    line-height: 1.1;
-}
-
-:root[data-view='shiny'] .leaderboard-title-block p {
-    margin-top: 6px;
-    color: #555555;
-    font-size: 14px;
-}
-
-:root[data-view='shiny'] .leaderboard-page .leader-card-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0;
-    border: 1px solid #dddddd;
-    border-radius: 4px;
-    background: #ffffff;
-}
-
-:root[data-view='shiny'] .leader-card {
-    min-height: 88px;
-    border: 0;
-    border-right: 1px solid #dddddd;
-    border-radius: 0;
-    background: #ffffff;
-    box-shadow: none;
-    padding: 12px 14px;
-}
-
-:root[data-view='shiny'] .leader-card:last-child {
-    border-right: 0;
-}
-
-:root[data-view='shiny'] .leader-card-copy {
-    padding: 0;
-}
-
-:root[data-view='shiny'] .leader-card-copy p {
-    margin-bottom: 4px;
-    color: #777777;
-    font-size: 12px;
-    font-weight: 400;
-}
-
-:root[data-view='shiny'] .leader-card-copy strong {
-    margin-bottom: 6px;
-    color: #333333;
-    font-size: 20px;
-    font-weight: 500;
 }
 
 :root[data-view='shiny'] .leader-player {
@@ -414,8 +409,7 @@
     font-weight: 400;
 }
 
-:root[data-view='shiny'] .leader-player img,
-:root[data-view='shiny'] .leader-photo {
+:root[data-view='shiny'] .leader-player img {
     display: none;
 }
 
@@ -438,7 +432,7 @@
 
 :root[data-view='shiny'] .control-field select,
 :root[data-view='shiny'] .search-control input,
-:root[data-view='shiny'] .leaderboard-controls .page-action-btn {
+:root[data-view='shiny'] .leaderboard-controls .btn {
     height: 34px;
     border: 1px solid #cccccc;
     border-radius: 4px;
@@ -449,7 +443,7 @@
     font-weight: 400;
 }
 
-:root[data-view='shiny'] .leaderboard-controls .page-action-btn {
+:root[data-view='shiny'] .leaderboard-controls .btn {
     padding: 6px 12px;
     color: #333333;
     box-shadow: none;
@@ -593,13 +587,6 @@
     grid-template-columns: 1fr;
     gap: 26px;
     top: calc(var(--nav-sticky-offset) + 16px);
-}
-
-:root[data-view='shiny'] .trajectory-stat-card {
-    border: 1px solid #e3e3e3;
-    border-radius: 4px;
-    background: #f5f5f5;
-    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 
 :root[data-view='shiny'] .insight-card {
@@ -880,36 +867,7 @@
 
 :root[data-view='shiny'] .trajectory-container {
     max-width: 1920px;
-    gap: 20px;
-    padding-top: 20px;
     padding-bottom: 20px;
-}
-
-:root[data-view='shiny'] .trajectory-hero {
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
-    background: #ffffff;
-    box-shadow: none;
-    padding: 0;
-}
-
-:root[data-view='shiny'] .trajectory-hero::before,
-:root[data-view='shiny'] .trajectory-icon {
-    display: none;
-}
-
-:root[data-view='shiny'] .trajectory-title-block h1 {
-    color: #222222;
-    font-size: 30px;
-    font-weight: 500;
-    line-height: 1.1;
-}
-
-:root[data-view='shiny'] .trajectory-title-block p {
-    margin-top: 6px;
-    color: #555555;
-    font-size: 14px;
 }
 
 :root[data-view='shiny'] .trajectory-workspace {
@@ -1004,33 +962,6 @@
     color: #555555;
 }
 
-:root[data-view='shiny'] .trajectory-stat-grid {
-    gap: 10px;
-    margin-top: 14px;
-}
-
-:root[data-view='shiny'] .trajectory-stat-card {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding: 12px;
-}
-
-:root[data-view='shiny'] .trajectory-stat-card .stat-icon {
-    display: none;
-}
-
-:root[data-view='shiny'] .trajectory-stat-card p,
-:root[data-view='shiny'] .trajectory-stat-card small {
-    color: #777777;
-    font-weight: 400;
-}
-
-:root[data-view='shiny'] .trajectory-stat-card strong {
-    color: #333333;
-    font-size: 18px;
-    font-weight: 500;
-}
-
 /* Shared application surfaces: keep every route in the same flat Shiny idiom. */
 :root[data-view='shiny'] :is(
     .standings-page,
@@ -1045,68 +976,31 @@
     background: #ffffff;
 }
 
-:root[data-view='shiny'] :is(
-    .standings-hero,
-    .lineups-hero,
-    .longevity-hero,
-    .wowy-hero
-) {
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
-    background: #ffffff;
-    box-shadow: none;
+/* The source app's title panel sat closer to the nav. :where() keeps this below a page's own
+   scoped header spacing (the team page's back link, the WOWY intro). */
+:root[data-view='shiny'] :where(.page-header) {
+    padding: 20px 0 18px;
 }
 
-:root[data-view='shiny'] :is(
-    .standings-hero,
-    .lineups-hero,
-    .longevity-hero,
-    .wowy-hero
-)::before,
-:root[data-view='shiny'] :is(
-    .standings-icon,
-    .lineups-icon,
-    .longevity-icon,
-    .wowy-icon,
-    .summary-icon,
-    .stat-icon
-) {
-    display: none;
+:root[data-view='shiny'] .wowy-intro {
+    padding-top: 20px;
 }
 
-:root[data-view='shiny'] :is(
-    .standings-hero,
-    .lineups-hero,
-    .longevity-hero,
-    .wowy-hero,
-    .page-header
-) h1 {
+:root[data-view='shiny'] .page-header h1 {
     color: #222222;
     font-size: 30px;
     font-weight: 500;
     line-height: 1.1;
 }
 
-:root[data-view='shiny'] :is(
-    .standings-hero,
-    .lineups-hero,
-    .longevity-hero,
-    .wowy-hero,
-    .page-header
-) :is(p, .subtitle, .page-subtitle) {
+:root[data-view='shiny'] .page-header :is(p, .subtitle, .page-subtitle) {
     color: #555555;
     font-size: 14px;
 }
 
-:root[data-view='shiny'] .wowy-hero {
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
-    gap: 24px;
-    padding: 0;
-}
-
-:root[data-view='shiny'] .wowy-title-row {
-    margin-top: 6px;
+:root[data-view='shiny'] .page-header .page-asof {
+    color: var(--time-text);
+    font-weight: 600;
 }
 
 :root[data-view='shiny'] .wowy-status {
@@ -1136,53 +1030,6 @@
     color: #222222;
     font-size: 22px;
     font-weight: 500;
-}
-
-:root[data-view='shiny'] :is(
-    .standings-page,
-    .lineups-page,
-    .longevity-page
-) .summary-card-grid {
-    gap: 0;
-    overflow: hidden;
-    border: 1px solid #dddddd;
-    border-radius: 4px;
-    background: #ffffff;
-}
-
-:root[data-view='shiny'] :is(
-    .standings-page,
-    .lineups-page,
-    .longevity-page
-) .summary-card {
-    min-height: 82px;
-    border: 0;
-    border-right: 1px solid #dddddd;
-    border-radius: 0;
-    background: #ffffff;
-    box-shadow: none;
-}
-
-:root[data-view='shiny'] :is(
-    .standings-page,
-    .lineups-page,
-    .longevity-page
-) .summary-card:last-child {
-    border-right: 0;
-}
-
-:root[data-view='shiny'] :is(
-    .standings-page,
-    .lineups-page,
-    .longevity-page
-) .summary-card:has(> .summary-icon) {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-:root[data-view='shiny'] .longevity-page .summary-copy :is(p, small) {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
 }
 
 :root[data-view='shiny'] :is(
@@ -1361,6 +1208,7 @@
     align-items: center;
     justify-content: center;
     gap: 2px 5px;
+    font-weight: 400;
     line-height: 1.35;
 }
 
@@ -1575,7 +1423,10 @@
     :root[data-view='shiny'] .legacy-logo-lockup {
         display: none;
     }
+}
 
+/* As in the modern view, the insight cards sit under the table until both fit side by side. */
+@media (max-width: 1839px) {
     :root[data-view='shiny'] .leaderboard-workspace {
         grid-template-columns: 1fr;
     }
@@ -1587,10 +1438,6 @@
 }
 
 @media (max-width: 900px) {
-    :root[data-view='shiny'] .wowy-hero {
-        grid-template-columns: 1fr;
-    }
-
     :root[data-view='shiny'] .trajectory-workspace {
         grid-template-columns: 1fr;
         gap: 18px;
@@ -1600,48 +1447,13 @@
         position: static;
     }
 
-    :root[data-view='shiny'] .leaderboard-page .leader-card-grid,
     :root[data-view='shiny'] .leaderboard-controls,
     :root[data-view='shiny'] .leaderboard-page .insight-rail {
         grid-template-columns: 1fr;
     }
 
-    :root[data-view='shiny'] .leader-card {
-        border-right: 0;
-        border-bottom: 1px solid #dddddd;
-    }
-
-    :root[data-view='shiny'] .leader-card:last-child {
-        border-bottom: 0;
-    }
-
     :root[data-view='shiny'] .lineups-grid {
         grid-template-columns: minmax(0, 1fr);
-    }
-
-    :root[data-view='shiny'] :is(
-        .standings-page,
-        .lineups-page,
-        .longevity-page
-    ) .summary-card-grid {
-        grid-template-columns: 1fr;
-    }
-
-    :root[data-view='shiny'] :is(
-        .standings-page,
-        .lineups-page,
-        .longevity-page
-    ) .summary-card {
-        border-right: 0;
-        border-bottom: 1px solid #dddddd;
-    }
-
-    :root[data-view='shiny'] :is(
-        .standings-page,
-        .lineups-page,
-        .longevity-page
-    ) .summary-card:last-child {
-        border-bottom: 0;
     }
 
     :root[data-view='shiny'] .player-profile-page .profile-layout {
@@ -1652,19 +1464,10 @@
 @media (max-width: 768px) {
     :root[data-view='shiny'] .leaderboard-container,
     :root[data-view='shiny'] .trajectory-container {
-        padding-top: 16px;
         padding-bottom: 16px;
     }
 
-    :root[data-view='shiny'] .leaderboard-title-block h1,
-    :root[data-view='shiny'] .trajectory-title-block h1,
-    :root[data-view='shiny'] :is(
-        .standings-hero,
-        .lineups-hero,
-        .longevity-hero,
-        .wowy-hero,
-        .page-header
-    ) h1 {
+    :root[data-view='shiny'] .page-header h1 {
         font-size: 26px;
     }
 

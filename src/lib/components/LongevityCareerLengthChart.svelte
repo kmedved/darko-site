@@ -121,7 +121,7 @@
                 group
                     .selectAll('.tick text')
                     .style('fill', 'var(--text-muted)')
-                    .attr('font-size', isMobile ? '10px' : '11px')
+                    .attr('font-size', '11px')
             );
 
         const xAxis = chartGroup
@@ -187,7 +187,7 @@
                 .attr('y', (point) => y(point.value) - 10)
                 .attr('text-anchor', 'middle')
                 .attr('fill', 'var(--text)')
-                .attr('font-size', '10px')
+                .attr('font-size', '11px')
                 .attr('font-weight', '700')
                 .text((point) => `${point.value.toFixed(point.value >= 99.95 ? 0 : 1)}%`);
         }
@@ -241,7 +241,7 @@
                     .attr('x', 20)
                     .attr('y', 11)
                     .attr('fill', 'var(--text)')
-                    .attr('font-size', isMobile ? '10px' : '11px')
+                    .attr('font-size', '11px')
                     .text(item.label);
             });
         }

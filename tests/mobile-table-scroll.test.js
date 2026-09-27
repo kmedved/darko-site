@@ -11,15 +11,19 @@ const TARGET_FILES = [
     'src/routes/longevity/+page.svelte'
 ];
 
-function extractTouchScrollBlock(contents, file) {
-    const start = contents.indexOf(START_MARKER);
-    const end = contents.indexOf(END_MARKER);
+function extractBlock(contents, file, startMarker, endMarker) {
+    const start = contents.indexOf(startMarker);
+    const end = contents.indexOf(endMarker);
 
-    assert.notEqual(start, -1, `${file} should define a touch/mobile scroll mode block`);
-    assert.notEqual(end, -1, `${file} should terminate the touch/mobile scroll mode block`);
-    assert.ok(end > start, `${file} touch/mobile scroll mode block should be well formed`);
+    assert.notEqual(start, -1, `${file} should define ${startMarker}`);
+    assert.notEqual(end, -1, `${file} should terminate it with ${endMarker}`);
+    assert.ok(end > start, `${file} ${startMarker} block should be well formed`);
 
     return contents.slice(start, end);
+}
+
+function extractTouchScrollBlock(contents, file) {
+    return extractBlock(contents, file, START_MARKER, END_MARKER);
 }
 
 function extractMediaBlocks(contents, file) {
@@ -56,20 +60,6 @@ function extractMediaBlocks(contents, file) {
     return blocks;
 }
 
-function assertTouchScrollBlock(block, file) {
-    assert.match(block, /hover:\s*none/, `${file} should target touch devices without hover`);
-    assert.match(block, /pointer:\s*coarse/, `${file} should target coarse pointers`);
-    assert.match(block, /any-hover:\s*none/, `${file} should include the any-hover touch fallback`);
-    assert.match(block, /any-pointer:\s*coarse/, `${file} should include the any-pointer touch fallback`);
-    assert.match(block, /max-width:\s*1024px/, `${file} should support mobile landscape widths`);
-    assert.doesNotMatch(block, /@media\s*\(\s*max-width:\s*768px\s*\)/, `${file} should not use a bare <=768px touch fallback`);
-    assert.match(block, /\.table-wrapper\s*\{[\s\S]*overflow-x:\s*auto;/, `${file} should enable horizontal scrolling in touch/mobile mode`);
-    assert.match(block, /-webkit-overflow-scrolling:\s*touch;/, `${file} should enable momentum scrolling`);
-    assert.match(block, /table\s*\{[\s\S]*width:\s*max-content;[\s\S]*min-width:\s*100%;/, `${file} should size the table to create real overflow`);
-    assert.match(block, /th\s*\{[\s\S]*position:\s*static;/, `${file} should disable sticky headers in touch/mobile mode`);
-    assert.doesNotMatch(block, /nth-child\s*\([\s\S]*display:\s*none;/, `${file} should not hide columns in touch/mobile scroll mode`);
-}
-
 test('lineups keeps its detached sticky header while the body scrolls on touch', async () => {
     const file = 'src/routes/lineups/+page.svelte';
     const contents = await fs.readFile(path.resolve(process.cwd(), file), 'utf8');
@@ -82,25 +72,24 @@ test('lineups keeps its detached sticky header while the body scrolls on touch',
     assert.doesNotMatch(block, /\.sticky-header-shell\s*\{[\s\S]*display:\s*none;/);
 });
 
-test('touch/mobile table scroll mode enables horizontal scrolling without hiding columns', async () => {
+test('standings and longevity keep a pinned header while a wide table scrolls sideways', async () => {
     for (const file of TARGET_FILES) {
-        const absolutePath = path.resolve(process.cwd(), file);
-        const contents = await fs.readFile(absolutePath, 'utf8');
-        const block = extractTouchScrollBlock(contents, file);
+        const contents = await fs.readFile(path.resolve(process.cwd(), file), 'utf8');
         const columnHideBlocks = extractMediaBlocks(contents, file).filter(
             (mediaBlock) => /nth-child/.test(mediaBlock) && /display:\s*none;/.test(mediaBlock)
         );
 
-        assertTouchScrollBlock(block, file);
-        assert.ok(columnHideBlocks.length > 0, `${file} should keep non-touch narrow-screen column fallbacks`);
-
-        for (const mediaBlock of columnHideBlocks) {
-            assert.match(mediaBlock, /hover:\s*hover/, `${file} column hiding should be limited to hover-capable devices`);
-            assert.match(mediaBlock, /pointer:\s*fine/, `${file} column hiding should be limited to fine pointers`);
-            assert.doesNotMatch(mediaBlock, /hover:\s*none/, `${file} column hiding should not target touch hover modes`);
-            assert.doesNotMatch(mediaBlock, /pointer:\s*coarse/, `${file} column hiding should not target coarse pointers`);
-            assert.doesNotMatch(mediaBlock, /any-hover:\s*none/, `${file} column hiding should not target touch fallback queries`);
-            assert.doesNotMatch(mediaBlock, /any-pointer:\s*coarse/, `${file} column hiding should not target touch fallback queries`);
-        }
+        // A detached header pinned under the nav, over a body that scrolls on its own.
+        assert.match(contents, /return setupWideStickyTable\(\{/, `${file} should sync a detached header`);
+        assert.match(contents, /class="sticky-header-shell"/);
+        assert.match(contents, /\.sticky-header-shell \{[^}]*position: sticky;[^}]*top: var\(--nav-sticky-offset\);/);
+        assert.match(contents, /\.table-body-scroll \{[^}]*overflow-x: auto;/);
+        // AGENTS.md: the wrapper itself never scrolls, which would unstick the header.
+        assert.doesNotMatch(contents, /\.table-wrapper \{[^}]*overflow-x:\s*auto/, `${file} wrapper must not scroll`);
+        // Same-table semantic headers, and sort controls the keyboard can reach.
+        assert.match(contents, /<tr class="table-semantic-row sr-only">/);
+        assert.match(contents, /scope="col"/);
+        assert.match(contents, /<button type="button" onclick=\{\(\) => toggleSort\(column\.key\)\}>/);
+        assert.deepEqual(columnHideBlocks, [], `${file} should never hide columns`);
     }
 });
