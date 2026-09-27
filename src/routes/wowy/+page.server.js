@@ -2,10 +2,8 @@ import {
     getActiveWowyPlayers,
     getWowyAdjustedAllTimePage,
     getWowyAdjustedSeasonPlayers,
-    getWowyAllTimePage,
     getWowyLeaderboardSeasons,
-    getWowyPublication,
-    getWowySeasonPlayers
+    getWowyPublication
 } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
@@ -17,83 +15,52 @@ export const config = {
 
 const ADJUSTED_SEASON_FLOOR = 1978;
 
+// The leaderboard shows Season-Adjusted WOWY only: all time, or one season from the first
+// adjusted season on. Current keeps the latest observed game-level ratings. Links from before
+// (?rating=average, or a season without adjusted ratings) open the all-time table instead.
 export async function load({ url, setHeaders }) {
     prefetchRequestedPlayers(url);
-    const [seasons, publication] = await Promise.all([
+    const [publishedSeasons, publication] = await Promise.all([
         getWowyLeaderboardSeasons(),
         getWowyPublication()
     ]);
+    const publishedSeasonAdjustedFrom = Number(publication?.season_adjusted_from);
+    const seasonAdjustedFrom =
+        Number.isInteger(publishedSeasonAdjustedFrom) && publishedSeasonAdjustedFrom >= ADJUSTED_SEASON_FLOOR
+            ? publishedSeasonAdjustedFrom
+            : ADJUSTED_SEASON_FLOOR;
+    const seasons = publishedSeasons.filter((season) => season >= seasonAdjustedFrom);
     const requestedSeasonValue = url.searchParams.get('season');
     const requestedSeason = parseSeasonEndYear(requestedSeasonValue);
     const selectedSeason = seasons.includes(requestedSeason) ? requestedSeason : null;
     const requestedCurrent =
         url.searchParams.get('view') === 'current' ||
         (typeof requestedSeasonValue === 'string' && requestedSeasonValue.trim() === 'current');
-    let selectedView = selectedSeason !== null
+    const selectedView = selectedSeason !== null
         ? 'season'
         : requestedCurrent
             ? 'current'
             : 'all-time';
-    const requestedRatingMode =
-        url.searchParams.get('rating') === 'adjusted' ? 'adjusted' : 'average';
-    const publishedSeasonAdjustedFrom = Number(publication?.season_adjusted_from);
-    const seasonAdjustedFrom =
-        Number.isInteger(publishedSeasonAdjustedFrom) && publishedSeasonAdjustedFrom >= ADJUSTED_SEASON_FLOOR
-            ? publishedSeasonAdjustedFrom
-            : ADJUSTED_SEASON_FLOOR;
-    const adjustedAvailable =
-        selectedView === 'all-time' ||
-        (selectedView === 'season' && selectedSeason >= seasonAdjustedFrom);
-    const selectedRatingMode =
-        selectedView === 'current' || !adjustedAvailable
-            ? 'average'
-            : requestedRatingMode;
     let players;
     let allTimeTotal = null;
     let allTimeHasMore = false;
-    let isActivationFallback = false;
 
     if (selectedView === 'season') {
-        players = selectedRatingMode === 'adjusted'
-            ? await getWowyAdjustedSeasonPlayers(selectedSeason)
-            : await getWowySeasonPlayers(selectedSeason);
+        players = await getWowyAdjustedSeasonPlayers(selectedSeason);
     } else if (selectedView === 'current') {
         players = await getActiveWowyPlayers();
     } else {
-        const page = selectedRatingMode === 'adjusted'
-            ? await getWowyAdjustedAllTimePage()
-            : await getWowyAllTimePage();
+        const page = await getWowyAdjustedAllTimePage();
         players = page.players;
         allTimeTotal = page.totalCount;
         allTimeHasMore = page.hasMore;
-
-        // Migration 012 deliberately returns no all-time rows until the
-        // separate manual certification operation has committed its marker.
-        // Keep the normal page useful during that safe intermediate state.
-        if (selectedRatingMode === 'average' && !page.activated) {
-            selectedView = 'current';
-            players = await getActiveWowyPlayers();
-            allTimeTotal = null;
-            allTimeHasMore = false;
-            isActivationFallback = true;
-        }
     }
 
-    if (isActivationFallback) {
-        // This same URL must retry after certification rather than serving a
-        // stale Current fallback from the browser or any CDN layer.
-        setHeaders({
-            'cache-control': 'no-store',
-            'cdn-cache-control': 'no-store',
-            'vercel-cdn-cache-control': 'no-store'
-        });
-    } else {
-        setEdgeCache(setHeaders, {
-            edgeSMaxAge: 300,
-            swr: 3600,
-            sie: 86400
-        });
-    }
+    setEdgeCache(setHeaders, {
+        edgeSMaxAge: 300,
+        swr: 3600,
+        sie: 86400
+    });
 
     return {
         players,
@@ -101,7 +68,8 @@ export async function load({ url, setHeaders }) {
         seasons,
         selectedSeason,
         selectedView,
-        selectedRatingMode,
+        // A team code (or, for Current, a team name) to filter by, from a clicked team.
+        selectedTeam: parseTeamParam(url.searchParams.get('team')),
         allTimeTotal,
         allTimeHasMore
     };
@@ -113,17 +81,14 @@ export async function load({ url, setHeaders }) {
 function prefetchRequestedPlayers(url) {
     const seasonValue = url.searchParams.get('season');
     const season = parseSeasonEndYear(seasonValue);
-    const adjusted = url.searchParams.get('rating') === 'adjusted';
     let request;
     if (season !== null) {
-        if (season < 1947 || season > new Date().getUTCFullYear() + 1) return;
-        request = adjusted && season >= ADJUSTED_SEASON_FLOOR
-            ? getWowyAdjustedSeasonPlayers(season)
-            : getWowySeasonPlayers(season);
+        if (season < ADJUSTED_SEASON_FLOOR || season > new Date().getUTCFullYear() + 1) return;
+        request = getWowyAdjustedSeasonPlayers(season);
     } else if (url.searchParams.get('view') === 'current' || seasonValue?.trim() === 'current') {
         request = getActiveWowyPlayers();
     } else {
-        request = adjusted ? getWowyAdjustedAllTimePage() : getWowyAllTimePage();
+        request = getWowyAdjustedAllTimePage();
     }
     request.catch(() => {});
 }
@@ -134,4 +99,9 @@ function parseSeasonEndYear(value) {
 
     const season = Number.parseInt(normalized, 10);
     return Number.isInteger(season) ? season : null;
+}
+
+function parseTeamParam(value) {
+    const normalized = typeof value === 'string' ? value.trim() : '';
+    return normalized && normalized.length <= 60 ? normalized : null;
 }

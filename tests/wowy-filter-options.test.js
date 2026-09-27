@@ -25,8 +25,9 @@ test('all-time WOWY height choices are whole inches in the filterable range', ()
 test('the all-time WOWY page takes its filter choices from the whole publication', () => {
     const page = readFileSync('src/routes/wowy/+page.svelte', 'utf8');
     const api = readFileSync('src/routes/api/wowy/filter-options/+server.js', 'utf8');
-    assert.match(page, /fetch\(`\/api\/wowy\/filter-options\?rating=\$\{key\}`\)/);
-    assert.match(page, /allTimeFilterOptions\[allTimeRatingKey\]\?\.teams/);
-    assert.match(page, /allTimeFilterOptions\[allTimeRatingKey\]\?\.heights/);
+    // The leaderboard is Season-Adjusted only, so it fetches one set of choices.
+    assert.match(page, /fetch\('\/api\/wowy\/filter-options\?rating=adjusted'\)/);
+    assert.match(page, /allTimeFilterOptions\?\.teams/);
+    assert.match(page, /allTimeFilterOptions\?\.heights/);
     assert.match(api, /getWowyAllTimeFilterOptions\(ratingMode\)/);
 });

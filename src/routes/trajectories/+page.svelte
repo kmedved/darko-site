@@ -652,8 +652,15 @@
 								<option value={tt.key}>{tt.label}</option>
 							{/each}
 						</select>
-						{#if isWowyMetric && wowyPublicationLabel}
-							<div class="metric-freshness">{wowyPublicationLabel}</div>
+						{#if isWowyMetric}
+							{#if wowyPublicationLabel}
+								<div class="metric-freshness">{wowyPublicationLabel}</div>
+							{/if}
+							<!-- Daily WOWY reaches back into the ABA, so its linkage is disclosed where it is charted. -->
+							<p class="metric-note">
+								Includes ABA seasons. The ABA-to-NBA level is explicitly unidentified from 1967-68 through
+								1970-71 and identified from 1971-72 through 1975-76.
+							</p>
 						{/if}
 					</div>
 
@@ -913,6 +920,13 @@
 		font-size: 12px;
 		font-weight: 650;
 		color: var(--text-muted);
+	}
+
+	.metric-note {
+		margin-top: 6px;
+		color: var(--text-muted);
+		font-size: 12px;
+		line-height: 1.4;
 	}
 
 	.radio-stack {

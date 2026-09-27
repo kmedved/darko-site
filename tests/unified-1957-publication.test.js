@@ -95,16 +95,18 @@ test('site keeps synthetic IDs inside WOWY-only paths', async () => {
     assert.match(trajectories, /Number\.isInteger\(nbaId\) && nbaId > 0/);
 });
 
-test('site disables unavailable early Season-Adjusted views and publishes the linkage disclosure', async () => {
-    const [loader, leaderboard] = await Promise.all([
+test('the leaderboard offers only Season-Adjusted seasons; trajectories disclose the ABA linkage', async () => {
+    const [loader, leaderboard, trajectories] = await Promise.all([
         readFile(LOADER, 'utf8'),
-        readFile(LEADERBOARD, 'utf8')
+        readFile(LEADERBOARD, 'utf8'),
+        readFile(TRAJECTORIES, 'utf8')
     ]);
 
     assert.match(loader, /publication\?\.season_adjusted_from/);
-    assert.match(loader, /selectedSeason >= seasonAdjustedFrom/);
-    assert.match(leaderboard, /disabled=\{!adjustedAvailable\}/);
-    assert.match(leaderboard, /Daily and season-average WOWY begin in 1956-57/);
-    assert.match(leaderboard, /ABA-to-NBA level is explicitly unidentified from 1967-68 through 1970-71/);
-    assert.match(leaderboard, /identified from 1971-72 through 1975-76/);
+    assert.match(loader, /publishedSeasons\.filter\(\(season\) => season >= seasonAdjustedFrom\)/);
+    assert.match(leaderboard, /Season-Adjusted WOWY begins in 1977-78/);
+    // Adjusted ratings start after the merger, so ABA seasons appear only in daily WOWY charts.
+    assert.doesNotMatch(leaderboard, /ABA seasons are included/);
+    assert.match(trajectories, /ABA-to-NBA level is explicitly unidentified from 1967-68 through\s+1970-71/);
+    assert.match(trajectories, /identified from 1971-72 through 1975-76/);
 });

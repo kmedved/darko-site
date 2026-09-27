@@ -42,12 +42,6 @@ function formatSeasonEndYearOrDash(value) {
     return formatSeasonEndYearLabel(value) || DASH;
 }
 
-function formatCrossLeagueLevel(value) {
-    if (value === true) return 'Identified';
-    if (value === false) return 'Unidentified';
-    return DASH;
-}
-
 export function formatNullable(value, fallback = DASH) {
     return value ?? fallback;
 }
@@ -187,42 +181,6 @@ export const wowyLeaderboardCsvColumns = [
     { header: 'As of', accessor: 'date', format: formatOrDash }
 ];
 
-export const wowyOpeningGameLeaderboardCsvColumns = [
-    { header: '#', accessor: 'rank' },
-    { header: 'Player', accessor: 'player_name' },
-    { header: 'League', accessor: 'league', format: formatOrDash },
-    { header: 'Cross-League Level', accessor: 'cross_league_level_identified', format: formatCrossLeagueLevel },
-    { header: 'Team Code', accessor: 'team_code', format: formatOrDash },
-    { header: 'Team', accessor: 'team_name', format: formatOrDash },
-    { header: 'Filter Position', accessor: 'filter_position', format: formatOrDash },
-    { header: 'Height (in)', accessor: 'height_inches', format: (value) => formatFixed(value, 0) },
-    { header: 'WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
-    { header: 'WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
-    { header: 'WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
-    { header: 'Exposure', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
-    { header: 'Sample Games', accessor: 'career_game_num', format: (value) => formatFixed(value, 0) },
-    { header: 'Opening Game', accessor: 'date', format: formatOrDash }
-];
-
-export const wowyHistoricalLeaderboardCsvColumns = [
-    { header: '#', accessor: 'rank' },
-    { header: 'Player', accessor: 'player_name' },
-    { header: 'League', accessor: 'league', format: formatOrDash },
-    { header: 'Cross-League Level', accessor: 'cross_league_level_identified', format: formatCrossLeagueLevel },
-    { header: 'Team Codes', accessor: 'team_codes', format: formatListOrDash },
-    { header: 'Teams', accessor: 'team_names', format: formatListOrDash },
-    { header: 'Filter Position', accessor: 'filter_position', format: formatOrDash },
-    { header: 'Height (in)', accessor: 'height_inches', format: (value) => formatFixed(value, 0) },
-    { header: 'Avg WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
-    { header: 'Avg WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
-    { header: 'Avg WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
-    { header: 'Possessions', accessor: 'season_possessions', format: (value) => formatFixed(value, 1) },
-    { header: 'Avg Exposure', accessor: 'exposure', format: (value) => formatFixed(value, 1) },
-    { header: 'Games', accessor: 'season_games', format: (value) => formatFixed(value, 0) },
-    { header: 'First Game', accessor: 'first_date', format: formatOrDash },
-    { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
-];
-
 export const wowyAdjustedHistoricalLeaderboardCsvColumns = [
     { header: '#', accessor: 'rank' },
     { header: 'Player', accessor: 'player_name' },
@@ -238,23 +196,6 @@ export const wowyAdjustedHistoricalLeaderboardCsvColumns = [
     { header: 'Playoff Games', accessor: 'playoff_games', format: (value) => formatFixed(value, 0) },
     { header: 'First Game', accessor: 'first_date', format: formatOrDash },
     { header: 'Last Game', accessor: 'last_date', format: formatOrDash }
-];
-
-export const wowyAllTimeLeaderboardCsvColumns = [
-    { header: '#', accessor: 'rank' },
-    { header: 'Player', accessor: 'player_name' },
-    { header: 'Season', accessor: 'season', format: formatSeasonEndYearOrDash },
-    { header: 'League', accessor: 'league', format: formatOrDash },
-    { header: 'Cross-League Level', accessor: 'cross_league_level_identified', format: formatCrossLeagueLevel },
-    { header: 'Team Codes', accessor: 'team_codes', format: formatListOrDash },
-    { header: 'Teams', accessor: 'team_names', format: formatListOrDash },
-    { header: 'Filter Position', accessor: 'filter_position', format: formatOrDash },
-    { header: 'Height (in)', accessor: 'height_inches', format: (value) => formatFixed(value, 0) },
-    { header: 'Avg WOWY RAPM', accessor: 'wowy_rapm', format: formatSignedMetric },
-    { header: 'Avg WOWY O-RAPM', accessor: 'wowy_orapm', format: formatSignedMetric },
-    { header: 'Avg WOWY D-RAPM', accessor: 'wowy_drapm', format: formatSignedMetric },
-    { header: 'Minutes', accessor: 'minutes', format: (value) => formatFixed(value, 0) },
-    { header: 'BPM', accessor: 'bpm', format: formatSignedMetric }
 ];
 
 export const wowyAdjustedAllTimeLeaderboardCsvColumns = [
