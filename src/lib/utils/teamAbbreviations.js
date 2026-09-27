@@ -77,6 +77,21 @@ export function teamAbbr(teamName) {
 	return TEAM_ABBR[teamName] ?? teamName;
 }
 
+const TEAM_ABBR_BY_ID = new Map(
+	Object.entries(TEAM_ID).map(([teamName, id]) => [id, TEAM_ABBR[teamName]])
+);
+
+/**
+ * Return the 3-letter abbreviation for an NBA team id. Ids stay with the franchise, so a
+ * 2005 Seattle game reads OKC, as team names do in DARKO's data. Unknown ids (such as the
+ * offseason -999) return ''.
+ * @param {number | string | null | undefined} id
+ * @returns {string}
+ */
+export function teamAbbrFromId(id) {
+	return TEAM_ABBR_BY_ID.get(Number.parseInt(id, 10)) ?? '';
+}
+
 /**
  * Return the NBA team id for a full NBA team name.
  * @param {string | null | undefined} teamName

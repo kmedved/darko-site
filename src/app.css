@@ -15,6 +15,8 @@
     --positive-bg: rgba(52, 211, 153, 0.08);
     --negative: #f87171;
     --negative-bg: rgba(248, 113, 113, 0.08);
+    --offense: #d95926;
+    --defense: #3987e5;
     --logo-image: url('/logo-white-nav.png');
     --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-mono: 'DM Mono', 'SF Mono', 'Consolas', monospace;
@@ -40,6 +42,8 @@
     --positive-bg: rgba(52, 211, 153, 0.08);
     --negative: #f87171;
     --negative-bg: rgba(248, 113, 113, 0.08);
+    --offense: #d95926;
+    --defense: #3987e5;
     --logo-image: url('/logo-black-nav.png');
 }
 
@@ -60,6 +64,8 @@
     --positive-bg: rgba(22, 163, 74, 0.08);
     --negative: #dc2626;
     --negative-bg: rgba(220, 38, 38, 0.08);
+    --offense: #eb6834;
+    --defense: #2a78d6;
     --logo-image: url('/logo-light-nav.png');
 }
 
@@ -80,6 +86,8 @@
     --positive-bg: rgba(22, 163, 74, 0.08);
     --negative: #dc2626;
     --negative-bg: rgba(220, 38, 38, 0.08);
+    --offense: #eb6834;
+    --defense: #2a78d6;
     --logo-image: url('/logo-white-nav.png');
 }
 

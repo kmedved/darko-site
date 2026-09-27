@@ -89,6 +89,14 @@ export const SHINY_CHART_PRESETS = Object.freeze({
         lineWidth: 3.5,
         pointRadius: 4.2,
         keepMajorGrid: true
+    }),
+    // Rating lines above per-game update bars split into offense and defense.
+    seismograph: Object.freeze({
+        lineWidth: 2,
+        splitLineWidth: 1.25,
+        zeroWidth: 1,
+        gridOpacity: 0,
+        plotBorder: true
     })
 });
 

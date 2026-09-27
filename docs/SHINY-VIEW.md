@@ -92,6 +92,8 @@ source-derived preset for specialized charts:
 - `singlePlayer`: NBA-blue points, red confidence ribbon, no smoother line;
 - `scatter`: source point geometry and grid/border treatment;
 - `probability`: black curve/points over roster-probability zones.
+- `seismograph`: black rating line with offense/defense lines above
+  stacked per-game update bars, each panel bordered.
 
 Add a named preset to `shinyDesign.js` when a new chart belongs to a new
 recurring family. Keep D3 color values in the shared preset or CSS variables,

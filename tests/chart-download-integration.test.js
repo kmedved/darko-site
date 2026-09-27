@@ -12,7 +12,8 @@ const CHART_COMPONENTS = [
     'src/lib/components/WinDistChart.svelte',
     'src/lib/components/SeedChart.svelte',
     'src/lib/components/LongevityRosterChart.svelte',
-    'src/lib/components/LongevityCareerLengthChart.svelte'
+    'src/lib/components/LongevityCareerLengthChart.svelte',
+    'src/lib/components/SeismographChart.svelte'
 ];
 
 test('all chart components include ChartDownloadMenu integration', async () => {

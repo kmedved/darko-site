@@ -12,7 +12,8 @@ const CHART_HOSTS = [
     { file: 'src/lib/components/WinDistChart.svelte', host: 'chartRootEl' },
     { file: 'src/lib/components/SeedChart.svelte', host: 'chartRootEl' },
     { file: 'src/lib/components/LongevityRosterChart.svelte', host: 'chartRootEl' },
-    { file: 'src/lib/components/LongevityCareerLengthChart.svelte', host: 'chartRootEl' }
+    { file: 'src/lib/components/LongevityCareerLengthChart.svelte', host: 'chartRootEl' },
+    { file: 'src/lib/components/SeismographChart.svelte', host: 'containerEl' }
 ];
 
 function escapeRegex(value) {

@@ -45,6 +45,9 @@
     --shiny-single-player-band: rgba(237, 23, 76, 0.34);
     --shiny-single-player-points: #006bb6;
     --shiny-season-rule: #636166;
+    /* Offense and defense reuse the DARKO series orange and blue. */
+    --offense: #ed7d3a;
+    --defense: #385bbb;
     --shiny-panel-bg: #ffffff;
     --shiny-panel-border: #dddddd;
     --shiny-control-bg: #ffffff;

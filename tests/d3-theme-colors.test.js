@@ -8,7 +8,8 @@ const TARGET_FILES = [
     'src/lib/components/SeedChart.svelte',
     'src/lib/components/ConferenceChart.svelte',
     'src/lib/components/LongevityRosterChart.svelte',
-    'src/lib/components/LongevityCareerLengthChart.svelte'
+    'src/lib/components/LongevityCareerLengthChart.svelte',
+    'src/lib/components/SeismographChart.svelte'
 ];
 
 const HEX_COLOR = /#(?:[0-9a-fA-F]{3}){1,2}\b/g;

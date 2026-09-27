@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 const TARGET_FILES = [
     'src/lib/components/TalentPercentilesChart.svelte',
     'src/lib/components/TalentTrendChart.svelte',
+    'src/lib/components/SeismographChart.svelte',
     'src/routes/trajectories/+page.svelte'
 ];
 const METRIC_TOOLTIP_FILE = 'src/lib/components/MetricTooltip.svelte';

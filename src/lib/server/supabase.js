@@ -226,10 +226,16 @@ const TRAJECTORY_RATING_COLUMNS = [
 
 // Player profiles chart complete careers, but snapshot-only metadata and
 // longevity projections are loaded once rather than repeated for every game.
+// season, seconds_played and future_game let the Seismograph tell games from rest days;
+// opp_id names each game's opponent.
 const PLAYER_PROFILE_RATING_COLUMNS = [
     'nba_id',
     'date',
+    'season',
+    'seconds_played',
+    'future_game',
     'team_name',
+    'opp_id',
     'tm_id',
     'dpm',
     'o_dpm',
@@ -1181,19 +1187,33 @@ export function getFullPlayerTrajectoryHistory(nbaId, options = {}) {
     });
 }
 
+const UNDEFINED_COLUMN = '42703';
+const PLAYER_PROFILE_COLUMNS_WITHOUT_OPPONENT = PLAYER_PROFILE_RATING_COLUMNS
+    .split(', ')
+    .filter((column) => column !== 'opp_id')
+    .join(', ');
+
 /** Get the complete career projection used by the player profile charts. */
 export async function getFullPlayerProfileHistory(nbaId, options = {}) {
-    const [history, latestRows] = await Promise.all([
-        getFullPlayerHistory(nbaId, {
+    // opp_id is new in the nightly publish. Until the live table carries it,
+    // profiles load without opponents instead of failing.
+    const history = getFullPlayerHistory(nbaId, {
+        ...options,
+        columns: PLAYER_PROFILE_RATING_COLUMNS,
+        cachePrefix: 'fullPlayerProfileHistory',
+        mergePlayerDim: false
+    }).catch((error) => {
+        if (error?.code !== UNDEFINED_COLUMN) throw error;
+        return getFullPlayerHistory(nbaId, {
             ...options,
-            columns: PLAYER_PROFILE_RATING_COLUMNS,
-            cachePrefix: 'fullPlayerProfileHistory',
+            columns: PLAYER_PROFILE_COLUMNS_WITHOUT_OPPONENT,
+            cachePrefix: 'fullPlayerProfileHistoryWithoutOpponent',
             mergePlayerDim: false
-        }),
-        getPlayerHistory(nbaId, 1)
-    ]);
+        });
+    });
+    const [profileHistory, latestRows] = await Promise.all([history, getPlayerHistory(nbaId, 1)]);
     return {
-        ...history,
+        ...profileHistory,
         playerInfo: latestRows.at(-1) ?? null
     };
 }

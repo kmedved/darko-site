@@ -2,10 +2,22 @@
 	import { goto } from '$app/navigation';
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import LongevityCareerLengthChart from '$lib/components/LongevityCareerLengthChart.svelte';
+	import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
+	import OffenseDefenseGlyph from '$lib/components/OffenseDefenseGlyph.svelte';
+	import OffenseDefenseSplit from '$lib/components/OffenseDefenseSplit.svelte';
+	import SeismographChart from '$lib/components/SeismographChart.svelte';
 	import TalentPercentilesChart from '$lib/components/TalentPercentilesChart.svelte';
 	import TalentTrendChart from '$lib/components/TalentTrendChart.svelte';
 	import { apiActivePlayers } from '$lib/api.js';
 	import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
+	import {
+		buildSeismograph,
+		formatGameDate,
+		formatSigned,
+		getSeismographSeasons,
+		seasonLabel
+	} from '$lib/utils/seismograph.js';
+	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
 
 	let { data } = $props();
 
@@ -49,12 +61,46 @@
 	let talentType = $state('dpm');
 	let selectedPercentileMetrics = $state(['dpm', 'o_dpm', 'd_dpm', 'x_pts_100', 'x_fg3_pct']);
 	let imgFailed = $state(false);
+	let pickedSeason = $state(null);
+	let showGameLog = $state(false);
 	const loadSeq = createRequestSequencer();
 
 	const nbaId = $derived(data.nbaId ?? data.playerInfo?.nba_id ?? null);
 	const playerInfo = $derived(data.playerInfo ?? null);
 	const historyRows = $derived(data.historyRows ?? []);
 	const historyMeta = $derived(data.historyMeta ?? { truncated: false, maxRows: null });
+
+	const playerRating = $derived.by(() => {
+		const dpm = Number.parseFloat(playerInfo?.dpm);
+		const offense = Number.parseFloat(playerInfo?.o_dpm);
+		let defense = Number.parseFloat(playerInfo?.d_dpm);
+		if (!Number.isFinite(defense)) defense = dpm - offense;
+		return [dpm, offense, defense].every(Number.isFinite) ? { dpm, offense, defense } : null;
+	});
+
+	// A picked season sticks only for the player it was picked on.
+	const seismographSeasons = $derived(getSeismographSeasons(historyRows));
+	const seismographSeason = $derived(
+		pickedSeason?.nbaId === nbaId && seismographSeasons.includes(pickedSeason.season)
+			? pickedSeason.season
+			: (seismographSeasons[0] ?? null)
+	);
+	const seismograph = $derived(
+		seismographSeason === null ? null : buildSeismograph(historyRows, seismographSeason)
+	);
+	const seismographSummary = $derived(seismograph?.summary ?? null);
+	const gameLog = $derived((seismograph?.points ?? []).filter((point) => point.played).reverse());
+	const SEASON_END_LABELS = { upcoming: 'now', final: 'before the last game', dnp: 'at the end' };
+
+	function pickSeismographSeason(value) {
+		const season = Number.parseInt(value, 10);
+		if (Number.isInteger(season)) pickedSeason = { nbaId, season };
+	}
+
+	function gameLabel(point) {
+		const opponent = point.opponent ? ` vs ${point.opponent}` : '';
+		return `${formatGameDate(point.date)}${opponent} · ${Math.round(point.minutes)} min`;
+	}
 
 	function getInitials(name) {
 		if (!name) return '?';
@@ -247,8 +293,24 @@
 						{/if}
 					</div>
 					<h1>{playerInfo.player_name}</h1>
-					<p class="player-meta">{playerInfo.team_name} · {playerInfo.position || '?'}</p>
+					<p class="player-meta">
+						{[playerInfo.team_name, playerInfo.position || '?'].filter(Boolean).join(' · ')}
+					</p>
 					<p class="player-detail">{playerDetailText}</p>
+					{#if playerRating}
+						<div class="sidebar-rating">
+							<p class="sidebar-rating-head">
+								<span class="sidebar-label">DPM</span>
+								<span class="sidebar-rating-value">{formatSigned(playerRating.dpm, 1)}</span>
+							</p>
+							<OffenseDefenseBar offense={playerRating.offense} defense={playerRating.defense} />
+							<OffenseDefenseSplit
+								offense={playerRating.offense}
+								defense={playerRating.defense}
+								labels
+							/>
+						</div>
+					{/if}
 				</div>
 				<a href="/compare?ids={nbaId}" class="compare-link">Compare this player</a>
 			{/if}
@@ -281,6 +343,140 @@
 
 		<div class="profile-content">
 			{#if playerInfo}
+				{#if seismograph}
+					<section
+						class="chart-panel seismograph-panel"
+						data-shiny-surface="plot"
+						aria-labelledby="seismograph-title"
+					>
+						<header class="seismograph-header">
+							<div>
+								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Game by game</p>
+								<h2 id="seismograph-title">Seismograph</h2>
+								<p class="seismograph-lede">
+									DARKO updates every rating after every game. The lines show the rating going
+									into each game; the bars show how much each game moved it, split into offense
+									and defense.
+								</p>
+							</div>
+							<label class="seismograph-season">
+								<span class="sidebar-label">Season</span>
+								<select
+									class="sidebar-select"
+									value={seismographSeason}
+									onchange={(event) => pickSeismographSeason(event.currentTarget.value)}
+								>
+									{#each seismographSeasons as season (season)}
+										<option value={season}>{seasonLabel(season)}</option>
+									{/each}
+								</select>
+							</label>
+						</header>
+
+						<div class="seismograph-body">
+							<div class="seismograph-chart">
+								<SeismographChart {seismograph} playerName={playerInfo.player_name} />
+							</div>
+							{#if seismographSummary}
+								<dl class="seismograph-callouts">
+									<div class="seismograph-callout">
+										<dt>Season change</dt>
+										<dd class="seismograph-callout-value">
+											{formatSigned(seismographSummary.change)}
+										</dd>
+										<dd class="seismograph-callout-note">
+											{formatSigned(seismographSummary.start)} before the first game,
+											{formatSigned(seismographSummary.end)}
+											{SEASON_END_LABELS[seismographSummary.endStatus] ?? 'at the end'}
+										</dd>
+									</div>
+									{#if seismographSummary.best?.update.dpm > 0}
+										<div class="seismograph-callout">
+											<dt>Biggest boost</dt>
+											<dd class="seismograph-callout-value">
+												{formatSigned(seismographSummary.best.update.dpm)}
+											</dd>
+											<dd class="seismograph-callout-note">{gameLabel(seismographSummary.best)}</dd>
+										</div>
+									{/if}
+									{#if seismographSummary.worst?.update.dpm < 0}
+										<div class="seismograph-callout">
+											<dt>Biggest drop</dt>
+											<dd class="seismograph-callout-value">
+												{formatSigned(seismographSummary.worst.update.dpm)}
+											</dd>
+											<dd class="seismograph-callout-note">{gameLabel(seismographSummary.worst)}</dd>
+										</div>
+									{/if}
+									{#if seismographSummary.typicalUpdate !== null}
+										<div class="seismograph-callout">
+											<dt>Typical change per game</dt>
+											<dd class="seismograph-callout-value">
+												{(seismographSummary.recentUpdate ?? seismographSummary.typicalUpdate).toFixed(2)}
+											</dd>
+											<dd class="seismograph-callout-note">
+												{#if seismographSummary.window}
+													Last {seismographSummary.window} games, vs
+													{seismographSummary.earlyUpdate.toFixed(2)} in the first
+													{seismographSummary.window}.
+												{:else}
+													Average size of a game's change this season.
+												{/if}
+												Smaller changes mean each game moves DARKO's view less.
+											</dd>
+										</div>
+									{/if}
+								</dl>
+							{/if}
+						</div>
+
+						<button
+							type="button"
+							class="seismograph-log-toggle"
+							aria-expanded={showGameLog}
+							aria-controls="seismograph-game-log"
+							onclick={() => (showGameLog = !showGameLog)}
+						>
+							{showGameLog ? 'Hide game log' : 'Show game log'}
+						</button>
+						<div id="seismograph-game-log" class="seismograph-log" hidden={!showGameLog}>
+							{#if showGameLog}
+								<table class="seismograph-log-table">
+									<caption class="sr-only">
+										{playerInfo.player_name}, {seismograph.label}, game by game
+									</caption>
+									<thead>
+										<tr>
+											<th scope="col">Date</th>
+											<th scope="col" class="log-team">Team</th>
+											<th scope="col">Opp</th>
+											<th scope="col">Min</th>
+											<th scope="col">DPM going in</th>
+											<th scope="col">Change</th>
+											<th scope="col"><OffenseDefenseGlyph side="offense" /> Offense</th>
+											<th scope="col"><OffenseDefenseGlyph side="defense" /> Defense</th>
+										</tr>
+									</thead>
+									<tbody>
+										{#each gameLog as game (game.date)}
+											<tr>
+												<td>{formatGameDate(game.date)}</td>
+												<td class="log-team">{teamAbbr(game.team)}</td>
+												<td>{game.opponent ?? '—'}</td>
+												<td>{Math.round(game.minutes)}</td>
+												<td>{formatSigned(game.dpm)}</td>
+												<td>{game.update ? formatSigned(game.update.dpm) : '—'}</td>
+												<td>{game.update ? formatSigned(game.update.o) : '—'}</td>
+												<td>{game.update ? formatSigned(game.update.d) : '—'}</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							{/if}
+						</div>
+					</section>
+				{/if}
+
 				<div class="charts-row" data-shiny-layout="split">
 					<div class="chart-panel chart-half" data-shiny-surface="plot">
 						<TalentTrendChart
@@ -513,6 +709,206 @@
 		font-size: 12px;
 	}
 
+	.sidebar-rating {
+		display: grid;
+		gap: 8px;
+		margin-top: 14px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-subtle);
+		font-size: 12px;
+	}
+
+	.sidebar-rating-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+	}
+
+	.sidebar-rating-value {
+		font-family: var(--font-mono);
+		font-size: 24px;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		line-height: 1;
+		color: var(--text);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.seismograph-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		min-width: 0;
+	}
+
+	.seismograph-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+	}
+
+	.seismograph-kicker {
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.seismograph-header h2 {
+		font-size: 18px;
+		font-weight: 700;
+		letter-spacing: -0.01em;
+		color: var(--text);
+	}
+
+	.seismograph-lede {
+		max-width: 76ch;
+		margin-top: 4px;
+		font-size: 13px;
+		color: var(--text-secondary);
+	}
+
+	.seismograph-season {
+		display: flex;
+		flex: none;
+		flex-direction: column;
+		gap: 6px;
+		min-width: 120px;
+	}
+
+	.seismograph-body {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 220px;
+		gap: 24px;
+		align-items: start;
+	}
+
+	.seismograph-chart {
+		min-width: 0;
+	}
+
+	.seismograph-callouts {
+		display: grid;
+		gap: 14px;
+		padding-top: 40px;
+	}
+
+	.seismograph-callout {
+		display: grid;
+		gap: 2px;
+		padding-bottom: 14px;
+		border-bottom: 1px solid var(--border-subtle);
+	}
+
+	.seismograph-callout:last-child {
+		padding-bottom: 0;
+		border-bottom: 0;
+	}
+
+	.seismograph-callout dt {
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.seismograph-callout-value {
+		font-family: var(--font-mono);
+		font-size: 22px;
+		font-weight: 600;
+		line-height: 1.2;
+		color: var(--text);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.seismograph-callout-note {
+		font-size: 12px;
+		color: var(--text-secondary);
+	}
+
+	.seismograph-log-toggle {
+		align-self: flex-start;
+		padding: 6px 12px;
+		font-family: var(--font-sans);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--accent);
+		background: transparent;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+	}
+
+	.seismograph-log-toggle:hover {
+		border-color: var(--accent);
+	}
+
+	.seismograph-log-toggle:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.seismograph-log {
+		max-height: 420px;
+		overflow: auto;
+		border: 1px solid var(--border-subtle);
+		border-radius: var(--radius-sm);
+	}
+
+	.seismograph-log-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 12px;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.seismograph-log-table th,
+	.seismograph-log-table td {
+		padding: 6px 10px;
+		text-align: right;
+		white-space: nowrap;
+	}
+
+	.seismograph-log-table th:first-child,
+	.seismograph-log-table td:first-child,
+	.seismograph-log-table .log-team {
+		text-align: left;
+	}
+
+	.seismograph-log-table thead th {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		font-weight: 600;
+		color: var(--text-secondary);
+		background: var(--bg-elevated);
+	}
+
+	.seismograph-log-table td {
+		font-family: var(--font-mono);
+		color: var(--text);
+		border-top: 1px solid var(--border-subtle);
+	}
+
+	@media (max-width: 1180px) {
+		.seismograph-body {
+			grid-template-columns: 1fr;
+		}
+
+		.seismograph-callouts {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			padding-top: 0;
+		}
+
+		.seismograph-callout {
+			padding-bottom: 0;
+			border-bottom: 0;
+		}
+	}
+
 	@media (max-width: 768px) {
 		.profile-layout {
 			grid-template-columns: 1fr;
@@ -525,6 +921,20 @@
 
 		.charts-row {
 			grid-template-columns: 1fr;
+		}
+
+		.seismograph-header {
+			flex-direction: column;
+		}
+	}
+
+	@media (max-width: 560px) {
+		.seismograph-callouts {
+			grid-template-columns: 1fr;
+		}
+
+		.seismograph-log-table .log-team {
+			display: none;
 		}
 	}
 </style>

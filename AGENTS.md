@@ -38,6 +38,9 @@
 - Client-side API helpers: `src/lib/api.js`
 - Metric tooltip definitions: `src/lib/utils/metricDefinitions.js`
 - Fantasy Lab (`/projections`) scoring and per-game conversion: `src/lib/utils/fantasyScoring.js`
+- Player-page Seismograph: `src/lib/utils/seismograph.js`. Each `player_ratings` row is the forecast going
+  into that day's game, so a game's update is the next row minus that row; offseason rows (`tm_id` -999) end a season.
+  Opponents come from `opp_id`, published nightly by nba_darko's `push_website.py`.
 - Supabase schema, column mappings, API data layer, pipeline scripts, and freshness: `SUPABASE_SCHEMA.md`
 
 ## Workflow Notes

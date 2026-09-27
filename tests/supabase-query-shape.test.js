@@ -53,7 +53,7 @@ test('player profile history projects chart fields instead of full production ro
     const end = contents.indexOf("].join(', ');", start);
     const block = contents.slice(start, end);
 
-    for (const required of ['dpm', 'box_odpm', 'tr_fg3_pct', 'sal_market_fixed']) {
+    for (const required of ['dpm', 'box_odpm', 'tr_fg3_pct', 'sal_market_fixed', 'season', 'seconds_played', 'future_game', 'opp_id']) {
         assert.match(block, new RegExp(`'${required}'`));
     }
     for (const unused of ['poss', 'rapm_exposure', 'projected_years_remaining', 'actual_salary', 's12']) {
@@ -63,6 +63,10 @@ test('player profile history projects chart fields instead of full production ro
     assert.match(contents, /cachePrefix: 'fullPlayerProfileHistory'/);
     assert.match(contents, /mergePlayerDim: false/);
     assert.match(contents, /getPlayerHistory\(nbaId, 1\)/);
+    // Until the nightly publish adds opp_id, profiles retry without it instead of failing.
+    assert.match(contents, /const UNDEFINED_COLUMN = '42703';/);
+    assert.match(contents, /if \(error\?\.code !== UNDEFINED_COLUMN\) throw error;/);
+    assert.match(contents, /columns: PLAYER_PROFILE_COLUMNS_WITHOUT_OPPONENT/);
 });
 
 test('player name search decorates only matched IDs', async () => {
