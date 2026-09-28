@@ -12,6 +12,7 @@ import {
 import { createActivePlayersAccessor } from './activePlayersCache.js';
 import { asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
 import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilterOptions.js';
+import { leagueTeamRatings } from '$lib/utils/teamDna.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -1790,8 +1791,10 @@ export async function getTeamPageData(teamName) {
         };
     }
 
-    const [players, sim, winDist, lineups] = await Promise.all([
+    // Every team's rating, from the same cached active players, ranks this one (Team DNA).
+    const [players, allPlayers, sim, winDist, lineups] = await Promise.all([
         getActivePlayers({ teamName: normalizedTeam }),
+        getActivePlayers(),
         getTeamSimulation(normalizedTeam),
         getTeamWinDistribution(normalizedTeam),
         getTeamLineups(normalizedTeam)
@@ -1799,6 +1802,7 @@ export async function getTeamPageData(teamName) {
 
     return {
         players: players || [],
+        league: leagueTeamRatings(allPlayers || []),
         sim: sim || null,
         winDist: winDist || [],
         lineups: lineups || { top: [], worst: [] }

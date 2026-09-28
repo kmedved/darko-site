@@ -1,5 +1,30 @@
 const PLAYER_VIEW_FIELDS = Object.freeze({
     search: ['nba_id', 'player_name', 'team_name', 'position', 'dpm'],
+    // Ask DARKO's command bar: names, teams and what its leaderboard questions rank by.
+    ask: [
+        'nba_id',
+        'player_name',
+        'team_name',
+        'position',
+        'age',
+        'season',
+        'rookie_season',
+        'dpm',
+        'o_dpm',
+        'd_dpm',
+        'x_minutes',
+        'x_pts_100',
+        'x_ast_100',
+        'x_orb_100',
+        'x_drb_100',
+        'x_stl_100',
+        'x_blk_100',
+        'x_fga_100',
+        'x_fg3a_100',
+        'x_fta_100',
+        'x_fg3_pct',
+        'surplus_value'
+    ],
     random: ['nba_id', 'player_name', 'team_name', 'position', 'dpm'],
     percentiles: [
         'nba_id',

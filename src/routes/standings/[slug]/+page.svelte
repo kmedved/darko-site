@@ -11,6 +11,7 @@
 <TeamDetailView
     teamName={data.teamName}
     players={data.players}
+    league={data.league}
     sim={data.sim}
     winDist={data.winDist}
     backHref="/standings"

@@ -6,6 +6,7 @@
 	import { navigating, page } from '$app/stores';
 	import { setContext } from 'svelte';
 	import TimeMachine from '$lib/components/TimeMachine.svelte';
+	import AskDarko from '$lib/components/AskDarko.svelte';
 	import { loadOptionalFont } from '$lib/fonts.js';
 	import { setTimeMachineCollapsed, syncTimeMachineFold, timeMachine } from '$lib/timeMachineState.svelte.js';
 	import {
@@ -57,6 +58,14 @@
 
 	let theme = $state('white');
 	let mobileMenuOpen = $state(false);
+	let askOpen = $state(false);
+	// The shortcut hint appears once the platform is known, so server and browser agree.
+	let askShortcut = $state('');
+	$effect(() => {
+		if (!browser) return;
+		const platform = navigator.userAgentData?.platform ?? navigator.platform ?? '';
+		askShortcut = /mac|iphone|ipad/i.test(platform) ? '⌘K' : 'Ctrl K';
+	});
 	const isShinyView = $derived(displayMode.view === 'shiny');
 
 	function readSavedDisplayView() {
@@ -426,6 +435,20 @@
 		</div>
 		<button
 			type="button"
+			class="ask-nav-toggle"
+			aria-haspopup="dialog"
+			aria-keyshortcuts="Meta+K Control+K /"
+			onclick={() => (askOpen = true)}
+		>
+			<svg viewBox="0 0 20 20" aria-hidden="true">
+				<circle cx="8.5" cy="8.5" r="5.5" />
+				<path d="M12.6 12.6 17 17" />
+			</svg>
+			<span class="ask-nav-label">Ask DARKO</span>
+			{#if askShortcut}<kbd class="ask-nav-kbd" aria-hidden="true">{askShortcut}</kbd>{/if}
+		</button>
+		<button
+			type="button"
 			id="tm-nav-toggle"
 			class="tm-nav-toggle"
 			class:rewound={foldedDateLabel}
@@ -444,6 +467,7 @@
 		</button>
     </div>
 	<TimeMachine />
+	<AskDarko bind:open={askOpen} />
 	{#if showProgress}
 		<div class="nav-progress" class:rewound={timeMachine.date} aria-hidden="true"></div>
 	{/if}
@@ -544,6 +568,73 @@
 	.tm-nav-toggle:hover {
 		color: var(--text);
 		border-color: var(--text-muted);
+	}
+
+	.ask-nav-toggle {
+		display: inline-flex;
+		flex: none;
+		align-items: center;
+		gap: 6px;
+		height: 30px;
+		margin-left: 10px;
+		padding: 0 7px 0 9px;
+		font-family: var(--font-sans);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		white-space: nowrap;
+		background: transparent;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		cursor: pointer;
+	}
+
+	.ask-nav-toggle:hover {
+		color: var(--text);
+		border-color: var(--text-muted);
+	}
+
+	.ask-nav-toggle:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.ask-nav-toggle svg {
+		width: 15px;
+		height: 15px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+	}
+
+	.ask-nav-kbd {
+		padding: 1px 5px;
+		font-family: var(--font-mono);
+		font-size: 10.5px;
+		color: var(--text-muted);
+		border: 1px solid var(--border);
+		border-radius: 999px;
+	}
+
+	:global(:root[data-view='shiny']) .ask-nav-toggle {
+		border-radius: 4px;
+		background: #ffffff;
+		border-color: #cccccc;
+		color: #333333;
+		font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	}
+
+	@media (max-width: 720px) {
+		.ask-nav-toggle {
+			margin-left: auto;
+			padding: 0 7px;
+		}
+
+		.ask-nav-label,
+		.ask-nav-kbd {
+			display: none;
+		}
 	}
 
 	.tm-nav-toggle:focus-visible {

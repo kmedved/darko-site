@@ -18,9 +18,9 @@ Reference only. Nothing in this folder is built, tested or deployed by the site.
 | Seismograph: every game's DPM update, split offense/defense | `drawSeismo` in `src/12-player.js` | Live on player pages, with opponents from `player_ratings.opp_id` |
 | Comps & Futures: historical matches and a five-year fan chart | `comps.py`, `drawFan` in `src/12-player.js` | needs a `player_comps` table from the pipeline |
 | Roster Lab: two-team trades, minutes, rating, wins, matchup odds | `src/14-lab.js` | `/lab`, today's rosters or any Time Machine date |
-| Team DNA: rating contributions, lineups, payroll vs value, core outlook | `src/13-teams.js` | existing `TeamDetailView.svelte` |
+| Team DNA: rating contributions, lineups, payroll vs value, core outlook | `src/13-teams.js` | Live in `TeamDetailView.svelte` (`utils/teamDna.js`) |
 | Fantasy Lab: ESPN, Yahoo, DraftKings, 9-cat or custom scoring, draft board | `src/15-fantasy.js` | Live at `/projections`, without the draft board |
-| Ask DARKO: command bar for players, filters, trades and time travel | `src/19-ask.js` | site-wide layout component |
+| Ask DARKO: command bar for players, filters, trades and time travel | `src/19-ask.js` | Live site-wide: `AskDarko.svelte`, `utils/askDarko.js` |
 | DARKOdle: daily mystery player from a career DPM curve | `src/17-darkodle.js` | needs season-end career rows |
 | Card Studio: shareable PNG player cards | `src/18-card.js` | client canvas, plus server-rendered share images |
 
@@ -34,8 +34,8 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
 2. Design foundations (offense/defense tokens for every theme, wide numerals, O/X split,
    sparkline, fingerprint glyph) and the Seismograph on player pages (done: tokens, O/X
    split and split bar; the sparkline and fingerprint wait for the features that use them).
-3. Ask DARKO.
-4. Team DNA additions, then Roster Lab (Roster Lab done ahead of Team DNA).
+3. Ask DARKO (done; without the comps and card answers, which wait for their features).
+4. Team DNA additions, then Roster Lab (both done).
 5. Card Studio and per-player share images.
 6. Pipeline-backed features: Rewind and the site-wide date (done, as the Time Machine),
    then Comps & Futures, The Daily and DARKOdle.
@@ -47,9 +47,10 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
   row, which is one game early; `src/lib/utils/seismograph.js` has the corrected version.
 - Fantasy per-game values use the same conversion as `nba_darko`'s props stage:
   `poss = x_minutes * x_pace / 48`, `stat = x_stat_100 * poss / 100`.
-- The nightly publish (`nba_darko/1_historic_darko/push_website.py`) drops `player_ratings`
-  with CASCADE and recreates only the functions in `restore_player_ratings_rpcs()`. Any new
-  Postgres function built on that table must be added there, or it disappears overnight.
+- Each publish (`nba_darko/1_historic_darko/push_website.py`) drops the old `player_ratings`
+  with CASCADE when it swaps the new one in, and recreates only the functions in
+  `restore_player_ratings_rpcs()`. Any new Postgres function built on that table must be added
+  there, or the next publish removes it.
 - `players.draft_year` and `players.draft_slot` are empty for all 5,358 rows. The prototype
   shows rookie season instead; the live Rate a Player page shows everyone as "Undrafted".
 - The Jul 26 offseason rows in `player_ratings` have no team (`tm_id = -999`), so the Roster

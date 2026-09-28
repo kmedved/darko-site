@@ -3,6 +3,7 @@
 	import { scrollEdges } from '$lib/utils/scrollEdges.js';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { afterNavigate, replaceState } from '$app/navigation';
 	import { exportCsvRows, getFantasyCsvColumns } from '$lib/utils/csvPresets.js';
 	import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
 	import { getPositionCategory } from '$lib/utils/positionCategories.js';
@@ -99,6 +100,19 @@
 			// localStorage can be unavailable in some privacy modes
 		}
 		restored = true;
+	});
+
+	// A link can pick the scoring (Ask DARKO's "fantasy 9-cat" opens ?scoring=categories). It wins
+	// over the saved choice once, then leaves the URL so the reader's next pick sticks.
+	afterNavigate(({ to }) => {
+		const key = to?.url.searchParams.get('scoring');
+		if (!PRESET_KEYS.includes(key)) return;
+		setPreset(key);
+		setTimeout(() => {
+			const url = new URL(window.location.href);
+			url.searchParams.delete('scoring');
+			replaceState(`${url.pathname}${url.search}${url.hash}`, {});
+		}, 0);
 	});
 
 	$effect(() => {

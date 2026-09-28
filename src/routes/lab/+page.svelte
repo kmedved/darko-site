@@ -3,7 +3,7 @@
 	import { browser } from '$app/environment';
 	import { afterNavigate, replaceState } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getContext } from 'svelte';
+	import { getContext, untrack } from 'svelte';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import OffenseDefenseSplit from '$lib/components/OffenseDefenseSplit.svelte';
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
@@ -296,12 +296,38 @@
 		return () => clearTimeout(timer);
 	});
 
+	// Ask DARKO's "trade X to Y" arrives as ?trade=<player id>&to=<team>: the player's team and the
+	// new one, side by side and reset, with the move made. The URL sync below drops both parameters.
+	let appliedTrade = null;
+	$effect(() => {
+		if (!browser || restoredKey !== dataKey) return;
+		const params = $page.url.searchParams;
+		const key = `${params.get('trade')}:${params.get('to')}`;
+		if (!params.has('trade') || key === appliedTrade) return;
+		appliedTrade = key;
+		untrack(() => applyTrade(Number.parseInt(params.get('trade'), 10), params.get('to')?.toUpperCase()));
+	});
+
+	function applyTrade(id, to) {
+		if (!playersById.has(id) || !TEAM_BY_ABBR.has(to)) return;
+		const from = homeOf(id);
+		const other = from && from !== to ? from : sides.b !== to ? sides.b : sides.a !== to ? sides.a : DEFAULT_SIDES.b;
+		sides = { a: to, b: other };
+		let next = resetScenarioTeam(edits, baseRosters, to, { homeOf, auto });
+		next = resetScenarioTeam(next, baseRosters, other, { homeOf, auto });
+		edits = next;
+		addPlayer('a', id);
+	}
+
 	$effect(() => {
 		if (!browser || restoredKey !== dataKey || !routerReady) return;
 		const url = new URL(window.location.href);
-		if (url.searchParams.get('a') !== sides.a || url.searchParams.get('b') !== sides.b) {
+		const tradeLink = url.searchParams.has('trade') || url.searchParams.has('to');
+		if (tradeLink || url.searchParams.get('a') !== sides.a || url.searchParams.get('b') !== sides.b) {
 			url.searchParams.set('a', sides.a);
 			url.searchParams.set('b', sides.b);
+			url.searchParams.delete('trade');
+			url.searchParams.delete('to');
 			replaceState(relativeHref(url), {});
 		}
 	});
