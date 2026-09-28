@@ -2,8 +2,9 @@
 	import { onMount } from 'svelte';
 	import { startWatchlist, toggleWatch, watchlist } from '$lib/utils/watchlist.js';
 
-	// Follow a player in The Daily's watchlist. The list stays in this browser.
-	let { nbaId, name = '' } = $props();
+	// Follow a player: The Daily's watchlist and the leaderboard's Watchlist filter. The list
+	// stays in this browser. `compact` fits a table row.
+	let { nbaId, name = '', compact = false } = $props();
 
 	onMount(startWatchlist);
 	const watched = $derived($watchlist.includes(nbaId));
@@ -13,9 +14,10 @@
 	type="button"
 	class="watch-star"
 	class:watched
+	class:compact
 	aria-pressed={watched}
-	aria-label={watched ? `Stop following ${name}` : `Follow ${name} in The Daily`}
-	title={watched ? 'Following in The Daily' : 'Follow in The Daily'}
+	aria-label={watched ? `Stop following ${name}` : `Follow ${name}`}
+	title={watched ? 'Following: in The Daily and the leaderboard’s Watchlist' : 'Follow in The Daily and the leaderboard’s Watchlist'}
 	onclick={() => toggleWatch(nbaId)}
 >
 	<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
@@ -60,5 +62,21 @@
 
 	.watch-star.watched path {
 		fill: currentColor;
+	}
+
+	.watch-star.compact {
+		flex: 0 0 auto;
+		width: 24px;
+		height: 24px;
+	}
+
+	/* In a table row the star stays faint until the row is hovered or it is on. */
+	.watch-star.compact:not(.watched) {
+		opacity: 0.55;
+	}
+
+	:global(tr:hover) .watch-star.compact,
+	.watch-star.compact:focus-visible {
+		opacity: 1;
 	}
 </style>

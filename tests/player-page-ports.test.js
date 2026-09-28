@@ -74,7 +74,8 @@ test('player pages and the Teams page wire the ports in', async () => {
     assert.match(page, /<SeasonBySeason rows=\{seasonsTable\}/);
     assert.match(page, /seasonRows\(data\.seasons, \{ asOf: asOfDate, inProgress: inProgressSeason \}\)/);
     // Only current players get a projected box score.
-    assert.match(page, /playerInfo && !asOfDate && Number\(playerInfo\.active_roster\) === 1 \? projectedBoxScore\(playerInfo\) : null/);
+    assert.match(page, /const isCurrentPlayer = \$derived\(Boolean\(playerInfo\) && Number\(playerInfo\.active_roster\) === 1\);/);
+    assert.match(page, /playerInfo && !asOfDate && isCurrentPlayer \? projectedBoxScore\(playerInfo\) : null/);
 
     const comps = await read('src/lib/server/comps.js');
     assert.match(comps, /\.eq\('comp_id', nbaId\)\s*\.lte\('rank', ECHO_MAX_RANK\)/);

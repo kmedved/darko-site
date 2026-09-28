@@ -50,6 +50,7 @@ const PLAYER_VIEW_FIELDS = Object.freeze({
         'team_name',
         'tm_id',
         'position',
+        'age',
         'season',
         'career_game_num',
         'dpm',

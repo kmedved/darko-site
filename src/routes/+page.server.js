@@ -8,6 +8,7 @@ import { projectPlayers } from '$lib/server/playerViews.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 import { AS_OF_PARAM, parseAsOfDate } from '$lib/utils/timeMachine.js';
 import { packRows } from '$lib/utils/columnar.js';
+import { withChangeSince } from '$lib/utils/leaderboardViews.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -25,12 +26,19 @@ export async function load({ url, setHeaders }) {
 
     let seasons;
     let snapshot;
+    let today = null;
     let asOf = null;
     let selectedSeason = null;
     if (asOfDate) {
-        const [allSeasons, result] = await Promise.all([getLeaderboardSeasons(), getPlayersOnDate(asOfDate)]);
+        // Today's board too, for each player's rating now and the change since the date.
+        const [allSeasons, result, current] = await Promise.all([
+            getLeaderboardSeasons(),
+            getPlayersOnDate(asOfDate),
+            getActivePlayers()
+        ]);
         seasons = allSeasons;
         snapshot = result.rows;
+        today = current;
         asOf = { date: asOfDate, dataDate: result.dataDate, season: result.season };
     } else {
         seasons = await getLeaderboardSeasons();
@@ -40,7 +48,8 @@ export async function load({ url, setHeaders }) {
             ? await getActivePlayers()
             : await getSeasonStartPlayers(selectedSeason);
     }
-    const players = projectPlayers(snapshot, 'leaderboard');
+    const projected = projectPlayers(snapshot, 'leaderboard');
+    const players = today ? withChangeSince(projected, today) : projected;
 
     return {
         // Column by column: every player repeats the same ~22 field names.

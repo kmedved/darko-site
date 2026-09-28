@@ -31,22 +31,23 @@
 	const THEME_KEY = 'darko-theme';
 	const THEMES = ['black', 'dark', 'light', 'white'];
 	const THEME_ICONS = ['⚫', '🌙', '☀️', '⚪'];
+	// Players, teams and the stats pages, then the two labs; the specialist views sit under More.
 	const PRIMARY_NAV_ITEMS = [
 		{ href: '/daily', label: 'The Daily', match: (path) => path === '/daily' },
 		{ href: '/', label: 'Active Leaderboard', match: (path) => path === '/' },
-		{ href: '/wowy', label: 'WOWY RAPM', match: (path) => path.startsWith('/wowy') },
+		{ href: '/teams', label: 'Teams', match: (path) => path === '/teams' || path.startsWith('/team/') },
 		{ href: '/standings', label: 'Standings', match: (path) => path.startsWith('/standings') },
-		{ href: '/trajectories', label: 'Trajectories', match: (path) => path === '/trajectories' },
-		{ href: '/longevity', label: 'Longevity', match: (path) => path.startsWith('/longevity') },
+		{ href: '/wowy', label: 'WOWY RAPM', match: (path) => path.startsWith('/wowy') },
 		{ href: '/lineups', label: 'Lineups', match: (path) => path === '/lineups' },
-		{ href: '/scatterplot', label: 'Scatterplot', match: (path) => path === '/scatterplot' }
+		{ href: '/lab', label: 'Roster Lab', match: (path) => path === '/lab' },
+		{ href: '/projections', label: 'Fantasy Lab', match: (path) => path === '/projections' }
 	];
 	const MORE_NAV_ITEMS = [
-		{ href: '/teams', label: 'Teams', match: (path) => path === '/teams' },
 		{ href: '/rewind', label: 'Rewind', match: (path) => path === '/rewind' },
-		{ href: '/lab', label: 'Roster Lab', match: (path) => path === '/lab' },
+		{ href: '/trajectories', label: 'Trajectories', match: (path) => path === '/trajectories' },
+		{ href: '/longevity', label: 'Longevity', match: (path) => path.startsWith('/longevity') },
+		{ href: '/scatterplot', label: 'Scatterplot', match: (path) => path === '/scatterplot' },
 		{ href: '/compare', label: 'Compare', match: (path) => path === '/compare' },
-		{ href: '/projections', label: 'Fantasy Lab', match: (path) => path === '/projections' },
 		{ href: '/rate', label: 'Rate a Player', match: (path) => path === '/rate' },
 		{ href: '/about', label: 'About', match: (path) => path.startsWith('/about') }
 	];

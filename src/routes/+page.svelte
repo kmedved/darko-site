@@ -8,11 +8,19 @@
         formatSignedMetric
     } from '$lib/utils/csvPresets.js';
     import {
+        buildPlayerTableSortConfig,
         formatLeaderboardCell,
         getLeaderboardCellValue,
-        LEADERBOARD_COLUMNS,
-        leaderboardSortConfig
+        leaderboardTableColumns
     } from '$lib/utils/leaderboardColumns.js';
+    import {
+        AGE_GROUPS,
+        filterLeaderboardRows,
+        matchesPosition,
+        POSITION_GROUPS,
+        trendSeason
+    } from '$lib/utils/leaderboardViews.js';
+    import { startWatchlist, watchlist } from '$lib/utils/watchlist.js';
     import { filterPlayers } from '$lib/utils/playerTableFilters.js';
     import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
@@ -31,9 +39,12 @@
     import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
     import DotDistribution from '$lib/components/DotDistribution.svelte';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
+    import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
+    import Sparkline from '$lib/components/Sparkline.svelte';
     import StatTile from '$lib/components/StatTile.svelte';
-    import { getContext } from 'svelte';
+    import WatchStar from '$lib/components/WatchStar.svelte';
+    import { getContext, onMount } from 'svelte';
 
     let { data } = $props();
 
@@ -42,6 +53,13 @@
     let searchQuery = $state('');
     let columnFilters = $state({});
     let teamFilter = $state('all');
+    let positionFilter = $state('all');
+    let ageFilter = $state('all');
+    let watchOnly = $state(false);
+    // The season sparklines are optional, and this browser remembers the choice.
+    let showTrends = $state(false);
+    // Sparkline values by board ("season:date"), then by player: { [key]: { [nba_id]: [dpm...] } }.
+    let trendsByBoard = $state({});
     let leaderboardPage = $state(1);
     let positionView = $state('all');
     let distributionMetric = $state('dpm');
@@ -56,8 +74,15 @@
 
     const TOP_POSITION_MIN_GAMES = 20;
     const LEADERBOARD_PAGE_SIZE = 50;
+    const TRENDS_STORAGE_KEY = 'darko-leaderboard-trends';
     const players = $derived(Array.isArray(data.players) ? data.players : unpackRows(data.players));
-    const playerColumns = LEADERBOARD_COLUMNS;
+    // The split bar after Def, the optional sparkline, and with the Time Machine set Now and Since.
+    const playerColumns = $derived(leaderboardTableColumns({ trends: showTrends, asOf: Boolean(data.asOf) }));
+    const dataColumns = $derived(playerColumns.filter((column) => column.sortable !== false));
+    const sortConfigs = $derived(buildPlayerTableSortConfig(dataColumns));
+    // Sorting by a column that has gone (Since, after leaving the Time Machine) falls back to DPM.
+    const activeSortColumn = $derived(sortConfigs[sortColumn] ? sortColumn : 'dpm');
+    const watchSet = $derived(new Set($watchlist));
     const textSortColumns = new Set(['_rank', 'player_name', 'team_name', 'position']);
     const positionTabs = [
         { key: 'all', label: 'All' },
@@ -117,16 +142,21 @@
     });
 
     const filteredPlayers = $derived.by(() => {
-        const columnMatched = filterPlayers(teamScopedPlayers, playerColumns, columnFilters);
+        const grouped = filterLeaderboardRows(teamScopedPlayers, {
+            position: positionFilter,
+            age: ageFilter,
+            watchlist: watchOnly ? watchSet : null
+        });
+        const columnMatched = filterPlayers(grouped, dataColumns, columnFilters);
         if (!searchQuery.trim()) return columnMatched;
-        return filterPlayers(columnMatched, playerColumns, { player_name: searchQuery });
+        return filterPlayers(columnMatched, dataColumns, { player_name: searchQuery });
     });
 
     const sortedPlayers = $derived.by(() =>
         getSortedRows(filteredPlayers, {
-            sortColumn,
+            sortColumn: activeSortColumn,
             sortDirection,
-            sortConfigs: leaderboardSortConfig
+            sortConfigs
         })
     );
     const leaderboardPageCount = $derived(
@@ -179,7 +209,7 @@
 
     const topPositionPlayers = $derived.by(() =>
         teamScopedPlayers
-            .filter((player) => matchesPositionView(player, positionView))
+            .filter((player) => matchesPosition(player, positionView))
             .filter((player) => hasMinimumGames(player, TOP_POSITION_MIN_GAMES))
             .filter((player) => Number.isFinite(toNumber(player?.dpm)))
             .slice()
@@ -187,20 +217,83 @@
             .slice(0, 5)
     );
 
-    const leaderboardCsvColumnsForExport = leaderboardCsvColumns
-        .filter((col) => col.accessor !== 'bayes_rapm_total' && col.accessor !== 'tr_minutes')
-        .map((col) =>
-            col.accessor === 'x_minutes'
-                ? { ...col, format: fmtMpg }
-                : col
-        );
+    // With the Time Machine set, the export carries Now and Since after DDPM, like the table.
+    const leaderboardCsvColumnsForExport = $derived(
+        leaderboardCsvColumns
+            .filter((col) => col.accessor !== 'bayes_rapm_total' && col.accessor !== 'tr_minutes')
+            .flatMap((col) => {
+                if (col.accessor === 'x_minutes') return [{ ...col, format: fmtMpg }];
+                if (col.accessor !== 'd_dpm' || !data.asOf) return [col];
+                return [
+                    col,
+                    { header: 'DPM now', accessor: 'now_dpm', format: formatSignedMetric },
+                    { header: 'Since', accessor: 'since_dpm', format: formatSignedMetric }
+                ];
+            })
+    );
+
+    // The board the sparklines follow: its season, stopping at the Time Machine's date.
+    const trendBoard = $derived.by(() => {
+        const season = trendSeason({ asOf: data.asOf, selectedSeason: data.selectedSeason, players });
+        const through = data.asOf?.date ?? null;
+        return season ? { season, through, key: `${season}:${through ?? ''}` } : null;
+    });
+    const boardTrends = $derived(trendBoard ? (trendsByBoard[trendBoard.key] ?? {}) : {});
+
+    onMount(() => {
+        startWatchlist();
+        try {
+            showTrends = localStorage.getItem(TRENDS_STORAGE_KEY) === '1';
+        } catch {
+            // Storage can be unavailable; the sparklines just start hidden.
+        }
+    });
+
+    function setShowTrends(value) {
+        showTrends = value;
+        try {
+            localStorage.setItem(TRENDS_STORAGE_KEY, value ? '1' : '0');
+        } catch {
+            // The choice still holds until the page closes.
+        }
+    }
+
+    // Sparklines load a page at a time, for the players on it that the board hasn't loaded yet.
+    $effect(() => {
+        if (!showTrends || !trendBoard) return;
+        const board = trendBoard;
+        const loaded = trendsByBoard[board.key] ?? {};
+        const missing = visibleLeaderboardPlayers
+            .map((player) => Number(player?.nba_id))
+            .filter((id) => Number.isInteger(id) && id > 0 && !(id in loaded))
+            .sort((a, b) => a - b);
+        if (!missing.length) return;
+
+        let cancelled = false;
+        const params = new URLSearchParams({ ids: missing.join(','), season: String(board.season) });
+        if (board.through) params.set('through', board.through);
+        fetch(`/api/history/trends?${params}`)
+            .then((response) => (response.ok ? response.json() : { trends: {} }))
+            .catch(() => ({ trends: {} }))
+            .then(({ trends = {} }) => {
+                if (cancelled) return;
+                // A player without a line that season counts as loaded, so it isn't requested again.
+                const next = { ...(trendsByBoard[board.key] ?? {}) };
+                for (const id of missing) next[id] = trends[id] ?? [];
+                trendsByBoard = { ...trendsByBoard, [board.key]: next };
+            });
+        return () => {
+            cancelled = true;
+        };
+    });
 
     $effect(() => {
-        sortColumn;
+        activeSortColumn;
         sortDirection;
         searchQuery;
         activeTeamFilter;
         activeSeason;
+        playerColumns.length;
         sortedPlayers.length;
         standardTableRoot;
         standardBodyScroller;
@@ -244,7 +337,7 @@
 
     function toggleSort(column) {
         ({ sortColumn, sortDirection } = getNextSortState({
-            sortColumn,
+            sortColumn: activeSortColumn,
             sortDirection,
             column,
             defaultDirection: textSortColumns.has(column) ? 'asc' : 'desc'
@@ -287,6 +380,13 @@
         if (column.key === 'team_name') classes.push('leaderboard-cell--team');
         if (column.alignClass === 'num') classes.push('leaderboard-cell--num', statClass(column.key, value));
         return classes.filter(Boolean).join(' ');
+    }
+
+    /** "DPM this season, +5.2 to +7.4" for a sparkline's screen-reader label. */
+    function trendLabel(values) {
+        if (!values?.length) return '';
+        const span = asOf ? 'this season to date' : 'this season';
+        return `DPM ${span}, ${formatSignedMetric(values[0], 1)} to ${formatSignedMetric(values.at(-1), 1)}`;
     }
 
     function fmtMpg(min) {
@@ -383,15 +483,6 @@
         };
     }
 
-    function matchesPositionView(player, view) {
-        if (view === 'all') return true;
-        const position = String(player?.position || '').toUpperCase();
-        if (view === 'guards') return position.includes('G');
-        if (view === 'forwards') return position.includes('F');
-        if (view === 'centers') return position.includes('C');
-        return true;
-    }
-
     function hasMinimumGames(player, minGames) {
         const games = toNumber(player?.career_game_num);
         return games !== null && games >= minGames;
@@ -448,7 +539,7 @@
             <div class="leaderboard-workspace">
                 <section class="leaderboard-table-panel" aria-label={`${activeSeasonLabel} player leaderboard`}>
                     <div class="leaderboard-controls" data-shiny-surface="well">
-                        <div class="control-field">
+                        <div class="control-field control-field--season">
                             <select
                                 id="season-filter"
                                 value={activeSeason}
@@ -482,6 +573,38 @@
                             </select>
                         </div>
 
+                        <div class="control-field">
+                            <select
+                                id="position-filter"
+                                value={positionFilter}
+                                onchange={(event) => {
+                                    positionFilter = event.currentTarget.value;
+                                    leaderboardPage = 1;
+                                }}
+                                aria-label="Position"
+                            >
+                                {#each POSITION_GROUPS as group (group.key)}
+                                    <option value={group.key}>{group.label}</option>
+                                {/each}
+                            </select>
+                        </div>
+
+                        <div class="control-field">
+                            <select
+                                id="age-filter"
+                                value={ageFilter}
+                                onchange={(event) => {
+                                    ageFilter = event.currentTarget.value;
+                                    leaderboardPage = 1;
+                                }}
+                                aria-label="Age"
+                            >
+                                {#each AGE_GROUPS as group (group.key)}
+                                    <option value={group.key}>{group.label}</option>
+                                {/each}
+                            </select>
+                        </div>
+
                         <div class="control-field control-field--search">
                             <div class="search-control">
                                 <input
@@ -496,6 +619,39 @@
                                     aria-label="Search players"
                                 />
                             </div>
+                        </div>
+
+                        <div class="control-toggles">
+                            <button
+                                type="button"
+                                class="toggle-chip"
+                                class:active={watchOnly}
+                                aria-pressed={watchOnly}
+                                title="Only the players you follow. Star a player to follow them here and in The Daily."
+                                onclick={() => {
+                                    watchOnly = !watchOnly;
+                                    leaderboardPage = 1;
+                                }}
+                            >
+                                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                    <path d="M8 1.6l1.9 4 4.4.5-3.3 3 .9 4.3L8 11.3l-3.9 2.1.9-4.3-3.3-3 4.4-.5z" />
+                                </svg>
+                                Watchlist
+                                {#if watchSet.size > 0}<span class="toggle-count">{watchSet.size}</span>{/if}
+                            </button>
+                            <button
+                                type="button"
+                                class="toggle-chip"
+                                class:active={showTrends}
+                                aria-pressed={showTrends}
+                                title="A small line of each player's DPM through the season"
+                                onclick={() => setShowTrends(!showTrends)}
+                            >
+                                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                    <path class="toggle-line" d="M1.5 11.5l3.5-4 3 2.5 5.5-6.5" />
+                                </svg>
+                                Season trend
+                            </button>
                         </div>
 
                         <button
@@ -533,7 +689,11 @@
                                 <tbody>
                                     {#if sortedPlayers.length === 0}
                                         <tr>
-                                            <td class="empty-row" colspan={playerColumns.length}>No matching players.</td>
+                                            <td class="empty-row" colspan={playerColumns.length}>
+                                                {watchOnly && watchSet.size === 0
+                                                    ? 'You aren’t following anyone yet. Star a player to follow them.'
+                                                    : 'No matching players.'}
+                                            </td>
                                         </tr>
                                     {:else}
                                         {#each visibleLeaderboardPlayers as player, index (player.nba_id)}
@@ -541,23 +701,45 @@
                                                 {#each playerColumns as column (column.key)}
                                                     {@const globalIndex = (activeLeaderboardPage - 1) * LEADERBOARD_PAGE_SIZE + index}
                                                     {@const value = getLeaderboardCellValue(player, column, globalIndex)}
-                                                    {#if column.key === 'player_name'}
+                                                    {#if column.key === 'dpm'}
+                                                        <!-- The number, and under it how it splits into offense and defense. -->
+                                                        <td class={cellClass(column, value)} style={cellStyle(column, value)}>
+                                                            <span class="dpm-figure">{formatLeaderboardCell(column, value)}</span>
+                                                            <span class="dpm-split">
+                                                                <OffenseDefenseBar offense={player.o_dpm} defense={player.d_dpm} max={6} />
+                                                            </span>
+                                                        </td>
+                                                    {:else if column.kind === 'trend'}
+                                                        {@const trend = boardTrends[player.nba_id]}
+                                                        <td class="leaderboard-cell leaderboard-cell--drawn leaderboard-cell--trend">
+                                                            {#if trend === undefined}
+                                                                <span class="trend-pending" aria-hidden="true"></span>
+                                                            {:else if trend.length > 1}
+                                                                <Sparkline values={trend} width={84} height={22} label={trendLabel(trend)} />
+                                                            {:else}
+                                                                <span class="cell-muted">—</span>
+                                                            {/if}
+                                                        </td>
+                                                    {:else if column.key === 'player_name'}
                                                         <td class={cellClass(column, value)}>
-                                                            <a class="player-link" href={datedHref(`/player/${player.nba_id}`)}>
-                                                                {#if isShinyView && playerHeadshotUrl(player)}
-                                                                    <img
-                                                                        src={playerHeadshotUrl(player)}
-                                                                        alt=""
-                                                                        width="20"
-                                                                        height="20"
-                                                                        class="leaderboard-headshot"
-                                                                        loading="lazy"
-                                                                        onerror={hideBrokenImage}
-                                                                    />
-                                                                {/if}
-                                                                <span>{player.player_name}</span>
-                                                                {#if player.position}<small>{player.position}</small>{/if}
-                                                            </a>
+                                                            <span class="player-cell">
+                                                                <WatchStar nbaId={Number(player.nba_id)} name={player.player_name} compact />
+                                                                <a class="player-link" href={datedHref(`/player/${player.nba_id}`)}>
+                                                                    {#if isShinyView && playerHeadshotUrl(player)}
+                                                                        <img
+                                                                            src={playerHeadshotUrl(player)}
+                                                                            alt=""
+                                                                            width="20"
+                                                                            height="20"
+                                                                            class="leaderboard-headshot"
+                                                                            loading="lazy"
+                                                                            onerror={hideBrokenImage}
+                                                                        />
+                                                                    {/if}
+                                                                    <span>{player.player_name}</span>
+                                                                    {#if player.position}<small>{player.position}</small>{/if}
+                                                                </a>
+                                                            </span>
                                                         </td>
                                                     {:else if column.key === 'team_name'}
                                                         <td class={cellClass(column, value)}>
@@ -716,7 +898,11 @@
 {#snippet standardSemanticHeaderRow()}
     <tr class="table-semantic-row sr-only">
         {#each playerColumns as column (column.key)}
-            <th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}>{column.label}</th>
+            {#if column.sortable === false}
+                <th scope="col">{column.label}</th>
+            {:else}
+                <th scope="col" aria-sort={getSortAriaValue(activeSortColumn, sortDirection, column.key)}>{column.label}</th>
+            {/if}
         {/each}
     </tr>
 {/snippet}
@@ -724,40 +910,44 @@
 {#snippet standardHeaderRows()}
     <tr class="header-row table-sizing-row">
         {#each playerColumns as column (column.key)}
-            <th
-                class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
-                onclick={() => toggleSort(column.key)}
-                aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
-            >
-                <span class="header-label-wrap">
-                    {#if column.metricKey}
-                        <MetricTooltip text={getMetricDefinition(column.metricKey)}>
+            {#if column.sortable === false}
+                <th class={column.alignClass}>{column.label}</th>
+            {:else}
+                <th
+                    class="{column.alignClass} sortable {activeSortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
+                    onclick={() => toggleSort(column.key)}
+                    aria-sort={getSortAriaValue(activeSortColumn, sortDirection, column.key)}
+                >
+                    <span class="header-label-wrap">
+                        {#if column.metricKey}
+                            <MetricTooltip text={getMetricDefinition(column.metricKey)}>
+                                <span>{column.label}</span>
+                            </MetricTooltip>
+                        {:else}
                             <span>{column.label}</span>
-                        </MetricTooltip>
-                    {:else}
-                        <span>{column.label}</span>
-                    {/if}
-                    <!-- The keyboard's way to sort; clicking anywhere else in the header works too. -->
-                    <button
-                        type="button"
-                        class="sort-button"
-                        aria-label={`Sort by ${column.label}`}
-                        onclick={(event) => {
-                            event.stopPropagation();
-                            toggleSort(column.key);
-                        }}
-                    >
-                        <span class="sort-indicator" aria-hidden="true">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
-                    </button>
-                </span>
-            </th>
+                        {/if}
+                        <!-- The keyboard's way to sort; clicking anywhere else in the header works too. -->
+                        <button
+                            type="button"
+                            class="sort-button"
+                            aria-label={`Sort by ${column.label}`}
+                            onclick={(event) => {
+                                event.stopPropagation();
+                                toggleSort(column.key);
+                            }}
+                        >
+                            <span class="sort-indicator" aria-hidden="true">{getSortGlyph(activeSortColumn, sortDirection, column.key)}</span>
+                        </button>
+                    </span>
+                </th>
+            {/if}
         {/each}
     </tr>
     {#if isShinyView}
         <tr class="column-filter-row table-sizing-row">
             {#each playerColumns as column (column.key)}
                 <th class={column.alignClass}>
-                    {#if column.key !== '_rank'}
+                    {#if column.key !== '_rank' && column.sortable !== false}
                         <input
                             type="text"
                             value={columnFilters[column.key] || ''}
@@ -832,12 +1022,88 @@
         min-width: 0;
     }
 
+    /* Season, team, position and age, the search taking what's left, then the toggles and the
+       export; the row wraps rather than squeezing. */
     .leaderboard-controls {
-        display: grid;
-        grid-template-columns: minmax(150px, 180px) minmax(140px, 180px) minmax(220px, 1fr) auto;
+        display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         align-items: center;
         margin-bottom: 14px;
+    }
+
+    .leaderboard-controls .control-field {
+        flex: 0 1 150px;
+        min-width: 120px;
+    }
+
+    .leaderboard-controls .control-field--season {
+        flex-basis: 180px;
+    }
+
+    .leaderboard-controls .control-field--search {
+        flex: 1 1 220px;
+    }
+
+    .control-toggles {
+        display: flex;
+        gap: 8px;
+    }
+
+    .toggle-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 42px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .toggle-chip:hover {
+        border-color: var(--text-muted);
+        color: var(--text);
+    }
+
+    .toggle-chip:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+    }
+
+    .toggle-chip.active {
+        border-color: var(--accent);
+        color: var(--text);
+        background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
+    }
+
+    .toggle-chip svg path {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.4;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+    }
+
+    .toggle-chip.active svg path {
+        color: var(--accent);
+    }
+
+    .toggle-count {
+        min-width: 18px;
+        padding: 1px 5px;
+        border-radius: 999px;
+        background: var(--bg-hover);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-align: center;
     }
 
     .leaderboard-value-note {
@@ -1129,6 +1395,60 @@
     .leaderboard-cell--team {
         min-width: 86px;
         color: var(--text-secondary);
+    }
+
+    .player-cell {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: -4px;
+    }
+
+    /* Under each DPM, a small offense/defense split: offense orange, defense blue. */
+    .dpm-figure,
+    .dpm-split {
+        display: block;
+    }
+
+    .leaderboard-cell--dpm {
+        min-width: 68px;
+    }
+
+    .dpm-split :global(.od-bar) {
+        width: 54px;
+        height: 7px;
+        margin: 3px 0 0 auto;
+    }
+
+    .dpm-split :global(.od-bar-half) {
+        height: 5px;
+        gap: 1px;
+    }
+
+    .dpm-split :global(.od-bar-zero) {
+        height: 7px;
+    }
+
+    /* The season sparkline: drawn, so centred and unsorted. */
+    th.drawn {
+        text-align: center;
+    }
+
+    .leaderboard-cell--drawn {
+        text-align: center;
+    }
+
+    .leaderboard-cell--trend :global(.sparkline) {
+        margin: 0 auto;
+    }
+
+    .trend-pending {
+        display: block;
+        width: 84px;
+        height: 2px;
+        margin: 0 auto;
+        border-radius: 1px;
+        background: var(--border-subtle);
     }
 
     .player-link,
@@ -1438,14 +1758,14 @@
         }
     }
 
+    /* Two selects a row, then the search on its own. */
     @media (max-width: 920px) {
-        .leaderboard-controls {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+        .leaderboard-controls .control-field {
+            flex: 1 1 calc(50% - 5px);
         }
 
-        .control-field--search,
-        .btn {
-            grid-column: span 2;
+        .leaderboard-controls .control-field--search {
+            flex-basis: 100%;
         }
 
         .insight-rail {
@@ -1498,13 +1818,13 @@
             padding: 0 12px 24px;
         }
 
-        .leaderboard-controls {
-            grid-template-columns: 1fr;
+        .control-toggles {
+            flex: 1 1 100%;
         }
 
-        .control-field--search,
-        .btn {
-            grid-column: auto;
+        .toggle-chip {
+            flex: 1 1 0;
+            justify-content: center;
         }
 
         td {

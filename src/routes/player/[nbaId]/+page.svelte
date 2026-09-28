@@ -31,6 +31,7 @@
 	import { seasonRows } from '$lib/utils/playerSeasons.js';
 	import { projectedBoxScore } from '$lib/utils/boxScore.js';
 	import { seasonOfRow } from '$lib/utils/seismograph.js';
+	import { compsSummary, contractTiles, profileSections } from '$lib/utils/playerProfile.js';
 
 	let { data } = $props();
 
@@ -153,9 +154,24 @@
 
 	// Only current players have a projection worth showing: a retired player's last row still
 	// carries the projections from his final season.
+	const isCurrentPlayer = $derived(Boolean(playerInfo) && Number(playerInfo.active_roster) === 1);
 	const boxScore = $derived(
-		playerInfo && !asOfDate && Number(playerInfo.active_roster) === 1 ? projectedBoxScore(playerInfo) : null
+		playerInfo && !asOfDate && isCurrentPlayer ? projectedBoxScore(playerInfo) : null
 	);
+
+	// Today's rank on the board, and the team to open in the Roster Lab (current players only).
+	const rankLabel = $derived(
+		data.dpmRank && !asOfDate ? `#${data.dpmRank.rank} of ${data.dpmRank.of}` : null
+	);
+	const labTeam = $derived(isCurrentPlayer && !asOfDate ? teamAbbr(playerInfo.team_name) : null);
+
+	// Contract & longevity: today's figures, so current players only and not in the Time Machine.
+	// Between seasons (no season in progress) the placeholder row's WARP is left out.
+	const contract = $derived(
+		isCurrentPlayer && !asOfDate ? contractTiles(playerInfo, { inSeason: inProgressSeason !== null }) : []
+	);
+	// How the latest season ranks for its age, and the closest comp, over Comps & futures.
+	const compsLine = $derived(asOfDate ? null : compsSummary(seasonsTable, comps));
 
 	const percentiles = $derived.by(() => {
 		if (!playerInfo || allActivePlayers.length === 0) return [];
@@ -290,12 +306,31 @@
 			parts.push(d);
 		}
 		if (playerInfo.rookie_season) parts.push('Rookie ' + playerInfo.rookie_season);
+		if (playerInfo.country) parts.push(playerInfo.country);
 		return parts.join(' · ');
 	});
 
 		const hasLongevityData = $derived(
 		longevityPlayer !== null &&
 		longevityPlayer.p1 !== null
+	);
+	// The roster-odds chart projects from today, so it sits with the contract figures and, like
+	// them, only for current players outside the Time Machine.
+	const showLongevity = $derived(hasLongevityData && isCurrentPlayer && !asOfDate);
+	const showContract = $derived(contract.length > 0 || showLongevity);
+
+	// The jump menu lists the sections this player's page shows, in page order.
+	const sections = $derived(
+		profileSections({
+			seismograph: Boolean(seismograph),
+			comps: comps.length > 0 && !asOfDate,
+			echoes: echoes.length > 0 && !asOfDate,
+			career: Boolean(playerInfo),
+			contract: showContract,
+			seasons: seasonsTable.length > 0,
+			percentiles: allActivePlayers.length > 0,
+			'box-score': Boolean(boxScore)
+		})
 	);
 
 	function handleSelectPlayer(player) {
@@ -361,7 +396,7 @@
 						<div class="sidebar-rating">
 							<p class="sidebar-rating-head">
 								<span class="sidebar-label">
-									DPM{#if asOfDate && asOfRow}<span class="sidebar-asof">{' · '}{formatAsOfDate(asOfRow.date.slice(0, 10), { short: true })}</span>{/if}
+									DPM{#if asOfDate && asOfRow}<span class="sidebar-asof">{' · '}{formatAsOfDate(asOfRow.date.slice(0, 10), { short: true })}</span>{:else if rankLabel}<span class="sidebar-rank">{' · '}{rankLabel}</span>{/if}
 								</span>
 								<span class="sidebar-rating-value">{formatSigned(playerRating.dpm, 1)}</span>
 							</p>
@@ -375,6 +410,9 @@
 					{/if}
 				</div>
 				<a href="/compare?ids={nbaId}" class="btn compare-link">Compare this player</a>
+				{#if labTeam}
+					<a href="/lab?a={labTeam}" class="btn compare-link">Open {labTeam} in the Roster Lab</a>
+				{/if}
 			{/if}
 
 			<div class="sidebar-section">
@@ -405,6 +443,14 @@
 
 		<div class="profile-content">
 			{#if playerInfo}
+				{#if sections.length > 1}
+					<nav class="profile-jump" aria-label="Sections of {playerInfo.player_name}'s page">
+						{#each sections as section (section.id)}
+							<a href="#{section.id}">{section.label}</a>
+						{/each}
+					</nav>
+				{/if}
+
 				{#if seismograph}
 					<section
 						class="chart-panel seismograph-panel"
@@ -560,6 +606,16 @@
 									The ten most similar player-seasons since 1996-97 at the same age, and what
 									happened to them next.
 								</p>
+								{#if compsLine}
+									<p class="comps-summary">
+										<strong>{compsLine.dpm} at age {compsLine.age}</strong> in {compsLine.season}{compsLine.inProgress ? ' so far' : ''}
+										ranks <strong>{compsLine.rank} of {compsLine.count}</strong> age-{compsLine.age} seasons since 1996-97.
+										{#if compsLine.closest}
+											Closest match:
+											<a href="/player/{compsLine.closest.id}">{compsLine.closest.name}</a>, {compsLine.closest.season}.
+										{/if}
+									</p>
+								{/if}
 							</div>
 						</header>
 						<CompsFutures {comps} history={historyRows} playerName={playerInfo.player_name} />
@@ -588,27 +644,56 @@
 					</section>
 				{/if}
 
-				<div class="charts-row" data-shiny-layout="split">
-					<div class="chart-panel chart-half" data-shiny-surface="plot">
-						<TalentTrendChart
-							rows={historyRows}
-							{talentType}
-							playerName={playerInfo.player_name}
-						/>
-						{#if historyMeta.truncated}
-							<p class="history-note">
-								Showing the first {historyMeta.maxRows} rows of career history.
-							</p>
-						{/if}
-					</div>
-					{#if hasLongevityData}
-						<div class="chart-panel chart-half" data-shiny-surface="plot">
-							<h3 class="chart-panel-title">{playerInfo.player_name}</h3>
-							<p class="chart-panel-subtitle">Career Length Projections</p>
-							<LongevityCareerLengthChart player={longevityPlayer} />
-						</div>
+				<div class="chart-panel" id="career" data-shiny-surface="plot">
+					<TalentTrendChart
+						rows={historyRows}
+						{talentType}
+						playerName={playerInfo.player_name}
+					/>
+					{#if historyMeta.truncated}
+						<p class="history-note">
+							Showing the first {historyMeta.maxRows} rows of career history.
+						</p>
 					{/if}
 				</div>
+
+				{#if showContract}
+					<section
+						class="chart-panel comps-panel"
+						id="contract"
+						data-shiny-surface="panel"
+						aria-labelledby="contract-title"
+					>
+						<header class="seismograph-header">
+							<div>
+								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Value</p>
+								<h2 id="contract-title">Contract &amp; longevity</h2>
+								<p class="seismograph-lede">
+									DARKO's fair salary from projected wins against {playerInfo.player_name}'s salary,
+									and the odds of still being on an NBA roster in each coming season.
+								</p>
+							</div>
+						</header>
+						<div class="contract-body" class:contract-body--tiles-only={!showLongevity}>
+							{#if contract.length > 0}
+								<dl class="contract-tiles">
+									{#each contract as tile (tile.key)}
+										<div class="contract-tile">
+											<dt>{tile.label}</dt>
+											<dd class="contract-value contract-value--{tile.tone ?? 'plain'}">{tile.value}</dd>
+											<dd class="contract-note">{tile.note}</dd>
+										</div>
+									{/each}
+								</dl>
+							{/if}
+							{#if showLongevity}
+								<div class="contract-chart">
+									<LongevityCareerLengthChart player={longevityPlayer} />
+								</div>
+							{/if}
+						</div>
+					</section>
+				{/if}
 
 				{#if seasonsTable.length > 0}
 					<section
@@ -637,7 +722,7 @@
 						<p class="percentile-notice">{percentileNotice}</p>
 					</div>
 				{:else if allActivePlayers.length > 0}
-					<div class="chart-panel" data-shiny-surface="plot">
+					<div class="chart-panel" id="percentiles" data-shiny-surface="plot">
 						<TalentPercentilesChart
 							playerName={playerInfo.player_name}
 							position={playerInfo.position}
@@ -813,36 +898,124 @@
 		min-width: 0;
 	}
 
-	.charts-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 16px;
-	}
-
 	.chart-panel {
 		background: var(--bg-surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		padding: 16px;
+		/* The jump menu's links land with the heading clear of the sticky nav. */
+		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
 	}
 
-	.chart-half {
-		min-width: 0;
+	/* The jump menu: one row of links to the sections this player's page shows. */
+	.profile-jump {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-bottom: -8px;
 	}
 
-	.chart-panel-title {
-		font-size: 16px;
-		font-weight: 700;
-		color: var(--text);
-		text-align: center;
-		margin-bottom: 2px;
-	}
-
-	.chart-panel-subtitle {
-		font-size: 13px;
+	.profile-jump a {
+		padding: 5px 11px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--bg-surface);
 		color: var(--text-secondary);
-		text-align: center;
-		margin-bottom: 8px;
+		font-size: 12px;
+		font-weight: 650;
+		white-space: nowrap;
+	}
+
+	.profile-jump a:hover,
+	.profile-jump a:focus-visible {
+		border-color: var(--accent);
+		color: var(--text);
+	}
+
+	.comps-summary {
+		margin-top: 8px;
+		color: var(--text-secondary);
+		font-size: 13px;
+		line-height: 1.5;
+	}
+
+	.comps-summary strong {
+		color: var(--text);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.comps-summary a {
+		color: var(--accent);
+		font-weight: 650;
+	}
+
+	.comps-summary a:hover {
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	/* Contract & longevity: the figures beside the roster-odds chart. */
+	.contract-body {
+		display: grid;
+		grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+		gap: 24px;
+		align-items: start;
+	}
+
+	.contract-body--tiles-only {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.contract-tiles {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px;
+	}
+
+	.contract-body--tiles-only .contract-tiles {
+		grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+	}
+
+	.contract-tile {
+		display: grid;
+		gap: 2px;
+		padding: 10px 12px;
+		border: 1px solid var(--border-subtle);
+		border-radius: var(--radius-sm);
+		background: var(--bg);
+	}
+
+	.contract-tile dt {
+		color: var(--text-secondary);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.contract-value {
+		color: var(--text);
+		font-family: var(--font-mono);
+		font-size: 20px;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.contract-value--up {
+		color: var(--positive, var(--text));
+	}
+
+	.contract-value--down {
+		color: var(--negative, var(--text));
+	}
+
+	.contract-note {
+		color: var(--text-muted);
+		font-size: 12px;
+	}
+
+	.contract-chart {
+		min-width: 0;
 	}
 
 	.percentile-notice {
@@ -872,6 +1045,14 @@
 
 	.sidebar-asof {
 		color: var(--time-text);
+		text-transform: none;
+		letter-spacing: 0;
+	}
+
+	/* Today's rank on the board, beside the DPM label. */
+	.sidebar-rank {
+		color: var(--text-secondary);
+		font-variant-numeric: tabular-nums;
 		text-transform: none;
 		letter-spacing: 0;
 	}
@@ -1058,6 +1239,14 @@
 			padding-bottom: 0;
 			border-bottom: 0;
 		}
+
+		.contract-body {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.contract-tiles {
+			grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+		}
 	}
 
 	@media (max-width: 768px) {
@@ -1068,10 +1257,6 @@
 
 		.profile-sidebar {
 			position: static;
-		}
-
-		.charts-row {
-			grid-template-columns: 1fr;
 		}
 
 		.seismograph-header {

@@ -5,6 +5,7 @@ import { loadPlayerPageData, parsePlayerRouteId } from '$lib/server/playerPage.j
 import { packRows } from '$lib/utils/columnar.js';
 import { getActivePlayers, getFullPlayerProfileHistory, MAX_FULL_HISTORY_ROWS } from '$lib/server/supabase.js';
 import { echoRows } from '$lib/utils/playerSeasons.js';
+import { dpmRank } from '$lib/utils/playerProfile.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -29,6 +30,13 @@ export async function load({ params, setHeaders }) {
             echoRows(rows, new Map(active.map((player) => [Number(player.nba_id), player])))
         )
     );
+    // "#4 of 530" in the header, for players on today's board.
+    const rank = getActivePlayers()
+        .then((active) => dpmRank(nbaId, active))
+        .catch((error) => {
+            console.error('player rank failed', error);
+            return null;
+        });
     const { historyRows, ...page } = await loadPlayerPageData({
         nbaIdParam: params.nbaId,
         setHeaders,
@@ -44,6 +52,7 @@ export async function load({ params, setHeaders }) {
         history: packRows(historyRows),
         comps: await comps,
         seasons: await seasons,
-        echoes: await echoes
+        echoes: await echoes,
+        dpmRank: await rank
     };
 }

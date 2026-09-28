@@ -103,6 +103,18 @@ test('WOWY RAPM is a primary navigation destination', async () => {
     );
 });
 
+test('Teams and the two labs are in the top bar; the specialist views are under More', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), LAYOUT_FILE), 'utf8');
+    const primary = contents.match(/const PRIMARY_NAV_ITEMS = \[([\s\S]*?)\];/)[1];
+    const more = contents.match(/const MORE_NAV_ITEMS = \[([\s\S]*?)\];/)[1];
+    const hrefs = (block) => [...block.matchAll(/href: '([^']+)'/g)].map((match) => match[1]);
+
+    assert.deepEqual(hrefs(primary), ['/daily', '/', '/teams', '/standings', '/wowy', '/lineups', '/lab', '/projections']);
+    assert.deepEqual(hrefs(more), ['/rewind', '/trajectories', '/longevity', '/scatterplot', '/compare', '/rate', '/about']);
+    // A team's own page counts as Teams.
+    assert.match(primary, /label: 'Teams', match: \(path\) => path === '\/teams' \|\| path\.startsWith\('\/team\/'\)/);
+});
+
 test('desktop navigation switches to drawer before links can overflow', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), LAYOUT_FILE), 'utf8');
     const drawerBreakpoint = contents.match(/@media\s*\(max-width:\s*1180px\)\s*\{[\s\S]*?\.desktop-links\s*\{[\s\S]*?display:\s*none\s*!important;/);

@@ -29,13 +29,25 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
 `src/02-ui.js` (O/X split bar, sparkline, skill fingerprint glyph, tooltip) and
 `src/04-charts.js` (time-series chart with crosshair).
 
+## Also ported from the prototype's pages
+
+| Prototype page | What the site has |
+|---|---|
+| Teams (`src/13-teams.js`) | `/teams`: offense against defense for all 30 teams and the power order (`TeamQuadrant.svelte`, `utils/teamsOverview.js`) |
+| Player (`src/12-player.js`) | Season by season, Echoes today, the projected box score, Contract & longevity, the rank-for-age line over Comps & futures, "#N of M" by the DPM, a Roster Lab link and a jump menu over the sections (`utils/playerSeasons.js`, `utils/boxScore.js`, `utils/playerProfile.js`) |
+| Players (`src/11-players.js`) | In the leaderboard: position, age and watchlist filters, a star on every row, the O/X split under each DPM, optional season sparklines (`/api/history/trends`, remembered per browser) and, with the Time Machine set, Now and Since columns (`utils/leaderboardViews.js`) |
+
+Not ported: the Seismograph's comparison line (the prototype's `vs`, another player's DPM in
+grey), since the Compare page covers two players; and the Players page's season-end mode for
+past seasons, since the Time Machine shows the board on any date.
+
 ## Agreed port order
 
 1. Fantasy Lab into `/projections` (done).
 2. Design foundations (offense/defense tokens for every theme, wide numerals, O/X split,
    sparkline, fingerprint glyph) and the Seismograph on player pages (done: tokens, O/X
-   split and split bar; the sparkline waits for the features that use it, and the
-   fingerprint glyph is dropped).
+   split and split bar, and the sparkline in The Daily and the leaderboard; the fingerprint
+   glyph is dropped).
 3. Ask DARKO (done).
 4. Team DNA additions, then Roster Lab (both done).
 5. Pipeline-backed features: Rewind and the site-wide date (done, as the Time Machine),
@@ -64,7 +76,9 @@ already carry the skill percentiles.
   `current_team` (the offseason placeholder rows have none), so Rate a Player showed everyone as
   "Undrafted" and most teams as "?". Draft pick 0 is a territorial pick.
 - The Jul 26 offseason rows in `player_ratings` have no team (`tm_id = -999`), so the Roster
-  Lab starts from each team's late-season rotation.
+  Lab starts from each team's late-season rotation, and a player's team is the team of their
+  last game. The same rows publish WARP at about a tenth of the season's (Jokic 1.7 against
+  15.8 at the season's end), so the player page shows WARP only while a season is on.
 - Season-end rows in the prototype count playoff games in games and minutes.
 - Comps, Roster Lab team ratings and fantasy values are prototype calculations, not DARKO
   outputs. nba_darko builds comps with the prototype's method (`pipeline_scripts/publish/

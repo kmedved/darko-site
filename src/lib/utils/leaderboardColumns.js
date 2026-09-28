@@ -202,7 +202,35 @@ const COLUMN_DEFINITIONS = Object.freeze({
         format: 'signedMillions',
         filterScale: 1e-6,
         metricKey: 'surplus_value'
+    },
+    // With the Time Machine set: the player's DPM today and the change since the board's date.
+    now_dpm: {
+        key: 'now_dpm',
+        label: 'Now',
+        type: 'number',
+        align: 'right',
+        alignClass: 'num',
+        dataType: 'number',
+        format: 'signed'
+    },
+    since_dpm: {
+        key: 'since_dpm',
+        label: 'Since',
+        type: 'number',
+        align: 'right',
+        alignClass: 'num',
+        dataType: 'number',
+        format: 'signed'
     }
+});
+
+// A drawn cell that doesn't sort or filter: the season sparkline.
+const TREND_COLUMN = Object.freeze({
+    key: '_trend',
+    label: 'Season',
+    kind: 'trend',
+    alignClass: 'drawn',
+    sortable: false
 });
 
 const STANDARD_LEADERBOARD_METRIC_KEYS = Object.freeze([
@@ -261,6 +289,22 @@ export const LEADERBOARD_COLUMNS = buildColumns(
 export const TEAM_PLAYER_COLUMNS = buildColumns(
     ['player_name', 'position', ...SHARED_PLAYER_METRIC_KEYS]
 );
+
+/**
+ * The leaderboard as drawn: after Def, the season sparkline when shown ("To date" with the
+ * Time Machine set), then with the Time Machine set each player's DPM now and the change
+ * since. The offense/defense split is drawn in the DPM cell, so it costs no width.
+ */
+export function leaderboardTableColumns({ trends = false, asOf = false } = {}) {
+    return LEADERBOARD_COLUMNS.flatMap((column) => {
+        if (column.key !== 'd_dpm') return [column];
+        return [
+            column,
+            ...(trends ? [{ ...TREND_COLUMN, label: asOf ? 'To date' : 'Season' }] : []),
+            ...(asOf ? [COLUMN_DEFINITIONS.now_dpm, COLUMN_DEFINITIONS.since_dpm] : [])
+        ];
+    });
+}
 
 export const leaderboardSortConfig = buildPlayerTableSortConfig(LEADERBOARD_COLUMNS);
 export const teamPlayerSortConfig = buildPlayerTableSortConfig(TEAM_PLAYER_COLUMNS);
