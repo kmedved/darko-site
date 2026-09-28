@@ -25,10 +25,10 @@ const DAY_MS = 86_400_000;
 // Playoff and play-in games (game_id // 10,000,000).
 const POSTSEASON_TYPES = new Set([4, 5]);
 
-// Between seasons The Daily is off the menus, What's new and Ask DARKO. It comes back the morning
-// after opening night (2026-27 opens Tuesday, October 20, 2026), once the first games' ratings
-// are in. The page itself still opens at /daily.
-export const DAILY_RETURNS = '2026-10-21T12:00:00Z';
+// Between seasons The Daily is off the menus, What's new and Ask DARKO. It comes back on the
+// morning of Thursday, October 22, 2026 (2026-27 opens Tuesday, October 20), once the first
+// games' ratings are in. The page itself still opens at /daily.
+export const DAILY_RETURNS = '2026-10-22T12:00:00Z';
 
 /** Whether the site lists The Daily at `now`. */
 export function dailyListed(now = new Date()) {

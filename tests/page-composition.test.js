@@ -86,16 +86,16 @@ test("a phone's leaderboard shows the DPM beside the name, and the name stays wh
 	assert.match(await read('src/app.css'), /\[data-overflow-left\]::before \{\s*left: var\(--pinned-width, 0px\);/);
 });
 
-test('The Daily is off the menus between seasons and back the morning after opening night', async () => {
+test('The Daily is off the menus between seasons and back on the morning of October 22', async () => {
 	const [{ DAILY_RETURNS, dailyListed }, { askPages, ASK_PAGES }] = await Promise.all([
 		import('../src/lib/utils/daily.js'),
 		import('../src/lib/utils/askDarko.js')
 	]);
-	assert.equal(DAILY_RETURNS, '2026-10-21T12:00:00Z');
-	assert.equal(dailyListed(new Date('2026-10-21T11:59:59Z')), false);
-	assert.equal(dailyListed(new Date('2026-10-21T12:00:00Z')), true);
+	assert.equal(DAILY_RETURNS, '2026-10-22T12:00:00Z');
+	assert.equal(dailyListed(new Date('2026-10-22T11:59:59Z')), false);
+	assert.equal(dailyListed(new Date('2026-10-22T12:00:00Z')), true);
 	assert.ok(!askPages(new Date('2026-10-01T00:00:00Z')).some((entry) => entry.href === '/daily'));
-	assert.ok(askPages(new Date('2026-10-22T00:00:00Z')).some((entry) => entry.href === '/daily'));
+	assert.ok(askPages(new Date('2026-10-23T00:00:00Z')).some((entry) => entry.href === '/daily'));
 	assert.equal(askPages(new Date('2026-10-01T00:00:00Z')).length, ASK_PAGES.length - 1);
 
 	const [layout, errorPage, askDarko] = await Promise.all([
