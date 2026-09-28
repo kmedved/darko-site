@@ -10,6 +10,29 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'page-headers',
+		title: 'Player and team pages, rearranged',
+		launched: '2026-09-28T23:17:09Z',
+		text: "Player pages open on the player: photo, facts and the rating split into offense and defense, with each chart's controls over the chart. Team pages lead with the rating and where it comes from, ahead of the roster.",
+		cta: "See Wembanyama's page",
+		href: '/player/1641705'
+	},
+	{
+		key: 'distribution-motion',
+		title: 'The Distribution, in motion',
+		launched: '2026-09-28T23:17:09Z',
+		text: "Pick a new stat under the leaderboard's Distribution and every player's dot travels to its new place, while the mean, median and top-10% figures count to theirs.",
+		cta: 'Try it on the leaderboard',
+		href: '/'
+	},
+	{
+		key: 'easier-reading',
+		kind: 'design',
+		title: 'Easier to read',
+		launched: '2026-09-28T23:17:09Z',
+		text: 'Titles, names and headline numbers are set in Archivo, figures in DM Mono at its own weights, and the small print is brighter in the dark themes, on every surface.'
+	},
+	{
 		key: 'leaderboard-tools',
 		title: 'Leaderboard filters, stars and trends',
 		launched: '2026-09-28T19:36:44Z',
