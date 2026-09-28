@@ -40,11 +40,16 @@ test('items stay for 30 days from launch, newest first', () => {
     // Before launch, nothing about it shows.
     assert.ok(!keys(currentNews(new Date(launched - 1))).includes('seismograph'));
 
+    // The Daily went live that afternoon and leads from then on.
+    const afternoon = new Date('2026-09-28T14:00:00Z');
+    assert.deepEqual(keys(currentNews(afternoon)).slice(0, 2), ['daily', 'comps']);
+
     // A month on, the first night's launches have left and the later ones remain.
-    assert.deepEqual(keys(currentNews(new Date('2026-10-27T12:00:00Z'))), ['comps', 'team-dna', 'ask', 'lab', 'rewind']);
+    assert.deepEqual(keys(currentNews(new Date('2026-10-27T12:00:00Z'))), ['daily', 'comps', 'team-dna', 'ask', 'lab', 'rewind']);
     assert.deepEqual(currentNews(new Date('2026-11-01T00:00:00Z')), []);
     // The menus count features, not the design note, to match the page's headline.
     assert.equal(newFeatureCount(now), 7);
+    assert.equal(newFeatureCount(afternoon), 8);
     assert.equal(newFeatureCount(new Date('2026-11-01T00:00:00Z')), 0);
 });
 
@@ -75,8 +80,8 @@ test('every item is a feature the site has, with a working way in', () => {
             assert.ok(routeExists(item.href), `${item.key}: ${item.href}`);
         }
     }
-    // The prototype's other three features are not on the site yet.
-    assert.ok(!WHATS_NEW.some((item) => /daily|darkodle|card studio/i.test(item.title)));
+    // DARKOdle is not on the site yet, and Card Studio was dropped.
+    assert.ok(!WHATS_NEW.some((item) => /darkodle|card studio/i.test(item.title)));
     assert.equal(new Set(keys(WHATS_NEW)).size, WHATS_NEW.length);
 });
 

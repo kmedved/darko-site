@@ -10,6 +10,14 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'daily',
+		title: 'The Daily',
+		launched: '2026-09-28T13:31:13Z',
+		text: "A front page DARKO's ratings write themselves: who's on top, the biggest risers and fallers over the past week, month or season, the largest single-game updates, and seasons among the best ever at a player's age. Star a player on their page to follow them there.",
+		cta: 'Read The Daily',
+		href: '/daily'
+	},
+	{
 		key: 'comps',
 		title: 'Comps & futures',
 		launched: '2026-09-28T11:44:44Z',
