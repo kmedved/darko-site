@@ -98,8 +98,9 @@
 			]
 		}
 	];
+	// Worth against style: the five ratings (the default), or the ten skills.
 	const PERCENTILE_PRESETS = {
-		ratings: ['dpm', 'o_dpm', 'd_dpm', 'x_pts_100', 'x_fg3_pct'],
+		ratings: PERCENTILE_GROUPS[0].options.map((option) => option.value),
 		skills: [...SKILL_METRICS]
 	};
 

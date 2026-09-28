@@ -67,6 +67,17 @@ test('the player page ranks skills, offers the presets, and names size and games
     for (const field of SKILL_FIELDS) assert.match(percentilesView, new RegExp(`'${field}'`), field);
 
     assert.match(page, /skills: \[\.\.\.SKILL_METRICS\]/);
+    // The Ratings button is the Ratings group, and it is what the chart opens on.
+    assert.match(page, /ratings: PERCENTILE_GROUPS\[0\]\.options\.map\(\(option\) => option\.value\)/);
+    const ratingsGroup = page.match(/label: 'Ratings',\s*options: \[([\s\S]*?)\]/)[1];
+    assert.deepEqual([...ratingsGroup.matchAll(/value: '([a-z_]+)'/g)].map((match) => match[1]), [
+        'dpm',
+        'o_dpm',
+        'd_dpm',
+        'on_off_dpm',
+        'bayes_rapm_total'
+    ]);
+    assert.match(page, /let selectedPercentileMetrics = \$state\(\[\.\.\.PERCENTILE_PRESETS\.ratings\]\);/);
     assert.match(page, /return \{ metric, value: percentileAmong\(playerValue, values, metric\) \};/);
     assert.match(page, /rawValues=\{skillInfo\}\s*labels=\{SKILL_LABELS\}/);
     assert.match(chart, /return labels\[metric\] \?\? getMetricDisplayLabel\(metric\);/);
