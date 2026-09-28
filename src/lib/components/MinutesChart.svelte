@@ -35,40 +35,36 @@
 	const profile = $derived(minutesProfile(rows));
 	const range = $derived(domain ?? { low: profile.low, high: profile.high });
 	const sideways = $derived(width > 0 && width < SIDEWAYS_BELOW);
-	const ticks = $derived(niceTicks(range.low, range.high, sideways ? 3 : 4));
+	const ticks = $derived(niceTicks(range.low, range.high, sideways ? 4 : 6));
 	const padded = $derived.by(() => {
 		const pad = (range.high - range.low) * 0.08 || 0.5;
 		return { low: range.low < 0 ? range.low - pad : range.low, high: range.high + pad };
 	});
 	const plotW = $derived(Math.max(width - M.left - M.right, 1));
 	const plotH = $derived(height - M.top - M.bottom);
-	const columns = $derived(
-		profile.bars.map((bar) => {
+	const columns = $derived.by(() => {
+		const bars = profile.bars.map((bar) => {
 			const x0 = M.left + bar.x0 * plotW;
 			const span = (bar.x1 - bar.x0) * plotW;
 			const gap = Math.min(2, span / 3);
-			const label = fitLabel(labelFor(bar), span - gap - 4);
-			return {
-				bar,
-				x0,
-				span,
-				x: x0 + gap / 2,
-				w: Math.max(span - gap, 0.5),
-				zero: y(0),
-				end: y(bar.dpm),
-				label,
-				fits: label !== ''
-			};
-		})
-	);
-	// Bars too narrow (or rows too thin) to carry a name are listed under the chart instead, and
-	// so is the deep bench, whose names only fit there.
+			return { bar, x0, span, x: x0 + gap / 2, w: Math.max(span - gap, 0.5), zero: y(0), end: y(bar.dpm) };
+		});
+		const names = placeNames(bars);
+		return bars.map((column) => {
+			const name = names.get(column.bar.id) ?? null;
+			return { ...column, name, fits: name !== null };
+		});
+	});
+	// Bars too narrow (or rows too thin) for their whole name are listed under the chart in
+	// full, and so is the deep bench, whose names only fit there.
 	const listed = $derived(
 		!listNarrow
 			? []
 			: sideways
 				? profile.bars.filter((bar) => bar.bench || bar.minutes * PX_PER_MINUTE < LABEL_ROW)
-				: columns.filter((column) => column.bar.bench || !column.fits).map((column) => column.bar)
+				: columns
+						.filter((column) => column.bar.bench || column.name?.text !== labelFor(column.bar))
+						.map((column) => column.bar)
 	);
 	const shortfall = $derived(profile.minutes > 0 && Math.abs(profile.minutes - TEAM_MINUTES) > 1);
 
@@ -98,14 +94,79 @@
 		return measure.measureText(text).width;
 	}
 
-	/** The whole name if it fits the bar, else as much as fits with an ellipsis, else nothing. */
-	function fitLabel(label, room) {
-		if (textWidth(label) <= room) return label;
-		for (let length = label.length - 1; length >= 4; length -= 1) {
-			const cut = `${label.slice(0, length)}…`;
-			if (textWidth(cut) <= room) return cut;
+	/** A name, then shorter and shorter cuts of it, down to four letters and an ellipsis. */
+	function nameForms(label) {
+		const forms = [label];
+		if (label === 'Bench') return forms;
+		for (let length = label.length - 1; length >= 4; length -= 1) forms.push(`${label.slice(0, length)}…`);
+		return forms;
+	}
+
+	function overlaps(a, b) {
+		return a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+	}
+
+	/**
+	 * Names for the bars. The tallest bar is always named in full. Then each bar gets the
+	 * longest form of its name that fits over it, and the bars still unnamed, tallest first, the
+	 * longest form that can spill past the bar without touching another bar or name.
+	 */
+	function placeNames(bars) {
+		const placed = [];
+		const rects = bars.map((column) => ({
+			x0: column.x,
+			x1: column.x + column.w,
+			y0: Math.min(column.zero, column.end),
+			y1: Math.max(column.zero, column.end)
+		}));
+		const meanText = `Average minute ${formatSigned(profile.mean, 2)}`;
+		const meanRight = M.left + plotW - 2;
+		const meanBaseline = y(profile.mean) - 5;
+		const names = new Map();
+		const box = (column, text) => {
+			const half = textWidth(text) / 2;
+			const middle = Math.min(Math.max(column.x + column.w / 2, M.left + half), M.left + plotW - half);
+			const baseline = column.bar.dpm >= 0 ? column.end - 5 : column.end + 13;
+			return { text, x: middle, y: baseline, x0: middle - half - 2, x1: middle + half + 2, y0: baseline - 10, y1: baseline + 3 };
+		};
+		const clear = (candidate, own) =>
+			placed.every((other) => !overlaps(candidate, other)) &&
+			rects.every((rect, index) => index === own || !overlaps(candidate, rect));
+		const place = (index, candidate) => {
+			placed.push(candidate);
+			names.set(bars[index].bar.id, candidate);
+		};
+		const order = bars
+			.map((column, index) => index)
+			.sort((a, b) => Math.abs(bars[b].bar.dpm) - Math.abs(bars[a].bar.dpm));
+		if (order.length) place(order[0], box(bars[order[0]], labelFor(bars[order[0]].bar)));
+		placed.push({
+			x0: meanRight - textWidth(meanText) - 2,
+			x1: meanRight + 2,
+			y0: meanBaseline - 10,
+			y1: meanBaseline + 3
+		});
+		for (const index of order) {
+			if (names.has(bars[index].bar.id)) continue;
+			for (const text of nameForms(labelFor(bars[index].bar))) {
+				const candidate = box(bars[index], text);
+				if (candidate.x1 - candidate.x0 <= bars[index].w && clear(candidate, index)) {
+					place(index, candidate);
+					break;
+				}
+			}
 		}
-		return '';
+		for (const index of order) {
+			if (names.has(bars[index].bar.id)) continue;
+			for (const text of nameForms(labelFor(bars[index].bar))) {
+				const candidate = box(bars[index], text);
+				if (clear(candidate, index)) {
+					place(index, candidate);
+					break;
+				}
+			}
+		}
+		return names;
 	}
 
 	/** A bar from the zero line to its value, rounded only at the data end. */
@@ -229,14 +290,14 @@
 				<line class="mc-mean" x1={M.left} x2={M.left + plotW} y1={y(profile.mean)} y2={y(profile.mean)} />
 				<!-- Names go on top of the lines, each with a halo so the dashed line passes behind it. -->
 				{#each columns as column (column.bar.id)}
-					{#if column.fits}
+					{#if column.name}
 						<text
 							class="mc-text mc-label"
-							x={column.x + column.w / 2}
-							y={column.bar.dpm >= 0 ? column.end - 5 : column.end + 13}
+							x={column.name.x}
+							y={column.name.y}
 							text-anchor="middle"
 							aria-hidden="true"
-						>{column.label}</text>
+						>{column.name.text}</text>
 					{/if}
 				{/each}
 				<text class="mc-text mc-mean-label" x={M.left + plotW - 2} y={y(profile.mean) - 5} text-anchor="end">
