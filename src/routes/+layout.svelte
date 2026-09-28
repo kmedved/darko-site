@@ -32,6 +32,7 @@
 	const THEMES = ['black', 'dark', 'light', 'white'];
 	const THEME_ICONS = ['⚫', '🌙', '☀️', '⚪'];
 	const PRIMARY_NAV_ITEMS = [
+		{ href: '/daily', label: 'The Daily', match: (path) => path === '/daily' },
 		{ href: '/', label: 'Active Leaderboard', match: (path) => path === '/' },
 		{ href: '/wowy', label: 'WOWY RAPM', match: (path) => path.startsWith('/wowy') },
 		{ href: '/standings', label: 'Standings', match: (path) => path.startsWith('/standings') },

@@ -10,6 +10,7 @@
 	import SeismographChart from '$lib/components/SeismographChart.svelte';
 	import TalentPercentilesChart from '$lib/components/TalentPercentilesChart.svelte';
 	import TalentTrendChart from '$lib/components/TalentTrendChart.svelte';
+	import WatchStar from '$lib/components/WatchStar.svelte';
 	import { apiActivePlayers } from '$lib/api.js';
 	import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
 	import {
@@ -315,7 +316,10 @@
 							</div>
 						{/if}
 					</div>
-					<h1>{playerInfo.player_name}</h1>
+					<div class="player-title">
+						<h1>{playerInfo.player_name}</h1>
+						{#if nbaId}<WatchStar nbaId={nbaId} name={playerInfo.player_name} />{/if}
+					</div>
 					<p class="player-meta">
 						{[playerInfo.team_name, playerInfo.position || '?'].filter(Boolean).join(' · ')}
 					</p>
@@ -603,6 +607,13 @@
 		background: var(--bg-surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
+	}
+
+	.player-title {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
 	}
 
 	.sidebar-player-info h1 {

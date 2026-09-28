@@ -14,7 +14,8 @@ const DATE_AWARE_PATHS = [
 	(path) => path === '/',
 	(path) => path.startsWith('/player/'),
 	(path) => path === '/lab',
-	(path) => path === '/rewind'
+	(path) => path === '/rewind',
+	(path) => path === '/daily'
 ];
 
 export function isDateAwarePath(pathname) {

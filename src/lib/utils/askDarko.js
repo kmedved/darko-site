@@ -360,6 +360,7 @@ function seasonOf(date, calendar) {
 // ---------------------------------------------------------------- pages
 
 export const ASK_PAGES = Object.freeze([
+	{ re: /^(the daily|daily|today|movers|risers|fallers|news)$/, label: 'The Daily', href: '/daily' },
 	{ re: /^(home|leaderboard|active leaderboard|players?|dpm|rankings?)$/, label: 'Active Leaderboard', href: '/' },
 	{ re: /^(wowy|wowy rapm|rapm)$/, label: 'WOWY RAPM', href: '/wowy' },
 	{ re: /^(standings|teams?|playoff odds|odds|sims?|simulations?)$/, label: 'Standings', href: '/standings' },
@@ -373,7 +374,7 @@ export const ASK_PAGES = Object.freeze([
 	{ re: /^(fantasy|fantasy lab|projections|draft)$/, label: 'Fantasy Lab', href: '/projections' },
 	{ re: /^(rate|rate a player|elo|vote)$/, label: 'Rate a Player', href: '/rate' },
 	{ re: /^(about|faq|help|methodology)$/, label: 'About', href: '/about' },
-	{ re: /^(what'?s new|new|news|features|tour|changelog)$/, label: "What's new", href: '/new' }
+	{ re: /^(what'?s new|new|features|tour|changelog)$/, label: "What's new", href: '/new' }
 ]);
 
 /** Opens Ask DARKO from anywhere on a page with `query` typed in; AskDarko.svelte listens. */
