@@ -53,12 +53,11 @@ already carry the skill percentiles.
   row, which is one game early; `src/lib/utils/seismograph.js` has the corrected version.
 - Fantasy per-game values use the same conversion as `nba_darko`'s props stage:
   `poss = x_minutes * x_pace / 48`, `stat = x_stat_100 * poss / 100`.
-- Each publish (`nba_darko/1_historic_darko/push_website.py`) drops the old `player_ratings`
-  with CASCADE when it swaps the new one in, and recreates only the functions in
-  `restore_player_ratings_rpcs()`. Any new Postgres function built on that table must be added
-  there, or the next publish removes it. The function it restores must match the site's latest
-  migration: an older copy of `get_wowy_season_player_ratings` there undid migration
-  20260814_001 on every publish until it was replaced with the migration's own definition.
+- Postgres functions (every RPC the site calls) are owned by this repository's
+  `supabase/migrations/`. `nba_darko`'s publisher never creates or replaces one: it swaps
+  tables in with a plain `DROP TABLE`, which does not remove string-bodied SQL functions,
+  and asks PostgREST to reload its schema cache. Add a new function as a site migration;
+  a publish will not remove it.
 - Until the fix in `push_website.py`, every publish left `players.draft_year` and `draft_slot`
   empty (a float-text-to-integer cast nulled all 3,704) and gave 403 of 530 active players no
   `current_team` (the offseason placeholder rows have none), so Rate a Player showed everyone as

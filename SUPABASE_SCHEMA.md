@@ -5,16 +5,26 @@ Reference for the Supabase (Postgres) tables powering darko-site. Use this when 
 ## Architecture
 
 ```
-Python pipeline (local)
-  → parquet files (calculated_data/, calculated_data/temp/)
-  → build_supabase_tables.py joins them into supabase_tables/*.parq
-  → upload_to_supabase.py loads to Postgres via COPY
+Python pipeline (nba_darko, run on the writer Mac)
+  → 1_historic_darko/push_website.py builds each website table as a Polars frame
+  → uploads every table into a "<table>__next" staging table the site cannot read
+  → one short transaction swaps the staged tables in (plain DROP TABLE + RENAME),
+    re-applies row-level security, records the publication, and NOTIFYs PostgREST
+  → calls the Vercel deploy hook so the site redeploys with an empty cache
 
 SvelteKit (darko-site/, deployed on Vercel)
   → queries Supabase via PostgREST (supabase-js client)
   → src/lib/server/supabase.js — all DB access, caching, field mapping
   → API routes in src/routes/api/ serve JSON to frontend components
 ```
+
+**Ownership.** `nba_darko` owns the tables it publishes: columns, indexes, staging and
+swap, and the read policies on tables the swap recreates. `darko-site` owns application
+state (the Elo vote path and `elo_rate_limits`) and every Postgres function, through
+`supabase/migrations/`. The publisher never issues `CREATE OR REPLACE FUNCTION`, and a
+publish never removes a function: string-bodied SQL functions record no dependency on the
+tables they name. `supabase/migrations/20260929_001_reassert_function_ownership.sql` puts
+production at this repository's definitions and can be re-run at any time.
 
 ---
 
@@ -27,7 +37,7 @@ Core fact table. One row per player per game-date.
 - **Primary key:** `(nba_id, date)`
 - **Indexes:** `date DESC`, `season`, `nba_id`
 - **Rows:** ~1,089,000
-- **Update strategy:** DELETE current season + INSERT current season (atomic transaction). Historical seasons are only re-uploaded if the table is dropped.
+- **Update strategy:** only the days whose fingerprints changed are replaced (row locks, readers never wait); a full staged rebuild and swap when `--full-player-ratings` is passed, nothing is published yet, or the columns or fingerprints no longer match.
 
 Built by `build_supabase_tables.py` which left-joins six source files on `(nba_id, date)`:
 
@@ -394,6 +404,73 @@ Five-man lineup ratings used by the `/lineups` page. One row per lineup variant.
 | 16 | player_5_id | bigint | Fifth player NBA ID |
 
 ---
+
+### season_calendar
+
+First game, last regular-season game and last game of every season. Built by
+`build_season_calendar()` in `1_historic_darko/push_website.py`; rebuilt and swapped in on every
+publish. Read by `src/lib/server/history.js` for the Time Machine and Rewind.
+
+- **Unique index:** `(season)`
+- **Columns:** `season`, `first_game`, `regular_season_end`, `earliest_team_finale` (the first
+  date any team played its last regular-season game), `last_game`
+
+### rating_frames
+
+The weekly top players by DPM in every regular season since 1996-97, with each player's latest
+rating at that frame. Built by `build_rating_frames()` in `1_historic_darko/push_website.py`;
+rebuilt and swapped in on every publish. Read by `src/lib/server/history.js` for Rewind.
+
+- **Unique index:** `(frame_date, rank)`; index on `season`
+- **Columns:** `frame_date`, `rank`, `season`, `nba_id`, `player_name`, `date`, `tm_id`,
+  `team_name`, `dpm`, `o_dpm`, `d_dpm`, `seconds_played`, `games`, `last_played`
+
+### player_comps
+
+The closest historical comps for every current player, closest first, each comp at its
+closest season with five finished seasons of futures. Built by
+`pipeline_scripts/publish/website_comps.py`; rebuilt and swapped in on every publish. Read by
+`src/lib/server/comps.js` for player pages and Echoes.
+
+- **Unique index:** `(nba_id, rank)`; index on `comp_id`
+- **Columns:** `nba_id`, `season`, `as_of`, `age`, `dpm`, `rank`, `comp_id`, `comp_name`,
+  `comp_season`, `comp_age`, `comp_dpm`, `comp_o_dpm`, `comp_d_dpm`, `similarity`, `weight`,
+  `dpm_next_1` … `dpm_next_5`
+
+### player_seasons
+
+Every player-season at its last game day. Built by `build_player_seasons()` in
+`pipeline_scripts/publish/website_daily.py`; rebuilt and swapped in on every publish. Read by
+`src/lib/server/daily.js` for The Daily and player-page season tables.
+
+- **Unique index:** `(nba_id, season)`; index on `(season, age_rank)`
+- **Columns:** `nba_id`, `season`, `player_name`, `tm_id`, `date`, `age`, `age_year`, `dpm`,
+  `o_dpm`, `d_dpm`, `games`, `playoff_games`, `minutes`, `seconds_played`, `age_rank`,
+  `age_count`
+
+### game_updates
+
+Every game of the current season each player played, with the rating going into it and coming
+out. Built by `build_game_updates()` in `pipeline_scripts/publish/website_daily.py`; rebuilt
+and swapped in on every publish. Read by `src/lib/server/daily.js` for The Daily and the
+Seismograph.
+
+- **Unique index:** `(nba_id, date)`; index on `date`
+- **Columns:** `nba_id`, `player_name`, `date`, `season`, `game_type`, `tm_id`, `opp_id`,
+  `player_game`, `minutes`, `seconds_played`, `dpm_before`, `o_before`, `d_before`,
+  `dpm_after`, `o_after`, `d_after`, `dpm_update`, `o_update`, `d_update`, `abs_update`
+
+### rating_moves
+
+Rating changes into the latest published date over 7 days, 30 days and since the season began.
+Built by `build_rating_moves()` in `pipeline_scripts/publish/website_daily.py`; rebuilt and
+swapped in on every publish. Read by `src/lib/server/daily.js` for The Daily.
+
+- **Unique index:** `(period, nba_id)`
+- **Columns:** `period`, `start_date`, `end_date`, `nba_id`, `player_name`, `tm_id`, `games`,
+  `dpm_from`, `o_from`, `dpm_to`, `o_to`, `delta`, `o_delta`
+
+Column lists above are the ones the site reads; each builder is the source of truth.
 
 ## SvelteKit Data Access Layer
 
