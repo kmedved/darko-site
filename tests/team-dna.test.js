@@ -3,12 +3,19 @@ import assert from 'node:assert/strict';
 
 import { defaultRoster, rateRoster } from '../src/lib/utils/rosterLab.js';
 import {
+    contributionExtent,
+    contributionSummary,
     coreOutlook,
+    DEEP_BENCH_MINUTES,
+    foldDeepBench,
     leagueTeamRatings,
+    minutesProfile,
     niceTicks,
     payrollRows,
     ratingContributions,
     ratingWaterfall,
+    rosterContributions,
+    sortContributions,
     teamRatingSummary
 } from '../src/lib/utils/teamDna.js';
 
@@ -121,4 +128,116 @@ test('the core outlook lists the rotation by minutes with years left and surviva
     // Percent-scale survival passes through.
     assert.equal(core[2].onRosterIn3, 40);
     assert.equal(core[0].age, 27.6);
+});
+
+const near = (a, b, tolerance = 1e-9) => Math.abs(a - b) < tolerance;
+
+test('an edited Lab roster splits into contributions that add up to its Lab rating', () => {
+    const byId = new Map(KNICKS.map((row) => [row.nba_id, row]));
+    byId.set(99, player(99, 'New York Knicks', { dpm: null }));
+    // 102 minutes plus an unrated player and a player at zero: the Lab rates it as if it filled 240.
+    const roster = [
+        { id: 1, minutes: 40 },
+        { id: 2, minutes: 30 },
+        { id: 3, minutes: 12 },
+        { id: 99, minutes: 20 },
+        { id: 10, minutes: 0 }
+    ];
+    const rows = rosterContributions(roster, byId);
+    const lab = rateRoster(roster, byId);
+    assert.deepEqual(rows.map((row) => row.id).sort(), [1, 2, 3]);
+    assert.ok(near(rows.reduce((sum, row) => sum + row.total, 0), lab.rating));
+    assert.ok(near(rows.reduce((sum, row) => sum + row.offense, 0), lab.offense));
+    assert.ok(near(rows.reduce((sum, row) => sum + row.defense, 0), lab.defense));
+});
+
+// A starter whose offense and defense cancel, a rotation player and two deep-bench players.
+const MIXED = [
+    { id: 1, name: 'Starter', minutes: 36, dpm: 0.05, oDpm: 2, dDpm: -1.95, offense: 1.5, defense: -1.46, total: 0.04 },
+    { id: 2, name: 'Rotation', minutes: 20, dpm: 1, oDpm: 0.7, dDpm: 0.3, offense: 0.3, defense: 0.12, total: 0.42 },
+    { id: 3, name: 'Bench A', minutes: 4.9, dpm: -2, oDpm: -1, dDpm: -1, offense: -0.1, defense: -0.1, total: -0.2 },
+    { id: 4, name: 'Bench B', minutes: 1.1, dpm: 3, oDpm: 2, dDpm: 1, offense: 0.05, defense: 0.02, total: 0.07 }
+];
+
+test('the deep bench folds by minutes, never by contribution', () => {
+    assert.equal(DEEP_BENCH_MINUTES, 5);
+    const folded = foldDeepBench(MIXED);
+    // The starter's net is nearly zero, but he plays 36 minutes, so he keeps his row.
+    assert.deepEqual(folded.map((row) => row.id), [1, 2, 'deep-bench']);
+    const bench = folded.at(-1);
+    assert.equal(bench.bench, true);
+    assert.deepEqual(bench.players.map((row) => row.id), [3, 4]);
+    assert.ok(near(bench.minutes, 6));
+    assert.ok(near(bench.total, -0.13));
+    assert.ok(near(bench.offense + bench.defense, bench.total));
+    assert.ok(near(bench.dpm, (-2 * 4.9 + 3 * 1.1) / 6));
+    // One short-minutes player keeps his own row.
+    assert.deepEqual(foldDeepBench(MIXED.slice(0, 3)).map((row) => row.id), [1, 2, 3]);
+});
+
+test('sorting by a column keeps the deep bench last', () => {
+    const folded = foldDeepBench(MIXED);
+    assert.deepEqual(sortContributions(folded, 'total').map((row) => row.id), [2, 1, 'deep-bench']);
+    assert.deepEqual(sortContributions(folded, 'offense').map((row) => row.id), [1, 2, 'deep-bench']);
+    assert.deepEqual(sortContributions(folded, 'defense').map((row) => row.id), [2, 1, 'deep-bench']);
+});
+
+test('the summary splits the rating into what above- and below-average players add', () => {
+    const rows = ratingContributions(KNICKS);
+    const lab = rateRoster(defaultRoster(KNICKS), new Map(KNICKS.map((row) => [row.nba_id, row])));
+    const summary = contributionSummary(rows);
+    assert.equal(summary.aboveCount, 9);
+    assert.equal(summary.belowCount, 1);
+    assert.ok(summary.below < 0 && summary.above > lab.rating);
+    assert.ok(near(summary.above + summary.below, lab.rating));
+    assert.ok(near(summary.total, lab.rating));
+});
+
+test('one scale covers the offense, defense and net columns and zero', () => {
+    const folded = foldDeepBench(MIXED);
+    assert.deepEqual(contributionExtent(folded), { low: -1.46, high: 1.5 });
+    assert.deepEqual(contributionExtent([{ offense: 0.2, defense: 0.1, total: 0.3 }]), { low: 0, high: 0.3 });
+});
+
+test('the build-up keeps the deep bench last and marks the peak it falls back from', () => {
+    const waterfall = ratingWaterfall(foldDeepBench(MIXED), 'total');
+    assert.deepEqual(waterfall.steps.map((step) => step.id), [2, 1, 'deep-bench']);
+    assert.ok(near(waterfall.peak, 0.46));
+    assert.ok(near(waterfall.total, 0.33));
+    // A team that only climbs, or only falls, has no peak to mark.
+    assert.equal(ratingWaterfall(MIXED.slice(0, 2), 'total').peak, null);
+    assert.equal(ratingWaterfall(MIXED.slice(2), 'total').peak, 0.07);
+    assert.equal(ratingWaterfall([MIXED[2]], 'total').peak, null);
+});
+
+test('the minutes chart: widths are minutes shares and areas add up to the rating', () => {
+    const byId = new Map(KNICKS.map((row) => [row.nba_id, row]));
+    // 235 minutes with two deep-bench players.
+    const roster = [
+        { id: 1, minutes: 38 },
+        { id: 2, minutes: 34 },
+        { id: 3, minutes: 30 },
+        ...[10, 11, 12, 13, 14, 15].map((id) => ({ id, minutes: 21 })),
+        { id: 16, minutes: 3 },
+        { id: 100, minutes: 4 }
+    ];
+    byId.set(100, CELTICS[0]);
+    const rows = foldDeepBench(rosterContributions(roster, byId));
+    const lab = rateRoster(roster, byId);
+    const profile = minutesProfile(rows);
+    assert.ok(near(profile.minutes, 235));
+    assert.ok(near(profile.rating, lab.rating));
+    assert.ok(near(profile.mean * 5, lab.rating));
+    // Contiguous widths from 0 to 1, best DPM first, the deep bench last.
+    assert.equal(profile.bars[0].x0, 0);
+    assert.equal(profile.bars.at(-1).x1, 1);
+    for (let i = 1; i < profile.bars.length; i += 1) assert.ok(near(profile.bars[i].x0, profile.bars[i - 1].x1));
+    const players = profile.bars.filter((bar) => !bar.bench);
+    assert.ok(players.every((bar, i) => i === 0 || players[i - 1].dpm >= bar.dpm));
+    assert.equal(profile.bars.at(-1).id, 'deep-bench');
+    // Each bar's area (DPM x share x 5) is that row's contribution, the deep bench's included.
+    for (const bar of profile.bars) assert.ok(near(bar.dpm * bar.share * 5, bar.total), bar.name);
+    assert.equal(profile.low, -1);
+    assert.equal(profile.high, 4);
+    assert.deepEqual(minutesProfile([]).bars, []);
 });

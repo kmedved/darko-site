@@ -2,7 +2,7 @@
     import { getContext } from 'svelte';
     import WinDistChart from './WinDistChart.svelte';
     import SeedChart from './SeedChart.svelte';
-    import OffenseDefenseGlyph from './OffenseDefenseGlyph.svelte';
+    import RatingBreakdown from './RatingBreakdown.svelte';
     import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
     import { getSeriesColor } from '$lib/utils/chartTheme.js';
     import {
@@ -13,14 +13,7 @@
         teamPlayersCsvColumns
     } from '$lib/utils/csvPresets.js';
     import { formatSigned } from '$lib/utils/seismograph.js';
-    import {
-        coreOutlook,
-        niceTicks,
-        payrollRows,
-        ratingContributions,
-        ratingWaterfall,
-        teamRatingSummary
-    } from '$lib/utils/teamDna.js';
+    import { coreOutlook, payrollRows, ratingContributions, teamRatingSummary } from '$lib/utils/teamDna.js';
     import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
@@ -78,16 +71,6 @@
     const abbr = $derived(teamAbbr(teamName));
     const ratingSummary = $derived(teamRatingSummary(abbr, teamPlayers, league));
     const contributions = $derived(ratingContributions(teamPlayers));
-    // The waterfall shows one component at a time, so every view adds up exactly.
-    const WATERFALL_VIEWS = [
-        { key: 'total', label: 'Total', dpm: 'dpm', dpmLabel: 'DPM' },
-        { key: 'offense', label: 'Offense', dpm: 'oDpm', dpmLabel: 'O-DPM' },
-        { key: 'defense', label: 'Defense', dpm: 'dDpm', dpmLabel: 'D-DPM' }
-    ];
-    let waterfallView = $state('total');
-    const waterfallMeta = $derived(WATERFALL_VIEWS.find((view) => view.key === waterfallView));
-    const waterfall = $derived(ratingWaterfall(contributions, waterfallView));
-    const waterfallScale = $derived(stepScale(waterfall));
     const payroll = $derived(payrollRows(teamPlayers));
     const payrollScale = $derived(moneyScale(payroll.rows));
     const surplusTintLimit = $derived(tintLimit(payroll.rows.map((row) => row.surplus)));
@@ -95,22 +78,6 @@
     const coreTintLimit = $derived(tintLimit(core.map((row) => row.dpm)));
     const valueColor = $derived(getSeriesColor(0, displayMode.view));
     let dnaTip = $state(null);
-
-    /** Positions (percent of the track) for a waterfall's values, with round ticks. */
-    function stepScale({ low, high }) {
-        const pad = (high - low) * 0.04 || 0.5;
-        const min = low - pad;
-        const max = high + pad;
-        return {
-            ticks: niceTicks(low, high, 5),
-            at: (value) => ((value - min) / (max - min)) * 100
-        };
-    }
-
-    function formatTick(value) {
-        if (value === 0) return '0';
-        return Number.isInteger(value) ? `${value > 0 ? '+' : ''}${value}` : formatSigned(value, 1);
-    }
 
     /** A $0-based money axis, rounded up to a whole step, with its tick values. */
     function moneyScale(rows) {
@@ -156,26 +123,6 @@
 
     function hideTip() {
         dnaTip = null;
-    }
-
-    function waterfallTip(step) {
-        const lines = [{ text: step.name, head: true }];
-        if (waterfallView === 'total') {
-            lines.push(
-                { text: `${formatSigned(step.total, 2)} per 100 possessions for the team` },
-                { text: `${formatSigned(step.offense, 2)} from offense, ${formatSigned(step.defense, 2)} from defense`, muted: true }
-            );
-        } else {
-            lines.push({ text: `${formatSigned(step.value, 2)} per 100 possessions from ${waterfallView}` });
-        }
-        lines.push(
-            {
-                text: `${formatSigned(step[waterfallMeta.dpm], 1)} ${waterfallMeta.dpmLabel} over ${formatFixed(step.minutes, 1)} of 240 minutes`,
-                muted: true
-            },
-            { text: `Running total ${formatSigned(step.end, 2)}`, muted: true }
-        );
-        return lines;
     }
 
     function payrollTip(row) {
@@ -485,210 +432,115 @@
     {/if}
 
 
-    {#if contributions.length > 0}
-        <div class="dna-grid" id="team-dna">
-            <section class="dna-section" aria-labelledby="dna-contrib-title" data-shiny-surface="plot">
-                <h2 class="section-title" id="dna-contrib-title">Where the rating comes from</h2>
-                <p class="dna-note">
-                    {#if waterfallView === 'total'}
-                        Each player's DPM times their share of DARKO's projected minutes. Each bar starts where
-                        the one above ends, so together they walk from zero to the team's
-                        {formatSigned(waterfall.total, 1)}.
-                    {:else}
-                        {waterfallMeta.label} alone: each player's {waterfallMeta.dpmLabel} times their share of
-                        the minutes, walking from zero to the team's {waterfallView} of
-                        {formatSigned(waterfall.total, 1)}.
+    {#if contributions.length > 0 || payroll.rows.length > 0}
+        <div class="dna" id="team-dna">
+            {#if contributions.length > 0}
+                <section class="dna-section" aria-labelledby="dna-contrib-title" data-shiny-surface="plot">
+                    <h2 class="section-title" id="dna-contrib-title">Where the rating comes from</h2>
+                    <RatingBreakdown rows={contributions} {teamName} />
+                    {#if abbr}
+                        <a class="dna-link" href="/lab?a={abbr}">Rebuild this roster in the Roster Lab →</a>
                     {/if}
-                    Hatched bars take points away.
-                </p>
-                <div class="dna-switch" role="group" aria-label="Rating shown">
-                    {#each WATERFALL_VIEWS as view (view.key)}
-                        <button
-                            type="button"
-                            class:active={waterfallView === view.key}
-                            aria-pressed={waterfallView === view.key}
-                            onclick={() => (waterfallView = view.key)}
-                        >
-                            {#if view.key !== 'total'}<OffenseDefenseGlyph side={view.key} />{/if}
-                            {view.label}
-                        </button>
-                    {/each}
-                </div>
-                <div class="dna-chart waterfall waterfall--{waterfallView}" data-chart="contrib">
-                    <ol class="wf-list">
-                        {#each waterfall.steps as step, index (step.id)}
-                            <li>
-                                <a
-                                    class="wf-row"
-                                    href="/player/{step.id}"
-                                    onpointermove={(event) => tipAtPointer(event, waterfallTip(step))}
-                                    onpointerleave={hideTip}
-                                    onfocus={(event) => tipAtRow(event, waterfallTip(step))}
-                                    onblur={hideTip}
-                                >
-                                    <span class="contrib-who">
-                                        <span class="contrib-name">{step.name}</span>
-                                        <span class="contrib-meta">
-                                            {formatFixed(step.minutes, 1)} min · {formatSigned(step[waterfallMeta.dpm], 1)}
-                                            {waterfallMeta.dpmLabel}
-                                        </span>
-                                    </span>
-                                    <span class="wf-track" aria-hidden="true">
-                                        {#each waterfallScale.ticks as tick (tick)}
-                                            <span class="wf-grid" class:wf-zero={tick === 0} style:left="{waterfallScale.at(tick)}%"></span>
-                                        {/each}
-                                        {#if index > 0}
-                                            <span class="wf-link" style:left="{waterfallScale.at(step.start)}%"></span>
-                                        {/if}
-                                        <span
-                                            class="wf-bar"
-                                            class:negative={step.value < 0}
-                                            style:left="{waterfallScale.at(Math.min(step.start, step.end))}%"
-                                            style:width="{Math.abs(waterfallScale.at(step.end) - waterfallScale.at(step.start))}%"
-                                        ></span>
-                                    </span>
-                                    <span class="contrib-total">{formatSigned(step.value, 2)}</span>
-                                    <span class="sr-only">
-                                        per 100 possessions{waterfallView === 'total' ? '' : ` from ${waterfallView}`}; running total
-                                        {formatSigned(step.end, 2)}
-                                    </span>
-                                </a>
-                            </li>
-                        {/each}
-                        <li>
-                            <div class="wf-row wf-row--total">
-                                <span class="contrib-who">
-                                    <span class="contrib-name">{teamName}</span>
-                                    <span class="contrib-meta">{waterfallView === 'total' ? 'DARKO rating' : `Team ${waterfallView}`}</span>
-                                </span>
-                                <span class="wf-track" aria-hidden="true">
-                                    {#each waterfallScale.ticks as tick (tick)}
-                                        <span class="wf-grid" class:wf-zero={tick === 0} style:left="{waterfallScale.at(tick)}%"></span>
+                </section>
+            {/if}
+
+            <div class="dna-pair">
+                {#if core.length > 0}
+                    <section class="dna-section" aria-labelledby="dna-core-title" data-shiny-surface="panel">
+                        <h2 class="section-title" id="dna-core-title">Core outlook</h2>
+                        <p class="dna-note">The rotation by projected minutes: age, rating and how long DARKO expects each player to last.</p>
+                        <div class="core-table-wrapper" data-shiny-table>
+                            <table class="core-table">
+                                <thead>
+                                    <tr>
+                                        <th class="core-th">Player</th>
+                                        <th class="core-th num">Age</th>
+                                        <th class="core-th num">DPM</th>
+                                        <th class="core-th num">
+                                            <MetricTooltip text="DARKO's projected seasons left in the league, from its survival model.">
+                                                <span>Years left</span>
+                                            </MetricTooltip>
+                                        </th>
+                                        <th class="core-th num">
+                                            <MetricTooltip text="The chance DARKO gives the player of playing at least three more seasons.">
+                                                <span>Active in 3 yrs</span>
+                                            </MetricTooltip>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {#each core as row (row.id)}
+                                        <tr>
+                                            <td class="core-cell name"><a href="/player/{row.id}">{row.name}</a></td>
+                                            <td class="core-cell num">{row.age === null ? '—' : Math.floor(row.age)}</td>
+                                            <td class="core-cell num tint-cell" style={divergingTint(row.dpm, coreTintLimit)}>{formatSigned(row.dpm, 1)}</td>
+                                            <td class="core-cell num">{row.seasonsLeft === null ? '—' : formatFixed(row.seasonsLeft, 1)}</td>
+                                            <td class="core-cell num">{row.onRosterIn3 === null ? '—' : `${Math.round(row.onRosterIn3)}%`}</td>
+                                        </tr>
                                     {/each}
-                                    <span class="wf-link" style:left="{waterfallScale.at(waterfall.total)}%"></span>
-                                    <span
-                                        class="wf-bar wf-bar--total"
-                                        class:negative={waterfall.total < 0}
-                                        style:left="{waterfallScale.at(Math.min(0, waterfall.total))}%"
-                                        style:width="{Math.abs(waterfallScale.at(waterfall.total) - waterfallScale.at(0))}%"
-                                    ></span>
-                                </span>
-                                <span class="contrib-total">{formatSigned(waterfall.total, 2)}</span>
-                            </div>
-                        </li>
-                    </ol>
-                    <div class="wf-axis" aria-hidden="true">
-                        <span></span>
-                        <span class="wf-axis-track">
-                            {#each waterfallScale.ticks as tick (tick)}
-                                <span class="pay-tick" style:left="{waterfallScale.at(tick)}%">{formatTick(tick)}</span>
-                            {/each}
-                        </span>
-                        <span></span>
-                    </div>
-                    {#if dnaTip?.chart === 'contrib'}
-                        {@render tipBox(dnaTip)}
-                    {/if}
-                </div>
-                {#if abbr}
-                    <a class="dna-link" href="/lab?a={abbr}">Rebuild this roster in the Roster Lab →</a>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
                 {/if}
-            </section>
-
-            <section class="dna-section" aria-labelledby="dna-core-title" data-shiny-surface="panel">
-                <h2 class="section-title" id="dna-core-title">Core outlook</h2>
-                <p class="dna-note">The rotation by projected minutes: age, rating and how long DARKO expects each player to last.</p>
-                <div class="core-table-wrapper" data-shiny-table>
-                    <table class="core-table">
-                        <thead>
-                            <tr>
-                                <th class="core-th">Player</th>
-                                <th class="core-th num">Age</th>
-                                <th class="core-th num">DPM</th>
-                                <th class="core-th num">
-                                    <MetricTooltip text="DARKO's projected seasons left in the league, from its survival model.">
-                                        <span>Years left</span>
-                                    </MetricTooltip>
-                                </th>
-                                <th class="core-th num">
-                                    <MetricTooltip text="The chance DARKO gives the player of playing at least three more seasons.">
-                                        <span>Active in 3 yrs</span>
-                                    </MetricTooltip>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {#each core as row (row.id)}
-                                <tr>
-                                    <td class="core-cell name"><a href="/player/{row.id}">{row.name}</a></td>
-                                    <td class="core-cell num">{row.age === null ? '—' : Math.floor(row.age)}</td>
-                                    <td class="core-cell num tint-cell" style={divergingTint(row.dpm, coreTintLimit)}>{formatSigned(row.dpm, 1)}</td>
-                                    <td class="core-cell num">{row.seasonsLeft === null ? '—' : formatFixed(row.seasonsLeft, 1)}</td>
-                                    <td class="core-cell num">{row.onRosterIn3 === null ? '—' : `${Math.round(row.onRosterIn3)}%`}</td>
-                                </tr>
-                            {/each}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </div>
-    {/if}
-
-    {#if payroll.rows.length > 0}
-        <section class="dna-section" aria-labelledby="dna-pay-title" data-shiny-surface="plot">
-            <h2 class="section-title" id="dna-pay-title">Payroll against DARKO value</h2>
-            <p class="dna-note">
-                {formatDollarsMillions(payroll.payroll)} of salary for {formatDollarsMillions(payroll.value)} of DARKO
-                fair value. The {payroll.rows.length} best-paid players:
-            </p>
-            <p class="dna-legend" aria-hidden="true">
-                <span class="pay-key"><span class="pay-key-ring"></span> Salary</span>
-                <span class="pay-key"><span class="pay-key-dot" style:background={valueColor}></span> DARKO fair value</span>
-            </p>
-            <div class="dna-chart" data-chart="payroll">
-                <ol class="pay-list">
-                    {#each payroll.rows as row (row.id)}
-                        <li>
-                            <a
-                                class="pay-row"
-                                href="/player/{row.id}"
-                                onpointermove={(event) => tipAtPointer(event, payrollTip(row))}
-                                onpointerleave={hideTip}
-                                onfocus={(event) => tipAtRow(event, payrollTip(row))}
-                                onblur={hideTip}
-                            >
-                                <span class="pay-name">{row.name}</span>
-                                <span class="pay-track" aria-hidden="true">
-                                    <span
-                                        class="pay-span"
-                                        style:left="{Math.min(payrollScale.at(row.salary), payrollScale.at(row.value))}%"
-                                        style:width="{Math.abs(payrollScale.at(row.value) - payrollScale.at(row.salary))}%"
-                                    ></span>
-                                    <span class="pay-ring" style:left="{payrollScale.at(row.salary)}%"></span>
-                                    <span class="pay-dot" style:left="{payrollScale.at(row.value)}%" style:background={valueColor}></span>
+                {#if payroll.rows.length > 0}
+                    <section class="dna-section" aria-labelledby="dna-pay-title" data-shiny-surface="plot">
+                        <h2 class="section-title" id="dna-pay-title">Payroll against DARKO value</h2>
+                        <p class="dna-note">
+                            {formatDollarsMillions(payroll.payroll)} of salary for {formatDollarsMillions(payroll.value)} of DARKO
+                            fair value. The {payroll.rows.length} best-paid players:
+                        </p>
+                        <p class="dna-legend" aria-hidden="true">
+                            <span class="pay-key"><span class="pay-key-ring"></span> Salary</span>
+                            <span class="pay-key"><span class="pay-key-dot" style:background={valueColor}></span> DARKO fair value</span>
+                        </p>
+                        <div class="dna-chart" data-chart="payroll">
+                            <ol class="pay-list">
+                                {#each payroll.rows as row (row.id)}
+                                    <li>
+                                        <a
+                                            class="pay-row"
+                                            href="/player/{row.id}"
+                                            onpointermove={(event) => tipAtPointer(event, payrollTip(row))}
+                                            onpointerleave={hideTip}
+                                            onfocus={(event) => tipAtRow(event, payrollTip(row))}
+                                            onblur={hideTip}
+                                        >
+                                            <span class="pay-name">{row.name}</span>
+                                            <span class="pay-track" aria-hidden="true">
+                                                <span
+                                                    class="pay-span"
+                                                    style:left="{Math.min(payrollScale.at(row.salary), payrollScale.at(row.value))}%"
+                                                    style:width="{Math.abs(payrollScale.at(row.value) - payrollScale.at(row.salary))}%"
+                                                ></span>
+                                                <span class="pay-ring" style:left="{payrollScale.at(row.salary)}%"></span>
+                                                <span class="pay-dot" style:left="{payrollScale.at(row.value)}%" style:background={valueColor}></span>
+                                            </span>
+                                            <span class="sr-only">
+                                                : salary {formatDollarsMillions(row.salary)}, DARKO value {formatDollarsMillions(row.value)}, surplus
+                                            </span>
+                                            <span class="pay-surplus tint-cell" style={divergingTint(row.surplus, surplusTintLimit)}>{formatSignedMoney(row.surplus)}</span>
+                                        </a>
+                                    </li>
+                                {/each}
+                            </ol>
+                            <div class="pay-axis" aria-hidden="true">
+                                <span></span>
+                                <span class="pay-axis-track">
+                                    {#each payrollScale.ticks as tick (tick)}
+                                        <span class="pay-tick" style:left="{payrollScale.at(tick)}%">{formatMoneyTick(tick)}</span>
+                                    {/each}
                                 </span>
-                                <span class="sr-only">
-                                    : salary {formatDollarsMillions(row.salary)}, DARKO value {formatDollarsMillions(row.value)}, surplus
-                                </span>
-                                <span class="pay-surplus tint-cell" style={divergingTint(row.surplus, surplusTintLimit)}>{formatSignedMoney(row.surplus)}</span>
-                            </a>
-                        </li>
-                    {/each}
-                </ol>
-                <div class="pay-axis" aria-hidden="true">
-                    <span></span>
-                    <span class="pay-axis-track">
-                        {#each payrollScale.ticks as tick (tick)}
-                            <span class="pay-tick" style:left="{payrollScale.at(tick)}%">{formatMoneyTick(tick)}</span>
-                        {/each}
-                    </span>
-                    <span class="pay-axis-label">Surplus</span>
-                </div>
-                {#if dnaTip?.chart === 'payroll'}
-                    {@render tipBox(dnaTip)}
+                                <span class="pay-axis-label">Surplus</span>
+                            </div>
+                            {#if dnaTip?.chart === 'payroll'}
+                                {@render tipBox(dnaTip)}
+                            {/if}
+                        </div>
+                    </section>
                 {/if}
             </div>
-        </section>
+        </div>
     {/if}
 
     {#if topLineups.length > 0 || worstLineups.length > 0}
@@ -885,11 +737,8 @@
         opacity: 1;
     }
 
-    /* Team DNA */
-    .dna-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-        gap: 32px;
+    /* Team DNA: the rating chart gets the full width; core outlook and payroll share a row. */
+    .dna {
         margin-bottom: 32px;
         /* Ask DARKO links to #team-dna; the heading clears the sticky nav. */
         scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
@@ -900,7 +749,14 @@
         margin-bottom: 32px;
     }
 
-    .dna-grid .dna-section {
+    .dna-pair {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        gap: 32px;
+        align-items: start;
+    }
+
+    .dna-pair .dna-section {
         margin-bottom: 0;
     }
 
@@ -929,14 +785,12 @@
         position: relative;
     }
 
-    .wf-list,
     .pay-list {
         list-style: none;
         margin: 0;
         padding: 0;
     }
 
-    .wf-row,
     .pay-row {
         display: grid;
         align-items: center;
@@ -947,25 +801,11 @@
         text-decoration: none;
     }
 
-    .wf-row,
-    .wf-axis {
-        grid-template-columns: minmax(118px, 34%) minmax(0, 1fr) 48px;
-    }
-
-    a.wf-row:hover,
-    a.wf-row:focus-visible,
     .pay-row:hover,
     .pay-row:focus-visible {
         background: var(--bg-hover);
     }
 
-    .contrib-who {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-    }
-
-    .contrib-name,
     .pay-name {
         overflow: hidden;
         font-size: 13px;
@@ -974,151 +814,11 @@
         white-space: nowrap;
     }
 
-    .contrib-meta {
-        font-size: 11px;
-        color: var(--text-muted);
-        white-space: nowrap;
-    }
-
-    .contrib-total,
     .pay-surplus {
         font-family: var(--font-mono);
         font-size: 13px;
         font-variant-numeric: tabular-nums;
         text-align: right;
-    }
-
-    .contrib-total {
-        font-weight: 600;
-    }
-
-    .dna-switch {
-        display: inline-grid;
-        grid-auto-flow: column;
-        margin: 0 0 10px;
-        overflow: hidden;
-        background: var(--bg-surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-    }
-
-    .dna-switch button {
-        display: inline-flex;
-        align-items: baseline;
-        justify-content: center;
-        gap: 6px;
-        min-height: 32px;
-        padding: 7px 14px;
-        font-family: var(--font-sans);
-        font-size: 12px;
-        font-weight: 700;
-        color: var(--text-secondary);
-        background: transparent;
-        border: 0;
-        cursor: pointer;
-    }
-
-    .dna-switch button + button {
-        border-left: 1px solid var(--border);
-    }
-
-    .dna-switch button.active {
-        color: var(--bg);
-        background: var(--accent);
-    }
-
-    .dna-switch button:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: -2px;
-    }
-
-    /* One colour per view: neutral for the total, the offense and defense colours otherwise. */
-    .waterfall {
-        --wf-bar: var(--text-secondary);
-    }
-
-    .waterfall--offense {
-        --wf-bar: var(--offense);
-    }
-
-    .waterfall--defense {
-        --wf-bar: var(--defense);
-    }
-
-    .wf-row {
-        padding: 5px 4px;
-    }
-
-    .wf-track,
-    .wf-axis-track {
-        position: relative;
-        height: 26px;
-    }
-
-    .wf-axis-track {
-        height: 16px;
-    }
-
-    .wf-grid {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 1px;
-        background: var(--border-subtle);
-    }
-
-    .wf-grid.wf-zero {
-        background: var(--text-muted);
-    }
-
-    .wf-bar {
-        position: absolute;
-        top: 50%;
-        min-width: 1px;
-        height: 12px;
-        background: var(--wf-bar);
-        border-radius: 2px;
-        transform: translateY(-50%);
-    }
-
-    .wf-bar.negative {
-        background: repeating-linear-gradient(135deg, var(--wf-bar) 0 2px, transparent 2px 5px);
-        box-shadow: inset 0 0 0 1px var(--wf-bar);
-    }
-
-    /* A dashed step from the end of the bar above to the start of this one. */
-    .wf-link {
-        position: absolute;
-        top: -18px;
-        height: 25px;
-        border-left: 1px dashed var(--text-muted);
-    }
-
-    .wf-row--total {
-        border-top: 1px solid var(--border);
-        border-bottom: 0;
-    }
-
-    .wf-row--total .contrib-name,
-    .wf-row--total .contrib-total {
-        font-weight: 800;
-    }
-
-    .wf-bar--total {
-        background: var(--text);
-    }
-
-    .wf-bar--total.negative {
-        background: repeating-linear-gradient(135deg, var(--text) 0 2px, transparent 2px 5px);
-        box-shadow: inset 0 0 0 1px var(--text);
-    }
-
-    .wf-axis {
-        display: grid;
-        gap: 12px;
-        padding: 4px 4px 0;
-        font-size: 11px;
-        color: var(--text-muted);
     }
 
     .dna-link {
@@ -1262,18 +962,12 @@
     }
 
     @media (max-width: 1100px) {
-        .dna-grid {
+        .dna-pair {
             grid-template-columns: minmax(0, 1fr);
         }
     }
 
     @media (max-width: 600px) {
-        .wf-row,
-        .wf-axis {
-            grid-template-columns: minmax(104px, 38%) minmax(0, 1fr) 44px;
-            gap: 8px;
-        }
-
         .pay-row,
         .pay-axis {
             grid-template-columns: minmax(96px, 30%) minmax(0, 1fr) 64px;

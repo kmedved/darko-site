@@ -18,7 +18,7 @@ Reference only. Nothing in this folder is built, tested or deployed by the site.
 | Seismograph: every game's DPM update, split offense/defense | `drawSeismo` in `src/12-player.js` | Live on player pages, with opponents from `player_ratings.opp_id` |
 | Comps & Futures: historical matches and a five-year fan chart | `comps.py`, `drawFan` in `src/12-player.js` | needs a `player_comps` table from the pipeline |
 | Roster Lab: two-team trades, minutes, rating, wins, matchup odds | `src/14-lab.js` | `/lab`, today's rosters or any Time Machine date |
-| Team DNA: rating contributions, lineups, payroll vs value, core outlook | `src/13-teams.js` | Live in `TeamDetailView.svelte` (`utils/teamDna.js`) |
+| Team DNA: rating contributions, lineups, payroll vs value, core outlook | `src/13-teams.js` | Live in `TeamDetailView.svelte`: Players, Build-up and Minutes views (`RatingBreakdown.svelte`, `MinutesChart.svelte`, `utils/teamDna.js`); the Minutes chart is in the Roster Lab too |
 | Fantasy Lab: ESPN, Yahoo, DraftKings, 9-cat or custom scoring, draft board | `src/15-fantasy.js` | Live at `/projections`, without the draft board |
 | Ask DARKO: command bar for players, filters, trades and time travel | `src/19-ask.js` | Live site-wide: `AskDarko.svelte`, `utils/askDarko.js` |
 | DARKOdle: daily mystery player from a career DPM curve | `src/17-darkodle.js` | needs season-end career rows |

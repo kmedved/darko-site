@@ -5,6 +5,7 @@
 	import { page } from '$app/stores';
 	import { getContext, untrack } from 'svelte';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+	import MinutesChart from '$lib/components/MinutesChart.svelte';
 	import OffenseDefenseSplit from '$lib/components/OffenseDefenseSplit.svelte';
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 	import { NBA_TEAMS, teamAbbr } from '$lib/utils/teamAbbreviations.js';
@@ -28,6 +29,7 @@
 		seriesWinProbability,
 		winsFor
 	} from '$lib/utils/rosterLab.js';
+	import { foldDeepBench, minutesProfile, rosterContributions } from '$lib/utils/teamDna.js';
 
 	let { data } = $props();
 
@@ -136,6 +138,18 @@
 			};
 		}
 		return result;
+	});
+	// Each side's Minutes chart: DPM against share of minutes, both on one DPM scale.
+	const minutesRows = $derived({
+		a: foldDeepBench(rosterContributions(view.a.roster, playersById)),
+		b: foldDeepBench(rosterContributions(view.b.roster, playersById))
+	});
+	const minutesDomain = $derived.by(() => {
+		const profiles = SIDES.map((side) => minutesProfile(minutesRows[side]));
+		return {
+			low: Math.min(...profiles.map((profile) => profile.low)),
+			high: Math.max(...profiles.map((profile) => profile.high))
+		};
 	});
 	const matchup = $derived.by(() => {
 		if (sides.a === sides.b) return null;
@@ -416,6 +430,17 @@
 						<span class="lab-stat-value">#{state.rank}</span>
 						<span class="lab-stat-note">of 30 teams</span>
 					</div>
+				</div>
+
+				<div class="lab-dna">
+					<MinutesChart
+						rows={minutesRows[side]}
+						domain={minutesDomain}
+						color={sideColors[side]}
+						height={200}
+						listNarrow={false}
+						playerHref={(id) => (asOf ? `/player/${id}?asof=${asOf.date}` : `/player/${id}`)}
+					/>
 				</div>
 
 				<div class="lab-minutes">
@@ -917,6 +942,12 @@
 	.lab-suggestions button.active,
 	.lab-suggestions button:hover {
 		background: var(--bg-hover);
+	}
+
+	.lab-dna {
+		/* The chart's label halos match the panel. */
+		--mc-halo: var(--bg-surface);
+		margin: 4px 0 14px;
 	}
 
 	.lab-bottom {
