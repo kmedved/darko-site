@@ -48,8 +48,15 @@ test('items stay for 30 days from launch, newest first', () => {
     const evening = new Date('2026-09-28T18:00:00Z');
     assert.deepEqual(keys(currentNews(evening)).slice(0, 4), ['teams', 'seasons', 'box-score', 'daily']);
 
+    // The leaderboard's tools and the fuller player pages followed that night.
+    const night = new Date('2026-09-28T20:00:00Z');
+    assert.deepEqual(keys(currentNews(night)).slice(0, 3), ['leaderboard-tools', 'player-pages', 'teams']);
+    assert.equal(newFeatureCount(night), 13);
+
     // A month on, the first night's launches have left and the later ones remain.
     assert.deepEqual(keys(currentNews(new Date('2026-10-27T12:00:00Z'))), [
+        'leaderboard-tools',
+        'player-pages',
         'teams',
         'seasons',
         'box-score',

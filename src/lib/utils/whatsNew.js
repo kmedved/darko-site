@@ -10,6 +10,22 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'leaderboard-tools',
+		title: 'Leaderboard filters, stars and trends',
+		launched: '2026-09-28T19:36:44Z',
+		text: "Filter the leaderboard by position and age, star players to follow them there and in The Daily, switch on a sparkline of each player's season, and with the Time Machine set, sort by who has risen or fallen since that date.",
+		cta: 'Open the leaderboard',
+		href: '/'
+	},
+	{
+		key: 'player-pages',
+		title: 'Player pages, filled in',
+		launched: '2026-09-28T19:36:44Z',
+		text: "Every player page opens with a menu of its sections and shows the player's rank on today's board, a Contract & longevity panel, and how the latest season ranks among every season at that age since 1996-97.",
+		cta: "See Jokic's page",
+		href: '/player/203999'
+	},
+	{
 		key: 'teams',
 		title: 'Teams overview',
 		launched: '2026-09-28T17:43:21Z',
