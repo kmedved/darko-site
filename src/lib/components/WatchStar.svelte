@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { dailyListed } from '$lib/utils/daily.js';
 	import { startWatchlist, toggleWatch, watchlist } from '$lib/utils/watchlist.js';
 
 	// Follow a player: The Daily's watchlist and the leaderboard's Watchlist filter. The list
@@ -8,6 +9,8 @@
 
 	onMount(startWatchlist);
 	const watched = $derived($watchlist.includes(nbaId));
+	// Between seasons The Daily is off the site, so the star names only the leaderboard.
+	const followedIn = dailyListed() ? 'in The Daily and the leaderboard’s Watchlist' : 'in the leaderboard’s Watchlist';
 </script>
 
 <button
@@ -17,7 +20,7 @@
 	class:compact
 	aria-pressed={watched}
 	aria-label={watched ? `Stop following ${name}` : `Follow ${name}`}
-	title={watched ? 'Following: in The Daily and the leaderboard’s Watchlist' : 'Follow in The Daily and the leaderboard’s Watchlist'}
+	title={watched ? `Following: ${followedIn}` : `Follow ${followedIn}`}
 	onclick={() => toggleWatch(nbaId)}
 >
 	<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">

@@ -13,7 +13,7 @@ Reference only. Nothing in this folder is built, tested or deployed by the site.
 
 | Feature | Prototype source | Port target |
 |---|---|---|
-| The Daily: headline, movers, single-game shocks, age records, watchlist | `src/10-today.js` | Live at `/daily` (`utils/daily.js`), from nba_darko's `rating_moves`, `game_updates` and `player_seasons` tables |
+| The Daily: headline, movers, single-game shocks, age records, watchlist | `src/10-today.js` | Live at `/daily` (`utils/daily.js`), from nba_darko's `rating_moves`, `game_updates` and `player_seasons` tables. Between seasons it is off the menus, What's new and Ask DARKO, and back the morning after opening night (`DAILY_RETURNS`) |
 | Rewind: global date scrubber and weekly top-15 race since 1996-97 | `src/03-floor.js`, `src/16-rewind.js` | `/rewind` and the Time Machine strip, on the `rating_frames` table; the strip gives the latest season its own stretch, scrubbed by the day (`utils/timeStrip.js`) |
 | Seismograph: every game's DPM update, split offense/defense | `drawSeismo` in `src/12-player.js` | Live on player pages, with opponents from `player_ratings.opp_id` |
 | Comps & Futures: historical matches and a five-year fan chart | `comps.py`, `drawFan` in `src/12-player.js` | Live on player pages: `CompsFutures.svelte`, `utils/comps.js`, from nba_darko's `player_comps` table |

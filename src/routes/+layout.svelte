@@ -8,6 +8,7 @@
 	import TimeMachine from '$lib/components/TimeMachine.svelte';
 	import AskDarko from '$lib/components/AskDarko.svelte';
 	import { newFeatureCount } from '$lib/utils/whatsNew.js';
+	import { dailyListed } from '$lib/utils/daily.js';
 	import { loadOptionalFont } from '$lib/fonts.js';
 	import { setTimeMachineCollapsed, syncTimeMachineFold, timeMachine } from '$lib/timeMachineState.svelte.js';
 	import {
@@ -371,9 +372,14 @@
 	// What's new shows in the menus only while a feature launched in the last 30 days. Pages can
 	// come from the edge cache, so the browser's clock recounts once the page is up.
 	let whatsNewCount = $state(newFeatureCount());
+	// The Daily is off the menus between seasons (utils/daily.js), decided the same way.
+	let dailyOn = $state(dailyListed());
 	onMount(() => {
 		whatsNewCount = newFeatureCount();
+		dailyOn = dailyListed();
 	});
+	const primaryNavItems = $derived(dailyOn ? PRIMARY_NAV_ITEMS : PRIMARY_NAV_ITEMS.filter((item) => item.href !== '/daily'));
+	const menuNavItems = $derived([...primaryNavItems, ...MORE_NAV_ITEMS]);
 	const moreMenuActive = $derived(
 		MORE_NAV_ITEMS.some((item) => isNavItemActive(item, $page.url.pathname)) || $page.url.pathname === '/new'
 	);
@@ -403,7 +409,7 @@
         </a>
 		<span class="mobile-current-page">{currentPageLabel}</span>
         <div class="links desktop-links">
-			{#each PRIMARY_NAV_ITEMS as item (item.href)}
+			{#each primaryNavItems as item (item.href)}
 				<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
 			{/each}
 			<details class="nav-more" class:active={moreMenuActive} bind:this={moreMenu}>
@@ -535,7 +541,7 @@
 				What's new <span class="nav-new-count">{whatsNewCount}</span>
 			</a>
 		{/if}
-		{#each ALL_NAV_ITEMS as item (item.href)}
+		{#each menuNavItems as item (item.href)}
 			<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)} onclick={closeMobileMenu}>{item.label}</a>
 		{/each}
 	</div>

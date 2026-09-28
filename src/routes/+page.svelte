@@ -21,6 +21,7 @@
         trendSeason
     } from '$lib/utils/leaderboardViews.js';
     import { startWatchlist, watchlist } from '$lib/utils/watchlist.js';
+    import { dailyListed } from '$lib/utils/daily.js';
     import { filterPlayers } from '$lib/utils/playerTableFilters.js';
     import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
@@ -635,7 +636,7 @@
                                 class="toggle-chip"
                                 class:active={watchOnly}
                                 aria-pressed={watchOnly}
-                                title="Only the players you follow. Star a player to follow them here and in The Daily."
+                                title={`Only the players you follow. Star a player to follow them here${dailyListed() ? ' and in The Daily' : ''}.`}
                                 onclick={() => {
                                     watchOnly = !watchOnly;
                                     leaderboardPage = 1;
@@ -744,10 +745,11 @@
                                                                             onerror={hideBrokenImage}
                                                                         />
                                                                     {/if}
-                                                                    <!-- The name, and under it the position and age: "C-F · 31". -->
+                                                                    <!-- The name, and under it the position and age: "C-F · 31". On a
+                                                                         phone the team leads that line, in place of the Team column. -->
                                                                     <span class="player-text">
                                                                         <span>{player.player_name}</span>
-                                                                        {#if positionAndAge(player)}<small>{positionAndAge(player)}</small>{/if}
+                                                                        {#if positionAndAge(player) || player.team_name}<small>{#if player.team_name}<span class="player-team-inline">{teamAbbr(player.team_name)}{positionAndAge(player) ? ' · ' : ''}</span>{/if}{positionAndAge(player)}</small>{/if}
                                                                     </span>
                                                                 </a>
                                                             </span>
@@ -1246,6 +1248,7 @@
         --wide-sticky-header-height: 44px;
         --frozen-rank-width: 52px;
         --frozen-player-width: 216px;
+        --pinned-width: calc(var(--frozen-rank-width) + var(--frozen-player-width));
         position: relative;
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius-sm);
@@ -1492,6 +1495,11 @@
 
     .player-text small {
         font-variant-numeric: tabular-nums;
+    }
+
+    /* The team under the name, shown only where the Team column is not. */
+    .player-team-inline {
+        display: none;
     }
 
     .player-link:hover,
@@ -1820,12 +1828,28 @@
             pointer-events: auto;
         }
 
-        th,
-        .leaderboard-cell--rank,
-        .leaderboard-cell--player {
+        th {
             position: static;
             left: auto;
             box-shadow: none;
+        }
+
+        /* The rank and the name stay put while the rest of the row scrolls sideways under them,
+           and so do their header cells, which here are the table's own. */
+        .table-sizing-head :is(.header-row, .column-filter-row) th:nth-child(1),
+        .table-sizing-head :is(.header-row, .column-filter-row) th:nth-child(2) {
+            position: sticky;
+            z-index: 2;
+            background: color-mix(in srgb, var(--bg-elevated) 86%, var(--bg));
+        }
+
+        .table-sizing-head :is(.header-row, .column-filter-row) th:nth-child(1) {
+            left: 0;
+        }
+
+        .table-sizing-head :is(.header-row, .column-filter-row) th:nth-child(2) {
+            left: var(--frozen-rank-width);
+            box-shadow: 1px 0 0 var(--border-subtle);
         }
 
         table {
@@ -1868,6 +1892,62 @@
 
         .distribution-stats {
             grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* A phone shows each player's DPM, offense and defense beside the name before any sideways
+       scroll: the team moves under the name, and the rank and name columns narrow. */
+    @media (max-width: 640px) {
+        .table-wrapper {
+            --frozen-rank-width: 32px;
+            --frozen-player-width: 160px;
+        }
+
+        th.team,
+        .leaderboard-cell--team {
+            display: none;
+        }
+
+        .player-team-inline {
+            display: inline;
+        }
+
+        td,
+        th {
+            padding-inline: 7px;
+        }
+
+        th.rank,
+        .leaderboard-cell--rank {
+            width: var(--frozen-rank-width);
+            min-width: var(--frozen-rank-width);
+            max-width: var(--frozen-rank-width);
+            padding-inline: 2px;
+        }
+
+        .leaderboard-cell--player {
+            min-width: var(--frozen-player-width);
+            max-width: var(--frozen-player-width);
+        }
+
+        .player-cell,
+        .player-link,
+        .player-text {
+            min-width: 0;
+        }
+
+        .player-text > span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .leaderboard-cell--dpm {
+            min-width: 56px;
+        }
+
+        .dpm-split :global(.od-bar) {
+            width: 42px;
         }
     }
 </style>

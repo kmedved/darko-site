@@ -5,6 +5,8 @@
  * Add a feature here when it ships; it leaves the page and the menu on its own.
  */
 
+import { DAILY_RETURNS } from './daily.js';
+
 export const NEW_FOR_DAYS = 30;
 const DAY_MS = 86_400_000;
 
@@ -36,7 +38,7 @@ export const WHATS_NEW = Object.freeze([
 		key: 'leaderboard-tools',
 		title: 'Leaderboard filters, stars and trends',
 		launched: '2026-09-28T19:36:44Z',
-		text: "Filter the leaderboard by position and age, star players to follow them there and in The Daily, switch on a sparkline of each player's season, and with the Time Machine set, sort by who has risen or fallen since that date.",
+		text: "Filter the leaderboard by position and age, star players to follow them, switch on a sparkline of each player's season, and with the Time Machine set, sort by who has risen or fallen since that date.",
 		cta: 'Open the leaderboard',
 		href: '/'
 	},
@@ -75,7 +77,8 @@ export const WHATS_NEW = Object.freeze([
 	{
 		key: 'daily',
 		title: 'The Daily',
-		launched: '2026-09-28T13:31:13Z',
+		// Off the site between seasons, so it counts as new from its return (utils/daily.js).
+		launched: DAILY_RETURNS,
 		text: "A front page DARKO's ratings write themselves: who's on top, the biggest risers and fallers over the past week, month or season, the largest single-game updates, and seasons among the best ever at a player's age. Star a player on their page to follow them there.",
 		cta: 'Read The Daily',
 		href: '/daily'

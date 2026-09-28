@@ -89,5 +89,6 @@ test('the player page ranks skills, offers the presets, and names size and games
     assert.match(shinyCss, /\.player-profile-page \.profile-sidebar > \* \{\s*flex-shrink: 0;/);
 
     // The leaderboard shows age under the name, beside the position.
-    assert.match(board, /\{#if positionAndAge\(player\)\}<small>\{positionAndAge\(player\)\}<\/small>\{\/if\}/);
+    // On a phone the team leads that line, in place of the Team column.
+    assert.match(board, /<small>\{#if player\.team_name\}<span class="player-team-inline">\{teamAbbr\(player\.team_name\)\}[\s\S]*?<\/span>\{\/if\}\{positionAndAge\(player\)\}<\/small>/);
 });

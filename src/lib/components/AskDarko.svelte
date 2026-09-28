@@ -9,8 +9,8 @@
 	import { relativeHref, withAsOf } from '$lib/utils/timeMachine.js';
 	import {
 		ASK_EXAMPLES,
-		ASK_PAGES,
 		activePlayerPool,
+		askPages,
 		interpretAsk,
 		matchPlayers,
 		normalizeAskText
@@ -74,7 +74,7 @@
 			add({
 				key: 'pages',
 				title: 'Go to',
-				options: ASK_PAGES.map((entry) => ({ key: entry.href, kind: 'page', label: entry.label, href: entry.href }))
+				options: askPages().map((entry) => ({ key: entry.href, kind: 'page', label: entry.label, href: entry.href }))
 			});
 			return out;
 		}

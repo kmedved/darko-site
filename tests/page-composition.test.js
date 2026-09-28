@@ -70,6 +70,48 @@ test("the Lab keeps the edited team's rating in view while its sliders scroll", 
 	assert.match(lab, /\.lab-dna \{\s*order: 1;/);
 });
 
+test("a phone's leaderboard shows the DPM beside the name, and the name stays while the row scrolls", async () => {
+	const board = await read('src/routes/+page.svelte');
+	const phone = board.slice(board.indexOf('@media (max-width: 640px) {'));
+	// The team moves under the name; the rank and name columns narrow.
+	assert.match(phone, /th\.team,\s*\.leaderboard-cell--team \{\s*display: none;/);
+	assert.match(phone, /\.player-team-inline \{\s*display: inline;/);
+	assert.match(phone, /--frozen-rank-width: 32px;\s*--frozen-player-width: 160px;/);
+	// On a touch screen the rank and name columns, and their header cells, stay pinned.
+	const touch = board.slice(board.indexOf('/* Touch/mobile scroll mode */'), board.indexOf('/* End touch/mobile scroll mode */'));
+	assert.doesNotMatch(touch, /\.leaderboard-cell--player \{\s*position: static;/);
+	assert.match(touch, /\.table-sizing-head :is\(\.header-row, \.column-filter-row\) th:nth-child\(2\) \{\s*left: var\(--frozen-rank-width\);/);
+	// The scroll fade starts after the pinned columns instead of covering them.
+	assert.match(board, /--pinned-width: calc\(var\(--frozen-rank-width\) \+ var\(--frozen-player-width\)\);/);
+	assert.match(await read('src/app.css'), /\[data-overflow-left\]::before \{\s*left: var\(--pinned-width, 0px\);/);
+});
+
+test('The Daily is off the menus between seasons and back the morning after opening night', async () => {
+	const [{ DAILY_RETURNS, dailyListed }, { askPages, ASK_PAGES }] = await Promise.all([
+		import('../src/lib/utils/daily.js'),
+		import('../src/lib/utils/askDarko.js')
+	]);
+	assert.equal(DAILY_RETURNS, '2026-10-21T12:00:00Z');
+	assert.equal(dailyListed(new Date('2026-10-21T11:59:59Z')), false);
+	assert.equal(dailyListed(new Date('2026-10-21T12:00:00Z')), true);
+	assert.ok(!askPages(new Date('2026-10-01T00:00:00Z')).some((entry) => entry.href === '/daily'));
+	assert.ok(askPages(new Date('2026-10-22T00:00:00Z')).some((entry) => entry.href === '/daily'));
+	assert.equal(askPages(new Date('2026-10-01T00:00:00Z')).length, ASK_PAGES.length - 1);
+
+	const [layout, errorPage, askDarko] = await Promise.all([
+		read('src/routes/+layout.svelte'),
+		read('src/routes/+error.svelte'),
+		read('src/lib/components/AskDarko.svelte')
+	]);
+	// Both menus draw from the list that leaves it out; the browser's clock decides again on load.
+	assert.match(layout, /const primaryNavItems = \$derived\(dailyOn \? PRIMARY_NAV_ITEMS : PRIMARY_NAV_ITEMS\.filter\(\(item\) => item\.href !== '\/daily'\)\);/);
+	assert.match(layout, /\{#each primaryNavItems as item \(item\.href\)\}/);
+	assert.match(layout, /\{#each menuNavItems as item \(item\.href\)\}/);
+	assert.match(layout, /dailyOn = dailyListed\(\);/);
+	assert.match(errorPage, /\{#if dailyListed\(\)\}<a class="btn" href="\/daily">Read The Daily<\/a>\{\/if\}/);
+	assert.match(askDarko, /askPages\(\)\.map\(/);
+});
+
 test('the distribution dots travel to a new stat instead of jumping', async () => {
 	const [dots, board, countUp] = await Promise.all([
 		read('src/lib/components/DotDistribution.svelte'),

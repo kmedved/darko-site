@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { ASK_PAGES } from '../src/lib/utils/askDarko.js';
+import { DAILY_RETURNS } from '../src/lib/utils/daily.js';
 import {
     currentNews,
     NEW_FOR_DAYS,
@@ -40,26 +41,32 @@ test('items stay for 30 days from launch, newest first', () => {
     // Before launch, nothing about it shows.
     assert.ok(!keys(currentNews(new Date(launched - 1))).includes('seismograph'));
 
-    // The Daily went live that afternoon and leads from then on.
+    // Comps & futures went live that morning and leads until the evening's launches.
     const afternoon = new Date('2026-09-28T14:00:00Z');
-    assert.deepEqual(keys(currentNews(afternoon)).slice(0, 2), ['daily', 'comps']);
+    assert.deepEqual(keys(currentNews(afternoon)).slice(0, 2), ['comps', 'team-dna']);
 
     // The Teams overview and the player-page sections went live that evening.
     const evening = new Date('2026-09-28T18:00:00Z');
-    assert.deepEqual(keys(currentNews(evening)).slice(0, 4), ['teams', 'seasons', 'box-score', 'daily']);
+    assert.deepEqual(keys(currentNews(evening)).slice(0, 4), ['teams', 'seasons', 'box-score', 'comps']);
 
     // The leaderboard's tools and the fuller player pages followed that night.
     const night = new Date('2026-09-28T20:00:00Z');
     assert.deepEqual(keys(currentNews(night)).slice(0, 3), ['leaderboard-tools', 'player-pages', 'teams']);
-    assert.equal(newFeatureCount(night), 13);
+    assert.equal(newFeatureCount(night), 12);
 
     // Late that night: the rearranged pages, the moving dots and a design note.
     const late = new Date('2026-09-28T23:30:00Z');
     assert.deepEqual(keys(currentNews(late)).slice(0, 4), ['page-headers', 'distribution-motion', 'easier-reading', 'leaderboard-tools']);
-    assert.equal(newFeatureCount(late), 15);
+    assert.equal(newFeatureCount(late), 14);
+
+    // The Daily is off the site between seasons and counts as new from its return.
+    assert.equal(WHATS_NEW.find((item) => item.key === 'daily').launched, DAILY_RETURNS);
+    assert.ok(!keys(currentNews(late)).includes('daily'));
+    assert.equal(keys(currentNews(new Date(DAILY_RETURNS)))[0], 'daily');
 
     // A month on, the first night's launches have left and the later ones remain.
     assert.deepEqual(keys(currentNews(new Date('2026-10-27T12:00:00Z'))), [
+        'daily',
         'page-headers',
         'distribution-motion',
         'easier-reading',
@@ -68,19 +75,19 @@ test('items stay for 30 days from launch, newest first', () => {
         'teams',
         'seasons',
         'box-score',
-        'daily',
         'comps',
         'team-dna',
         'ask',
         'lab',
         'rewind'
     ]);
-    assert.deepEqual(currentNews(new Date('2026-11-01T00:00:00Z')), []);
+    assert.deepEqual(keys(currentNews(new Date('2026-11-01T00:00:00Z'))), ['daily']);
+    assert.deepEqual(currentNews(new Date('2026-11-21T00:00:00Z')), []);
     // The menus count features, not the design note, to match the page's headline.
     assert.equal(newFeatureCount(now), 7);
-    assert.equal(newFeatureCount(afternoon), 8);
-    assert.equal(newFeatureCount(evening), 11);
-    assert.equal(newFeatureCount(new Date('2026-11-01T00:00:00Z')), 0);
+    assert.equal(newFeatureCount(afternoon), 7);
+    assert.equal(newFeatureCount(evening), 10);
+    assert.equal(newFeatureCount(new Date('2026-11-01T00:00:00Z')), 1);
 });
 
 function routeExists(href) {
