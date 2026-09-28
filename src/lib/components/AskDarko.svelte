@@ -255,6 +255,19 @@
 		open = true;
 	}
 
+	// Pages open the box with a question typed in (openAskDarko in askDarko.js). Opening clears
+	// the field, so the question goes in once that has run.
+	$effect(() => {
+		const ask = async (event) => {
+			open = true;
+			await tick();
+			query = event.detail?.query ?? '';
+			inputEl?.focus();
+		};
+		window.addEventListener('darko:ask', ask);
+		return () => window.removeEventListener('darko:ask', ask);
+	});
+
 	function useExample(example) {
 		query = example;
 		inputEl?.focus();

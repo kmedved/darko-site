@@ -4,9 +4,10 @@
 	import { browser } from '$app/environment';
 	import { beforeNavigate, goto, preloadData } from '$app/navigation';
 	import { navigating, page } from '$app/stores';
-	import { setContext } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import TimeMachine from '$lib/components/TimeMachine.svelte';
 	import AskDarko from '$lib/components/AskDarko.svelte';
+	import { newFeatureCount } from '$lib/utils/whatsNew.js';
 	import { loadOptionalFont } from '$lib/fonts.js';
 	import { setTimeMachineCollapsed, syncTimeMachineFold, timeMachine } from '$lib/timeMachineState.svelte.js';
 	import {
@@ -49,6 +50,7 @@
 	];
 	const ALL_NAV_ITEMS = [...PRIMARY_NAV_ITEMS, ...MORE_NAV_ITEMS];
 	const DETAIL_PAGE_LABELS = [
+		{ label: "What's new", match: (path) => path === '/new' },
 		{ label: 'Player Profile', match: (path) => path.startsWith('/player/') },
 		{ label: 'Team Profile', match: (path) => path.startsWith('/team/') }
 	];
@@ -338,7 +340,15 @@
 		setTimeMachineCollapsed(false);
 		requestAnimationFrame(() => document.querySelector('#time-machine .tm-collapse')?.focus());
 	}
-	const moreMenuActive = $derived(MORE_NAV_ITEMS.some((item) => isNavItemActive(item, $page.url.pathname)));
+	// What's new shows in the menus only while a feature launched in the last 30 days. Pages can
+	// come from the edge cache, so the browser's clock recounts once the page is up.
+	let whatsNewCount = $state(newFeatureCount());
+	onMount(() => {
+		whatsNewCount = newFeatureCount();
+	});
+	const moreMenuActive = $derived(
+		MORE_NAV_ITEMS.some((item) => isNavItemActive(item, $page.url.pathname)) || $page.url.pathname === '/new'
+	);
 </script>
 
 <nav class="site-nav">
@@ -369,6 +379,11 @@
 			<details class="nav-more" class:active={moreMenuActive}>
 				<summary>More</summary>
 				<div class="nav-more-menu">
+					{#if whatsNewCount > 0}
+						<a href="/new" class="nav-new" class:active={$page.url.pathname === '/new'}>
+							What's new <span class="nav-new-count">{whatsNewCount}</span>
+						</a>
+					{/if}
 					{#each MORE_NAV_ITEMS as item (item.href)}
 						<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
 					{/each}
@@ -485,6 +500,11 @@
 	inert={!mobileMenuOpen}
 >
 	<div class="mobile-drawer-links">
+		{#if whatsNewCount > 0}
+			<a href="/new" class="nav-new" class:active={$page.url.pathname === '/new'} onclick={closeMobileMenu}>
+				What's new <span class="nav-new-count">{whatsNewCount}</span>
+			</a>
+		{/if}
 		{#each ALL_NAV_ITEMS as item (item.href)}
 			<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)} onclick={closeMobileMenu}>{item.label}</a>
 		{/each}
@@ -897,6 +917,21 @@
 	.nav-more-menu a.active {
 		background: var(--bg-elevated);
 		color: var(--text);
+	}
+
+	.nav-new-count {
+		display: inline-block;
+		min-width: 18px;
+		margin-left: 6px;
+		padding: 1px 6px;
+		border-radius: 999px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 700;
+		line-height: 16px;
+		text-align: center;
+		color: var(--bg);
+		background: var(--accent);
 	}
 
 	.display-menu-panel {

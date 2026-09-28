@@ -372,8 +372,14 @@ export const ASK_PAGES = Object.freeze([
 	{ re: /^(compare|comparison)$/, label: 'Compare', href: '/compare' },
 	{ re: /^(fantasy|fantasy lab|projections|draft)$/, label: 'Fantasy Lab', href: '/projections' },
 	{ re: /^(rate|rate a player|elo|vote)$/, label: 'Rate a Player', href: '/rate' },
-	{ re: /^(about|faq|help|methodology)$/, label: 'About', href: '/about' }
+	{ re: /^(about|faq|help|methodology)$/, label: 'About', href: '/about' },
+	{ re: /^(what'?s new|new|news|features|tour|changelog)$/, label: "What's new", href: '/new' }
 ]);
+
+/** Opens Ask DARKO from anywhere on a page with `query` typed in; AskDarko.svelte listens. */
+export function openAskDarko(query = '') {
+	window.dispatchEvent(new CustomEvent('darko:ask', { detail: { query } }));
+}
 
 const FANTASY_SCORING = [
 	[/9[ -]?cat|categor/, 'categories', '9-cat'],

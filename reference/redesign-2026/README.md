@@ -23,6 +23,7 @@ Reference only. Nothing in this folder is built, tested or deployed by the site.
 | Ask DARKO: command bar for players, filters, trades and time travel | `src/19-ask.js` | Live site-wide: `AskDarko.svelte`, `utils/askDarko.js` |
 | DARKOdle: daily mystery player from a career DPM curve | `src/17-darkodle.js` | needs season-end career rows |
 | Card Studio: shareable PNG player cards | `src/18-card.js` | client canvas, plus server-rendered share images |
+| What's new: the new features, with links in | `src/20-new.js` | Live at `/new` (`utils/whatsNew.js`): ported features only, each for 30 days after launch |
 
 Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team ratings),
 `src/02-ui.js` (O/X split bar, sparkline, skill fingerprint glyph, tooltip) and

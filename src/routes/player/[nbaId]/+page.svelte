@@ -376,6 +376,7 @@
 				{#if seismograph}
 					<section
 						class="chart-panel seismograph-panel"
+						id="seismograph"
 						data-shiny-surface="plot"
 						aria-labelledby="seismograph-title"
 					>
@@ -802,6 +803,8 @@
 		flex-direction: column;
 		gap: 14px;
 		min-width: 0;
+		/* What's new links to #seismograph; the heading clears the sticky nav. */
+		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
 	}
 
 	.seismograph-header {
