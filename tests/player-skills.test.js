@@ -56,11 +56,12 @@ test('height in feet and inches, and career games from the season table', () => 
 });
 
 test('the player page ranks skills, offers the presets, and names size and games', async () => {
-    const [page, views, chart, board] = await Promise.all([
+    const [page, views, chart, board, shinyCss] = await Promise.all([
         read('src/routes/player/[nbaId]/+page.svelte'),
         read('src/lib/server/playerViews.js'),
         read('src/lib/components/TalentPercentilesChart.svelte'),
-        read('src/routes/+page.svelte')
+        read('src/routes/+page.svelte'),
+        read('src/shiny-view.css')
     ]);
     // Every skill input is in the active-player view the page ranks against.
     const percentilesView = views.match(/percentiles: \[([\s\S]*?)\]/)[1];
@@ -82,8 +83,10 @@ test('the player page ranks skills, offers the presets, and names size and games
     assert.match(page, /rawValues=\{skillInfo\}\s*labels=\{SKILL_LABELS\}/);
     assert.match(chart, /return labels\[metric\] \?\? getMetricDisplayLabel\(metric\);/);
     assert.match(page, /const since = Number\(playerInfo\.rookie_season\) < 1997 \? ' since 1996-97' : '';/);
-    // The sidebar scrolls when its controls outgrow the window.
-    assert.match(page, /max-height: calc\(100dvh - var\(--nav-sticky-offset\) - 48px\);\s*overflow-y: auto;/);
+    // The Shiny view's sidebar scrolls when its controls outgrow the window, and its items keep
+    // their height instead of shrinking to fit.
+    assert.match(shinyCss, /max-height: calc\(100dvh - var\(--nav-sticky-offset\) - 48px\);\s*overflow-y: auto;/);
+    assert.match(shinyCss, /\.player-profile-page \.profile-sidebar > \* \{\s*flex-shrink: 0;/);
 
     // The leaderboard shows age under the name, beside the position.
     assert.match(board, /\{#if positionAndAge\(player\)\}<small>\{positionAndAge\(player\)\}<\/small>\{\/if\}/);

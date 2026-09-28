@@ -679,7 +679,8 @@
 		white-space: nowrap;
 		font-family: var(--font-mono);
 		font-size: 13px;
-		font-weight: 700;
+		/* Ordinary figures at DM Mono's regular weight; the value column carries the emphasis. */
+		font-weight: var(--figure-weight);
 		color: var(--text);
 		background: var(--bg-surface);
 	}
@@ -736,7 +737,7 @@
 		color: var(--text-muted);
 		font-family: var(--font-mono);
 		font-size: 11px;
-		font-weight: 600;
+		font-weight: var(--figure-weight-strong);
 	}
 
 	.team-cell {
@@ -760,7 +761,7 @@
 
 	.value-cell {
 		font-size: 13px;
-		font-weight: 850;
+		font-weight: var(--figure-weight-strong);
 	}
 
 	.z-cell {

@@ -2,7 +2,7 @@
 	import '../app.css';
 	import '../shiny-view.css';
 	import { browser } from '$app/environment';
-	import { beforeNavigate, goto, preloadData } from '$app/navigation';
+	import { afterNavigate, beforeNavigate, goto, preloadData } from '$app/navigation';
 	import { navigating, page } from '$app/stores';
 	import { onMount, setContext } from 'svelte';
 	import TimeMachine from '$lib/components/TimeMachine.svelte';
@@ -131,6 +131,31 @@
 	function closeMobileMenu() {
 		mobileMenuOpen = false;
 	}
+
+	// More and Display are <details> menus, which nothing closes when the page changes under them:
+	// a new page, a link inside, a click elsewhere and Escape all close them.
+	let moreMenu = $state(null);
+	let displayMenu = $state(null);
+
+	function closeDesktopMenus(except = null) {
+		for (const menu of [moreMenu, displayMenu]) {
+			if (menu && menu !== except && menu.open) menu.open = false;
+		}
+	}
+
+	function handleWindowClick(event) {
+		const inside = [moreMenu, displayMenu].find((menu) => menu?.contains(event.target)) ?? null;
+		closeDesktopMenus(inside && !event.target.closest('a') ? inside : null);
+	}
+
+	function handleWindowKeydown(event) {
+		const open = event.key === 'Escape' ? [moreMenu, displayMenu].find((menu) => menu?.open) : null;
+		if (!open) return;
+		open.open = false;
+		open.querySelector('summary')?.focus();
+	}
+
+	afterNavigate(() => closeDesktopMenus());
 
 	// The Time Machine date comes from ?asof= and sticks to every in-app navigation until the
 	// reader returns to today (which clears timeMachine.date before navigating).
@@ -354,6 +379,8 @@
 	);
 </script>
 
+<svelte:window onclick={handleWindowClick} onkeydown={handleWindowKeydown} />
+
 <nav class="site-nav">
     <div class="container">
 		<button class="mobile-menu-btn" onclick={toggleMobileMenu} aria-label="Toggle menu" aria-expanded={mobileMenuOpen}>
@@ -379,7 +406,7 @@
 			{#each PRIMARY_NAV_ITEMS as item (item.href)}
 				<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
 			{/each}
-			<details class="nav-more" class:active={moreMenuActive}>
+			<details class="nav-more" class:active={moreMenuActive} bind:this={moreMenu}>
 				<summary>More</summary>
 				<div class="nav-more-menu">
 					{#if whatsNewCount > 0}
@@ -394,7 +421,7 @@
 			</details>
         </div>
 		<div class="desktop-controls">
-			<details class="display-menu">
+			<details class="display-menu" bind:this={displayMenu}>
 				<summary>Display</summary>
 				<div class="display-menu-panel">
 					<div class="display-control">
@@ -930,7 +957,7 @@
 		border-radius: 999px;
 		font-family: var(--font-mono);
 		font-size: 11px;
-		font-weight: 700;
+		font-weight: var(--figure-weight-strong);
 		line-height: 16px;
 		text-align: center;
 		color: var(--bg);

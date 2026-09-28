@@ -37,6 +37,7 @@
         getMetricHeatVariables
     } from '$lib/utils/metricHeatScales.js';
     import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+    import CountUp from '$lib/components/CountUp.svelte';
     import DotDistribution from '$lib/components/DotDistribution.svelte';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
     import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
@@ -45,6 +46,8 @@
     import StatTile from '$lib/components/StatTile.svelte';
     import WatchStar from '$lib/components/WatchStar.svelte';
     import { getContext, onMount } from 'svelte';
+    import { prefersReducedMotion } from 'svelte/motion';
+    import { fly } from 'svelte/transition';
 
     let { data } = $props();
 
@@ -456,6 +459,11 @@
         return formatFixed(n, compact ? 0 : (metric.decimals ?? 1));
     }
 
+    /** A figure under the dot plot, in the selected stat's format. */
+    function formatDistributionFigure(value) {
+        return formatDistributionValue(value, selectedDistributionMetric);
+    }
+
     /** Axis labels: "+2", "0", "-2"; "35%"; "12.5". */
     function formatDistributionTick(value, metric) {
         if (metric.kind === 'percent') return `${+(value * 100).toFixed(1)}%`;
@@ -471,7 +479,7 @@
             .sort((a, b) => a - b);
 
         if (values.length === 0) {
-            return { meanValue: null, mean: '—', median: '—', topTen: '—', players: 0 };
+            return { meanValue: null, medianValue: null, topTenValue: null, players: 0 };
         }
 
         const meanValue = values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -480,13 +488,7 @@
         const topValues = values.slice(-topCount);
         const topTenValue = topValues.reduce((sum, value) => sum + value, 0) / topValues.length;
 
-        return {
-            meanValue,
-            mean: formatDistributionValue(meanValue, metric),
-            median: formatDistributionValue(medianValue, metric),
-            topTen: formatDistributionValue(topTenValue, metric),
-            players: values.length
-        };
+        return { meanValue, medianValue, topTenValue, players: values.length };
     }
 
     function hasMinimumGames(player, minGames) {
@@ -831,24 +833,28 @@
                                 label={`Distribution of ${activeSeasonLabel.toLowerCase()} player ${selectedDistributionMetric.label}, one dot per player`}
                             />
                         </div>
-                        <div class="distribution-stats">
-                            <div>
-                                <span>Mean</span>
-                                <strong>{distribution.mean}</strong>
+                        <!-- A filter runs each figure to its new value; a new stat brings in a new set,
+                             rather than running a DPM through percentages on the way. -->
+                        {#key selectedDistributionMetric.key}
+                            <div class="distribution-stats" in:fly={{ y: 6, duration: prefersReducedMotion.current ? 0 : 260 }}>
+                                <div>
+                                    <span>Mean</span>
+                                    <strong><CountUp value={distribution.meanValue} format={formatDistributionFigure} /></strong>
+                                </div>
+                                <div>
+                                    <span>Median</span>
+                                    <strong><CountUp value={distribution.medianValue} format={formatDistributionFigure} /></strong>
+                                </div>
+                                <div>
+                                    <span>Top 10%</span>
+                                    <strong><CountUp value={distribution.topTenValue} format={formatDistributionFigure} /></strong>
+                                </div>
+                                <div>
+                                    <span>Players</span>
+                                    <strong><CountUp value={distribution.players} format={(value) => Math.round(value ?? 0)} /></strong>
+                                </div>
                             </div>
-                            <div>
-                                <span>Median</span>
-                                <strong>{distribution.median}</strong>
-                            </div>
-                            <div>
-                                <span>Top 10%</span>
-                                <strong>{distribution.topTen}</strong>
-                            </div>
-                            <div>
-                                <span>Players</span>
-                                <strong>{distribution.players}</strong>
-                            </div>
-                        </div>
+                        {/key}
                         <p class="shiny-plot-caption">@kmedved | www.darko.app | @anpatt7</p>
                     </section>
 
@@ -1168,7 +1174,7 @@
         top: 50%;
         width: 11px;
         height: 11px;
-        border: 1.6px solid var(--text-muted);
+        border: 1.6px solid var(--graphic-muted);
         border-radius: 50%;
         transform: translateY(-58%);
         pointer-events: none;
@@ -1181,7 +1187,7 @@
         top: 25px;
         width: 7px;
         height: 1.6px;
-        background: var(--text-muted);
+        background: var(--graphic-muted);
         transform: rotate(45deg);
         transform-origin: left center;
         pointer-events: none;
@@ -1357,7 +1363,7 @@
         text-align: center;
         font-family: var(--font-mono);
         font-size: 13px;
-        font-weight: 700;
+        font-weight: var(--figure-weight);
     }
 
     .leaderboard-cell--player,
@@ -1394,7 +1400,7 @@
     }
 
     .leaderboard-cell--dpm {
-        font-weight: 700;
+        font-weight: var(--figure-weight-strong);
     }
 
     th.num {
@@ -1575,7 +1581,7 @@
         border-radius: 50%;
         display: inline-grid;
         place-items: center;
-        border: 1px solid var(--text-muted);
+        border: 1px solid var(--graphic-muted);
         color: var(--text-secondary);
         font-size: 11px;
         font-family: var(--font-mono);
@@ -1632,6 +1638,7 @@
         color: var(--accent);
         font-family: var(--font-mono);
         font-size: 16px;
+        font-weight: var(--figure-weight-strong);
     }
 
     .position-tabs {
@@ -1688,7 +1695,7 @@
     .position-rank {
         color: var(--text-secondary);
         font-family: var(--font-mono);
-        font-weight: 850;
+        font-weight: var(--figure-weight-strong);
     }
 
     .mini-headshot {
@@ -1755,6 +1762,7 @@
         color: var(--accent);
         font-family: var(--font-mono);
         font-size: 14px;
+        font-weight: var(--figure-weight-strong);
     }
 
     .insight-note {

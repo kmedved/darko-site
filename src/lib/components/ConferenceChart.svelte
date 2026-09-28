@@ -107,7 +107,7 @@
             .attr('rx', 3)
             .style('fill', d => {
                 const playoff = parseFloat(d.Playoffs);
-                if (!Number.isFinite(playoff)) return 'var(--text-muted)';
+                if (!Number.isFinite(playoff)) return 'var(--graphic-muted)';
                 if (playoff >= 66) return 'var(--positive)';
                 if (playoff >= 33) return 'var(--accent)';
                 return 'var(--negative)';

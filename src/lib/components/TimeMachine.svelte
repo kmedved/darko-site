@@ -472,7 +472,7 @@
 		width: 15px;
 		height: 15px;
 		fill: none;
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-width: 1.7;
 		stroke-linecap: round;
 		stroke-linejoin: round;
@@ -492,7 +492,7 @@
 
 	.tm-date {
 		font-family: var(--font-mono);
-		font-weight: 600;
+		font-weight: var(--figure-weight-strong);
 		color: var(--text);
 		font-variant-numeric: tabular-nums;
 	}
@@ -558,7 +558,7 @@
 	}
 
 	.tm-month {
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-width: 1;
 	}
 
@@ -580,7 +580,7 @@
 	}
 
 	.tm-hover {
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-width: 1;
 		stroke-dasharray: 2 2;
 	}

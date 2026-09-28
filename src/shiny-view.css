@@ -17,6 +17,7 @@
     --text: #333333;
     --text-secondary: #555555;
     --text-muted: #777777;
+    --graphic-muted: #777777;
     --accent: #337ab7;
     --accent-hover: #286090;
     --positive: #3c763d;
@@ -26,6 +27,10 @@
     --logo-image: url('/logo-white-nav.png');
     --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     --font-mono: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    /* No display font here, and Helvetica's figures keep the bold they always had. */
+    --font-display: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --figure-weight: 700;
+    --figure-weight-strong: 700;
     --radius: 4px;
     --radius-sm: 4px;
     --nav-bar-height: 64px;
@@ -97,6 +102,7 @@
     color: #222222;
     font-size: 30px;
     font-weight: 500;
+    font-stretch: normal;
     letter-spacing: 0;
     line-height: 1.1;
 }
@@ -364,6 +370,7 @@
     font-family: inherit;
     font-size: 20px;
     font-weight: 500;
+    font-stretch: normal;
 }
 
 :root[data-view='shiny'] .stat-tile-detail {
@@ -1276,20 +1283,52 @@
     padding-top: 32px;
 }
 
+/* The Modern view spreads the player across a header and puts each chart's controls over it; the
+   Shiny view keeps its sidebar, sticky and scrolling on its own when the controls outgrow it. */
 :root[data-view='shiny'] .player-profile-page .profile-sidebar {
+    position: sticky;
     top: calc(var(--nav-sticky-offset) + 20px);
+    gap: 16px;
+    max-height: calc(100dvh - var(--nav-sticky-offset) - 48px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+:root[data-view='shiny'] .player-profile-page .profile-sidebar > * {
+    flex-shrink: 0;
+}
+
+:root[data-view='shiny'] .player-profile-page .profile-search {
+    align-self: stretch;
+    width: auto;
+}
+
+:root[data-view='shiny'] .player-profile-page .profile-search .sidebar-label {
+    display: block;
+}
+
+:root[data-view='shiny'] .player-profile-page .sidebar-controls {
+    display: flex;
+    flex-direction: column;
     gap: 16px;
 }
 
-:root[data-view='shiny'] .player-profile-page .sidebar-player-info {
-    border: 0;
-    border-radius: 0;
-    background: transparent;
+:root[data-view='shiny'] .player-profile-page .panel-controls {
+    display: none;
+}
+
+:root[data-view='shiny'] .player-profile-page .profile-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
     padding: 0;
+    border: 0;
     text-align: center;
 }
 
 :root[data-view='shiny'] .player-profile-page .profile-headshot {
+    display: flex;
+    justify-content: center;
     margin-bottom: 4px;
 }
 
@@ -1297,21 +1336,103 @@
     width: 220px;
     height: 161px;
     border-radius: 0;
+    background: transparent;
     object-fit: contain;
 }
 
-:root[data-view='shiny'] .player-profile-page .sidebar-player-info h1 {
+:root[data-view='shiny'] .player-profile-page .profile-headshot .headshot-placeholder {
+    width: 90px;
+    height: 90px;
+    font-size: 28px;
+}
+
+:root[data-view='shiny'] .player-profile-page .player-title {
+    justify-content: space-between;
+    gap: 8px;
+}
+
+:root[data-view='shiny'] .player-profile-page .player-title h1 {
     color: #222222;
     font-size: 24px;
     font-weight: 700;
+    font-stretch: normal;
+    letter-spacing: 0;
+    line-height: 1.2;
 }
 
 :root[data-view='shiny'] .player-profile-page .player-meta {
+    order: 0;
     color: #333333;
     font-size: 16px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
-:root[data-view='shiny'] .player-profile-page :is(.sidebar-label, .checkbox-label) {
+:root[data-view='shiny'] .player-profile-page .player-detail {
+    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+:root[data-view='shiny'] .player-profile-page .profile-score {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    justify-items: stretch;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12px;
+    text-align: left;
+}
+
+:root[data-view='shiny'] .player-profile-page .profile-score-value {
+    justify-self: end;
+    font-size: 28px;
+    font-weight: 700;
+    font-stretch: normal;
+    line-height: 1;
+}
+
+:root[data-view='shiny'] .player-profile-page .profile-score-split {
+    grid-column: 1 / -1;
+    justify-items: stretch;
+    gap: 8px;
+    font-size: 12px;
+}
+
+:root[data-view='shiny'] .player-profile-page .profile-score-split .od-bar {
+    width: auto;
+}
+
+:root[data-view='shiny'] .player-profile-page .profile-actions {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+:root[data-view='shiny'] .player-profile-page .compare-link {
+    width: 100%;
+}
+
+/* The team page's rating, at the size of the Shiny view's other figures. */
+:root[data-view='shiny'] .team-detail-page .team-score-value {
+    font-size: 34px;
+    font-weight: 700;
+    font-stretch: normal;
+}
+
+:root[data-view='shiny'] .team-detail-page .team-score-label {
+    color: #333333;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+:root[data-view='shiny'] .player-profile-page :is(.sidebar-label, .checkbox-label, .profile-score-label) {
     color: #333333;
     font-size: 13px;
     font-weight: 600;
@@ -1457,6 +1578,12 @@
 
     :root[data-view='shiny'] .player-profile-page .profile-layout {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    :root[data-view='shiny'] .player-profile-page .profile-sidebar {
+        position: static;
+        max-height: none;
+        overflow: visible;
     }
 }
 

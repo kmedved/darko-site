@@ -403,16 +403,65 @@
 	<title>{playerInfo?.player_name || 'Player'} Profile — DARKO DPM</title>
 </svelte:head>
 
+{#snippet talentTrendControl(id)}
+	<div class="sidebar-section talent-trend-control">
+		<label class="sidebar-label" for={id}>Talent Trend</label>
+		<select {id} class="sidebar-select" bind:value={talentType}>
+			{#each TALENT_OPTIONS as opt (opt.value)}
+				<option value={opt.value}>{opt.label}</option>
+			{/each}
+		</select>
+	</div>
+{/snippet}
+
+{#snippet percentilePresets()}
+	<div class="percentile-presets" role="group" aria-label="Percentile sets">
+		{#each Object.entries(PERCENTILE_PRESETS) as [name, metrics] (name)}
+			{@const active = metrics.length === selectedPercentileMetrics.length && metrics.every((metric) => selectedPercentileMetrics.includes(metric))}
+			<button
+				type="button"
+				class:active
+				aria-pressed={active}
+				onclick={() => (selectedPercentileMetrics = [...metrics])}
+			>
+				{name === 'skills' ? 'Skills' : 'Ratings'}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet percentileCheckboxes()}
+	<div class="percentile-checkboxes">
+		{#each PERCENTILE_GROUPS as group (group.label)}
+			<div class="percentile-group-options">
+				<p class="percentile-group">{group.label}</p>
+				{#each group.options as opt (opt.value)}
+					<label class="checkbox-label">
+						<input
+							type="checkbox"
+							checked={selectedPercentileMetrics.includes(opt.value)}
+							onchange={() => togglePercentileMetric(opt.value)}
+						/>
+						{opt.label}
+					</label>
+				{/each}
+			</div>
+		{/each}
+	</div>
+{/snippet}
+
+<!-- One tree for both views. The Modern view puts the player in a full-width header, with each
+     chart's controls beside the chart; the Shiny view keeps its sidebar, controls and all. -->
 <div class="container player-profile-page" data-shiny-page>
 	<div class="profile-layout" data-shiny-layout="sidebar">
-		<aside class="profile-sidebar" data-shiny-surface="well">
-			<div class="sidebar-section">
+		<div class="profile-sidebar" data-shiny-surface="well">
+			<div class="sidebar-section profile-search">
 				<p class="sidebar-label">Player</p>
 				<AllPlayerSearch onSelect={handleSelectPlayer} exclude={[]} />
 			</div>
 
 			{#if playerInfo}
-				<div class="sidebar-player-info">
+				<header class="profile-header">
 					<div class="profile-headshot">
 						{#if nbaId && !imgFailed}
 							<img
@@ -429,84 +478,57 @@
 							</div>
 						{/if}
 					</div>
-					<div class="player-title">
-						<h1>{playerInfo.player_name}</h1>
-						{#if nbaId}<WatchStar nbaId={nbaId} name={playerInfo.player_name} />{/if}
+					<div class="profile-id">
+						<div class="player-title">
+							<h1>{playerInfo.player_name}</h1>
+							{#if nbaId}<WatchStar nbaId={nbaId} name={playerInfo.player_name} />{/if}
+						</div>
+						<p class="player-meta">
+							{[playerInfo.team_name, playerInfo.position || '?'].filter(Boolean).join(' · ')}
+						</p>
+						{#if playerBioText}<p class="player-detail">{playerBioText}</p>{/if}
+						{#if playerDetailText}<p class="player-detail">{playerDetailText}</p>{/if}
 					</div>
-					<p class="player-meta">
-						{[playerInfo.team_name, playerInfo.position || '?'].filter(Boolean).join(' · ')}
-					</p>
-					{#if playerBioText}<p class="player-detail">{playerBioText}</p>{/if}
-					{#if playerDetailText}<p class="player-detail">{playerDetailText}</p>{/if}
 					{#if asOfDate && !playerRating}
-						<p class="sidebar-rating sidebar-rating-note">
+						<p class="profile-score profile-score-note">
 							No DARKO rating yet on {formatAsOfDate(asOfDate)}.
 						</p>
 					{/if}
 					{#if playerRating}
-						<div class="sidebar-rating">
-							<p class="sidebar-rating-head">
-								<span class="sidebar-label">
-									DPM{#if asOfDate && asOfRow}<span class="sidebar-asof">{' · '}{formatAsOfDate(asOfRow.date.slice(0, 10), { short: true })}</span>{:else if rankLabel}<span class="sidebar-rank">{' · '}{rankLabel}</span>{/if}
-								</span>
-								<span class="sidebar-rating-value">{formatSigned(playerRating.dpm, 1)}</span>
+						<div class="profile-score">
+							<p class="profile-score-label">
+								DPM{#if asOfDate && asOfRow}<span class="profile-asof">{' · '}{formatAsOfDate(asOfRow.date.slice(0, 10), { short: true })}</span>{:else if rankLabel}<span class="profile-rank">{' · '}{rankLabel}</span>{/if}
 							</p>
-							<OffenseDefenseBar offense={playerRating.offense} defense={playerRating.defense} />
-							<OffenseDefenseSplit
-								offense={playerRating.offense}
-								defense={playerRating.defense}
-								labels
-							/>
+							<span class="profile-score-value">{formatSigned(playerRating.dpm, 1)}</span>
+							<div class="profile-score-split">
+								<OffenseDefenseBar offense={playerRating.offense} defense={playerRating.defense} />
+								<OffenseDefenseSplit
+									offense={playerRating.offense}
+									defense={playerRating.defense}
+									labels
+								/>
+							</div>
 						</div>
 					{/if}
-				</div>
-				<a href="/compare?ids={nbaId}" class="btn compare-link">Compare this player</a>
-				{#if labTeam}
-					<a href="/lab?a={labTeam}" class="btn compare-link">Open {labTeam} in the Roster Lab</a>
-				{/if}
+					<div class="profile-actions">
+						<a href="/compare?ids={nbaId}" class="btn compare-link">Compare this player</a>
+						{#if labTeam}
+							<a href="/lab?a={labTeam}" class="btn compare-link">Open {labTeam} in the Roster Lab</a>
+						{/if}
+					</div>
+				</header>
 			{/if}
 
-			<div class="sidebar-section">
-				<label class="sidebar-label" for="talent-trend-select">Talent Trend</label>
-				<select id="talent-trend-select" class="sidebar-select" bind:value={talentType}>
-					{#each TALENT_OPTIONS as opt (opt.value)}
-						<option value={opt.value}>{opt.label}</option>
-					{/each}
-				</select>
-			</div>
-
-			<div class="sidebar-section">
-				<p class="sidebar-label">Talent Percentiles</p>
-				<div class="percentile-presets" role="group" aria-label="Percentile sets">
-					{#each Object.entries(PERCENTILE_PRESETS) as [name, metrics] (name)}
-						{@const active = metrics.length === selectedPercentileMetrics.length && metrics.every((metric) => selectedPercentileMetrics.includes(metric))}
-						<button
-							type="button"
-							class:active
-							aria-pressed={active}
-							onclick={() => (selectedPercentileMetrics = [...metrics])}
-						>
-							{name === 'skills' ? 'Skills' : 'Ratings'}
-						</button>
-					{/each}
-				</div>
-				<div class="percentile-checkboxes">
-					{#each PERCENTILE_GROUPS as group (group.label)}
-						<p class="percentile-group">{group.label}</p>
-						{#each group.options as opt (opt.value)}
-							<label class="checkbox-label">
-								<input
-									type="checkbox"
-									checked={selectedPercentileMetrics.includes(opt.value)}
-									onchange={() => togglePercentileMetric(opt.value)}
-								/>
-								{opt.label}
-							</label>
-						{/each}
-					{/each}
+			<!-- The Shiny view's sidebar controls; the Modern view shows each over its chart. -->
+			<div class="sidebar-controls">
+				{@render talentTrendControl('talent-trend-select-sidebar')}
+				<div class="sidebar-section">
+					<p class="sidebar-label">Talent Percentiles</p>
+					{@render percentilePresets()}
+					{@render percentileCheckboxes()}
 				</div>
 			</div>
-		</aside>
+		</div>
 
 		<div class="profile-content">
 			{#if playerInfo}
@@ -712,6 +734,9 @@
 				{/if}
 
 				<div class="chart-panel" id="career" data-shiny-surface="plot">
+					<div class="panel-controls">
+						{@render talentTrendControl('talent-trend-select')}
+					</div>
 					<TalentTrendChart
 						rows={historyRows}
 						{talentType}
@@ -790,6 +815,14 @@
 					</div>
 				{:else if allActivePlayers.length > 0}
 					<div class="chart-panel" id="percentiles" data-shiny-surface="plot">
+						<div class="panel-controls">
+							<p class="sidebar-label">Talent Percentiles</p>
+							{@render percentilePresets()}
+							<details class="percentile-picker">
+								<summary>Choose metrics ({selectedPercentileMetrics.length})</summary>
+								{@render percentileCheckboxes()}
+							</details>
+						</div>
 						<TalentPercentilesChart
 							playerName={playerInfo.player_name}
 							position={playerInfo.position}
@@ -831,86 +864,179 @@
 </div>
 
 <style>
+	/* Search, then the player's header, then the sections, each the page's full width. The Shiny
+	   view lays the same tree out as its sidebar (src/shiny-view.css). */
 	.profile-layout {
-		display: grid;
-		grid-template-columns: 280px 1fr;
-		gap: 24px;
-		padding: 32px 0 64px;
-		align-items: start;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		padding: 20px 0 64px;
 	}
 
-	/* Sticky, and scrolling on its own when its controls outgrow the window. */
 	.profile-sidebar {
 		display: flex;
 		flex-direction: column;
-		gap: 20px;
-		position: sticky;
-		top: calc(var(--nav-sticky-offset) + 24px);
-		max-height: calc(100dvh - var(--nav-sticky-offset) - 48px);
-		overflow-y: auto;
-		overscroll-behavior: contain;
+		gap: 12px;
 	}
 
-	.sidebar-player-info {
-		padding: 16px;
-		background: var(--bg-surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
+	.profile-search {
+		align-self: flex-end;
+		width: min(100%, 360px);
+	}
+
+	/* The sidebar's own label and controls are for the Shiny view. */
+	.profile-search .sidebar-label,
+	.sidebar-controls {
+		display: none;
+	}
+
+	/* The photo, who the player is, the rating on the right, and the actions under the name. */
+	.profile-header {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		grid-template-areas:
+			'photo id score'
+			'photo actions score';
+		align-items: center;
+		gap: 10px 28px;
+		padding-bottom: 20px;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.profile-headshot {
+		grid-area: photo;
+	}
+
+	.profile-headshot .headshot-img {
+		display: block;
+		width: 164px;
+		height: 120px;
+		object-fit: cover;
+		object-position: top;
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+	}
+
+	.profile-headshot .headshot-placeholder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 120px;
+		height: 120px;
+		border-radius: 50%;
+		background: var(--bg-elevated);
+		color: var(--text-muted);
+		font-size: 36px;
+		font-weight: 700;
+	}
+
+	.profile-id {
+		grid-area: id;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		min-width: 0;
+		align-self: end;
 	}
 
 	.player-title {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
+		gap: 10px;
 	}
 
-	.sidebar-player-info h1 {
-		font-size: 20px;
-		font-weight: 700;
+	.player-title h1 {
+		min-width: 0;
+		font-family: var(--font-display);
+		font-size: clamp(32px, 3.2vw, 44px);
+		font-weight: 800;
+		font-stretch: 116%;
+		letter-spacing: -0.015em;
+		line-height: 1.05;
 		color: var(--text);
+		text-wrap: balance;
 	}
 
-	.profile-headshot {
-		display: flex;
-		justify-content: center;
-		margin-bottom: 12px;
-	}
-
-	.profile-headshot .headshot-img {
-		width: 130px;
-		height: 95px;
-		object-fit: cover;
-		border-radius: 6px;
-	}
-
-	.profile-headshot .headshot-placeholder {
-		width: 90px;
-		height: 90px;
-		border-radius: 50%;
-		background: var(--bg-elevated);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 28px;
-		font-weight: 700;
-		color: var(--text-muted);
-	}
-
-	.compare-link {
-		width: 100%;
-	}
-
+	/* Team and position read as the line over the name. */
 	.player-meta {
-		font-size: 13px;
-		color: var(--text-secondary);
-		margin-top: 4px;
+		order: -1;
+		color: var(--text-muted);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
 	}
 
 	.player-detail {
-		font-size: 12px;
+		font-size: 13px;
+		color: var(--text-secondary);
+	}
+
+	.profile-actions {
+		grid-area: actions;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		align-self: start;
+	}
+
+	.profile-score {
+		grid-area: score;
+		display: grid;
+		justify-items: end;
+		gap: 6px;
+		text-align: right;
+	}
+
+	.profile-score-label {
 		color: var(--text-muted);
-		margin-top: 2px;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.profile-score-value {
+		font-family: var(--font-display);
+		font-size: clamp(52px, 5vw, 64px);
+		font-weight: 800;
+		font-stretch: 116%;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: -0.02em;
+		line-height: 0.9;
+		color: var(--text);
+	}
+
+	.profile-score-split {
+		display: grid;
+		justify-items: end;
+		gap: 6px;
+		font-size: 13px;
+	}
+
+	.profile-score-split :global(.od-bar) {
+		width: 180px;
+	}
+
+	.profile-score-note {
+		color: var(--time-text);
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	/* With the Time Machine set, the date the rating is from, in its colour. */
+	.profile-asof {
+		color: var(--time-text);
+		text-transform: none;
+		letter-spacing: 0;
+	}
+
+	/* Today's rank on the board, beside the DPM label. */
+	.profile-rank {
+		color: var(--text-secondary);
+		font-variant-numeric: tabular-nums;
+		text-transform: none;
+		letter-spacing: 0;
 	}
 
 	.sidebar-section {
@@ -944,7 +1070,28 @@
 		border-color: var(--accent);
 	}
 
-	/* Ratings or the ten skills in one click; the boxes below fine-tune either. */
+	/* Over a chart, the controls that change it. */
+	.panel-controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px 14px;
+		margin-bottom: 8px;
+	}
+
+	.panel-controls .talent-trend-control {
+		flex-direction: row;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.panel-controls .talent-trend-control .sidebar-select {
+		width: auto;
+		min-width: 160px;
+		padding: 6px 10px;
+	}
+
+	/* Ratings or the ten skills in one click; the boxes fine-tune either. */
 	.percentile-presets {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -952,6 +1099,11 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
 		overflow: hidden;
+	}
+
+	.panel-controls .percentile-presets {
+		min-width: 190px;
+		margin: 0;
 	}
 
 	.percentile-presets button {
@@ -979,7 +1131,8 @@
 		outline-offset: -2px;
 	}
 
-	.percentile-checkboxes {
+	.percentile-checkboxes,
+	.percentile-group-options {
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
@@ -1007,10 +1160,59 @@
 		accent-color: var(--accent);
 	}
 
+	/* Every metric, by group, one click away and out of the way until wanted. */
+	.percentile-picker[open] {
+		flex-basis: 100%;
+	}
+
+	.percentile-picker summary {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 30px;
+		padding: 0 10px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		color: var(--text-secondary);
+		font-size: 12px;
+		font-weight: 650;
+		list-style: none;
+		cursor: pointer;
+	}
+
+	.percentile-picker summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.percentile-picker summary::after {
+		content: '▾';
+		font-size: 10px;
+	}
+
+	.percentile-picker[open] summary::after {
+		content: '▴';
+	}
+
+	.percentile-picker summary:hover,
+	.percentile-picker summary:focus-visible {
+		border-color: var(--accent);
+		color: var(--text);
+	}
+
+	.percentile-picker .percentile-checkboxes {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+		gap: 4px 24px;
+		margin-top: 10px;
+		padding: 4px 14px 12px;
+		border: 1px solid var(--border-subtle);
+		border-radius: var(--radius-sm);
+	}
+
 	.profile-content {
 		display: flex;
 		flex-direction: column;
-		gap: 24px;
+		gap: 20px;
 		min-width: 0;
 	}
 
@@ -1018,33 +1220,31 @@
 		background: var(--bg-surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: 16px;
+		padding: 18px 20px;
 		/* The jump menu's links land with the heading clear of the sticky nav. */
 		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
 	}
 
-	/* The jump menu: one row of links to the sections this player's page shows. */
+	/* The jump menu: one quiet row of links to the sections this player's page shows. */
 	.profile-jump {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 6px;
-		margin-bottom: -8px;
+		gap: 2px;
+		margin: -8px 0 -4px -10px;
 	}
 
 	.profile-jump a {
-		padding: 5px 11px;
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		background: var(--bg-surface);
+		padding: 6px 10px;
+		border-radius: var(--radius-sm);
 		color: var(--text-secondary);
-		font-size: 12px;
-		font-weight: 650;
+		font-size: 13px;
+		font-weight: 600;
 		white-space: nowrap;
 	}
 
 	.profile-jump a:hover,
 	.profile-jump a:focus-visible {
-		border-color: var(--accent);
+		background: var(--bg-hover);
 		color: var(--text);
 	}
 
@@ -1111,9 +1311,10 @@
 
 	.contract-value {
 		color: var(--text);
-		font-family: var(--font-mono);
-		font-size: 20px;
-		font-weight: 700;
+		font-family: var(--font-display);
+		font-size: 21px;
+		font-weight: 750;
+		font-stretch: 106%;
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -1143,50 +1344,6 @@
 		margin-top: 12px;
 		color: var(--text-muted);
 		font-size: 12px;
-	}
-
-	.sidebar-rating {
-		display: grid;
-		gap: 8px;
-		margin-top: 14px;
-		padding-top: 12px;
-		border-top: 1px solid var(--border-subtle);
-		font-size: 12px;
-	}
-
-	.sidebar-rating-note {
-		color: var(--time-text);
-		font-weight: 600;
-	}
-
-	.sidebar-asof {
-		color: var(--time-text);
-		text-transform: none;
-		letter-spacing: 0;
-	}
-
-	/* Today's rank on the board, beside the DPM label. */
-	.sidebar-rank {
-		color: var(--text-secondary);
-		font-variant-numeric: tabular-nums;
-		text-transform: none;
-		letter-spacing: 0;
-	}
-
-	.sidebar-rating-head {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-	}
-
-	.sidebar-rating-value {
-		font-family: var(--font-mono);
-		font-size: 28px;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-		line-height: 1;
-		color: var(--text);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.comps-panel {
@@ -1223,8 +1380,8 @@
 	}
 
 	.seismograph-header h2 {
-		font-size: 16px;
-		font-weight: 700;
+		font-size: 17px;
+		font-weight: 750;
 		letter-spacing: -0.01em;
 		color: var(--text);
 	}
@@ -1282,9 +1439,10 @@
 	}
 
 	.seismograph-callout-value {
-		font-family: var(--font-mono);
-		font-size: 20px;
-		font-weight: 600;
+		font-family: var(--font-display);
+		font-size: 21px;
+		font-weight: 750;
+		font-stretch: 106%;
 		line-height: 1.2;
 		color: var(--text);
 		font-variant-numeric: tabular-nums;
@@ -1341,7 +1499,7 @@
 		border-top: 1px solid var(--border-subtle);
 	}
 
-	@media (max-width: 1180px) {
+	@media (max-width: 900px) {
 		.seismograph-body {
 			grid-template-columns: 1fr;
 		}
@@ -1363,18 +1521,49 @@
 		.contract-tiles {
 			grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
 		}
+
+		/* The rating moves under the name: the number, then its offense and defense beside it. */
+		.profile-header {
+			grid-template-columns: auto minmax(0, 1fr);
+			grid-template-areas:
+				'photo id'
+				'photo actions'
+				'score score';
+		}
+
+		.profile-score {
+			grid-template-columns: auto minmax(0, 1fr);
+			grid-template-areas:
+				'label label'
+				'value split';
+			align-items: center;
+			justify-items: start;
+			column-gap: 18px;
+			text-align: left;
+		}
+
+		.profile-score-label {
+			grid-area: label;
+		}
+
+		.profile-score-value {
+			grid-area: value;
+		}
+
+		.profile-score-split {
+			grid-area: split;
+			justify-items: start;
+		}
 	}
 
 	@media (max-width: 768px) {
 		.profile-layout {
-			grid-template-columns: 1fr;
-			padding: 20px 0 48px;
+			padding: 16px 0 48px;
 		}
 
-		.profile-sidebar {
-			position: static;
-			max-height: none;
-			overflow: visible;
+		.profile-search {
+			align-self: stretch;
+			width: auto;
 		}
 
 		.seismograph-header {
@@ -1388,6 +1577,52 @@
 		}
 
 		.seismograph-log-table .log-team {
+			display: none;
+		}
+
+		.profile-header {
+			grid-template-areas:
+				'photo id'
+				'score score'
+				'actions actions';
+			gap: 12px 14px;
+		}
+
+		.profile-headshot .headshot-img {
+			width: 92px;
+			height: 67px;
+		}
+
+		.profile-headshot .headshot-placeholder {
+			width: 64px;
+			height: 64px;
+			font-size: 22px;
+		}
+
+		.player-title h1 {
+			font-size: 28px;
+			font-stretch: 104%;
+		}
+
+		.profile-score-value {
+			font-size: 44px;
+			font-stretch: 108%;
+		}
+
+		.profile-actions .btn {
+			flex: 1 1 auto;
+		}
+
+		/* One row of section links that scrolls sideways rather than three rows of them. */
+		.profile-jump {
+			flex-wrap: nowrap;
+			margin-right: -16px;
+			padding-right: 16px;
+			overflow-x: auto;
+			scrollbar-width: none;
+		}
+
+		.profile-jump::-webkit-scrollbar {
 			display: none;
 		}
 	}

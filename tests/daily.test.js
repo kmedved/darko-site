@@ -8,6 +8,7 @@ import {
     ageRecordText,
     boardRows,
     chooseWindow,
+    datedSeriesFrom,
     daysBefore,
     editionPhase,
     headline,
@@ -130,6 +131,12 @@ test('boards, sparklines and watch cards come from plain rows', () => {
     const series = { 2: [['2025-10-22', 3], ['2026-03-02', 5], ['2026-03-05', 6.4]] };
     assert.deepEqual(seriesFrom(series[2], '2026-03-01'), [5, 6.4]);
     assert.deepEqual(seriesFrom(series[2], null), [3, 5, 6.4]);
+    // The featured chart keeps the dates; the rating out of the last game counts from the next day.
+    assert.deepEqual(
+        datedSeriesFrom([['2026-03-02', 5], ['2026-03-05', 6.4], ['2026-03-05', 6.9], ['2026-03-06', null]], '2026-03-01'),
+        [['2026-03-02', 5], ['2026-03-05', 6.4], ['2026-03-06', 6.9]]
+    );
+    assert.deepEqual(datedSeriesFrom(null, null), []);
 
     const byWindow = movesByWindow([move('season', 2, 60, 1.4), move('7', 2, 3, 0.2)]);
     const [card] = watchCards([2, 99], { players, byWindow, series });

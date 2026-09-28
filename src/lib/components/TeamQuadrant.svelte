@@ -148,7 +148,7 @@
 	}
 
 	.net {
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-width: 1;
 		stroke-dasharray: 2 4;
 	}

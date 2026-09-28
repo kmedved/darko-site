@@ -151,6 +151,21 @@ export function seriesFrom(series, start) {
 	return (series ?? []).filter(([date]) => !start || date >= start).map(([, value]) => value);
 }
 
+/**
+ * The same ratings with their dates, for a chart with a time axis. Each game's date has the rating
+ * going into it; the rating out of the latest game shares that date, so it is placed a day later,
+ * when it takes effect. Dates never repeat.
+ */
+export function datedSeriesFrom(series, start) {
+	const points = [];
+	for (const [date, value] of series ?? []) {
+		if ((start && date < start) || !Number.isFinite(value)) continue;
+		const previous = points.at(-1)?.[0];
+		points.push([previous && date <= previous ? daysBefore(previous, -1) : date, value]);
+	}
+	return points;
+}
+
 /** The board's rows from ratings rows (active players, or any date's), best first. */
 export function boardRows(rows, size = BOARD_SIZE) {
 	return (rows ?? [])

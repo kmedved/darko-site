@@ -371,7 +371,7 @@
 	}
 
 	.cf-grid.zero {
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 	}
 
 	.cf-axis {
@@ -381,7 +381,7 @@
 	}
 
 	.cf-share {
-		font-weight: 600;
+		font-weight: var(--figure-weight-strong);
 		fill: var(--text-secondary);
 	}
 
@@ -395,7 +395,7 @@
 
 	.cf-ghost {
 		fill: none;
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-opacity: 0.35;
 		stroke-width: 1;
 	}
@@ -432,7 +432,7 @@
 	}
 
 	.cf-crosshair {
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-dasharray: 2 3;
 	}
 
@@ -529,7 +529,7 @@
 	}
 
 	.comps-table td.tint-cell {
-		font-weight: 700;
+		font-weight: var(--figure-weight-strong);
 	}
 
 	.comps-table tr.active td {

@@ -1690,7 +1690,7 @@
         content: '+';
         font-family: var(--font-mono);
         font-size: 16px;
-        font-weight: 650;
+        font-weight: var(--figure-weight-strong);
     }
 
     .wowy-advanced-filters[open] summary {
@@ -1719,7 +1719,7 @@
         color: var(--accent);
         font-family: var(--font-mono);
         font-size: 11px;
-        font-weight: 750;
+        font-weight: var(--figure-weight-strong);
         letter-spacing: 0.04em;
         padding: 2px 6px;
         text-transform: uppercase;
@@ -1976,7 +1976,7 @@
         color: var(--text-secondary);
         font-family: var(--font-mono);
         font-size: 11px;
-        font-weight: 750;
+        font-weight: var(--figure-weight-strong);
     }
 
     .wowy-team-link {
@@ -1986,7 +1986,7 @@
         color: var(--text);
         font-family: var(--font-mono);
         font-size: 12px;
-        font-weight: 800;
+        font-weight: var(--figure-weight-strong);
     }
 
     .wowy-team-link .wowy-team-mark {
@@ -2007,7 +2007,7 @@
         color: var(--text);
         font-family: var(--font-mono);
         font-size: 12px;
-        font-weight: 800;
+        font-weight: var(--figure-weight-strong);
         line-height: 1.15;
     }
 
@@ -2053,7 +2053,7 @@
     /* metricTone's classes drive the Shiny heat cells; here numbers stay in neutral ink and only
        the WOWY RAPM column carries a tint. */
     .wowy-rapm-cell {
-        font-weight: 700;
+        font-weight: var(--figure-weight-strong);
     }
 
     .metric-muted {

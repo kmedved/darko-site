@@ -306,7 +306,7 @@
 				.attr('x2', plotWidth)
 				.attr('y1', y1(0))
 				.attr('y2', y1(0))
-				.attr('stroke', isShinyView ? 'var(--shiny-chart-line)' : 'var(--text-muted)')
+				.attr('stroke', isShinyView ? 'var(--shiny-chart-line)' : 'var(--graphic-muted)')
 				.attr('stroke-width', 1)
 				.attr('stroke-dasharray', '6,4');
 		}
@@ -315,7 +315,7 @@
 			.attr('x2', plotWidth)
 			.attr('y1', y2(0))
 			.attr('y2', y2(0))
-			.attr('stroke', isShinyView ? 'var(--shiny-season-rule)' : 'var(--text-muted)')
+			.attr('stroke', isShinyView ? 'var(--shiny-season-rule)' : 'var(--graphic-muted)')
 			.attr('stroke-width', isShinyView ? shinySeismograph.zeroWidth : 1);
 
 		// Per-game updates: positive parts stack up from zero and negative parts down,
@@ -448,7 +448,7 @@
 		const crosshair = hover.append('line')
 			.attr('y1', -4)
 			.attr('y2', axisY)
-			.attr('stroke', 'var(--text-muted)')
+			.attr('stroke', 'var(--graphic-muted)')
 			.attr('stroke-width', 1)
 			.attr('stroke-dasharray', '3,3');
 		const dotDefense = hover.append('path')

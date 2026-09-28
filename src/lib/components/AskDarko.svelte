@@ -482,7 +482,7 @@
 		width: 18px;
 		height: 18px;
 		fill: none;
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-width: 1.8;
 		stroke-linecap: round;
 	}
@@ -616,7 +616,7 @@
 		flex: none;
 		min-width: 64px;
 		font-family: var(--font-mono);
-		font-weight: 700;
+		font-weight: var(--figure-weight-strong);
 		text-align: right;
 		font-variant-numeric: tabular-nums;
 	}
@@ -638,7 +638,7 @@
 
 	.ask-dot.former {
 		background: transparent;
-		border: 1.5px solid var(--text-muted);
+		border: 1.5px solid var(--graphic-muted);
 	}
 
 	.ask-arrow {

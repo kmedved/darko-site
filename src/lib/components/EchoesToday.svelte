@@ -72,7 +72,7 @@
 	.echo-score {
 		min-width: 2ch;
 		font-family: var(--font-mono);
-		font-weight: 600;
+		font-weight: var(--figure-weight-strong);
 		text-align: right;
 		color: var(--text);
 	}

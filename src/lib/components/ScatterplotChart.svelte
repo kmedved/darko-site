@@ -215,7 +215,7 @@
 			g.append('line')
 				.attr('x1', x(0)).attr('x2', x(0))
 				.attr('y1', 0).attr('y2', h)
-				.attr('stroke', isShinyView ? 'var(--shiny-chart-line)' : 'var(--text-muted)')
+				.attr('stroke', isShinyView ? 'var(--shiny-chart-line)' : 'var(--graphic-muted)')
 				.attr('stroke-width', isShinyView ? 2 : 1)
 				.attr('stroke-dasharray', '6,4')
 				.attr('opacity', isShinyView ? 1 : 0.5);
@@ -224,7 +224,7 @@
 			g.append('line')
 				.attr('x1', 0).attr('x2', w)
 				.attr('y1', y(0)).attr('y2', y(0))
-				.attr('stroke', isShinyView ? 'var(--shiny-chart-line)' : 'var(--text-muted)')
+				.attr('stroke', isShinyView ? 'var(--shiny-chart-line)' : 'var(--graphic-muted)')
 				.attr('stroke-width', isShinyView ? 2 : 1)
 				.attr('stroke-dasharray', '6,4')
 				.attr('opacity', isShinyView ? 1 : 0.5);

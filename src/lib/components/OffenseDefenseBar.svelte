@@ -52,7 +52,7 @@
 
 	.od-bar-zero {
 		height: 12px;
-		background: var(--text-muted);
+		background: var(--graphic-muted);
 	}
 
 	.od-bar-part {

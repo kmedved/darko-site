@@ -34,8 +34,10 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
 | Prototype page | What the site has |
 |---|---|
 | Teams (`src/13-teams.js`) | `/teams`: offense against defense for all 30 teams and the power order (`TeamQuadrant.svelte`, `utils/teamsOverview.js`) |
-| Player (`src/12-player.js`) | Season by season, Echoes today, the projected box score, Contract & longevity, the rank-for-age line over Comps & futures, "#N of M" by the DPM, height, weight and career games, a Roster Lab link, a jump menu over the sections, and the ten skills as a set in the percentile chart (`utils/playerSeasons.js`, `utils/boxScore.js`, `utils/playerProfile.js`, `utils/playerSkills.js`) |
-| Players (`src/11-players.js`) | In the leaderboard: position, age and watchlist filters, each player's position and age under the name, a star on every row, the O/X split under each DPM, optional season sparklines (`/api/history/trends`, remembered per browser) and, with the Time Machine set, Now and Since columns (`utils/leaderboardViews.js`) |
+| Player (`src/12-player.js`) | Season by season, Echoes today, the projected box score, Contract & longevity, the rank-for-age line over Comps & futures, "#N of M" by the DPM, height, weight and career games, a Roster Lab link, a jump menu over the sections, and the ten skills as a set in the percentile chart (`utils/playerSeasons.js`, `utils/boxScore.js`, `utils/playerProfile.js`, `utils/playerSkills.js`). The page opens like the prototype's `p-head`: photo, name, facts and actions, with the rating on the right, then the jump menu; each chart's controls sit over it. The Shiny view keeps its sidebar (`src/shiny-view.css`) |
+| Team (`src/13-teams.js`, `t-head`) | Team pages open on the rating (rank, offense and defense, wins) and a line of season facts, then "Where the rating comes from", then the roster table (`TeamDetailView.svelte`, the `aside` of `PageHeader.svelte`) |
+| The Daily (`src/10-today.js`) | The featured chart has a value scale, month labels and the latest value and date, on production's game dates with no offseason interpolation (`LeadTrendChart.svelte`, `datedSeriesFrom` in `utils/daily.js`) |
+| Players (`src/11-players.js`) | In the leaderboard: position, age and watchlist filters, each player's position and age under the name, a star on every row, the O/X split under each DPM, optional season sparklines (`/api/history/trends`, remembered per browser) and, with the Time Machine set, Now and Since columns (`utils/leaderboardViews.js`). A new stat moves the Distribution's dots to their new places in a wave instead of redrawing them (`DotDistribution.svelte`) |
 
 Not ported: the Seismograph's comparison line (the prototype's `vs`, another player's DPM in
 grey), since the Compare page covers two players; and the Players page's season-end mode for
@@ -104,6 +106,19 @@ added to `src/app.css`.
 
 Maple stayed in the prototype: on the site, the Time Machine and its as-of marks use each
 theme's accent (`--time: var(--accent)` in `src/app.css`).
+
+## Type and supporting text
+
+- Archivo, the prototype's display face, is self-hosted in `static/fonts/archivo` for page
+  titles, player and team names and headline numbers (`--font-display`), expanded on a desktop
+  and at normal width on a phone. Body text keeps the reader's chosen font; the Shiny view uses
+  Helvetica throughout.
+- Figures stay in DM Mono, which has 400 and 500 only: ordinary figures use `--figure-weight`
+  (400) and emphasis and totals `--figure-weight-strong` (500), and `font-synthesis-weight: none`
+  stops the browser faking a bolder one. The Shiny view sets both to 700 for its Helvetica.
+- `--text-muted` is at least 4.5:1 on every surface of every theme, raised panels included
+  (`tests/readability.test.js` checks each one); lines, dots and icons use `--graphic-muted`,
+  the earlier, quieter gray.
 
 ## Rebuilding and viewing
 
