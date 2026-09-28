@@ -64,7 +64,7 @@ the splits.
 The source model artifact is:
 
 ```text
-33_wowy_rapm/composite_rapm.parquet
+nba_darko/pipeline_scripts/wowy_rapm/composite_rapm.parquet
 SHA-256: ef5e1b5f99c0fa3e5b9913582ee5c3612b2ac4fc31667444dab085e43d5d4a40
 Rows: 4,126,431
 Dates: 1979-10-12 through 2026-06-13
@@ -107,7 +107,7 @@ The existing season-level publication table is useful for validation but not
 for the Trajectories chart, which needs game-level points:
 
 ```text
-33_wowy_rapm/reports/publication/player_season_display_synthetic.tsv
+nba_darko/pipeline_scripts/wowy_rapm/reports/publication/player_season_display_synthetic.tsv
 ```
 
 ## Existing Site Contract
@@ -137,14 +137,14 @@ the feature has a clean implementation boundary.
 Add a model-owned exporter, tentatively:
 
 ```text
-33_wowy_rapm/scripts/export_wowy_site.py
+nba_darko/pipeline_scripts/wowy_rapm/scripts/export_wowy_site.py
 ```
 
 It should produce:
 
 ```text
-33_wowy_rapm/reports/publication/wowy_player_game.parquet
-33_wowy_rapm/reports/publication/wowy_player_game_manifest.json
+nba_darko/pipeline_scripts/wowy_rapm/reports/publication/wowy_player_game.parquet
+nba_darko/pipeline_scripts/wowy_rapm/reports/publication/wowy_player_game_manifest.json
 ```
 
 The exporter should:

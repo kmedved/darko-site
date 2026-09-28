@@ -130,7 +130,10 @@ the 1956-57 season onward, including NBA and ABA postseason games and with no ex
 - **Current unified artifact:** 1,198,710 rows; the exact player count is
   recorded in its publication manifest
 - **Update strategy:** validated staging COPY followed by transactional table replacement
-- **Source:** `33_wowy_rapm/reports/publication/wowy_player_game.parquet`
+- **Source:** the WOWY program's certified player-game export, published by
+  `nba_darko/pipeline_scripts/wowy_rapm/scripts/publish_wowy_site.py` from
+  `$NBA_DARKO_RUNTIME_ROOT/wowy_rapm/derived/publication/current/wowy_player_game.parquet`
+  (the program was imported into `nba_darko` on 2026-09-28)
 - **RLS:** Read-only for `anon` and `authenticated` via
   `supabase/migrations/20260710_001_add_wowy_ratings.sql`.
 
@@ -554,12 +557,12 @@ Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at
 
 **Connection:** Uses `SUPABASE_PG_DSN` env var, falling back to `fixed_data/supabase_secret.json`.
 
-The model-owned `33_wowy_rapm/scripts/publish_wowy_site.py` independently validates the certified
+The model-owned `nba_darko/pipeline_scripts/wowy_rapm/scripts/publish_wowy_site.py` independently validates the certified
 WOWY manifest, COPY-loads a temporary staging table, verifies keys/counts/date coverage, and replaces
 `wowy_ratings` plus `wowy_publication` in one transaction. It never uses the generic drop/recreate
 uploader, so indexes, grants, constraints, and RLS survive publication.
 
-`33_wowy_rapm/scripts/export_wowy_season_opening_snapshots.py` builds the matching all-era
+`nba_darko/pipeline_scripts/wowy_rapm/scripts/export_wowy_season_opening_snapshots.py` builds the matching all-era
 opening-game artifact from the certified player-game publication plus BBRef historical team data.
 `scripts/publish_wowy_season_opening_snapshots.py` validates season coverage, team context, keys,
 and RAPM decomposition before atomically replacing `wowy_season_opening_snapshots`.
