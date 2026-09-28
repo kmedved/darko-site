@@ -44,12 +44,27 @@ test('items stay for 30 days from launch, newest first', () => {
     const afternoon = new Date('2026-09-28T14:00:00Z');
     assert.deepEqual(keys(currentNews(afternoon)).slice(0, 2), ['daily', 'comps']);
 
+    // The Teams overview and the player-page sections went live that evening.
+    const evening = new Date('2026-09-28T18:00:00Z');
+    assert.deepEqual(keys(currentNews(evening)).slice(0, 4), ['teams', 'seasons', 'box-score', 'daily']);
+
     // A month on, the first night's launches have left and the later ones remain.
-    assert.deepEqual(keys(currentNews(new Date('2026-10-27T12:00:00Z'))), ['daily', 'comps', 'team-dna', 'ask', 'lab', 'rewind']);
+    assert.deepEqual(keys(currentNews(new Date('2026-10-27T12:00:00Z'))), [
+        'teams',
+        'seasons',
+        'box-score',
+        'daily',
+        'comps',
+        'team-dna',
+        'ask',
+        'lab',
+        'rewind'
+    ]);
     assert.deepEqual(currentNews(new Date('2026-11-01T00:00:00Z')), []);
     // The menus count features, not the design note, to match the page's headline.
     assert.equal(newFeatureCount(now), 7);
     assert.equal(newFeatureCount(afternoon), 8);
+    assert.equal(newFeatureCount(evening), 11);
     assert.equal(newFeatureCount(new Date('2026-11-01T00:00:00Z')), 0);
 });
 

@@ -10,6 +10,30 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'teams',
+		title: 'Teams overview',
+		launched: '2026-09-28T17:43:21Z',
+		text: "All 30 teams on one chart, DARKO offense against defense, and the power order by DARKO rating with each team's record, SRS, and its playoff odds or how its season ended.",
+		cta: 'See the teams',
+		href: '/teams'
+	},
+	{
+		key: 'seasons',
+		title: 'Season by season and Echoes today',
+		launched: '2026-09-28T17:43:21Z',
+		text: "Player pages list every season since 1996-97 with team, games, minutes and DPM, and where it ranks among all players that age. Echoes today names the current players whose closest comps include one of a player's seasons.",
+		cta: "See Kobe Bryant's echoes",
+		href: '/player/977#echoes'
+	},
+	{
+		key: 'box-score',
+		title: 'Projected box score',
+		launched: '2026-09-28T17:43:21Z',
+		text: "Current players' pages turn DARKO's per-100 projections into a per-game line at their projected minutes and pace, with shooting percentages, using the Fantasy Lab's math.",
+		cta: "See Wembanyama's line",
+		href: '/player/1641705#box-score'
+	},
+	{
 		key: 'daily',
 		title: 'The Daily',
 		launched: '2026-09-28T13:31:13Z',
