@@ -2,8 +2,12 @@
 -- each publish, from this repository's own latest definitions. The publisher no longer
 -- defines functions (nba_darko docs/migration/supabase-function-ownership-and-wowy-import.md,
 -- Part A). Idempotent: re-run at any time to put production at these definitions.
--- CREATE OR REPLACE keeps each function's existing grants, so only the one definition that
--- changes language re-states its grant explicitly.
+-- Each definition is followed by the grants its source migration gave it: revoke all from
+-- PUBLIC, execute to anon, authenticated and service_role. CREATE OR REPLACE keeps an
+-- existing function's grants, but a function that a later migration dropped comes back with
+-- PostgreSQL's default PUBLIC EXECUTE; restating the grants means a lone re-run of this file
+-- never widens privileges. Such a re-run does re-create the dropped function, so re-apply
+-- the migration that dropped it afterwards.
 --
 -- Source migration of each definition:
 --   normalize_wowy_filter_position: 20260711_001_add_wowy_leaderboard_bio_filters.sql
@@ -62,6 +66,10 @@ as $function$
     from normalized;
 $function$;
 
+revoke all on function public.normalize_wowy_filter_position(text) from public;
+grant execute on function public.normalize_wowy_filter_position(text)
+    to anon, authenticated, service_role;
+
 -- get_active_player_ratings (from 20260710_002_add_active_player_snapshot_rpc.sql)
 create or replace function public.get_active_player_ratings(p_season integer)
 returns jsonb
@@ -79,6 +87,10 @@ as $function$
         order by pr.nba_id, pr.date desc
     ) as latest;
 $function$;
+
+revoke all on function public.get_active_player_ratings(integer) from public;
+grant execute on function public.get_active_player_ratings(integer)
+    to anon, authenticated, service_role;
 
 -- get_latest_player_teams (from 20260710_003_add_latest_player_teams_rpc.sql)
 create or replace function public.get_latest_player_teams(
@@ -106,6 +118,10 @@ as $function$
     ) as latest;
 $function$;
 
+revoke all on function public.get_latest_player_teams(bigint[], date) from public;
+grant execute on function public.get_latest_player_teams(bigint[], date)
+    to anon, authenticated, service_role;
+
 -- get_leaderboard_seasons (from 20260710_005_add_historical_leaderboard_snapshot_rpcs.sql)
 create or replace function public.get_leaderboard_seasons()
 returns jsonb
@@ -124,6 +140,10 @@ as $function$
         where pr.season is not null
     ) as seasons;
 $function$;
+
+revoke all on function public.get_leaderboard_seasons() from public;
+grant execute on function public.get_leaderboard_seasons()
+    to anon, authenticated, service_role;
 
 -- get_season_start_player_ratings (from 20260710_005_add_historical_leaderboard_snapshot_rpcs.sql)
 create or replace function public.get_season_start_player_ratings(p_season integer)
@@ -157,6 +177,10 @@ as $function$
     from season_start_rows;
 $function$;
 
+revoke all on function public.get_season_start_player_ratings(integer) from public;
+grant execute on function public.get_season_start_player_ratings(integer)
+    to anon, authenticated, service_role;
+
 -- get_latest_player_search_ratings (from 20260710_006_add_player_search_snapshot_rpc.sql)
 create or replace function public.get_latest_player_search_ratings(p_ids bigint[])
 returns jsonb
@@ -183,6 +207,10 @@ as $function$
         order by pr.nba_id, pr.date desc
     ) as latest;
 $function$;
+
+revoke all on function public.get_latest_player_search_ratings(bigint[]) from public;
+grant execute on function public.get_latest_player_search_ratings(bigint[])
+    to anon, authenticated, service_role;
 
 -- get_active_wowy_player_ratings (from 20260711_001_add_wowy_leaderboard_bio_filters.sql)
 create or replace function public.get_active_wowy_player_ratings()
@@ -255,6 +283,10 @@ as $function$
     )
     from latest_wowy;
 $function$;
+
+revoke all on function public.get_active_wowy_player_ratings() from public;
+grant execute on function public.get_active_wowy_player_ratings()
+    to anon, authenticated, service_role;
 
 -- get_wowy_leaderboard_seasons: one definition for both activation states. Migration
 -- 20260710_010 lists seasons from the opening snapshots; the manual activation operation
@@ -395,5 +427,9 @@ begin
     );
 end;
 $function$;
+
+revoke all on function public.get_wowy_season_player_ratings(integer) from public;
+grant execute on function public.get_wowy_season_player_ratings(integer)
+    to anon, authenticated, service_role;
 
 commit;
