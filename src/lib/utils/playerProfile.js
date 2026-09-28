@@ -26,6 +26,28 @@ function signed(value, digits = 1) {
 	return value > 0 && Number(text) !== 0 ? `+${text}` : text;
 }
 
+/** 82 inches as 6'10". */
+export function formatHeight(inches) {
+	const n = toNumber(inches);
+	if (n === null || n <= 0) return null;
+	const total = Math.round(n);
+	return `${Math.floor(total / 12)}'${total % 12}"`;
+}
+
+/**
+ * Career games from the season table (player_seasons): regular-season and playoff games.
+ * player_ratings' career_game_num counts more than games played, so it isn't used.
+ */
+export function careerGames(seasons) {
+	let regular = 0;
+	let playoffs = 0;
+	for (const row of seasons ?? []) {
+		regular += toNumber(row?.games) ?? 0;
+		playoffs += toNumber(row?.playoff_games) ?? 0;
+	}
+	return { regular, playoffs };
+}
+
 /** Where a current player's DPM ranks among everyone on today's board: { rank, of }. */
 export function dpmRank(nbaId, activePlayers) {
 	const ranked = (activePlayers ?? [])

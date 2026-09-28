@@ -34,8 +34,8 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
 | Prototype page | What the site has |
 |---|---|
 | Teams (`src/13-teams.js`) | `/teams`: offense against defense for all 30 teams and the power order (`TeamQuadrant.svelte`, `utils/teamsOverview.js`) |
-| Player (`src/12-player.js`) | Season by season, Echoes today, the projected box score, Contract & longevity, the rank-for-age line over Comps & futures, "#N of M" by the DPM, a Roster Lab link and a jump menu over the sections (`utils/playerSeasons.js`, `utils/boxScore.js`, `utils/playerProfile.js`) |
-| Players (`src/11-players.js`) | In the leaderboard: position, age and watchlist filters, a star on every row, the O/X split under each DPM, optional season sparklines (`/api/history/trends`, remembered per browser) and, with the Time Machine set, Now and Since columns (`utils/leaderboardViews.js`) |
+| Player (`src/12-player.js`) | Season by season, Echoes today, the projected box score, Contract & longevity, the rank-for-age line over Comps & futures, "#N of M" by the DPM, height, weight and career games, a Roster Lab link, a jump menu over the sections, and the ten skills as a set in the percentile chart (`utils/playerSeasons.js`, `utils/boxScore.js`, `utils/playerProfile.js`, `utils/playerSkills.js`) |
+| Players (`src/11-players.js`) | In the leaderboard: position, age and watchlist filters, each player's position and age under the name, a star on every row, the O/X split under each DPM, optional season sparklines (`/api/history/trends`, remembered per browser) and, with the Time Machine set, Now and Since columns (`utils/leaderboardViews.js`) |
 
 Not ported: the Seismograph's comparison line (the prototype's `vs`, another player's DPM in
 grey), since the Compare page covers two players; and the Players page's season-end mode for
@@ -55,8 +55,8 @@ past seasons, since the Time Machine shows the board on any date.
 
 DARKOdle, Card Studio, the Fantasy Lab's draft board and the skill fingerprint glyph are
 dropped: `src/17-darkodle.js`, `src/18-card.js`, the draft board in `src/15-fantasy.js` and
-`glyph()` in `src/02-ui.js` stay as reference only. The player page's percentile bars
-already carry the skill percentiles.
+`glyph()` in `src/02-ui.js` stay as reference only. The glyph's ten skills are in the player
+page's percentile chart instead (its Skills set, `utils/playerSkills.js`).
 
 ## Porting notes
 

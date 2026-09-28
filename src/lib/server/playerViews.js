@@ -42,7 +42,16 @@ const PLAYER_VIEW_FIELDS = Object.freeze({
         'x_fg3_pct',
         'x_ft_pct',
         'tr_fg3_pct',
-        'tr_ft_pct'
+        'tr_ft_pct',
+        // The skills: shooting volume, turnovers, rebounds, blocks and steals per 100.
+        'x_fga_100',
+        'x_fta_100',
+        'x_fg3a_100',
+        'x_tov_100',
+        'x_orb_100',
+        'x_drb_100',
+        'x_blk_100',
+        'x_stl_100'
     ],
     leaderboard: [
         'nba_id',

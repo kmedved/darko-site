@@ -31,7 +31,14 @@
 	import { seasonRows } from '$lib/utils/playerSeasons.js';
 	import { projectedBoxScore } from '$lib/utils/boxScore.js';
 	import { seasonOfRow } from '$lib/utils/seismograph.js';
-	import { compsSummary, contractTiles, profileSections } from '$lib/utils/playerProfile.js';
+	import {
+		careerGames,
+		compsSummary,
+		contractTiles,
+		formatHeight,
+		profileSections
+	} from '$lib/utils/playerProfile.js';
+	import { percentileAmong, SKILL_LABELS, SKILL_METRICS, withSkillRates } from '$lib/utils/playerSkills.js';
 
 	let { data } = $props();
 
@@ -54,26 +61,53 @@
 		{ value: 'sal_market_fixed', label: 'Fair Salary' }
 	];
 
-	const PERCENTILE_OPTIONS = [
-		{ value: 'dpm', label: 'DPM' },
-		{ value: 'o_dpm', label: 'O-DPM' },
-		{ value: 'd_dpm', label: 'D-DPM' },
-		{ value: 'on_off_dpm', label: 'On/Off DPM' },
-		{ value: 'bayes_rapm_total', label: 'RAPM' },
-		{ value: 'x_pts_100', label: 'Pts per 100' },
-		{ value: 'x_ast_100', label: 'Ast per 100' },
-		{ value: 'x_fg_pct', label: 'FG%' },
-		{ value: 'x_fg3_pct', label: '3P%' },
-		{ value: 'x_ft_pct', label: 'FT%' },
-		{ value: 'tr_fg3_pct', label: '3P% (trend)' },
-		{ value: 'tr_ft_pct', label: 'FT% (trend)' }
+	// The ratings, the redesign's ten skills (SKILL_METRICS), and the rest of the shooting.
+	const PERCENTILE_GROUPS = [
+		{
+			label: 'Ratings',
+			options: [
+				{ value: 'dpm', label: 'DPM' },
+				{ value: 'o_dpm', label: 'O-DPM' },
+				{ value: 'd_dpm', label: 'D-DPM' },
+				{ value: 'on_off_dpm', label: 'On/Off DPM' },
+				{ value: 'bayes_rapm_total', label: 'RAPM' }
+			]
+		},
+		{
+			label: 'Skills',
+			options: [
+				{ value: 'x_pts_100', label: 'Scoring' },
+				{ value: 'ts_pct', label: 'Efficiency (TS%)' },
+				{ value: 'x_ft_pct', label: 'Touch (FT%)' },
+				{ value: 'x_fg3a_100', label: '3PT volume' },
+				{ value: 'x_ast_100', label: 'Playmaking' },
+				{ value: 'tov_pct', label: 'Ball security' },
+				{ value: 'x_orb_100', label: 'Off. boards' },
+				{ value: 'x_drb_100', label: 'Def. boards' },
+				{ value: 'x_blk_100', label: 'Rim protection' },
+				{ value: 'x_stl_100', label: 'Steals' }
+			]
+		},
+		{
+			label: 'Shooting',
+			options: [
+				{ value: 'x_fg_pct', label: 'FG%' },
+				{ value: 'x_fg3_pct', label: '3P%' },
+				{ value: 'tr_fg3_pct', label: '3P% (trend)' },
+				{ value: 'tr_ft_pct', label: 'FT% (trend)' }
+			]
+		}
 	];
+	const PERCENTILE_PRESETS = {
+		ratings: ['dpm', 'o_dpm', 'd_dpm', 'x_pts_100', 'x_fg3_pct'],
+		skills: [...SKILL_METRICS]
+	};
 
 	let allActivePlayers = $state([]);
 	let percentilesLoading = $state(true);
 	let percentileNotice = $state(null);
 	let talentType = $state('dpm');
-	let selectedPercentileMetrics = $state(['dpm', 'o_dpm', 'd_dpm', 'x_pts_100', 'x_fg3_pct']);
+	let selectedPercentileMetrics = $state([...PERCENTILE_PRESETS.ratings]);
 	let imgFailed = $state(false);
 	let pickedSeason = $state(null);
 	let showGameLog = $state(false);
@@ -173,20 +207,23 @@
 	// How the latest season ranks for its age, and the closest comp, over Comps & futures.
 	const compsLine = $derived(asOfDate ? null : compsSummary(seasonsTable, comps));
 
-	const percentiles = $derived.by(() => {
-		if (!playerInfo || allActivePlayers.length === 0) return [];
+	// The player's row with the two skill rates (true shooting, turnovers per play) added.
+	const skillInfo = $derived(withSkillRates(playerInfo));
 
-		const position = playerInfo.position;
-		const positionPlayers = position
-			? allActivePlayers.filter((player) => player.position === position)
-			: allActivePlayers;
+	const percentiles = $derived.by(() => {
+		if (!skillInfo || allActivePlayers.length === 0) return [];
+
+		const position = skillInfo.position;
+		const positionPlayers = (
+			position ? allActivePlayers.filter((player) => player.position === position) : allActivePlayers
+		).map(withSkillRates);
 
 		if (positionPlayers.length === 0) return [];
 
 		// A metric with no value for this player (or anyone) is left out, not drawn at the 0th
-		// percentile.
+		// percentile. For turnovers, fewer is better.
 		return selectedPercentileMetrics.map((metric) => {
-			const playerValue = Number.parseFloat(playerInfo[metric]);
+			const playerValue = Number.parseFloat(skillInfo[metric]);
 			if (Number.isNaN(playerValue)) return null;
 
 			const values = positionPlayers
@@ -195,11 +232,7 @@
 
 			if (values.length === 0) return null;
 
-			const below = values.filter((value) => value < playerValue).length;
-			return {
-				metric,
-				value: Math.round((below / values.length) * 100)
-			};
+			return { metric, value: percentileAmong(playerValue, values, metric) };
 		}).filter(Boolean);
 	});
 
@@ -295,10 +328,22 @@
 		};
 	});
 
-	const playerDetailText = $derived.by(() => {
+	// Two lines under the name: who the player is (age, size, country), then the career (draft,
+	// rookie season, games).
+	const playerBioText = $derived.by(() => {
 		if (!playerInfo) return '';
 		const parts = [];
 		if (playerInfo.age) parts.push('Age ' + Math.floor(playerInfo.age));
+		const height = formatHeight(playerInfo.height);
+		if (height) parts.push(height);
+		if (Number(playerInfo.weight) > 0) parts.push(Math.round(playerInfo.weight) + ' lb');
+		if (playerInfo.country) parts.push(playerInfo.country);
+		return parts.join(' · ');
+	});
+
+	const playerDetailText = $derived.by(() => {
+		if (!playerInfo) return '';
+		const parts = [];
 		if (playerInfo.draft_year) {
 			let d = '';
 			if (playerInfo.draft_slot) d += 'Pick #' + Math.round(playerInfo.draft_slot) + ', ';
@@ -306,7 +351,11 @@
 			parts.push(d);
 		}
 		if (playerInfo.rookie_season) parts.push('Rookie ' + playerInfo.rookie_season);
-		if (playerInfo.country) parts.push(playerInfo.country);
+		// The season table starts in 1996-97, so an earlier debut's games count from there.
+		const games = careerGames(data.seasons);
+		const since = Number(playerInfo.rookie_season) < 1997 ? ' since 1996-97' : '';
+		if (games.regular > 0) parts.push(`${games.regular.toLocaleString('en-US')} games${since}`);
+		if (games.playoffs > 0) parts.push(`${games.playoffs.toLocaleString('en-US')} playoff games`);
 		return parts.join(' · ');
 	});
 
@@ -386,7 +435,8 @@
 					<p class="player-meta">
 						{[playerInfo.team_name, playerInfo.position || '?'].filter(Boolean).join(' · ')}
 					</p>
-					<p class="player-detail">{playerDetailText}</p>
+					{#if playerBioText}<p class="player-detail">{playerBioText}</p>{/if}
+					{#if playerDetailText}<p class="player-detail">{playerDetailText}</p>{/if}
 					{#if asOfDate && !playerRating}
 						<p class="sidebar-rating sidebar-rating-note">
 							No DARKO rating yet on {formatAsOfDate(asOfDate)}.
@@ -426,16 +476,32 @@
 
 			<div class="sidebar-section">
 				<p class="sidebar-label">Talent Percentiles</p>
+				<div class="percentile-presets" role="group" aria-label="Percentile sets">
+					{#each Object.entries(PERCENTILE_PRESETS) as [name, metrics] (name)}
+						{@const active = metrics.length === selectedPercentileMetrics.length && metrics.every((metric) => selectedPercentileMetrics.includes(metric))}
+						<button
+							type="button"
+							class:active
+							aria-pressed={active}
+							onclick={() => (selectedPercentileMetrics = [...metrics])}
+						>
+							{name === 'skills' ? 'Skills' : 'Ratings'}
+						</button>
+					{/each}
+				</div>
 				<div class="percentile-checkboxes">
-					{#each PERCENTILE_OPTIONS as opt (opt.value)}
-						<label class="checkbox-label">
-							<input
-								type="checkbox"
-								checked={selectedPercentileMetrics.includes(opt.value)}
-								onchange={() => togglePercentileMetric(opt.value)}
-							/>
-							{opt.label}
-						</label>
+					{#each PERCENTILE_GROUPS as group (group.label)}
+						<p class="percentile-group">{group.label}</p>
+						{#each group.options as opt (opt.value)}
+							<label class="checkbox-label">
+								<input
+									type="checkbox"
+									checked={selectedPercentileMetrics.includes(opt.value)}
+									onchange={() => togglePercentileMetric(opt.value)}
+								/>
+								{opt.label}
+							</label>
+						{/each}
 					{/each}
 				</div>
 			</div>
@@ -729,7 +795,8 @@
 							date={currentDate}
 							{percentiles}
 							selectedMetrics={selectedPercentileMetrics}
-							rawValues={playerInfo}
+							rawValues={skillInfo}
+							labels={SKILL_LABELS}
 						/>
 						{#if percentileRapmFrom}
 							<p class="percentile-notice">RAPM is from {formatAsOfDate(percentileRapmFrom)}, the latest published.</p>
@@ -771,12 +838,16 @@
 		align-items: start;
 	}
 
+	/* Sticky, and scrolling on its own when its controls outgrow the window. */
 	.profile-sidebar {
 		display: flex;
 		flex-direction: column;
 		gap: 20px;
 		position: sticky;
 		top: calc(var(--nav-sticky-offset) + 24px);
+		max-height: calc(100dvh - var(--nav-sticky-offset) - 48px);
+		overflow-y: auto;
+		overscroll-behavior: contain;
 	}
 
 	.sidebar-player-info {
@@ -872,10 +943,54 @@
 		border-color: var(--accent);
 	}
 
+	/* Ratings or the ten skills in one click; the boxes below fine-tune either. */
+	.percentile-presets {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		margin: 2px 0 10px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		overflow: hidden;
+	}
+
+	.percentile-presets button {
+		padding: 6px 8px;
+		border: 0;
+		background: var(--bg-surface);
+		color: var(--text-secondary);
+		font-family: var(--font-sans);
+		font-size: 12px;
+		font-weight: 650;
+		cursor: pointer;
+	}
+
+	.percentile-presets button + button {
+		border-left: 1px solid var(--border);
+	}
+
+	.percentile-presets button.active {
+		background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
+		color: var(--text);
+	}
+
+	.percentile-presets button:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: -2px;
+	}
+
 	.percentile-checkboxes {
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
+	}
+
+	.percentile-group {
+		margin-top: 6px;
+		color: var(--text-muted);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
 	}
 
 	.checkbox-label {
@@ -1257,6 +1372,8 @@
 
 		.profile-sidebar {
 			position: static;
+			max-height: none;
+			overflow: visible;
 		}
 
 		.seismograph-header {

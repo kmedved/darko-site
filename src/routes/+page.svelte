@@ -382,6 +382,12 @@
         return classes.filter(Boolean).join(' ');
     }
 
+    /** "C-F · 31": the position and whole-year age under a player's name. */
+    function positionAndAge(player) {
+        const age = toNumber(player?.age);
+        return [player?.position, age === null ? null : String(Math.floor(age))].filter(Boolean).join(' · ');
+    }
+
     /** "DPM this season, +5.2 to +7.4" for a sparkline's screen-reader label. */
     function trendLabel(values) {
         if (!values?.length) return '';
@@ -736,8 +742,11 @@
                                                                             onerror={hideBrokenImage}
                                                                         />
                                                                     {/if}
-                                                                    <span>{player.player_name}</span>
-                                                                    {#if player.position}<small>{player.position}</small>{/if}
+                                                                    <!-- The name, and under it the position and age: "C-F · 31". -->
+                                                                    <span class="player-text">
+                                                                        <span>{player.player_name}</span>
+                                                                        {#if positionAndAge(player)}<small>{positionAndAge(player)}</small>{/if}
+                                                                    </span>
                                                                 </a>
                                                             </span>
                                                         </td>
@@ -1468,6 +1477,15 @@
         color: var(--text-muted);
         font-size: 11px;
         font-weight: 700;
+    }
+
+    .player-text {
+        display: grid;
+        line-height: 1.25;
+    }
+
+    .player-text small {
+        font-variant-numeric: tabular-nums;
     }
 
     .player-link:hover,

@@ -56,19 +56,19 @@ test('Rate a Player pairs come from the active leaderboard, not every player eve
     assert.match(pair, /from\('elo_ratings'\)/);
 });
 
-test('player pages get draft year, pick and country without adding them to the players index', async () => {
+test('player pages get draft year, pick, country and size without adding them to the players index', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), SUPABASE_FILE), 'utf8');
 
     // The shared players columns also feed the index that search downloads.
     const shared = contents.match(/const PLAYERS_DIM_COLUMNS = \[([\s\S]*?)\]\.join/);
-    assert.ok(shared && !/draft|country/.test(shared[1]));
+    assert.ok(shared && !/draft|country|height|weight/.test(shared[1]));
 
     const profile = contents.slice(contents.indexOf('export async function getFullPlayerProfileHistory'));
-    assert.match(contents, /const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot, country';/);
+    assert.match(contents, /const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot, country, height, weight';/);
     assert.match(profile, /getPlayersMapByIds\(\[nbaId\], PLAYER_DRAFT_COLUMNS\)/);
     assert.match(
         profile,
-        /draft_year: draft\?\.draft_year \?\? null,\s*draft_slot: draft\?\.draft_slot \?\? null,\s*country: draft\?\.country \?\? null/
+        /draft_year: draft\?\.draft_year \?\? null,\s*draft_slot: draft\?\.draft_slot \?\? null,\s*country: draft\?\.country \?\? null,\s*height: draft\?\.height \?\? null,\s*weight: draft\?\.weight \?\? null/
     );
 });
 

@@ -275,9 +275,9 @@ const PLAYERS_DIM_COLUMNS = [
     'position',
     'rookie_season'
 ].join(', ');
-// Where a player was drafted and is from, for the player page's header only:
+// Where a player was drafted and is from, and their size, for the player page's header only:
 // PLAYERS_DIM_COLUMNS also feeds the players index that search downloads.
-const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot, country';
+const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot, country, height, weight';
 
 const WOWY_RATING_COLUMNS = [
     'nba_id',
@@ -1534,7 +1534,9 @@ export async function getFullPlayerProfileHistory(nbaId, options = {}) {
             ...info,
             draft_year: draft?.draft_year ?? null,
             draft_slot: draft?.draft_slot ?? null,
-            country: draft?.country ?? null
+            country: draft?.country ?? null,
+            height: draft?.height ?? null,
+            weight: draft?.weight ?? null
         }
     };
 }
