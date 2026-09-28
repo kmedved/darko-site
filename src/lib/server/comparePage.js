@@ -1,3 +1,4 @@
+import { withLatestRapm } from '../utils/latestRapm.js';
 import { withLatestTeam } from '../utils/latestTeam.js';
 
 function resolveHistoryRows(payload) {
@@ -70,7 +71,7 @@ export async function loadComparePageData({
             continue;
         }
 
-        const currentRow = withLatestTeam(rows.at(-1) ?? {}, rows);
+        const currentRow = withLatestRapm(withLatestTeam(rows.at(-1) ?? {}, rows), rows);
         preloadedPlayers.push(
             buildComparePlayer({
                 currentRow,

@@ -2,13 +2,13 @@
 	import { formatFixed } from '$lib/utils/csvPresets.js';
 	import { formatSigned } from '$lib/utils/seismograph.js';
 	import { TEAM_MINUTES } from '$lib/utils/rosterLab.js';
-	import { formatTick, minutesProfile, niceTicks } from '$lib/utils/teamDna.js';
+	import { formatTick, minutesProfile, niceTicks, sidewaysRows } from '$lib/utils/teamDna.js';
 
 	/**
 	 * The Minutes chart: each bar's height is a player's DPM and its width their share of the
-	 * roster's minutes, so its area is what they add and the bars add up to the rating. The dashed
-	 * line is the average minute; five of them on the floor make the rating. Narrow containers get
-	 * the chart turned sideways, each row as thick as the player's minutes, so names still fit.
+	 * roster's minutes, so the signed areas add up to the average minute (the dashed line), and
+	 * five of those on the floor make the rating. Narrow containers get the chart turned
+	 * sideways, each row as thick as the player's share of the minutes, so names still fit.
 	 */
 	let {
 		// Contributions with the deep bench folded (foldDeepBench), for one roster.
@@ -17,14 +17,13 @@
 		domain = null,
 		color = 'var(--text-secondary)',
 		height = 240,
-		// Where another list already names every player (the Roster Lab's table), skip ours.
+		// Where another list already names every player (the Roster Lab's table), names the chart
+		// only shortens aren't listed again; marks it can't name, and the deep bench, still are.
 		listNarrow = true,
 		playerHref = (id) => `/player/${id}`
 	} = $props();
 
 	const SIDEWAYS_BELOW = 520;
-	const PX_PER_MINUTE = 1.4;
-	const LABEL_ROW = 12;
 	const M = { top: 24, right: 12, bottom: 36, left: 40 };
 	const SHARE_TICKS = [0, 0.25, 0.5, 0.75, 1];
 
@@ -55,16 +54,21 @@
 			return { ...column, name, fits: name !== null };
 		});
 	});
-	// Bars too narrow (or rows too thin) for their whole name are listed under the chart in
-	// full, and so is the deep bench, whose names only fit there.
+	const sideRows = $derived(sidewaysRows(profile.bars));
+	// Marks with no name in the chart (rows too thin for one, bars with no room) are listed under
+	// it, and so is the deep bench, whose players only fit there; with listNarrow, so are names
+	// the chart cuts short.
 	const listed = $derived(
-		!listNarrow
-			? []
-			: sideways
-				? profile.bars.filter((bar) => bar.bench || bar.minutes * PX_PER_MINUTE < LABEL_ROW)
-				: columns
-						.filter((column) => column.bar.bench || column.name?.text !== labelFor(column.bar))
-						.map((column) => column.bar)
+		sideways
+			? sideRows.filter((row) => row.bar.bench || !row.labeled).map((row) => row.bar)
+			: columns
+					.filter(
+						(column) =>
+							column.bar.bench ||
+							!column.name ||
+							(listNarrow && column.name.text !== labelFor(column.bar))
+					)
+					.map((column) => column.bar)
 	);
 	const shortfall = $derived(profile.minutes > 0 && Math.abs(profile.minutes - TEAM_MINUTES) > 1);
 
@@ -218,6 +222,13 @@
 	function hideTip() {
 		tip = null;
 	}
+
+	// The deep bench has no page of its own: tapping it, or Enter or Space on it, shows its players.
+	function benchKey(event, bar) {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
+		tipAtTarget(event, bar);
+	}
 </script>
 
 <div class="mc" style:--mc-bar={color} bind:clientWidth={width}>
@@ -225,22 +236,22 @@
 		{#if sideways}
 			<div class="mc-side">
 				<ol class="mc-rows">
-					{#each profile.bars as bar (bar.id)}
-						{@const thick = Math.max(bar.minutes * PX_PER_MINUTE, 2)}
-						{@const labeled = thick >= LABEL_ROW}
+					{#each sideRows as { bar, thick, labeled } (bar.id)}
 						{@const left = at(Math.min(0, bar.dpm)) * 100}
 						{@const right = at(Math.max(0, bar.dpm)) * 100}
 						<li style:height="{thick}px">
 							<svelte:element
-								this={bar.bench ? 'div' : 'a'}
+								this={bar.bench ? 'button' : 'a'}
 								class="mc-row"
 								href={bar.bench ? undefined : playerHref(bar.id)}
+								type={bar.bench ? 'button' : undefined}
+								role={bar.bench ? 'button' : undefined}
 								aria-label={describe(bar)}
-								role={bar.bench ? 'img' : undefined}
 								onpointermove={(event) => tipAtPointer(event, bar)}
 								onpointerleave={hideTip}
 								onfocus={(event) => tipAtTarget(event, bar)}
 								onblur={hideTip}
+								onclick={bar.bench ? (event) => tipAtTarget(event, bar) : undefined}
 							>
 								<span class="mc-row-name" aria-hidden="true">{labeled ? labelFor(bar) : ''}</span>
 								<span class="mc-row-track" aria-hidden="true">
@@ -276,11 +287,14 @@
 						class="mc-link"
 						href={column.bar.bench ? undefined : playerHref(column.bar.id)}
 						aria-label={describe(column.bar)}
-						role={column.bar.bench ? 'img' : undefined}
+						role={column.bar.bench ? 'button' : undefined}
+						tabindex={column.bar.bench ? 0 : undefined}
 						onpointermove={(event) => tipAtPointer(event, column.bar)}
 						onpointerleave={hideTip}
 						onfocus={(event) => tipAtTarget(event, column.bar)}
 						onblur={hideTip}
+						onclick={column.bar.bench ? (event) => tipAtTarget(event, column.bar) : undefined}
+						onkeydown={column.bar.bench ? (event) => benchKey(event, column.bar) : undefined}
 					>
 						<rect class="mc-hit" x={column.x0} y={M.top} width={Math.max(column.span, 1)} height={plotH} />
 						<path class="mc-bar" class:negative={column.bar.dpm < 0} d={barPath(column)} />
@@ -316,30 +330,42 @@
 		{/if}
 
 		{#if listed.length}
-			<p class="mc-others">
+			<div class="mc-others">
 				<span class="mc-others-head">Also in the chart:</span>
 				{#each listed as bar, index (bar.id)}
 					{#if index > 0}<span aria-hidden="true">{' · '}</span>{/if}
-					<span class="mc-other">
-						{#if bar.bench}
-							Deep bench ({bar.players.map((player) => player.name).join(', ')})
-						{:else}
+					{#if bar.bench}
+						<details class="mc-other mc-bench">
+							<summary>
+								Deep bench, {bar.players.length} players
+								<span class="mc-other-num">{formatFixed(bar.minutes, 1)} min, {formatSigned(bar.dpm, 1)}</span>
+							</summary>
+							{#each bar.players as player, playerIndex (player.id)}
+								{#if playerIndex > 0}<span aria-hidden="true">{', '}</span>{/if}
+								<span class="mc-bench-player">
+									<a href={playerHref(player.id)}>{player.name}</a>
+									<span class="mc-other-num">{formatFixed(player.minutes, 1)} min, {formatSigned(player.dpm, 1)}</span>
+								</span>
+							{/each}
+						</details>
+					{:else}
+						<span class="mc-other">
 							<a href={playerHref(bar.id)}>{bar.name}</a>
-						{/if}
-						<span class="mc-other-num">{formatFixed(bar.minutes, 1)} min, {formatSigned(bar.dpm, 1)}</span>
-					</span>
+							<span class="mc-other-num">{formatFixed(bar.minutes, 1)} min, {formatSigned(bar.dpm, 1)}</span>
+						</span>
+					{/if}
 				{/each}
-			</p>
+			</div>
 		{/if}
 
 		<p class="mc-legend">
 			{sideways ? "A bar's length is DPM and its thickness the share of minutes" : "A bar's height is DPM and its width the share of minutes"},
-			so its area is what the player adds. The dashed line is the average minute: five of them,
-			{formatSigned(profile.mean, 2)} × 5, make the rating of {formatSigned(profile.rating, 2)}.
+			so the signed areas add up to the average minute, the dashed line at {formatSigned(profile.mean, 2)}.
+			Five players are on the floor, so the rating is five times that: {formatSigned(profile.rating, 2)}.
 		</p>
 		{#if shortfall}
 			<p class="mc-legend">
-				{Math.round(profile.minutes)} of {TEAM_MINUTES} minutes: widths are shares, and the rating counts them as a full {TEAM_MINUTES}.
+				{Math.round(profile.minutes)} of {TEAM_MINUTES} minutes: {sideways ? 'thicknesses' : 'widths'} are shares, and the rating counts them as a full {TEAM_MINUTES}.
 			</p>
 		{/if}
 
@@ -464,8 +490,22 @@
 		text-decoration: none;
 	}
 
+	/* The deep bench is a button that shows its players; it looks like the other rows. */
+	button.mc-row {
+		width: 100%;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: none;
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
 	a.mc-row:hover,
-	a.mc-row:focus-visible {
+	a.mc-row:focus-visible,
+	button.mc-row:hover,
+	button.mc-row:focus-visible {
 		background: var(--bg-hover);
 	}
 
@@ -551,6 +591,28 @@
 
 	.mc-other a {
 		color: var(--text);
+	}
+
+	.mc-bench {
+		display: inline;
+	}
+
+	.mc-bench summary {
+		display: inline;
+		cursor: pointer;
+	}
+
+	.mc-bench summary::after {
+		content: ' ▸';
+		color: var(--text-muted);
+	}
+
+	.mc-bench[open] summary::after {
+		content: ' ▾';
+	}
+
+	.mc-bench[open] summary {
+		margin-right: 4px;
 	}
 
 	.mc-other-num {

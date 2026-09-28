@@ -683,20 +683,19 @@
     padding: 6px 7px 2px;
 }
 
-:root[data-view='shiny'] .distribution-chart line {
+:root[data-view='shiny'] .distribution-chart .dot-grid {
     stroke: #d9d9d9;
 }
 
-:root[data-view='shiny'] .distribution-line {
-    stroke: #377eb8;
-    stroke-width: 3;
+:root[data-view='shiny'] .distribution-chart .dot {
+    fill: #377eb8;
 }
 
-:root[data-view='shiny'] .distribution-area {
-    fill: rgba(55, 126, 184, 0.28);
+:root[data-view='shiny'] .distribution-chart .dot.off {
+    fill: #d9d9d9;
 }
 
-:root[data-view='shiny'] .distribution-chart .distribution-mean {
+:root[data-view='shiny'] .distribution-chart .dot-mean {
     stroke: #000000;
     stroke-width: 2;
     stroke-dasharray: 7 5;

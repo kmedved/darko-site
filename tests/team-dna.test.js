@@ -15,6 +15,9 @@ import {
     ratingContributions,
     ratingWaterfall,
     rosterContributions,
+    SIDEWAYS_LABEL_ROW,
+    SIDEWAYS_THICKNESS,
+    sidewaysRows,
     sortContributions,
     teamRatingSummary
 } from '../src/lib/utils/teamDna.js';
@@ -240,4 +243,21 @@ test('the minutes chart: widths are minutes shares and areas add up to the ratin
     assert.equal(profile.low, -1);
     assert.equal(profile.high, 4);
     assert.deepEqual(minutesProfile([]).bars, []);
+});
+
+test('sideways Minutes rows are as thick as their share, whatever the minutes add up to', () => {
+    const row = (id, minutes, dpm) => ({ id, name: `Player ${id}`, minutes, dpm, oDpm: dpm, dDpm: 0 });
+    const roster = [row(1, 36, 4), row(2, 30, 1), row(3, 6, -1)];
+    const thickness = (rows) => sidewaysRows(minutesProfile(rows).bars).map((entry) => entry.thick);
+    // Scaling every player's minutes changes no share, so it changes no row.
+    const halved = roster.map((player) => ({ ...player, minutes: player.minutes / 2 }));
+    assert.deepEqual(thickness(halved), thickness(roster));
+    // One player alone has every minute: the whole chart at 44 minutes or at 22.
+    assert.deepEqual(thickness([row(1, 44, 3.36)]), [SIDEWAYS_THICKNESS]);
+    assert.deepEqual(thickness([row(1, 22, 3.36)]), [SIDEWAYS_THICKNESS]);
+    // Names go only where the drawn row has room: 6 of 72 minutes is 28px, 1 of 240 is 1.4px.
+    const [, , third] = sidewaysRows(minutesProfile(roster).bars);
+    assert.ok(near(third.thick, (6 / 72) * SIDEWAYS_THICKNESS) && third.labeled);
+    const tiny = sidewaysRows(minutesProfile([row(1, 239, 1), row(2, 1, 0)]).bars)[1];
+    assert.ok(near(tiny.thick, 1.4) && !tiny.labeled && tiny.thick < SIDEWAYS_LABEL_ROW);
 });

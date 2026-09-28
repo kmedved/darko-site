@@ -10,6 +10,7 @@
     import { unpackLineups } from '$lib/utils/lineupTransport.js';
     import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
+    import { formatAsOfDate } from '$lib/utils/timeMachine.js';
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
     import {
         buildPresetHeatScales,
@@ -581,7 +582,10 @@
 <div class="lineups-page" data-shiny-page>
     <div class="container lineups-container">
         <PageHeader id="lineups-title" title="Lineup Projections" lede="Lineup Plus/Minus in Relation to League Average">
-            <p class="page-note">Table limited to lineups with more than {data.minPoss ?? 100} possessions.</p>
+            <p class="page-note">
+                Table limited to lineups with more than {data.minPoss ?? 100} possessions.
+                {#if data.computedOn}Lineup ratings last computed {formatAsOfDate(data.computedOn)}.{/if}
+            </p>
         </PageHeader>
 
         {#if !hasAnyVariantLineups}

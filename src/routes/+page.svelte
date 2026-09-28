@@ -29,6 +29,7 @@
         getMetricHeatVariables
     } from '$lib/utils/metricHeatScales.js';
     import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+    import DotDistribution from '$lib/components/DotDistribution.svelte';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import StatTile from '$lib/components/StatTile.svelte';
@@ -160,7 +161,21 @@
     const selectedDistributionMetric = $derived(
         distributionMetrics.find((metric) => metric.key === distributionMetric) ?? distributionMetrics[0]
     );
-    const distribution = $derived(buildDistribution(teamScopedPlayers, selectedDistributionMetric));
+    const distribution = $derived(buildDistribution(filteredPlayers, selectedDistributionMetric));
+    // Every player is a dot; the ones the table's filters keep are drawn in ink.
+    const distributionPoints = $derived(
+        players.map((player) => ({
+            id: Number(player?.nba_id),
+            name: player?.player_name ?? '',
+            team: player?.team_name ? teamAbbr(player.team_name) : '',
+            value: toNumber(player?.[selectedDistributionMetric.key])
+        }))
+    );
+    const distributionHighlight = $derived(
+        filteredPlayers.length === players.length
+            ? null
+            : new Set(filteredPlayers.map((player) => Number(player?.nba_id)))
+    );
 
     const topPositionPlayers = $derived.by(() =>
         teamScopedPlayers
@@ -335,16 +350,14 @@
         return formatFixed(n, compact ? 0 : (metric.decimals ?? 1));
     }
 
-    function distributionFloor(value, metric) {
-        if (metric.kind === 'percent') return Math.max(0, value);
-        return value;
+    /** Axis labels: "+2", "0", "-2"; "35%"; "12.5". */
+    function formatDistributionTick(value, metric) {
+        if (metric.kind === 'percent') return `${+(value * 100).toFixed(1)}%`;
+        const n = +value.toFixed(2);
+        return metric.kind === 'signed' && n > 0 ? `+${n}` : String(n);
     }
 
-    function distributionCeiling(value, metric) {
-        if (metric.kind === 'percent') return Math.min(1, value);
-        return value;
-    }
-
+    /** The figures under the dot plot, for the players the table's filters keep. */
     function buildDistribution(rows, metric) {
         const values = rows
             .map((player) => toNumber(player?.[metric.key]))
@@ -352,62 +365,21 @@
             .sort((a, b) => a - b);
 
         if (values.length === 0) {
-            return {
-                areaPath: '',
-                linePath: '',
-                meanX: 160,
-                mean: '—',
-                median: '—',
-                topTen: '—',
-                players: 0,
-                ticks: [
-                    { x: 0, anchor: 'start', label: '—' },
-                    { x: 160, anchor: 'middle', label: '—' },
-                    { x: 320, anchor: 'end', label: '—' }
-                ]
-            };
+            return { meanValue: null, mean: '—', median: '—', topTen: '—', players: 0 };
         }
 
         const meanValue = values.reduce((sum, value) => sum + value, 0) / values.length;
         const medianValue = values[Math.floor(values.length / 2)];
-        const variance = values.reduce((sum, value) => sum + (value - meanValue) ** 2, 0) / values.length;
-        const minSd = metric.kind === 'percent' ? 0.02 : 1;
-        const sd = Math.max(Math.sqrt(variance), minSd);
-        const min = distributionFloor(Math.min(values[0], meanValue - sd * 3), metric);
-        const max = distributionCeiling(Math.max(values[values.length - 1], meanValue + sd * 3), metric);
-        const domainSpan = Math.max(max - min, metric.kind === 'percent' ? 0.01 : 1);
-        const width = 320;
-        const baseY = 138;
-        const topY = 20;
-        const mid = min + domainSpan / 2;
-        const points = Array.from({ length: 72 }, (_, index) => {
-            const xValue = min + (domainSpan * index) / 71;
-            const density = Math.exp(-((xValue - meanValue) ** 2) / (2 * sd ** 2));
-            const x = (index / 71) * width;
-            const y = baseY - density * (baseY - topY);
-            return { x, y };
-        });
-        const linePath = points
-            .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
-            .join(' ');
-        const areaPath = `M 0 ${baseY} ${linePath.slice(1)} L ${width} ${baseY} Z`;
         const topCount = Math.max(1, Math.ceil(values.length * 0.1));
         const topValues = values.slice(-topCount);
         const topTenValue = topValues.reduce((sum, value) => sum + value, 0) / topValues.length;
 
         return {
-            areaPath,
-            linePath,
-            meanX: ((meanValue - min) / domainSpan) * width,
+            meanValue,
             mean: formatDistributionValue(meanValue, metric),
             median: formatDistributionValue(medianValue, metric),
             topTen: formatDistributionValue(topTenValue, metric),
-            players: values.length,
-            ticks: [
-                { x: 0, anchor: 'start', label: formatDistributionValue(min, metric, true) },
-                { x: 160, anchor: 'middle', label: formatDistributionValue(mid, metric, true) },
-                { x: 320, anchor: 'end', label: formatDistributionValue(max, metric, true) }
-            ]
+            players: values.length
         };
     }
 
@@ -434,7 +406,7 @@
 </script>
 
 <svelte:head>
-    <title>DARKO DPM - NBA Player Projections</title>
+    <title>DARKO DPM — NBA Player Projections</title>
 </svelte:head>
 
 <div class="leaderboard-page" data-shiny-page>
@@ -656,21 +628,18 @@
                                     {/each}
                                 </select>
                             </div>
-                            <span class="insight-info" title={`${activeSeasonLabel}, ${activeTeamFilter === 'all' ? 'all teams' : teamAbbr(activeTeamFilter)}`}>i</span>
+                            <span class="insight-info" title={`${activeSeasonLabel}: one dot per player. Players the table's filters leave out are faint; the dashed mean and the figures below cover the rest. Hover a dot to see who it is, and click to open their page.`}>i</span>
                         </div>
-                        <svg class="distribution-chart" viewBox="0 0 320 170" role="img" aria-label={`Distribution of ${activeSeasonLabel.toLowerCase()} player ${selectedDistributionMetric.label}`}>
-                            <line x1="0" y1="138" x2="320" y2="138" />
-                            <line x1="0" y1="96" x2="320" y2="96" />
-                            <line x1="0" y1="54" x2="320" y2="54" />
-                            <line class="distribution-mean" x1={distribution.meanX} y1="20" x2={distribution.meanX} y2="138" />
-                            {#if distribution.areaPath}
-                                <path class="distribution-area" d={distribution.areaPath} />
-                                <path class="distribution-line" d={distribution.linePath} />
-                            {/if}
-                            {#each distribution.ticks as tick (tick.anchor)}
-                                <text x={tick.x} y="166" text-anchor={tick.anchor}>{tick.label}</text>
-                            {/each}
-                        </svg>
+                        <div class="distribution-chart">
+                            <DotDistribution
+                                points={distributionPoints}
+                                highlight={distributionHighlight}
+                                mean={distribution.meanValue}
+                                formatValue={(value) => formatDistributionValue(value, selectedDistributionMetric)}
+                                formatTick={(value) => formatDistributionTick(value, selectedDistributionMetric)}
+                                label={`Distribution of ${activeSeasonLabel.toLowerCase()} player ${selectedDistributionMetric.label}, one dot per player`}
+                            />
+                        </div>
                         <div class="distribution-stats">
                             <div>
                                 <span>Mean</span>
@@ -1296,34 +1265,7 @@
     .distribution-chart {
         display: block;
         width: 100%;
-        height: auto;
-        color: var(--text-muted);
-    }
-
-    .distribution-chart line {
-        stroke: var(--border);
-        stroke-width: 1;
-    }
-
-    .distribution-chart .distribution-mean {
-        stroke: var(--text-muted);
-        stroke-dasharray: 3 4;
-    }
-
-    .distribution-area {
-        fill: color-mix(in srgb, var(--accent) 24%, transparent);
-    }
-
-    .distribution-line {
-        fill: none;
-        stroke: var(--accent);
-        stroke-width: 2.5;
-    }
-
-    .distribution-chart text {
-        fill: var(--text-secondary);
-        font-family: var(--font-mono);
-        font-size: 11px;
+        margin-top: 14px;
     }
 
     .distribution-stats {

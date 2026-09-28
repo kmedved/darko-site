@@ -13,6 +13,8 @@
         teamPlayersCsvColumns
     } from '$lib/utils/csvPresets.js';
     import { formatSigned } from '$lib/utils/seismograph.js';
+    import { ordinal } from '$lib/utils/daily.js';
+    import { finalSeed, isSeasonComplete, seasonResult } from '$lib/utils/finalStandings.js';
     import { coreOutlook, payrollRows, ratingContributions, teamRatingSummary } from '$lib/utils/teamDna.js';
     import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
@@ -55,6 +57,9 @@
 
     const teamId = $derived(players?.[0]?.tm_id || teamIdFromName(teamName) || null);
     const knownTeam = $derived(NBA_TEAMS.some((team) => team.name === teamName));
+    // Every offseason the simulation keeps publishing the finished season (odds all 0 or 100): show
+    // its result instead until the next season is simulated.
+    const simFinished = $derived(sim ? isSeasonComplete([sim]) : false);
 
     const teamPlayers = $derived(players || []);
     const teamPlayerHeatScales = $derived(buildPresetHeatScales(teamPlayers, 'talent'));
@@ -322,7 +327,9 @@
         title={teamName || 'Team'}
         logo={teamId ? `https://cdn.nba.com/logos/nba/${teamId}/global/L/logo.svg` : ''}
         lede={sim
-            ? `${sim.conference}ern Conference · Current: ${sim.Current} · Projected: ${formatFixed(sim.W)}-${formatFixed(sim.L)}`
+            ? simFinished
+                ? `${sim.conference}ern Conference · Final: ${sim.Current}${finalSeed(sim) ? ` · ${ordinal(finalSeed(sim))} seed` : ''} · ${seasonResult(sim)}`
+                : `${sim.conference}ern Conference · Current: ${sim.Current} · Projected: ${formatFixed(sim.W)}-${formatFixed(sim.L)}`
             : knownTeam
                 ? 'Current ratings for all current-season players on the team.'
                 : 'Team not found.'}
@@ -358,7 +365,14 @@
         </section>
     {/if}
 
-    {#if sim}
+    {#if sim && simFinished}
+        <section class="stat-strip" aria-label="Season result">
+            <StatTile label="Record" value={sim.Current} />
+            <StatTile label="Seed" value={finalSeed(sim) ?? '—'} />
+            <StatTile label="Result" value={seasonResult(sim)} />
+            <StatTile label="SRS" value={formatSignedSrs(sim.SRS)} />
+        </section>
+    {:else if sim}
         <section class="stat-strip" aria-label="Season simulation">
             <StatTile label="Playoff%" value={`${formatFixed(sim.Playoffs)}%`} />
             <StatTile label="Win Conf" value={`${formatFixed(sim['Win Conf'])}%`} />
@@ -556,7 +570,7 @@
         </div>
     {/if}
 
-    {#if sim && teamWinDist.length > 0}
+    {#if sim && teamWinDist.length > 0 && !simFinished}
         <h2 class="section-title">Win Distribution</h2>
         <div class="chart-card">
             <WinDistChart

@@ -1,4 +1,4 @@
-import { getConferenceStandings } from '$lib/server/supabase.js';
+import { getConferenceStandings, getLatestPlayedSeason } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
@@ -13,13 +13,16 @@ export async function load({ setHeaders }) {
         sie: 86400
     });
 
-    const [eastStandings, westStandings] = await Promise.all([
+    // The season's label, for when the simulation has nothing left to play (a finished season).
+    const [eastStandings, westStandings, playedSeason] = await Promise.all([
         getConferenceStandings('East'),
-        getConferenceStandings('West')
+        getConferenceStandings('West'),
+        getLatestPlayedSeason().catch(() => null)
     ]);
 
     return {
         eastStandings,
-        westStandings
+        westStandings,
+        playedSeason
     };
 }

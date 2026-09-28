@@ -28,6 +28,47 @@ test('supabase rating column projection includes actual_salary', async () => {
     assert.match(contents, RATING_COLUMNS_INCLUDE_ACTUAL_SALARY);
 });
 
+test('the lineups page says when its ratings were computed, once the column is published', async () => {
+    const read = (file) => fs.readFile(path.resolve(process.cwd(), file), 'utf8');
+    const contents = await read(SUPABASE_FILE);
+    const start = contents.indexOf('export async function getLineupsComputedOn');
+    const lookup = contents.slice(start, contents.indexOf('\n}\n', start));
+    assert.match(lookup, /from\('lineup_ratings'\)\.select\('computed_on'\)\.limit\(1\)/);
+    // Before the pipeline publishes the column, the page shows no date instead of failing.
+    assert.match(lookup, /if \(error\.code === UNDEFINED_COLUMN\) return null;/);
+    assert.match(await read('src/routes/lineups/+page.server.js'), /getLineupsComputedOn\(\)/);
+    assert.match(
+        await read('src/routes/lineups/+page.svelte'),
+        /\{#if data\.computedOn\}Lineup ratings last computed \{formatAsOfDate\(data\.computedOn\)\}\.\{\/if\}/
+    );
+});
+
+test('Rate a Player pairs come from the active leaderboard, not every player ever', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), SUPABASE_FILE), 'utf8');
+    const start = contents.indexOf('export async function getRandomPair');
+    const pair = contents.slice(start, contents.indexOf('\n}\n', start));
+    // The players table holds every player since the 1940s; the RPC drew from all of them.
+    assert.match(pair, /await getActivePlayers\(\)/);
+    assert.doesNotMatch(pair, /rpc\('get_random_pair'\)/);
+    // Two different players, with the card's fields and their Elo.
+    assert.match(pair, /if \(second >= first\) second \+= 1;/);
+    assert.match(pair, /from\('players'\)\.select\(RATE_PLAYER_COLUMNS\)/);
+    assert.match(pair, /from\('elo_ratings'\)/);
+});
+
+test('player pages get draft year and pick without adding them to the players index', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), SUPABASE_FILE), 'utf8');
+
+    // The shared players columns also feed the index that search downloads.
+    const shared = contents.match(/const PLAYERS_DIM_COLUMNS = \[([\s\S]*?)\]\.join/);
+    assert.ok(shared && !/draft/.test(shared[1]));
+
+    const profile = contents.slice(contents.indexOf('export async function getFullPlayerProfileHistory'));
+    assert.match(contents, /const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot';/);
+    assert.match(profile, /getPlayersMapByIds\(\[nbaId\], PLAYER_DRAFT_COLUMNS\)/);
+    assert.match(profile, /draft_year: draft\?\.draft_year \?\? null,\s*draft_slot: draft\?\.draft_slot \?\? null/);
+});
+
 test('trajectory projections omit unused heavyweight fields', async () => {
     const absolutePath = path.resolve(process.cwd(), SUPABASE_FILE);
     const contents = await fs.readFile(absolutePath, 'utf8');

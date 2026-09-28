@@ -256,11 +256,13 @@
             .attr('font-weight', '600')
             .text('Season Start Points');
 
+        // Hung 4px inside the chart's left edge whatever the margin, so phones don't clip it.
         chartGroup
             .append('text')
             .attr('transform', 'rotate(-90)')
             .attr('x', -innerHeight / 2)
-            .attr('y', -44)
+            .attr('y', -margin.left + 4)
+            .attr('dy', '0.9em')
             .attr('text-anchor', 'middle')
             .attr('fill', 'var(--text-secondary)')
             .attr('font-size', '12px')

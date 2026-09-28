@@ -42,6 +42,7 @@
 		{ href: '/scatterplot', label: 'Scatterplot', match: (path) => path === '/scatterplot' }
 	];
 	const MORE_NAV_ITEMS = [
+		{ href: '/teams', label: 'Teams', match: (path) => path === '/teams' },
 		{ href: '/rewind', label: 'Rewind', match: (path) => path === '/rewind' },
 		{ href: '/lab', label: 'Roster Lab', match: (path) => path === '/lab' },
 		{ href: '/compare', label: 'Compare', match: (path) => path === '/compare' },

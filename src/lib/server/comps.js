@@ -46,3 +46,27 @@ export async function getPlayerComps(nbaId) {
     }
     return data ?? [];
 }
+
+// Only a player's ten closest comps show on his page, so only those count as echoes.
+const ECHO_MAX_RANK = 10;
+
+/**
+ * "Echoes today": the rows of current players whose ten closest comps include one of this
+ * player's seasons (player_comps read by comp), unsorted; echoRows picks and orders them.
+ */
+export async function getPlayerEchoes(nbaId) {
+    const local = await readLocalTable('player_comps');
+    if (local) {
+        return local.filter((row) => Number(row.comp_id) === nbaId && Number(row.rank) <= ECHO_MAX_RANK);
+    }
+    const { data, error } = await supabase
+        .from('player_comps')
+        .select('nba_id, rank, comp_season, similarity')
+        .eq('comp_id', nbaId)
+        .lte('rank', ECHO_MAX_RANK);
+    if (error) {
+        if (isMissingTable(error)) return [];
+        throw error;
+    }
+    return data ?? [];
+}

@@ -154,3 +154,20 @@ export async function getSeasonLeaders(season, { minGames = 20, limit = 8 } = {}
         return data ?? [];
     });
 }
+
+/** A player's seasons since 1996-97, each at its last game day, oldest first. */
+export async function getPlayerSeasons(nbaId) {
+    const local = await readLocalTable('player_seasons');
+    if (local) {
+        return local.filter((row) => Number(row.nba_id) === nbaId).sort((a, b) => a.season - b.season);
+    }
+    return missingAsNull(async () => {
+        const { data, error } = await supabase
+            .from('player_seasons')
+            .select('season, date, tm_id, age, dpm, o_dpm, d_dpm, games, minutes, playoff_games, age_rank, age_count')
+            .eq('nba_id', nbaId)
+            .order('season', { ascending: true });
+        if (error) throw error;
+        return data ?? [];
+    });
+}

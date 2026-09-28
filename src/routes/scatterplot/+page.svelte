@@ -2,6 +2,8 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ScatterplotChart from '$lib/components/ScatterplotChart.svelte';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
+	import { isRapmMetric, staleRapmDate } from '$lib/utils/latestRapm.js';
+	import { formatAsOfDate } from '$lib/utils/timeMachine.js';
 
 	let { data } = $props();
 
@@ -53,6 +55,12 @@
 			return Number.isFinite(mpg) && mpg >= mpgMinimum;
 		});
 	});
+
+	// RAPM hasn't come with each day's ratings since March, so the chart plots each player's
+	// latest published value and says how old it is.
+	const rapmFrom = $derived(
+		isRapmMetric(xMetric) || isRapmMetric(yMetric) ? staleRapmDate(filteredPlayers) : null
+	);
 </script>
 
 <svelte:head>
@@ -127,6 +135,9 @@
 				height={chartHeight}
 			/>
 		</div>
+		{#if rapmFrom}
+			<p class="scatterplot-note">RAPM values are each player's latest published, through {formatAsOfDate(rapmFrom)}.</p>
+		{/if}
 	</div>
 </div>
 
@@ -158,6 +169,12 @@
 	.scatterplot-controls .control-group:last-child {
 		flex-basis: auto;
 		align-self: center;
+	}
+
+	.scatterplot-note {
+		margin: 0;
+		font-size: 12px;
+		color: var(--text-secondary);
 	}
 
 	.scatterplot-chart-area {

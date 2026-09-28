@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 import { getTeamPageData } from '$lib/server/supabase.js';
-import { canonicalTeamName } from '$lib/utils/teamRouteUtils.js';
+import { knownTeamName } from '$lib/utils/teamRouteUtils.js';
 
 export const TEAM_PAGE_CACHE = Object.freeze({
     edgeSMaxAge: 3600,
@@ -20,7 +20,11 @@ export function resolveTeamPageName(rawTeamParam, normalizeTeamParam) {
         throw error(400, 'Team not specified');
     }
 
-    return canonicalTeamName(teamName);
+    const known = knownTeamName(teamName);
+    if (!known) {
+        throw error(404, 'Team not found');
+    }
+    return known;
 }
 
 export async function getTeamPagePayload({

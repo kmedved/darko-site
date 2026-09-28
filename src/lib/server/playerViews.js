@@ -34,6 +34,8 @@ const PLAYER_VIEW_FIELDS = Object.freeze({
         'd_dpm',
         'on_off_dpm',
         'bayes_rapm_total',
+        'bayes_rapm_date',
+        'date',
         'x_pts_100',
         'x_ast_100',
         'x_fg_pct',
@@ -120,6 +122,7 @@ const PLAYER_VIEW_FIELDS = Object.freeze({
         'bayes_rapm_total',
         'bayes_rapm_off',
         'bayes_rapm_def',
+        'bayes_rapm_date',
         'x_pts_100',
         'x_ast_100',
         'x_orb_100',
@@ -137,7 +140,8 @@ const PLAYER_VIEW_FIELDS = Object.freeze({
         'x_pace',
         'age',
         'sal_market_fixed',
-        'surplus_value'
+        'surplus_value',
+        'date'
     ]
 });
 

@@ -3,6 +3,9 @@
 	import { page } from '$app/stores';
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import CompsFutures from '$lib/components/CompsFutures.svelte';
+	import EchoesToday from '$lib/components/EchoesToday.svelte';
+	import ProjectedBoxScore from '$lib/components/ProjectedBoxScore.svelte';
+	import SeasonBySeason from '$lib/components/SeasonBySeason.svelte';
 	import LongevityCareerLengthChart from '$lib/components/LongevityCareerLengthChart.svelte';
 	import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
 	import OffenseDefenseGlyph from '$lib/components/OffenseDefenseGlyph.svelte';
@@ -24,6 +27,9 @@
 	import { unpackRows } from '$lib/utils/columnar.js';
 	import { normalizeComps } from '$lib/utils/comps.js';
 	import { AS_OF_PARAM, formatAsOfDate, parseAsOfDate } from '$lib/utils/timeMachine.js';
+	import { isRapmMetric, staleRapmDate } from '$lib/utils/latestRapm.js';
+	import { seasonRows } from '$lib/utils/playerSeasons.js';
+	import { projectedBoxScore } from '$lib/utils/boxScore.js';
 	import { seasonOfRow } from '$lib/utils/seismograph.js';
 
 	let { data } = $props();
@@ -80,6 +86,14 @@
 
 	// With the Time Machine set, the sidebar rating and the Seismograph follow that date.
 	const asOfDate = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
+	// Season by season: in the Time Machine only seasons over by its date; in season, the current
+	// one (a next-game row with a real team) is marked "so far".
+	const inProgressSeason = $derived.by(() => {
+		const latest = historyRows.at(-1);
+		return latest && Number(latest.tm_id) > 0 && !asOfDate ? Number(latest.season) : null;
+	});
+	const seasonsTable = $derived(seasonRows(data.seasons, { asOf: asOfDate, inProgress: inProgressSeason }));
+	const echoes = $derived(data.echoes ?? []);
 	const asOfRow = $derived.by(() => {
 		if (!asOfDate) return null;
 		let latest = null;
@@ -137,6 +151,12 @@
 			.toUpperCase();
 	}
 
+	// Only current players have a projection worth showing: a retired player's last row still
+	// carries the projections from his final season.
+	const boxScore = $derived(
+		playerInfo && !asOfDate && Number(playerInfo.active_roster) === 1 ? projectedBoxScore(playerInfo) : null
+	);
+
 	const percentiles = $derived.by(() => {
 		if (!playerInfo || allActivePlayers.length === 0) return [];
 
@@ -147,23 +167,31 @@
 
 		if (positionPlayers.length === 0) return [];
 
+		// A metric with no value for this player (or anyone) is left out, not drawn at the 0th
+		// percentile.
 		return selectedPercentileMetrics.map((metric) => {
 			const playerValue = Number.parseFloat(playerInfo[metric]);
-			if (Number.isNaN(playerValue)) return { metric, value: 0 };
+			if (Number.isNaN(playerValue)) return null;
 
 			const values = positionPlayers
 				.map((player) => Number.parseFloat(player[metric]))
 				.filter((value) => !Number.isNaN(value));
 
-			if (values.length === 0) return { metric, value: 0 };
+			if (values.length === 0) return null;
 
 			const below = values.filter((value) => value < playerValue).length;
 			return {
 				metric,
 				value: Math.round((below / values.length) * 100)
 			};
-		});
+		}).filter(Boolean);
 	});
+
+	// RAPM hasn't come with each day's ratings since March: the percentiles use each player's
+	// latest published value, and say how old it is.
+	const percentileRapmFrom = $derived(
+		isRapmMetric(selectedPercentileMetrics.find(isRapmMetric)) ? staleRapmDate([playerInfo]) : null
+	);
 
 	const currentDate = $derived.by(() => {
 		if (!playerInfo?.date) return '';
@@ -538,6 +566,28 @@
 					</section>
 				{/if}
 
+				<!-- Echoes read today's comps backwards, so the Time Machine hides them too. -->
+				{#if echoes.length > 0 && !asOfDate}
+					<section
+						class="chart-panel comps-panel"
+						id="echoes"
+						data-shiny-surface="panel"
+						aria-labelledby="echoes-title"
+					>
+						<header class="seismograph-header">
+							<div>
+								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Historical comps</p>
+								<h2 id="echoes-title">Echoes today</h2>
+								<p class="seismograph-lede">
+									Current players whose ten closest comps include one of {playerInfo.player_name}'s
+									seasons, at the same age.
+								</p>
+							</div>
+						</header>
+						<EchoesToday {echoes} />
+					</section>
+				{/if}
+
 				<div class="charts-row" data-shiny-layout="split">
 					<div class="chart-panel chart-half" data-shiny-surface="plot">
 						<TalentTrendChart
@@ -560,6 +610,24 @@
 					{/if}
 				</div>
 
+				{#if seasonsTable.length > 0}
+					<section
+						class="chart-panel comps-panel"
+						id="seasons"
+						data-shiny-surface="panel"
+						aria-labelledby="seasons-title"
+					>
+						<header class="seismograph-header">
+							<div>
+								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Career</p>
+								<h2 id="seasons-title">Season by season</h2>
+								<p class="seismograph-lede">DPM at the last game day of each season since 1996-97.</p>
+							</div>
+						</header>
+						<SeasonBySeason rows={seasonsTable} playerName={playerInfo.player_name} />
+					</section>
+				{/if}
+
 				{#if percentilesLoading}
 					<div class="chart-panel" data-shiny-surface="panel">
 						<div class="loading">Loading percentile context...</div>
@@ -578,7 +646,31 @@
 							selectedMetrics={selectedPercentileMetrics}
 							rawValues={playerInfo}
 						/>
+						{#if percentileRapmFrom}
+							<p class="percentile-notice">RAPM is from {formatAsOfDate(percentileRapmFrom)}, the latest published.</p>
+						{/if}
 					</div>
+				{/if}
+
+				{#if boxScore}
+					<section
+						class="chart-panel comps-panel"
+						id="box-score"
+						data-shiny-surface="panel"
+						aria-labelledby="box-score-title"
+					>
+						<header class="seismograph-header">
+							<div>
+								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Projections</p>
+								<h2 id="box-score-title">Projected box score</h2>
+								<p class="seismograph-lede">
+									DARKO's per-100 projections, and per game at {boxScore.minutes.toFixed(1)} projected minutes
+									and a pace of {boxScore.pace?.toFixed(1) ?? '—'}.
+								</p>
+							</div>
+						</header>
+						<ProjectedBoxScore box={boxScore} playerName={playerInfo.player_name} />
+					</section>
 				{/if}
 			{/if}
 		</div>

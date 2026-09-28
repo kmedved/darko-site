@@ -24,3 +24,12 @@ export function canonicalTeamName(teamName = '') {
     const match = NBA_TEAMS.find((team) => team.abbr.toLowerCase() === key || team.name.toLowerCase() === key);
     return match ? match.name : teamName;
 }
+
+/**
+ * The canonical name of one of the 30 teams, or null. The data names every season's teams by
+ * today's franchises (a 2005 Sonics row says Oklahoma City Thunder), so any other name has no page.
+ */
+export function knownTeamName(teamName = '') {
+    const canonical = canonicalTeamName(teamName);
+    return NBA_TEAMS.some((team) => team.name === canonical) ? canonical : null;
+}

@@ -15,6 +15,8 @@
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import StatTile from '$lib/components/StatTile.svelte';
+    import { finalStandingsRows, isSeasonComplete, resultCounts, RESULTS } from '$lib/utils/finalStandings.js';
+    import { seasonLabelFromEndYear } from '$lib/utils/timeMachine.js';
 
     let { data } = $props();
 
@@ -66,7 +68,9 @@
         'Win Finals': { type: 'percent' },
         'Lottery%': { type: 'percent' },
         ExpPick: { type: 'number' },
-        conference: { type: 'text' }
+        conference: { type: 'text' },
+        seed: { type: 'number' },
+        result: { type: 'text' }
     };
 
     const baseStandingsColumns = [
@@ -81,6 +85,16 @@
         { key: 'Win Finals', label: 'Win Finals', alignClass: 'num', dataType: 'percent' },
         { key: 'Lottery%', label: 'Lotto%', alignClass: 'num', dataType: 'percent' },
         { key: 'ExpPick', label: 'E[Pick]', alignClass: 'num', dataType: 'number', format: 'decimal' }
+    ];
+
+    // A finished season: records, seeds and results instead of odds that are all 0 or 100.
+    const finalStandingsColumns = [
+        { key: 'Rk', label: '#', alignClass: 'rk', dataType: 'number', format: 'integer' },
+        { key: 'team_name', label: 'Team', alignClass: 'name', dataType: 'text', isTeam: true },
+        { key: 'Current', label: 'Record', alignClass: 'rec', dataType: 'text' },
+        { key: 'seed', label: 'Seed', alignClass: 'num', dataType: 'number', format: 'integer' },
+        { key: 'result', label: 'Result', alignClass: 'name', dataType: 'text' },
+        { key: 'SRS', label: 'SRS', alignClass: 'num', dataType: 'number', format: 'decimal', decimals: 2 }
     ];
 
     const expandedStandingsColumns = [
@@ -114,13 +128,23 @@
             .map((column) => [column.key, column.key])
     );
 
-    const visibleStandingsColumns = $derived.by(() =>
-        showExpandedStandings ? [...baseStandingsColumns, ...expandedStandingsColumns] : [...baseStandingsColumns]
+    // Every offseason the simulation keeps publishing the finished season, so the page shows it as
+    // final standings until DARKO simulates the next one.
+    const seasonComplete = $derived(
+        isSeasonComplete([...(data.eastStandings || []), ...(data.westStandings || [])])
     );
+    const seasonLabel = $derived(seasonLabelFromEndYear(data.playedSeason));
+    const nextSeasonLabel = $derived(data.playedSeason ? seasonLabelFromEndYear(data.playedSeason + 1) : '');
 
-    const standings = $derived(
-        conference === 'East' ? (data.eastStandings || []) : (data.westStandings || [])
-    );
+    const visibleStandingsColumns = $derived.by(() => {
+        if (seasonComplete) return [...finalStandingsColumns];
+        return showExpandedStandings ? [...baseStandingsColumns, ...expandedStandingsColumns] : [...baseStandingsColumns];
+    });
+
+    const standings = $derived.by(() => {
+        const rows = conference === 'East' ? (data.eastStandings || []) : (data.westStandings || []);
+        return seasonComplete ? finalStandingsRows(rows) : rows;
+    });
     const standingsHeatScales = $derived.by(() =>
         buildMetricHeatScales(standings, standingsHeatAccessors, { quantileStep: 0.1 })
     );
@@ -143,9 +167,15 @@
         })
     );
 
-    const summaryCards = $derived(buildSummaryCards(standings));
+    const summaryCards = $derived(seasonComplete ? buildFinalCards(standings) : buildSummaryCards(standings));
     const srsTintLimit = $derived(tintLimit(standings.map((team) => team?.SRS)));
-    const playoffDistribution = $derived(buildPlayoffDistribution(standings));
+    const playoffDistribution = $derived(
+        seasonComplete ? buildResultDistribution(standings) : buildPlayoffDistribution(standings)
+    );
+    const finalCounts = $derived(resultCounts(standings));
+    const finalSeeds = $derived(
+        standings.filter((team) => team.seed !== null && team.seed !== undefined).sort((a, b) => a.seed - b.seed)
+    );
     const conferenceFavorites = $derived(
         standings
             .slice()
@@ -228,6 +258,50 @@
                 caption: `Teams at ${PLAYOFF_LOCK_THRESHOLD}%+ playoff odds`
             }
         ];
+    }
+
+    function buildFinalCards(rows) {
+        const confChampion = rows.find((row) => row.result === RESULTS.champion || row.result === RESULTS.finals) ?? null;
+        const bestRecord = maxBy(rows, 'W');
+        const highestSrs = maxBy(rows, 'SRS');
+        const worstRecord = rows.reduce(
+            (worst, row) => (!worst || numberValue(row?.W) < numberValue(worst?.W) ? row : worst),
+            null
+        );
+        const counts = resultCounts(rows);
+
+        return [
+            {
+                title: 'Conference Champion',
+                team: confChampion,
+                value: confChampion?.Current ?? '—',
+                caption: confChampion ? (confChampion.result === RESULTS.champion ? 'Won the Finals' : 'Lost the Finals') : undefined
+            },
+            { title: 'Best Record', team: bestRecord, value: bestRecord?.Current ?? '—' },
+            { title: 'Highest SRS', team: highestSrs, value: formatSigned(numberValue(highestSrs?.SRS), 2) },
+            { title: 'Worst Record', team: worstRecord, value: worstRecord?.Current ?? '—' },
+            {
+                title: 'Playoff Teams',
+                value: String(counts.playoffs),
+                caption: `${counts.throughPlayIn} through the play-in`
+            }
+        ];
+    }
+
+    function buildResultDistribution(rows) {
+        const counts = resultCounts(rows);
+        const buckets = [
+            { key: 'playoffs', label: 'Playoffs', count: counts.playoffs },
+            { key: 'play-in', label: 'Out in the play-in', count: counts.playIn },
+            { key: 'lottery', label: 'Lottery', count: counts.lottery }
+        ];
+        const maxCount = Math.max(...buckets.map((bucket) => bucket.count), 1);
+        const total = Math.max(rows.length, 1);
+        return buckets.map((bucket) => ({
+            ...bucket,
+            percent: (bucket.count / total) * 100,
+            width: Math.max(4, (bucket.count / maxCount) * 100)
+        }));
     }
 
     function buildPlayoffDistribution(rows) {
@@ -398,13 +472,21 @@
 
 <div class="standings-page" data-shiny-page>
     <div class="container standings-container">
-        <PageHeader
-            id="standings-title"
-            title="Season Simulation"
-            lede="Win projections, playoff odds, and championship probabilities from 10,000 simulations."
-        />
+        {#if seasonComplete}
+            <PageHeader
+                id="standings-title"
+                title={seasonLabel ? `${seasonLabel} Final Standings` : 'Final Standings'}
+                lede={`The season is over. DARKO's win projections and playoff odds${nextSeasonLabel ? ` for ${nextSeasonLabel}` : ''} appear once it simulates the new season.`}
+            />
+        {:else}
+            <PageHeader
+                id="standings-title"
+                title="Season Simulation"
+                lede="Win projections, playoff odds, and championship probabilities from 10,000 simulations."
+            />
+        {/if}
 
-        <section class="stat-strip" aria-label="Simulation leaders">
+        <section class="stat-strip" aria-label={seasonComplete ? 'Season leaders' : 'Simulation leaders'}>
             {#each summaryCards as card (card.title)}
                 <StatTile
                     label={card.title}
@@ -443,10 +525,12 @@
                             </div>
                         </div>
 
-                        <div class="view-toggle" role="group" aria-label="Standings view">
-                            <button type="button" class:active={!showExpandedStandings} onclick={() => (showExpandedStandings = false)}>Standard</button>
-                            <button type="button" class:active={showExpandedStandings} onclick={() => (showExpandedStandings = true)}>Detailed Odds</button>
-                        </div>
+                        {#if !seasonComplete}
+                            <div class="view-toggle" role="group" aria-label="Standings view">
+                                <button type="button" class:active={!showExpandedStandings} onclick={() => (showExpandedStandings = false)}>Standard</button>
+                                <button type="button" class:active={showExpandedStandings} onclick={() => (showExpandedStandings = true)}>Detailed Odds</button>
+                            </div>
+                        {/if}
 
                         <button
                             class="btn"
@@ -515,13 +599,17 @@
                             </table>
                         </div>
                     </div>
-                    <p class="standings-note">Results based on 10,000 season simulations.</p>
+                    <p class="standings-note">
+                        {seasonComplete
+                            ? 'Final regular-season records, seeds and how each season ended.'
+                            : 'Results based on 10,000 season simulations.'}
+                    </p>
                 </section>
 
-                <aside class="standings-rail" aria-label="Simulation insights">
+                <aside class="standings-rail" aria-label={seasonComplete ? 'Season results' : 'Simulation insights'}>
                     <section class="insight-card" data-shiny-surface="panel">
                         <div class="insight-card-header">
-                            <h2>Playoff Odds Distribution</h2>
+                            <h2>{seasonComplete ? 'How the Season Ended' : 'Playoff Odds Distribution'}</h2>
                             <span class="insight-info" title={`${conference}ern Conference`}>i</span>
                         </div>
                         <div class="odds-distribution">
@@ -540,47 +628,90 @@
                                 <span>Avg Wins</span>
                                 <strong>{averageWins}</strong>
                             </div>
-                            <div>
-                                <span>Playoff Locks</span>
-                                <strong>{playoffLocks}</strong>
-                            </div>
-                            <div>
-                                <span>Bubble Teams</span>
-                                <strong>{bubbleTeams}</strong>
-                            </div>
-                            <div>
-                                <span>Simulations</span>
-                                <strong>10,000</strong>
-                            </div>
+                            {#if seasonComplete}
+                                <div>
+                                    <span>Playoff Teams</span>
+                                    <strong>{finalCounts.playoffs}</strong>
+                                </div>
+                                <div>
+                                    <span>Through Play-in</span>
+                                    <strong>{finalCounts.throughPlayIn}</strong>
+                                </div>
+                                <div>
+                                    <span>Lottery Teams</span>
+                                    <strong>{finalCounts.lottery}</strong>
+                                </div>
+                            {:else}
+                                <div>
+                                    <span>Playoff Locks</span>
+                                    <strong>{playoffLocks}</strong>
+                                </div>
+                                <div>
+                                    <span>Bubble Teams</span>
+                                    <strong>{bubbleTeams}</strong>
+                                </div>
+                                <div>
+                                    <span>Simulations</span>
+                                    <strong>10,000</strong>
+                                </div>
+                            {/if}
                         </div>
                     </section>
 
-                    <section class="insight-card" data-shiny-surface="panel">
-                        <div class="insight-card-header">
-                            <h2>Conference Favorites</h2>
-                            <span>WIN CONF %</span>
-                        </div>
-                        <div class="favorite-list">
-                            {#each conferenceFavorites as team, index (team.team_name)}
-                                <a class="favorite-team" href="/standings/{encodeURIComponent(team.team_name)}">
-                                    <span class="favorite-rank">{index + 1}</span>
-                                    <span class="favorite-logo">
-                                        {#if teamLogoUrl(team.team_name)}
-                                            <img src={teamLogoUrl(team.team_name)} alt="" loading="lazy" onerror={hideBrokenImage} />
-                                        {/if}
-                                    </span>
-                                    <span class="favorite-main">
-                                        <span>{team.team_name}</span>
-                                        <span class="favorite-bar">
-                                            <span style={`width: ${barWidth(team['Win Conf'], conferenceFavorites)}%`}></span>
+                    {#if seasonComplete}
+                        <section class="insight-card" data-shiny-surface="panel">
+                            <div class="insight-card-header">
+                                <h2>Final Seeds</h2>
+                                <span>RESULT</span>
+                            </div>
+                            <div class="favorite-list">
+                                {#each finalSeeds as team (team.team_name)}
+                                    <a class="favorite-team" href="/standings/{encodeURIComponent(team.team_name)}">
+                                        <span class="favorite-rank">{team.seed}</span>
+                                        <span class="favorite-logo">
+                                            {#if teamLogoUrl(team.team_name)}
+                                                <img src={teamLogoUrl(team.team_name)} alt="" loading="lazy" onerror={hideBrokenImage} />
+                                            {/if}
                                         </span>
-                                    </span>
-                                    <strong>{formatPercent(team['Win Conf'])}</strong>
-                                </a>
-                            {/each}
-                        </div>
-                        <a class="rail-link" href="/standings/{encodeURIComponent(conferenceFavorites[0]?.team_name || '')}">View full projections</a>
-                    </section>
+                                        <span class="favorite-main">
+                                            <span>{team.team_name} <span class="final-record">{team.Current}</span></span>
+                                            <span class="favorite-bar">
+                                                <span style={`width: ${barWidth(team.W, finalSeeds, 'W')}%`}></span>
+                                            </span>
+                                        </span>
+                                        <strong>{team.result}</strong>
+                                    </a>
+                                {/each}
+                            </div>
+                        </section>
+                    {:else}
+                        <section class="insight-card" data-shiny-surface="panel">
+                            <div class="insight-card-header">
+                                <h2>Conference Favorites</h2>
+                                <span>WIN CONF %</span>
+                            </div>
+                            <div class="favorite-list">
+                                {#each conferenceFavorites as team, index (team.team_name)}
+                                    <a class="favorite-team" href="/standings/{encodeURIComponent(team.team_name)}">
+                                        <span class="favorite-rank">{index + 1}</span>
+                                        <span class="favorite-logo">
+                                            {#if teamLogoUrl(team.team_name)}
+                                                <img src={teamLogoUrl(team.team_name)} alt="" loading="lazy" onerror={hideBrokenImage} />
+                                            {/if}
+                                        </span>
+                                        <span class="favorite-main">
+                                            <span>{team.team_name}</span>
+                                            <span class="favorite-bar">
+                                                <span style={`width: ${barWidth(team['Win Conf'], conferenceFavorites)}%`}></span>
+                                            </span>
+                                        </span>
+                                        <strong>{formatPercent(team['Win Conf'])}</strong>
+                                    </a>
+                                {/each}
+                            </div>
+                            <a class="rail-link" href="/standings/{encodeURIComponent(conferenceFavorites[0]?.team_name || '')}">View full projections</a>
+                        </section>
+                    {/if}
                 </aside>
             </div>
         {/if}
@@ -588,6 +719,14 @@
 </div>
 
 <style>
+    .final-record {
+        margin-left: 4px;
+        font-family: var(--font-mono);
+        font-size: 0.85em;
+        font-weight: 400;
+        color: var(--text-muted);
+    }
+
     .standings-page {
         min-height: calc(100dvh - var(--nav-sticky-offset));
         padding: 0 0 34px;

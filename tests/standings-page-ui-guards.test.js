@@ -16,7 +16,10 @@ test('standings percent formatter does not append percent signs to missing value
 test('standings summary uses the shared tiles and explains the playoff-lock count', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), STANDINGS_PAGE), 'utf8');
 
-    assert.match(contents, /<section class="stat-strip" aria-label="Simulation leaders">/);
+    assert.match(
+        contents,
+        /<section class="stat-strip" aria-label=\{seasonComplete \? 'Season leaders' : 'Simulation leaders'\}>/
+    );
     assert.match(contents, /<StatTile\b/, 'summary tiles should use the shared StatTile component');
     assert.match(
         contents,

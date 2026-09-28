@@ -80,7 +80,7 @@ test('every item is a feature the site has, with a working way in', () => {
             assert.ok(routeExists(item.href), `${item.key}: ${item.href}`);
         }
     }
-    // DARKOdle is not on the site yet, and Card Studio was dropped.
+    // DARKOdle and Card Studio were dropped.
     assert.ok(!WHATS_NEW.some((item) => /darkodle|card studio/i.test(item.title)));
     assert.equal(new Set(keys(WHATS_NEW)).size, WHATS_NEW.length);
 });

@@ -21,7 +21,7 @@ export async function GET({ params, setHeaders }) {
         });
         return json(payload);
     } catch (e) {
-        if (e?.status === 400) {
+        if (e?.status === 400 || e?.status === 404) {
             throw e;
         }
         throw error(500, e?.message || 'Failed to load team data');

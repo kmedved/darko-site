@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canonicalTeamName } from '../src/lib/utils/teamRouteUtils.js';
+import { canonicalTeamName, knownTeamName } from '../src/lib/utils/teamRouteUtils.js';
 
 test('team detail page loaders delegate to the shared team page helper', async () => {
     const loaderFiles = [
@@ -33,8 +33,18 @@ test('team pages accept abbreviations and any-case names', async () => {
     assert.equal(canonicalTeamName('Denver Nuggets'), 'Denver Nuggets');
     assert.equal(canonicalTeamName('Seattle SuperSonics'), 'Seattle SuperSonics');
 
+    // Anything that isn't one of the 30 teams has no page: a 404, not an empty page titled
+    // with the slug.
+    assert.equal(knownTeamName('OKC'), 'Oklahoma City Thunder');
+    assert.equal(knownTeamName('denver nuggets'), 'Denver Nuggets');
+    assert.equal(knownTeamName('not-a-team'), null);
+    assert.equal(knownTeamName('Seattle SuperSonics'), null);
+
     const helper = await fs.readFile(path.resolve(process.cwd(), 'src/lib/server/teamPage.js'), 'utf8');
-    assert.match(helper, /return canonicalTeamName\(teamName\);/, 'the shared loader should resolve the team name');
+    assert.match(helper, /const known = knownTeamName\(teamName\);/, 'the shared loader should resolve the team name');
+    assert.match(helper, /throw error\(404, 'Team not found'\);/);
+    const api = await fs.readFile(path.resolve(process.cwd(), 'src/routes/api/standings/[slug]/+server.js'), 'utf8');
+    assert.match(api, /e\?\.status === 400 \|\| e\?\.status === 404/, 'the API keeps the 404');
 });
 
 test('an offseason projection row keeps its ratings but takes the last real team', async () => {

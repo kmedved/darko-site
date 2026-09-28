@@ -958,7 +958,7 @@
 {/snippet}
 
 <svelte:head>
-    <title>WOWY RAPM — DARKO</title>
+    <title>WOWY RAPM — DARKO DPM</title>
     <meta
         name="description"
         content={isAllTimeView

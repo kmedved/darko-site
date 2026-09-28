@@ -603,7 +603,7 @@
 </script>
 
 <svelte:head>
-	<title>Player Career Trajectories - DARKO DPM</title>
+	<title>Player Career Trajectories — DARKO DPM</title>
 </svelte:head>
 
 <div class="trajectory-page" data-shiny-page>

@@ -5,7 +5,7 @@
  */
 
 import { NBA_TEAMS } from './teamAbbreviations.js';
-import { defaultRoster, leagueRank, playersByTeam, rateRoster, winsFor } from './rosterLab.js';
+import { defaultRoster, leagueRank, playersByTeam, rateRoster, TEAM_MINUTES, winsFor } from './rosterLab.js';
 
 export const PAYROLL_PLAYERS = 12;
 export const CORE_PLAYERS = 9;
@@ -174,8 +174,8 @@ export function ratingWaterfall(rows, component = 'total') {
 
 /**
  * The Minutes chart: each player's DPM (height) over their share of the roster's minutes
- * (width), best DPM first and the deep bench last. A bar's area is the player's contribution;
- * the bars add up to the rating, which is five times the minutes-weighted DPM (`mean`), because
+ * (width), best DPM first and the deep bench last. The signed areas add up to the
+ * minutes-weighted DPM (`mean`, the average minute), and the rating is five times that, because
  * the Lab rates any roster as if its minutes filled 240.
  */
 export function minutesProfile(rows) {
@@ -193,6 +193,23 @@ export function minutesProfile(rows) {
 	const mean = list.reduce((total, row) => total + row.dpm * row.minutes, 0) / minutes;
 	const values = list.map((row) => row.dpm);
 	return { bars, minutes, mean, rating: mean * 5, low: Math.min(0, ...values), high: Math.max(0, ...values) };
+}
+
+/** Sideways, a roster's whole share of minutes is this thick, whatever its total minutes. */
+export const SIDEWAYS_THICKNESS = TEAM_MINUTES * 1.4;
+/** Rows at least this thick have room for a name and a DPM. */
+export const SIDEWAYS_LABEL_ROW = 12;
+
+/**
+ * The sideways Minutes chart's rows: each as thick as its share of SIDEWAYS_THICKNESS, so a
+ * thickness means the same share in every chart, including the Lab's two rosters whatever their
+ * minutes add up to. Tiny shares stay tiny rather than being inflated.
+ */
+export function sidewaysRows(bars) {
+	return (bars ?? []).map((bar) => {
+		const thick = bar.share * SIDEWAYS_THICKNESS;
+		return { bar, thick, labeled: thick >= SIDEWAYS_LABEL_ROW };
+	});
 }
 
 /** Round tick values covering [low, high], about `count` of them. */

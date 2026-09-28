@@ -10,6 +10,7 @@
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 	import { NBA_TEAMS, teamAbbr } from '$lib/utils/teamAbbreviations.js';
 	import { formatAsOfDate, relativeHref, seasonLabelFromEndYear } from '$lib/utils/timeMachine.js';
+	import { mergeSavedEdits, savedEditsByKey } from '$lib/utils/labStorage.js';
 	import { formatSigned } from '$lib/utils/seismograph.js';
 	import {
 		SLIDER_MAX_MINUTES,
@@ -33,6 +34,7 @@
 
 	let { data } = $props();
 
+	// Saved scenarios keep each date's edits (utils/labStorage.js).
 	const STORAGE_KEY = 'darko-roster-lab';
 	const SIDES = ['a', 'b'];
 	const DEFAULT_SIDES = { a: 'NYK', b: 'SAS' };
@@ -292,7 +294,8 @@
 			[fromUrl[side], saved?.sides?.[side], DEFAULT_SIDES[side]].find((abbr) => TEAM_BY_ABBR.has(abbr));
 		sides = { a: pick('a'), b: pick('b') };
 		auto = saved?.auto ?? true;
-		edits = saved?.key === dataKey && saved?.edits ? dedupeEdits(saved.edits) : {};
+		const savedEdits = savedEditsByKey(saved)[dataKey];
+		edits = savedEdits ? dedupeEdits(savedEdits) : {};
 		restoredKey = dataKey;
 	});
 
@@ -302,7 +305,15 @@
 		const snapshot = JSON.stringify({ key: dataKey, sides, auto, edits });
 		const timer = setTimeout(() => {
 			try {
-				localStorage.setItem(STORAGE_KEY, snapshot);
+				const current = JSON.parse(snapshot);
+				let stored = null;
+				try {
+					stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
+				} catch {
+					stored = null;
+				}
+				const editsByKey = mergeSavedEdits(stored, current.key, current.edits);
+				localStorage.setItem(STORAGE_KEY, JSON.stringify({ sides: current.sides, auto: current.auto, editsByKey }));
 			} catch {
 				// Storage can be unavailable; the lab still works for this visit.
 			}

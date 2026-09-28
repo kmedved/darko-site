@@ -36,4 +36,13 @@ test('each Roster Lab side draws its edited roster on one shared Minutes scale',
     assert.match(chart, /minutesProfile\(rows\)/);
     // Narrow containers turn the chart sideways so names still fit.
     assert.match(chart, /const SIDEWAYS_BELOW = \d+;/);
+    // Sideways rows are as thick as their share of the minutes, not their raw minutes.
+    assert.match(chart, /sidewaysRows\(profile\.bars\)/);
+    assert.doesNotMatch(chart, /bar\.minutes \* PX_PER_MINUTE/);
+    // The deep bench can be focused and opened, in the chart and in the list under it, which
+    // keeps marks with no name even where the Lab's table names every player.
+    assert.match(chart, /this=\{bar\.bench \? 'button' : 'a'\}/);
+    assert.match(chart, /tabindex=\{column\.bar\.bench \? 0 : undefined\}/);
+    assert.match(chart, /<details class="mc-other mc-bench">/);
+    assert.match(chart, /column\.bar\.bench \|\|\s*!column\.name \|\|/);
 });

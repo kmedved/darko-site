@@ -13,6 +13,7 @@ import { createActivePlayersAccessor } from './activePlayersCache.js';
 import { asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
 import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilterOptions.js';
 import { leagueTeamRatings } from '$lib/utils/teamDna.js';
+import { fillLatestRapm } from '$lib/utils/latestRapm.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -56,6 +57,7 @@ const CACHE_MS = {
     teamWinDistribution: 60_000,
     lineupRatings: 3_600_000,
     lineupSizeCounts: 3_600_000,
+    latestRapmSnapshot: 3_600_000,
     eloLeaderboard: 30_000
 };
 
@@ -272,6 +274,9 @@ const PLAYERS_DIM_COLUMNS = [
     'position',
     'rookie_season'
 ].join(', ');
+// Where a player was drafted, for the player page's header only: PLAYERS_DIM_COLUMNS also
+// feeds the players index that search downloads.
+const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot';
 
 const WOWY_RATING_COLUMNS = [
     'nba_id',
@@ -567,6 +572,7 @@ function mergePlayerWithActiveSnapshot(player, active) {
         box_ddpm: active?.box_ddpm ?? null,
         on_off_dpm: active?.on_off_dpm ?? null,
         bayes_rapm_total: active?.bayes_rapm_total ?? null,
+        bayes_rapm_date: active?.bayes_rapm_date ?? null,
         tr_fg3_pct: active?.tr_fg3_pct ?? null,
         tr_ft_pct: active?.tr_ft_pct ?? null,
         x_minutes: active?.x_minutes ?? null,
@@ -576,7 +582,7 @@ function mergePlayerWithActiveSnapshot(player, active) {
     };
 }
 
-async function getPlayersMapByIds(ids = []) {
+async function getPlayersMapByIds(ids = [], columns = PLAYERS_DIM_COLUMNS) {
     const filteredIds = (ids || []).filter((id) => Number.isInteger(id) && id > 0);
     if (filteredIds.length === 0) {
         return new Map();
@@ -584,7 +590,7 @@ async function getPlayersMapByIds(ids = []) {
 
     const { data, error } = await supabase
         .from('players')
-        .select(PLAYERS_DIM_COLUMNS)
+        .select(columns)
         .in('nba_id', filteredIds);
 
     if (error) throw error;
@@ -627,6 +633,24 @@ async function getLatestTeamMapByIds(ids = [], latestDate) {
     }
 
     return teamMap;
+}
+
+/**
+ * The latest season with a game played: the one a finished season simulation covers, even once
+ * the next season's schedule has put forecast rows for it in player_ratings.
+ */
+export async function getLatestPlayedSeason() {
+    return runCached(cacheKey('latestPlayedSeason'), CACHE_MS.leaderboardSeasons, async () => {
+        const { data, error } = await supabase
+            .from('player_ratings')
+            .select('season')
+            .eq('future_game', 0)
+            .order('date', { ascending: false })
+            .limit(1);
+        if (error) throw error;
+        const season = Number.parseInt(data?.[0]?.season, 10);
+        return Number.isFinite(season) ? season : null;
+    });
 }
 
 async function getLatestActiveSeason() {
@@ -685,6 +709,54 @@ async function getLatestCurrentSeasonRatingRows(season) {
  * Uses the latest season value and returns the most recent row per player, including
  * future projection rows.
  */
+// RAPM rows exist only on the old RAPM file's snapshot days, for whoever played that day, so each
+// player's newest comes from this many days before the latest.
+const RAPM_LOOKBACK_DAYS = 183;
+
+/**
+ * The latest published RAPM: its date, and each player's newest RAPM row (with its own date)
+ * from the RAPM_LOOKBACK_DAYS before it, for fillLatestRapm. RAPM stopped coming with each
+ * day's ratings on 2026-03-07; newest-first on the date index, the first search stops at the
+ * first day with any. Best effort: without it RAPM stays blank.
+ */
+async function getLatestRapmSnapshot() {
+    return runCached(cacheKey('latestRapmSnapshot'), CACHE_MS.latestRapmSnapshot, async () => {
+        const latest = await supabase
+            .from('player_ratings')
+            .select('date')
+            .not('bayes_rapm_total', 'is', null)
+            .order('date', { ascending: false })
+            .limit(1);
+        if (latest.error) throw latest.error;
+        const date = latest.data?.[0]?.date ? String(latest.data[0].date).slice(0, 10) : null;
+        if (!date) return null;
+        const since = new Date(Date.parse(`${date}T00:00:00Z`) - RAPM_LOOKBACK_DAYS * 86_400_000)
+            .toISOString()
+            .slice(0, 10);
+        const rows = await fetchAllPages(
+            (options) =>
+                supabase
+                    .from('player_ratings')
+                    .select('nba_id, date, bayes_rapm_total, bayes_rapm_off, bayes_rapm_def', options)
+                    .not('bayes_rapm_total', 'is', null)
+                    .gt('date', since)
+                    .lte('date', date)
+                    .order('date', { ascending: false })
+                    .order('nba_id', { ascending: true }),
+            { guessPages: 2 }
+        );
+        const byId = new Map();
+        for (const row of rows) {
+            const id = Number(row.nba_id);
+            if (!byId.has(id)) byId.set(id, row);
+        }
+        return { date, byId };
+    }).catch((error) => {
+        console.error('latest RAPM snapshot failed', error);
+        return null;
+    });
+}
+
 async function loadAllActivePlayers() {
     const latestSeason = await getLatestActiveSeason();
     if (!latestSeason) {
@@ -708,12 +780,15 @@ async function loadAllActivePlayers() {
             );
         })
         .map((row) => row.nba_id);
-    const teamMap = await getLatestTeamMapByIds(missingTeamIds, latestDate);
+    const [teamMap, rapm] = await Promise.all([
+        getLatestTeamMapByIds(missingTeamIds, latestDate),
+        getLatestRapmSnapshot()
+    ]);
     const merged = unique.map((row) =>
         mergeWithPlayerDim(row, playersMap.get(row.nba_id), teamMap.get(row.nba_id))
     );
 
-    return sortByDpmDesc(merged);
+    return sortByDpmDesc(fillLatestRapm(merged, rapm));
 }
 
 const getCachedActivePlayers = createActivePlayersAccessor({
@@ -1270,10 +1345,13 @@ export async function searchAllPlayers(searchTerm) {
 
     const key = cacheKey('searchPlayers', normalizedTerm);
     return runCached(key, CACHE_MS.searchPlayers, async () => {
+        // Only players DARKO rated (a season of ratings): the table also holds every player since
+        // the 1940s, and their pages don't exist.
         const { data: players, error } = await supabase
             .from('players')
             .select(PLAYERS_DIM_COLUMNS)
             .ilike('player_name', `%${normalizedTerm}%`)
+            .not('season', 'is', null)
             .order('player_name', { ascending: true })
             .limit(15);
 
@@ -1404,10 +1482,26 @@ export async function getFullPlayerProfileHistory(nbaId, options = {}) {
             mergePlayerDim: false
         });
     });
-    const [profileHistory, latestRows] = await Promise.all([history, getPlayerHistory(nbaId, 1)]);
+    const draftLookup = runCached(cacheKey('playerDraft', nbaId), CACHE_MS.playerHistory, () =>
+        getPlayersMapByIds([nbaId], PLAYER_DRAFT_COLUMNS)
+    );
+    const [profileHistory, latestRows, draftById, rapm] = await Promise.all([
+        history,
+        getPlayerHistory(nbaId, 1),
+        draftLookup,
+        getLatestRapmSnapshot()
+    ]);
+    const latest = latestRows.at(-1) ?? null;
+    const draft = draftById.get(nbaId);
+    // RAPM from the same snapshot as the active players this player's percentiles rank against.
+    const [info] = latest ? fillLatestRapm([latest], rapm) : [null];
     return {
         ...profileHistory,
-        playerInfo: latestRows.at(-1) ?? null
+        playerInfo: info && {
+            ...info,
+            draft_year: draft?.draft_year ?? null,
+            draft_slot: draft?.draft_slot ?? null
+        }
     };
 }
 
@@ -1519,9 +1613,11 @@ export async function getPlayersIndex() {
         const pageSize = 1_000;
 
         while (true) {
+            // Only players DARKO rated; the others have no page (see searchAllPlayers).
             const { data, error } = await supabase
                 .from('players')
                 .select(PLAYERS_DIM_COLUMNS)
+                .not('season', 'is', null)
                 .order('player_name', { ascending: true })
                 .range(page * pageSize, (page + 1) * pageSize - 1);
 
@@ -1688,6 +1784,21 @@ async function fetchLineupRatingsRows({ lineupSize = 5, minPoss = LINEUP_MIN_POS
     );
 }
 
+/**
+ * When the published lineup ratings were computed (nba_darko stamps `computed_on` on every row;
+ * no stage has rebuilt them since 2026-03-26), or null before the pipeline publishes the column.
+ */
+export async function getLineupsComputedOn() {
+    return runCached(cacheKey('lineupsComputedOn'), CACHE_MS.lineupRatings, async () => {
+        const { data, error } = await supabase.from('lineup_ratings').select('computed_on').limit(1);
+        if (error) {
+            if (error.code === UNDEFINED_COLUMN) return null;
+            throw error;
+        }
+        return data?.[0]?.computed_on ?? null;
+    });
+}
+
 export async function getLineupRatings({ lineupSize = 5, minPoss = LINEUP_MIN_POSSESSIONS } = {}) {
     const key = cacheKey('lineupRatings', `size-${lineupSize}:min-${minPoss}`);
     return runCached(key, CACHE_MS.lineupRatings, async () => {
@@ -1781,6 +1892,21 @@ export async function getTeamWinDistribution(teamName) {
     });
 }
 
+/** The Teams overview's inputs: every team's DARKO rating and its season simulation row. */
+export async function getTeamsOverviewData() {
+    const [players, east, west, playedSeason] = await Promise.all([
+        getActivePlayers(),
+        getConferenceStandings('East'),
+        getConferenceStandings('West'),
+        getLatestPlayedSeason().catch(() => null)
+    ]);
+    return {
+        ratings: leagueTeamRatings(players || []),
+        sim: [...(east || []), ...(west || [])],
+        playedSeason
+    };
+}
+
 export async function getTeamPageData(teamName) {
     const normalizedTeam = (teamName || '').trim();
     if (!normalizedTeam) {
@@ -1813,11 +1939,51 @@ export async function getTeamPageData(teamName) {
 // Elo rating system
 // ---------------------------------------------------------------------------
 
-export async function getRandomPair() {
-    const { data, error } = await supabase.rpc('get_random_pair');
-    if (error) throw error;
-    if (!data || data.length < 2) throw new Error('Not enough players for comparison');
-    return data;
+// The Rate a Player card's fields for each player in a pair.
+const RATE_PLAYER_COLUMNS =
+    'nba_id, player_name, height, weight, dob, draft_year, draft_slot, position, country, current_team, active_roster, season, rookie_season';
+
+/**
+ * Two different players from the active leaderboard, with the card's fields and their Elo.
+ * The get_random_pair RPC drew from every row of `players`, which holds every player since the
+ * 1940s, so nearly every pair was two retired players DARKO never rated.
+ */
+export async function getRandomPair(random = Math.random) {
+    const active = (await getActivePlayers()).filter((row) => Number.isInteger(Number(row?.nba_id)));
+    if (active.length < 2) throw new Error('Not enough players for comparison');
+    const first = Math.floor(random() * active.length);
+    let second = Math.floor(random() * (active.length - 1));
+    if (second >= first) second += 1;
+    const picks = [active[first], active[second]];
+    const ids = picks.map((row) => Number(row.nba_id));
+
+    const [bios, elo] = await Promise.all([
+        supabase.from('players').select(RATE_PLAYER_COLUMNS).in('nba_id', ids),
+        supabase.from('elo_ratings').select('nba_id, elo_rating, total_comparisons, wins, losses').in('nba_id', ids)
+    ]);
+    if (bios.error) throw bios.error;
+    if (elo.error) throw elo.error;
+    const byId = (rows) => new Map((rows ?? []).map((row) => [Number(row.nba_id), row]));
+    const bioById = byId(bios.data);
+    const eloById = byId(elo.data);
+
+    return picks.map((row) => {
+        const id = Number(row.nba_id);
+        const bio = bioById.get(id) ?? {};
+        const rating = eloById.get(id);
+        return {
+            ...bio,
+            nba_id: id,
+            player_name: bio.player_name ?? row.player_name ?? null,
+            position: bio.position ?? row.position ?? null,
+            // The leaderboard's team, which looks past offseason rows that have none.
+            current_team: row.team_name ?? bio.current_team ?? null,
+            elo_rating: rating?.elo_rating ?? 1500,
+            total_comparisons: rating?.total_comparisons ?? 0,
+            wins: rating?.wins ?? 0,
+            losses: rating?.losses ?? 0
+        };
+    });
 }
 
 function parseRpcNumber(value, fallback = null) {

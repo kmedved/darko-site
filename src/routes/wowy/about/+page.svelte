@@ -21,7 +21,7 @@
 </script>
 
 <svelte:head>
-	<title>What Did Larry Bird Play Like in 1983? — DARKO</title>
+	<title>What Did Larry Bird Play Like in 1983? — DARKO DPM</title>
 	<meta
 		name="description"
 		content="How DARKO turned daily WOWY RAPM into season-by-season impact ratings from the 1977-78 NBA season onward."

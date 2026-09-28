@@ -19,9 +19,9 @@ Reference only. Nothing in this folder is built, tested or deployed by the site.
 | Comps & Futures: historical matches and a five-year fan chart | `comps.py`, `drawFan` in `src/12-player.js` | Live on player pages: `CompsFutures.svelte`, `utils/comps.js`, from nba_darko's `player_comps` table |
 | Roster Lab: two-team trades, minutes, rating, wins, matchup odds | `src/14-lab.js` | `/lab`, today's rosters or any Time Machine date |
 | Team DNA: rating contributions, lineups, payroll vs value, core outlook | `src/13-teams.js` | Live in `TeamDetailView.svelte`: Players, Build-up and Minutes views (`RatingBreakdown.svelte`, `MinutesChart.svelte`, `utils/teamDna.js`); the Minutes chart is in the Roster Lab too |
-| Fantasy Lab: ESPN, Yahoo, DraftKings, 9-cat or custom scoring, draft board | `src/15-fantasy.js` | Live at `/projections`, without the draft board |
+| Fantasy Lab: ESPN, Yahoo, DraftKings, 9-cat or custom scoring, draft board | `src/15-fantasy.js` | Live at `/projections`; the draft board is dropped (2026-09-28) |
 | Ask DARKO: command bar for players, filters, trades and time travel | `src/19-ask.js` | Live site-wide: `AskDarko.svelte`, `utils/askDarko.js` |
-| DARKOdle: daily mystery player from a career DPM curve | `src/17-darkodle.js` | season-end career rows are published (`player_seasons`) |
+| DARKOdle: daily mystery player from a career DPM curve | `src/17-darkodle.js` | Dropped (2026-09-28): not porting |
 | Card Studio: shareable PNG player cards | `src/18-card.js` | Dropped (2026-09-28): not porting |
 | What's new: the new features, with links in | `src/20-new.js` | Live at `/new` (`utils/whatsNew.js`): ported features only, each for 30 days after launch |
 
@@ -34,13 +34,17 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
 1. Fantasy Lab into `/projections` (done).
 2. Design foundations (offense/defense tokens for every theme, wide numerals, O/X split,
    sparkline, fingerprint glyph) and the Seismograph on player pages (done: tokens, O/X
-   split and split bar; the sparkline and fingerprint wait for the features that use them).
+   split and split bar; the sparkline waits for the features that use it, and the
+   fingerprint glyph is dropped).
 3. Ask DARKO (done).
 4. Team DNA additions, then Roster Lab (both done).
 5. Pipeline-backed features: Rewind and the site-wide date (done, as the Time Machine),
-   Comps & Futures and The Daily (done), then DARKOdle.
+   Comps & Futures and The Daily (done).
 
-Card Studio is dropped: `src/18-card.js` stays as reference only.
+DARKOdle, Card Studio, the Fantasy Lab's draft board and the skill fingerprint glyph are
+dropped: `src/17-darkodle.js`, `src/18-card.js`, the draft board in `src/15-fantasy.js` and
+`glyph()` in `src/02-ui.js` stay as reference only. The player page's percentile bars
+already carry the skill percentiles.
 
 ## Porting notes
 
@@ -52,9 +56,13 @@ Card Studio is dropped: `src/18-card.js` stays as reference only.
 - Each publish (`nba_darko/1_historic_darko/push_website.py`) drops the old `player_ratings`
   with CASCADE when it swaps the new one in, and recreates only the functions in
   `restore_player_ratings_rpcs()`. Any new Postgres function built on that table must be added
-  there, or the next publish removes it.
-- `players.draft_year` and `players.draft_slot` are empty for all 5,358 rows. The prototype
-  shows rookie season instead; the live Rate a Player page shows everyone as "Undrafted".
+  there, or the next publish removes it. The function it restores must match the site's latest
+  migration: an older copy of `get_wowy_season_player_ratings` there undid migration
+  20260814_001 on every publish until it was replaced with the migration's own definition.
+- Until the fix in `push_website.py`, every publish left `players.draft_year` and `draft_slot`
+  empty (a float-text-to-integer cast nulled all 3,704) and gave 403 of 530 active players no
+  `current_team` (the offseason placeholder rows have none), so Rate a Player showed everyone as
+  "Undrafted" and most teams as "?". Draft pick 0 is a territorial pick.
 - The Jul 26 offseason rows in `player_ratings` have no team (`tm_id = -999`), so the Roster
   Lab starts from each team's late-season rotation.
 - Season-end rows in the prototype count playoff games in games and minutes.

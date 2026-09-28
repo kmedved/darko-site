@@ -130,7 +130,7 @@
 </script>
 
 <svelte:head>
-    <title>Rate Players — DARKO DPM</title>
+    <title>Rate a Player — DARKO DPM</title>
 </svelte:head>
 
 <div class="container rate-page" data-shiny-page>
