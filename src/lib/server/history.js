@@ -31,7 +31,7 @@ function cached(key, loader) {
     return value;
 }
 
-async function readLocalTable(name) {
+export async function readLocalTable(name) {
     if (!dev || !env.DARKO_LOCAL_DATA_DIR) return null;
     try {
         const file = path.resolve(env.DARKO_LOCAL_DATA_DIR, `${name}.json`);
@@ -60,7 +60,7 @@ async function readTable(name, columns, order) {
 }
 
 /** A missing table (before the pipeline first publishes it) reads as unavailable, not an error. */
-function isMissingTable(error) {
+export function isMissingTable(error) {
     return error?.code === 'PGRST205' || error?.code === '42P01';
 }
 

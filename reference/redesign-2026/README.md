@@ -16,7 +16,7 @@ Reference only. Nothing in this folder is built, tested or deployed by the site.
 | The Daily: headline, movers, single-game shocks, age records, watchlist | `src/10-today.js` | new route; movers need a Postgres function |
 | Rewind: global date scrubber and weekly top-15 race since 1996-97 | `src/03-floor.js`, `src/16-rewind.js` | `/rewind` and the Time Machine strip, on the `rating_frames` table |
 | Seismograph: every game's DPM update, split offense/defense | `drawSeismo` in `src/12-player.js` | Live on player pages, with opponents from `player_ratings.opp_id` |
-| Comps & Futures: historical matches and a five-year fan chart | `comps.py`, `drawFan` in `src/12-player.js` | needs a `player_comps` table from the pipeline |
+| Comps & Futures: historical matches and a five-year fan chart | `comps.py`, `drawFan` in `src/12-player.js` | Live on player pages: `CompsFutures.svelte`, `utils/comps.js`, from nba_darko's `player_comps` table |
 | Roster Lab: two-team trades, minutes, rating, wins, matchup odds | `src/14-lab.js` | `/lab`, today's rosters or any Time Machine date |
 | Team DNA: rating contributions, lineups, payroll vs value, core outlook | `src/13-teams.js` | Live in `TeamDetailView.svelte`: Players, Build-up and Minutes views (`RatingBreakdown.svelte`, `MinutesChart.svelte`, `utils/teamDna.js`); the Minutes chart is in the Roster Lab too |
 | Fantasy Lab: ESPN, Yahoo, DraftKings, 9-cat or custom scoring, draft board | `src/15-fantasy.js` | Live at `/projections`, without the draft board |
@@ -34,11 +34,11 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
 2. Design foundations (offense/defense tokens for every theme, wide numerals, O/X split,
    sparkline, fingerprint glyph) and the Seismograph on player pages (done: tokens, O/X
    split and split bar; the sparkline and fingerprint wait for the features that use them).
-3. Ask DARKO (done; without the comps and card answers, which wait for their features).
+3. Ask DARKO (done; without the card answer, which waits for Card Studio).
 4. Team DNA additions, then Roster Lab (both done).
 5. Card Studio and per-player share images.
 6. Pipeline-backed features: Rewind and the site-wide date (done, as the Time Machine),
-   then Comps & Futures, The Daily and DARKOdle.
+   Comps & Futures (done), then The Daily and DARKOdle.
 
 ## Porting notes
 
@@ -57,7 +57,11 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
   Lab starts from each team's late-season rotation.
 - Season-end rows in the prototype count playoff games in games and minutes.
 - Comps, Roster Lab team ratings and fantasy values are prototype calculations, not DARKO
-  outputs. The team-rating wins fit is computed in the page from the ratings it shows.
+  outputs. nba_darko builds comps with the prototype's method (`pipeline_scripts/publish/
+  website_comps.py`, called by `push_website.py`); on the same bundle it reproduced the
+  prototype exactly, and it then counts only regular-season games toward a season's games,
+  which left 475 of 530 top-ten lists unchanged (99.3% of comps). The page draws the fan
+  from the 25 published comps (`utils/comps.js`, matching the prototype to 1e-14). The team-rating wins fit is computed in the page from the ratings it shows.
 
 ## Color tokens
 

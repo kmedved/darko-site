@@ -22,7 +22,8 @@ export const ASK_EXAMPLES = Object.freeze([
 	'overpaid',
 	'3-point shooters',
 	'fantasy 9-cat',
-	'payroll Knicks'
+	'payroll Knicks',
+	'comps for Wembanyama'
 ]);
 
 // Rotation players only, unless the question names a team.
@@ -481,6 +482,22 @@ export function interpretAsk(raw, { players = null, pool = [], calendar = [], se
 				detail: 'Where the rating comes from, the core outlook and payroll against DARKO value.',
 				action: `Open the ${team.nickname}`,
 				href: `/team/${team.abbr}#team-dna`
+			});
+		}
+	}
+
+	if (
+		(match = normalized.match(/^(?:comps?|comparables?|historical comps|futures?|players? like|similar to)(?: for| of| to)? (.+)$/)) ||
+		(match = normalized.match(/^(.+?)(?:'s)? (?:comps?|comparables?|futures?)$/))
+	) {
+		const player = current(match[1]);
+		if (player) {
+			result.answers.push({
+				kind: 'comps',
+				title: `${player.player_name}: comps & futures`,
+				detail: 'The ten most similar player-seasons since 1996-97 at the same age, and what they did over the next five seasons.',
+				action: `Open ${player.player_name}'s comps`,
+				href: `/player/${player.nba_id}#comps`
 			});
 		}
 	}

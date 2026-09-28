@@ -136,6 +136,17 @@ test('dates, team pages and fantasy scoring become links', () => {
     assert.equal(interpretAsk('draftkings', CONTEXT).answers[0].href, '/projections?scoring=draftkings');
 });
 
+test('comps questions open the player page at Comps & futures', () => {
+    for (const question of ['comps for wembanyama', 'Wembanyama comps', "wembanyama's comps", 'players like Wembanyama']) {
+        const [answer] = interpretAsk(question, CONTEXT).answers;
+        assert.equal(answer?.kind, 'comps', question);
+        assert.equal(answer.href, '/player/2#comps');
+    }
+    // Two players are still a comparison, not comps.
+    assert.equal(interpretAsk('compare jokic and wemb', CONTEXT).answers[0].kind, 'compare');
+    assert.equal(interpretAsk('comps for nobody at all', CONTEXT).answers.length, 0);
+});
+
 test('questions answer from the leaderboard; a bare team is just the team', () => {
     const board = interpretAsk('best defenders under 25', CONTEXT).answers[0];
     assert.equal(board.kind, 'board');

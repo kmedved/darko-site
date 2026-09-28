@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
+	import CompsFutures from '$lib/components/CompsFutures.svelte';
 	import LongevityCareerLengthChart from '$lib/components/LongevityCareerLengthChart.svelte';
 	import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
 	import OffenseDefenseGlyph from '$lib/components/OffenseDefenseGlyph.svelte';
@@ -20,6 +21,7 @@
 	} from '$lib/utils/seismograph.js';
 	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
 	import { unpackRows } from '$lib/utils/columnar.js';
+	import { normalizeComps } from '$lib/utils/comps.js';
 	import { AS_OF_PARAM, formatAsOfDate, parseAsOfDate } from '$lib/utils/timeMachine.js';
 	import { seasonOfRow } from '$lib/utils/seismograph.js';
 
@@ -73,6 +75,7 @@
 	const playerInfo = $derived(data.playerInfo ?? null);
 	const historyRows = $derived(data.history ? unpackRows(data.history) : (data.historyRows ?? []));
 	const historyMeta = $derived(data.historyMeta ?? { truncated: false, maxRows: null });
+	const comps = $derived(normalizeComps(data.comps));
 
 	// With the Time Machine set, the sidebar rating and the Seismograph follow that date.
 	const asOfDate = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
@@ -508,6 +511,28 @@
 					</section>
 				{/if}
 
+				<!-- Comps come from today's ratings, so the Time Machine hides them. -->
+				{#if comps.length > 0 && !asOfDate}
+					<section
+						class="chart-panel comps-panel"
+						id="comps"
+						data-shiny-surface="plot"
+						aria-labelledby="comps-title"
+					>
+						<header class="seismograph-header">
+							<div>
+								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Historical comps</p>
+								<h2 id="comps-title">Comps &amp; futures</h2>
+								<p class="seismograph-lede">
+									The ten most similar player-seasons since 1996-97 at the same age, and what
+									happened to them next.
+								</p>
+							</div>
+						</header>
+						<CompsFutures {comps} history={historyRows} playerName={playerInfo.player_name} />
+					</section>
+				{/if}
+
 				<div class="charts-row" data-shiny-layout="split">
 					<div class="chart-panel chart-half" data-shiny-surface="plot">
 						<TalentTrendChart
@@ -761,6 +786,15 @@
 		line-height: 1;
 		color: var(--text);
 		font-variant-numeric: tabular-nums;
+	}
+
+	.comps-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		min-width: 0;
+		/* Ask DARKO links to #comps; the heading clears the sticky nav. */
+		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
 	}
 
 	.seismograph-panel {

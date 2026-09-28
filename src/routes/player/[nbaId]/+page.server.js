@@ -1,5 +1,6 @@
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
-import { loadPlayerPageData } from '$lib/server/playerPage.js';
+import { getPlayerComps } from '$lib/server/comps.js';
+import { loadPlayerPageData, parsePlayerRouteId } from '$lib/server/playerPage.js';
 import { packRows } from '$lib/utils/columnar.js';
 import { getFullPlayerProfileHistory, MAX_FULL_HISTORY_ROWS } from '$lib/server/supabase.js';
 
@@ -10,6 +11,11 @@ export const config = {
 };
 
 export async function load({ params, setHeaders }) {
+    // Comps are a side panel: without them the page still loads.
+    const comps = getPlayerComps(parsePlayerRouteId(params.nbaId)).catch((error) => {
+        console.error('player comps failed', error);
+        return [];
+    });
     const { historyRows, ...page } = await loadPlayerPageData({
         nbaIdParam: params.nbaId,
         setHeaders,
@@ -20,5 +26,5 @@ export async function load({ params, setHeaders }) {
             })
     });
     // The career history ships column by column; the page rebuilds the rows.
-    return { ...page, history: packRows(historyRows) };
+    return { ...page, history: packRows(historyRows), comps: await comps };
 }
