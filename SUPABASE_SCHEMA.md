@@ -247,9 +247,11 @@ than current DARKO team metadata. This preserves defunct and relocated franchise
 New Jersey, Kansas City, and Washington correctly. A traded player's `team_code` and `team_name`
 are slash-joined historical display labels in chronological first-seen order, never a claim that
 the average belongs to only one stint. The paired `team_codes` and `team_names` arrays preserve
-each individual team for filters and provenance. The historical RPC returns no current `tm_id` or
-position, preventing an old team from receiving a modern logo/link; `date` is a compatibility
-alias for `last_date`, while seasonal UI should use the explicit date range and game count.
+each individual team for filters and provenance. The per-season RPC that served these rows,
+`get_wowy_season_player_ratings` (dropped by `20260929_002`), returned no current `tm_id` or
+position, preventing an old team from receiving a modern logo/link, and its `date` was a
+compatibility alias for `last_date`; seasonal UI should use the explicit date range and game
+count.
 
 The 20260711 filter fields deliberately do not change that historical identity contract:
 `filter_position` and `height_inches` are explicit player-dimension metadata for filtering only.
@@ -596,13 +598,15 @@ All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. 
 | longevityTrajectory | 10min |
 | lineupRatings | 1h |
 | lineupSizeCounts | 1h |
-| playerCurrent | 60s |
 | playerHistory | 5min |
 | activeWowyPlayers | 5min |
+| wowyAllTimePlayers / wowyAdjustedAllTimePlayers | 1h |
 | wowyLeaderboardSeasons | 1h |
-| wowySeasonPlayers | 5min |
+| wowyAdjustedSeasonPlayers | 5min |
 | wowyPlayerHistory | 30min |
 | wowyPublication | 5min |
+
+These are the main keys; `CACHE_MS` in `src/lib/server/supabase.js` lists every one.
 
 ### API routes
 
