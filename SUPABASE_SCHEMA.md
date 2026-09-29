@@ -50,7 +50,8 @@ until the dependent is removed. These create such a dependency:
 - a function or procedure with a SQL-standard `BEGIN ATOMIC` body that reads the table.
 
 Safe: a string-bodied (`as $function$ ... $function$`) `language sql` or `language plpgsql`
-function that returns `jsonb`, `setof record`, or `table(...)` with explicit column types.
+function that returns a scalar (`text`, `boolean`, ...), `jsonb`, `setof record`, or
+`table(...)` with explicit column types.
 Postgres records no dependency from a string body on the tables it names, so the drop goes
 through and the function reads the new table on its next call. Every function in
 `supabase/migrations/` follows this pattern. Anything attached to one of those tables itself
