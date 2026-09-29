@@ -673,8 +673,8 @@ Deferred shifts to evaluate:
 Every table documented above except the WOWY tables is published by one script in the
 `nba_darko` repository, outside `darko-site/`: `pipeline_scripts/publish/website.py` (formerly
 `1_historic_darko/push_website.py`, which the Part A pipeline branch still uses; that copy has
-no writer guard and gives a table it creates no row-level security, and otherwise behaves the
-same). It is the source of truth for those tables' data, columns and indexes.
+no writer guard on the build or the publish and gives a table it creates no row-level security,
+and otherwise behaves the same). It is the source of truth for those tables' data, columns and indexes.
 `pipeline_scripts/run_all.py` runs it as the `push-website` stage, in two actions: a build
 (`--skip-upload`) and a publish (`--skip-build`). Run by hand from the `nba_darko` root,
 `python pipeline_scripts/publish/website.py` does both.
@@ -697,6 +697,18 @@ manifest (`supabase_tables/player_ratings.manifest.json`) seals the bundle with 
 its sources, builder code and outputs, and the publish refuses a bundle that changed after it
 was read.
 
+**A build into a shared runtime needs the writer.** From the pipeline import branch
+(`codex/wowy-import-20260928-v1`) on, a build-only run (`--skip-upload`) takes the writer's
+scope (`build_write_scope()`) whenever `<runtime-root>/supabase_tables` lies in a shared runtime,
+by the rule of `shared_runtime_containing()` in `pipeline_scripts/lib/shared_runtime.py`: the
+path is at or below `NBA_DARKO_RUNTIME_ROOT` (exported, or loaded from the runner's `.env`), or
+it or an ancestor directory holds a `WRITER.txt` marker. Under `run_all.py` the `push-website`
+build action verifies the runner's inherited lock; run by hand, the build needs the same writer
+authorization as a publish (step 1 below) and holds the full-run lock, so on a machine that is
+not the writer it is refused before anything is built. A build into a runtime root outside
+every shared runtime needs no writer. The Part A pipeline branch's
+`1_historic_darko/push_website.py` has no build guard.
+
 ### Publish
 
 1. **Writer guard.** The publish runs inside the pipeline's single-writer scope
@@ -704,7 +716,8 @@ was read.
    writer. Under `run_all.py` it verifies the runner's inherited full-run lock; run by hand it
    requires `NBA_DARKO_WRITE_ENABLED=1` and an `NBA_DARKO_MACHINE_ID` that matches `WRITER.txt`
    in the runtime root, and holds the full-run lock until it finishes. A build-only run
-   (`--skip-upload`) needs no guard.
+   (`--skip-upload`) takes the same scope when it writes into a shared runtime; see
+   [Build](#build).
 2. **Connection.** `SUPABASE_PG_DSN` is required. The session sets a 10-minute
    `statement_timeout` and a 5-minute `idle_in_transaction_session_timeout`, so a stalled
    upload rolls back instead of holding locks.
@@ -785,6 +798,6 @@ The homepage's historical leaderboard uses `get_season_start_player_ratings(p_se
 **Debugging null columns on the site:**
 1. Check max dates of all source parquet files — they should match `spm_outputs`
 2. If a file is stale, re-run the pipeline stage that writes it (`pipeline_scripts/run_all.py`; `pipeline_scripts/manifest.py` lists each stage's outputs)
-3. From the `nba_darko` root, run `python pipeline_scripts/publish/website.py --skip-upload` and check the `coverage` line it prints; it rebuilds the bundle without publishing
-4. On the writer Mac, run `python pipeline_scripts/publish/website.py --skip-build` to publish that bundle (or leave the next `run_all.py` to do it)
+3. Rebuild the bundle without publishing and check the `coverage` line it prints: from the `nba_darko` root, `python pipeline_scripts/publish/website.py --skip-upload`. On the writer Mac that writes the shared runtime's `supabase_tables/` under the writer guard. From the pipeline import branch on, any other machine is refused a build into the shared runtime (see [Build](#build)), so there pass `--runtime-root` a scratch runtime root outside `NBA_DARKO_RUNTIME_ROOT`, with no `WRITER.txt` in it or any directory above it, holding copies of the files the build reads from `calculated_data/`, `fixed_data/crosswalks/` and `external_share/`
+4. Publish on the writer Mac: `python pipeline_scripts/publish/website.py` builds and publishes, `--skip-build` publishes a bundle already built into its runtime, or leave it to the next `run_all.py`
 5. The publish calls the Vercel deploy hook; without one, redeploy on Vercel (or restart the dev server) to clear the in-memory cache
