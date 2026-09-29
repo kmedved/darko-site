@@ -12,6 +12,13 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'leaderboard-look',
+		kind: 'design',
+		title: 'A calmer leaderboard',
+		launched: '2026-09-29T04:10:04Z',
+		text: "The leaders stand in their teams' colours, each with the margin over the next player; the controls fit one row, with the filters in a panel; and the column sets are tabs on the table."
+	},
+	{
 		key: 'leaderboard-views',
 		title: 'Leaderboard views you can share',
 		launched: '2026-09-29T02:51:13Z',
