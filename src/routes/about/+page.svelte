@@ -6,7 +6,6 @@
 	import MemoryChart from '$lib/components/about/MemoryChart.svelte';
 	import ModelFlow from '$lib/components/about/ModelFlow.svelte';
 	import RookieStarts from '$lib/components/about/RookieStarts.svelte';
-	import SurveyChart from '$lib/components/about/SurveyChart.svelte';
 	import { HOOPSHYPE_SURVEY, SITE_TOOLS } from '$lib/utils/aboutDarko.js';
 	import { dailyListed } from '$lib/utils/daily.js';
 
@@ -63,7 +62,7 @@
 				</p>
 				<p class="about-credential">
 					The top-ranked all-in-one metric in
-					<a href={HOOPSHYPE_SURVEY.url}>HoopsHype's 2021 survey</a> of NBA team staff and media.
+					<a href={HOOPSHYPE_SURVEY.url}>HoopsHype's survey of NBA team staff</a>.
 				</p>
 				<div class="about-actions">
 					<a class="about-primary" href="/">Open the leaderboard</a>
@@ -294,14 +293,10 @@
 					this respect.
 				</p>
 				<p>
-					In 2021 <a href={HOOPSHYPE_SURVEY.url}>HoopsHype asked {HOOPSHYPE_SURVEY.respondents} NBA team staff and media members</a>
-					which public all-in-one metrics they trusted. DPM ranked first: 8 named it their preferred
-					metric, more than any other; 10 more said they trusted it; 1 said they did not.
-				</p>
-				<SurveyChart />
-				<p>
-					HoopsHype also reported that DPM beat the other public metrics in predictive power, by
-					root mean square error, with EPM and LEBRON next.
+					In <a href={HOOPSHYPE_SURVEY.url}>HoopsHype's survey of NBA team staff</a>, DPM ranked first
+					among the public all-in-one metrics: 8 of the {HOOPSHYPE_SURVEY.respondents} respondents
+					named it their preferred metric, more than any other; 10 more said they trusted it; 1 said
+					they did not.
 				</p>
 				<blockquote>
 					<p>“…allowing him to confidently say when a players’ improvement is more signal than noise.”</p>

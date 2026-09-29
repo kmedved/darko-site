@@ -1,6 +1,6 @@
 /**
- * The About page's numbers: DARKO's per-stat memory, the DPM blend, HoopsHype's 2021 survey and
- * the arithmetic behind the page's calculators. Model parameters here are the current fit's
+ * The About page's numbers: DARKO's per-stat memory, the DPM blend, HoopsHype's survey and the
+ * arithmetic behind the page's calculators. Model parameters here are the current fit's
  * (nba_darko's decay_coefs.csv and 19_create_dpm_projections.py); a refit only changes numbers.
  */
 
@@ -88,29 +88,12 @@ export function onOffShare(possessions, prior) {
 }
 
 /**
- * HoopsHype's 2021 survey of 29 NBA team staff and media members, in its order (most trusted
- * first): how many named each metric their preferred all-in-one metric, trusted it, or did not.
- * The article gives no "trust" count for the last four (null).
+ * HoopsHype's survey of all-in-one metrics (29 respondents, NBA team staff and media members), in
+ * which DPM ranked first: 8 named it their preferred metric, 10 more trusted it, 1 did not.
  */
 export const HOOPSHYPE_SURVEY = Object.freeze({
-	title: 'What is the best advanced statistic for basketball? NBA executives weigh in',
-	author: 'Bryan Kalbrosky',
-	date: '2021-09-17',
 	respondents: 29,
-	url: 'https://www.hoopshype.com/story/sports/nba/2021/09/17/advanced-stats-nba-real-plus-minus-rapm-win-shares-analytics/75615174007/',
-	metrics: Object.freeze([
-		{ key: 'dpm', name: 'DPM', preferred: 8, trust: 10, distrust: 1 },
-		{ key: 'epm', name: 'EPM', preferred: 6, trust: 11, distrust: 1 },
-		{ key: 'lebron', name: 'LEBRON', preferred: 4, trust: 14, distrust: 2 },
-		{ key: 'raptor', name: 'RAPTOR', preferred: 6, trust: 8, distrust: 7 },
-		{ key: 'rapm', name: 'RAPM', preferred: 0, trust: 15, distrust: 2 },
-		{ key: 'bpm', name: 'BPM', preferred: 2, trust: 11, distrust: 3 },
-		{ key: 'rpm', name: 'RPM', preferred: 2, trust: 8, distrust: 11 },
-		{ key: 'wpa', name: 'WPA', preferred: 0, trust: null, distrust: 5 },
-		{ key: 'fic', name: 'FIC', preferred: 0, trust: null, distrust: 8 },
-		{ key: 'ws48', name: 'WS/48', preferred: 1, trust: null, distrust: 14 },
-		{ key: 'per', name: 'PER', preferred: 0, trust: null, distrust: 22 }
-	])
+	url: 'https://www.hoopshype.com/story/sports/nba/2021/09/17/advanced-stats-nba-real-plus-minus-rapm-win-shares-analytics/75615174007/'
 });
 
 function finite(value) {

@@ -77,18 +77,9 @@ test("the DPM scale's readouts and what a player is worth to an average team", (
 	assert.equal(playerWorth({ dpm: 3, minutes: 0 }, 0), null);
 });
 
-test("HoopsHype's 2021 survey, as reported", () => {
+test("HoopsHype's survey, linked from the page", () => {
 	assert.equal(HOOPSHYPE_SURVEY.respondents, 29);
-	assert.equal(HOOPSHYPE_SURVEY.date, '2021-09-17');
-	assert.match(HOOPSHYPE_SURVEY.url, /^https:\/\/www\.hoopshype\.com\/story\/sports\/nba\/2021\/09\/17\//);
-	const [first, ...rest] = HOOPSHYPE_SURVEY.metrics;
-	assert.deepEqual({ ...first }, { key: 'dpm', name: 'DPM', preferred: 8, trust: 10, distrust: 1 });
-	// More respondents preferred DPM than any other metric.
-	assert.ok(rest.every((metric) => metric.preferred < first.preferred));
-	assert.deepEqual(HOOPSHYPE_SURVEY.metrics.map((metric) => metric.name), [
-		'DPM', 'EPM', 'LEBRON', 'RAPTOR', 'RAPM', 'BPM', 'RPM', 'WPA', 'FIC', 'WS/48', 'PER'
-	]);
-	assert.equal(HOOPSHYPE_SURVEY.metrics.at(-1).distrust, 22);
+	assert.match(HOOPSHYPE_SURVEY.url, /^https:\/\/www\.hoopshype\.com\/story\/sports\/nba\//);
 });
 
 test('the About page keeps its methodology and accuracy claim, and says the rest plainly', async () => {
@@ -103,8 +94,10 @@ test('the About page keeps its methodology and accuracy claim, and says the rest
 	// The accuracy claim, word for word, then the survey.
 	assert.match(page, /With one exception, DARKO beat both sites in every stat tested\s+\(minutes, points, rebounds, assists, blocks, turnovers, and threes made\), some by\s+substantial margins\./);
 	assert.match(page, /The only stat where DARKO lost was in minutes projections\./);
-	assert.match(page, /<SurveyChart \/>/);
-	assert.match(page, /HoopsHype also reported that DPM beat the other public metrics in predictive power/);
+	// Then the survey's result in words, named without its year, and no chart or RMSE claim.
+	assert.match(page, /HoopsHype's survey of NBA team staff/);
+	assert.match(page, /8 of the \{HOOPSHYPE_SURVEY\.respondents\} respondents\s+named it their preferred metric/);
+	assert.doesNotMatch(page, /2021|SurveyChart|root mean square/);
 	// Rookies start from age, draft slot and height.
 	assert.match(page, /his rating comes from his age, draft slot and height/);
 	assert.doesNotMatch(page, /initialized to essentially the same starting point/);
