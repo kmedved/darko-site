@@ -43,10 +43,8 @@
 				{/each}
 			</tbody>
 		</table>
-		<p class="h2h-caption">
-			Each player's latest available DARKO projections; games are since 1996-97. Shooting gaps are in
-			percentage points (pp).
-		</p>
+		<!-- The page says what the figures are and how far back the games go (compare/+page.svelte). -->
+		<p class="h2h-caption">Shooting gaps are in percentage points (pp).</p>
 	</div>
 {/if}
 

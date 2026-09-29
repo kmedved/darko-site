@@ -33,6 +33,7 @@
         sameLeaderboardState
     } from '$lib/utils/leaderboardState.js';
     import { isIncomingNavigation, keepsPendingState, pathAndSearch } from '$lib/utils/urlSync.js';
+    import { leaderCard } from '$lib/utils/leaderCards.js';
     import { startWatchlist, watchlist } from '$lib/utils/watchlist.js';
     import { dailyListed } from '$lib/utils/daily.js';
     import { filterPlayers } from '$lib/utils/playerTableFilters.js';
@@ -256,13 +257,13 @@
     });
 
     // Any other navigation drops a write still waiting, which was worked out from the address
-    // before and would undo it. One that stays on the board (the Time Machine, the season menu)
-    // was built from the URL before the change, so the change stands over what it brings, and
-    // the page writes it onto the new address.
-    beforeNavigate(({ to }) => {
+    // before and would undo it. A Time Machine date change on the board was built from the URL
+    // before the change, so the change stands over what it brings and the page writes it onto the
+    // new date; a link (Active Leaderboard), Back/Forward or Ask DARKO brings its own question.
+    beforeNavigate(({ type, to }) => {
         if (to?.url && pathAndSearch(to.url) === ownHref) return;
         clearTimeout(urlSyncTimer);
-        keepLocalQuestion = keepsPendingState({ writePending, to, pathname: '/', ownHref });
+        keepLocalQuestion = keepsPendingState({ writePending, type, to, pathname: '/' });
         writePending = false;
     });
 
@@ -318,11 +319,11 @@
     );
 
     const leaderCards = $derived.by(() => [
-        buildLeaderCard(teamScopedPlayers, 'Top DPM', 'dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Top offense', 'o_dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Top defense', 'd_dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Top 3PT%', 'x_fg3_pct', formatPercent),
-        buildLeaderCard(teamScopedPlayers, 'Top FT%', 'x_ft_pct', formatPercent)
+        leaderCard(teamScopedPlayers, 'Top DPM', 'dpm'),
+        leaderCard(teamScopedPlayers, 'Top offense', 'o_dpm'),
+        leaderCard(teamScopedPlayers, 'Top defense', 'd_dpm'),
+        leaderCard(teamScopedPlayers, 'Top 3PT%', 'x_fg3_pct', formatPercent),
+        leaderCard(teamScopedPlayers, 'Top FT%', 'x_ft_pct', formatPercent)
     ]);
 
     const selectedDistributionMetric = $derived(
@@ -655,30 +656,6 @@
             columns: leaderboardCsvColumnsForExport,
             filename: 'darko-dpm-leaderboard.csv'
         });
-    }
-
-    // The leader in `metric`, and how far ahead of the next player: "1.2 ahead of Gilgeous-Alexander".
-    function buildLeaderCard(rows, title, metric, formatter = formatSignedMetric) {
-        const [leader, next] = rows
-            .map((player) => ({ player, value: toNumber(player?.[metric]) }))
-            .filter((entry) => entry.value !== null)
-            .sort((a, b) => b.value - a.value);
-        return {
-            title,
-            metric,
-            player: leader?.player ?? null,
-            value: leader?.value ?? null,
-            displayValue: formatter(leader?.value ?? null),
-            margin: leader && next ? leadMargin(leader.value - next.value, next.player, metric) : null
-        };
-    }
-
-    // Shooting leads are in percentage points; a lead too small to print is level.
-    function leadMargin(gap, player, metric) {
-        const name = String(player?.player_name ?? '').split(' ').slice(1).join(' ') || player?.player_name;
-        const amount = metric.endsWith('_pct') ? (gap * 100).toFixed(1) : gap.toFixed(1);
-        if (Number(amount) === 0) return `Level with ${name}`;
-        return `${amount}${metric.endsWith('_pct') ? ' pp' : ''} ahead of ${name}`;
     }
 
     function playerHeadshotUrl(player) {

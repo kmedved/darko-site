@@ -1,5 +1,6 @@
 import { isMissingTable, readLocalTable } from './history.js';
 import { supabase } from './supabase.js';
+import { careerGamesById } from '../utils/playerProfile.js';
 
 /**
  * The Daily's tables, published by nba_darko's push_website.py
@@ -170,6 +171,37 @@ export async function getSeasonLeaders(season, { minGames = 20, limit = 8 } = {}
             .limit(limit);
         if (error) throw error;
         return data ?? [];
+    });
+}
+
+/**
+ * Games played since 1996-97, regular season and playoffs, for each of `nbaIds` (careerGames, as
+ * profiles and Compare count them): a Map by nba_id, without the players who have no seasons yet;
+ * null until the season table is published.
+ */
+export async function getCareerGames(nbaIds) {
+    const ids = [...new Set((nbaIds ?? []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+    const local = await readLocalTable('player_seasons');
+    if (local) {
+        const wanted = new Set(ids);
+        return careerGamesById(local.filter((row) => wanted.has(Number(row.nba_id))));
+    }
+    return missingAsNull(async () => {
+        const chunks = [];
+        for (let start = 0; start < ids.length; start += 150) chunks.push(ids.slice(start, start + 150));
+        const pages = await Promise.all(
+            chunks.map((chunk) =>
+                readPages(() =>
+                    supabase
+                        .from('player_seasons')
+                        .select('nba_id, season, games, playoff_games')
+                        .in('nba_id', chunk)
+                        .order('nba_id', { ascending: true })
+                        .order('season', { ascending: true })
+                )
+            )
+        );
+        return careerGamesById(pages.flat());
     });
 }
 
