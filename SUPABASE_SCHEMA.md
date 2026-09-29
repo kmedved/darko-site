@@ -233,20 +233,24 @@ and exposure values are the **unweighted arithmetic mean** of every certified pl
 observation published for that player in the selected NBA season; they are not a single-game
 snapshot and are not exposure- or minutes-weighted.
 
-This is an intentional two-phase publication: apply 011 and the subsequent WOWY schema migrations,
-run the checked model publisher (`python -m pipeline_scripts.publish.wowy.publish_wowy_season_player_averages --publish`
-from the `nba_darko` root), deploy the context-aware `/wowy` UI, then explicitly run the manual operation
-`supabase/operations/20260710_activate_wowy_season_player_averages.sql`. That operation owns its
-own transaction. The UI reads `snapshot_context`, so it truthfully presents opening-game rows
-until the cutover and averages afterward. The manual operation fails closed unless the average table covers every
-contiguous published WOWY season from its recorded lower bound through the current source maximum,
-and every
-`(season, nba_id)` group matches the raw player-game source on row presence, game count, first and
-last game dates, and unweighted RAPM/O-RAPM/D-RAPM/exposure means. It records that verified
-cutover in the private singleton `wowy_season_average_activation` table, then redirects the
+This was an intentional two-phase publication: 011 provisioned the table, the checked model
+publisher loaded the averages, the context-aware `/wowy` UI was deployed, and then the manual
+operation `supabase/operations/20260710_activate_wowy_season_player_averages.sql` activated them,
+once, on 2026-07-10. It is a historical record now and must not be re-run: it would put back its
+July definitions of the `/wowy` season RPCs, undoing `20260929_001` (and `20260929_002`), and it
+refuses to run once its marker row exists. The operation owned its own transaction. The UI reads
+`snapshot_context`, so it truthfully presented opening-game rows until the cutover and averages
+afterward. The operation failed closed unless the average table covered every contiguous
+published WOWY season from its recorded lower bound through the source maximum, and every
+`(season, nba_id)` group matched the raw player-game source on row presence, game count, first
+and last game dates, and unweighted RAPM/O-RAPM/D-RAPM/exposure means. It recorded that verified
+cutover in the private singleton `wowy_season_average_activation` table, then redirected the
 historical `/wowy` RPCs from migration 010's opening-game artifact to season averages. Keeping
 this data-dependent activation outside the replayable migration chain prevents an empty or
-partial table from breaking a normal migration run or later ratings-table rebuild.
+partial table from breaking a normal migration run or later ratings-table rebuild. The
+season-average publisher itself is
+`python -m pipeline_scripts.publish.wowy.publish_wowy_season_player_averages --publish`, run
+from the `nba_darko` root.
 
 Historical team data comes from the BBRef game source and season-bounded team crosswalk, rather
 than current DARKO team metadata. This preserves defunct and relocated franchises such as Seattle,

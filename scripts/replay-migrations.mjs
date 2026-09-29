@@ -9,8 +9,9 @@
 // Checks, in order (exit code 1 if any fails):
 //   1. Every migration applies, in filename order. The manual activation operation
 //      (supabase/operations/20260710_activate_wowy_season_player_averages.sql) is attempted
-//      after 20260711_001 as it was in production; on empty tables its guard refuses, which
-//      is reported, not failed.
+//      after 20260711_001, whose filter helper this copy's RPC needs (production ran an
+//      earlier copy on 2026-07-10, before that migration); on empty tables, and without its
+//      marker table, its data guard refuses, which is reported, not failed.
 //   2. Right after 20260929_001, each function it defines exists with that file's language
 //      and body.
 //   3. After the full replay, each of those functions is present or absent according to the
