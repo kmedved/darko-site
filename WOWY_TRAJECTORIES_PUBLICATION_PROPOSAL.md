@@ -64,11 +64,18 @@ the splits.
 The source model artifact is:
 
 ```text
-nba_darko/pipeline_scripts/wowy_rapm/composite_rapm.parquet
+composite_rapm.parquet
 SHA-256: ef5e1b5f99c0fa3e5b9913582ee5c3612b2ac4fc31667444dab085e43d5d4a40
 Rows: 4,126,431
 Dates: 1979-10-12 through 2026-06-13
 ```
+
+It was the writer's `composite_rapm.parquet` at the WOWY program's root, a file never tracked
+in Git, so the import into `nba_darko` did not bring it. The exporter reads the current daily
+composite from the shared runtime,
+`$NBA_DARKO_RUNTIME_ROOT/wowy_rapm/derived/publication/current/composite_rapm.parquet`; later
+publications have replaced that file, so the hash, rows and dates above identify the version
+this proposal certified, not the file at that path today.
 
 The displayed values are:
 
@@ -107,8 +114,13 @@ The existing season-level publication table is useful for validation but not
 for the Trajectories chart, which needs game-level points:
 
 ```text
-nba_darko/pipeline_scripts/wowy_rapm/reports/publication/player_season_display_synthetic.tsv
+reports/publication/player_season_display_synthetic.tsv
 ```
+
+That path is relative to the original WOWY repository (GitHub `kmedved/wowy-rapm`, the former
+`33_wowy_rapm` checkout). The import into `nba_darko` did not bring the file, which is excluded
+evidence: it survives only in that repository's history and in the evidence archive's bundle of
+it (`$NBA_DARKO_RUNTIME_ROOT/wowy_rapm/evidence/`, once made).
 
 ## Existing Site Contract
 
