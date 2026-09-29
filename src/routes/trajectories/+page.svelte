@@ -30,6 +30,8 @@
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 	import { isWowyPlayerId } from '$lib/utils/wowyPlayerId.js';
 
+	let { data } = $props();
+
 	let selectedPlayers = $state([]);
 	let timeScale = $state('games');
 	let talentType = $state('dpm');
@@ -54,7 +56,20 @@
 		{ nbaId: 2544, label: 'LeBron James', detail: 'Full career arc' },
 		{ nbaId: 201939, label: 'Stephen Curry', detail: 'Shooting prime' }
 	];
-	const starterPlayerById = new Map(STARTER_PLAYERS.map((player) => [player.nbaId, player]));
+	// The players in today's news (src/lib/utils/trending.js), which the page opens on while current.
+	const newsPlayers = $derived(data?.newsPlayers ?? []);
+	const starterPlayerById = $derived(
+		new Map([...STARTER_PLAYERS, ...newsPlayers].map((player) => [player.nbaId, player]))
+	);
+	// Why each player on the chart is in the news, in the chart's order and colors.
+	const newsNotes = $derived(
+		selectedPlayers.flatMap((player, index) => {
+			const detail = newsPlayers.find((entry) => entry.nbaId === player.nba_id)?.detail;
+			if (!detail) return [];
+			const color = getSeriesColor(index, displayMode.view);
+			return [{ nba_id: player.nba_id, name: player.player_name, color, detail }];
+		})
+	);
 
 	$effect(() => {
 		if (talentType !== prevTalentType) {
@@ -493,6 +508,9 @@
 		if (ids) {
 			const idList = ids.split(',');
 			preloadPlayersById(idList, initialKind);
+		} else if (newsPlayers.length > 0) {
+			// Open on the players in today's news.
+			preloadPlayersById(newsPlayers.map((player) => player.nbaId), initialKind);
 		} else {
 			loadRandomPlayer(initialKind);
 		}
@@ -541,7 +559,7 @@
 	});
 
 	async function loadPlayerById(nbaId) {
-		const starter = STARTER_PLAYERS.find((player) => player.nbaId === nbaId);
+		const starter = starterPlayerById.get(nbaId);
 		const kind = isWowyMetric ? 'wowy' : 'darko';
 		if (!addPlayerShell({ nba_id: nbaId, label: starter?.label }, kind)) return;
 		error = null;
@@ -800,6 +818,17 @@
 				<section class="trajectory-chart-area" data-shiny-surface="plot" aria-label="Career trajectory chart">
 					{#if error}
 						<div class="trajectory-message error-msg">{error}</div>
+					{/if}
+
+					{#if newsNotes.length > 0}
+						<div class="trajectory-news">
+							<strong>In the news</strong>
+							<ul>
+								{#each newsNotes as note (note.nba_id)}
+									<li style:--player-color={note.color}><span>{note.name}</span> {note.detail}</li>
+								{/each}
+							</ul>
+						</div>
 					{/if}
 
 					{#if loading}
@@ -1112,6 +1141,52 @@
 
 	.trajectory-empty-state span {
 		color: var(--text-secondary);
+	}
+
+	.trajectory-news {
+		display: grid;
+		gap: 6px;
+		margin: 0 0 12px;
+		color: var(--text-secondary);
+		font-size: 13px;
+		line-height: 1.35;
+	}
+
+	.trajectory-news strong {
+		color: var(--text);
+		font-weight: 850;
+	}
+
+	.trajectory-news ul {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+		gap: 4px 20px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	/* A dot in the player's line color, then the name and the reason. */
+	.trajectory-news li {
+		position: relative;
+		padding-left: 14px;
+	}
+
+	.trajectory-news li::before {
+		position: absolute;
+		top: 0.4em;
+		left: 0;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--player-color);
+		content: '';
+	}
+
+	.trajectory-news li span {
+		margin-right: 4px;
+		color: var(--text);
+		font-weight: 750;
 	}
 
 	.trajectory-starter-grid {
