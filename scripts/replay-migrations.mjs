@@ -75,20 +75,60 @@ const TABLE_STUBS = [
         winner_id bigint, loser_id bigint, winner_elo_before numeric, loser_elo_before numeric,
         winner_elo_after numeric, loser_elo_after numeric, elo_delta numeric);`,
     'create table public.season_sim ();',
-    'create table public.win_distribution ();',
-    `create table public.player_ratings (
-        nba_id bigint, date date, season real, active_roster smallint, team_name text,
-        tm_id integer, position text, dpm double precision, o_dpm double precision,
-        d_dpm double precision);`,
-    'create table public.lineup_ratings ();'
+    'create table public.win_distribution ();'
 ];
-// The six other tables the publisher rebuilds and swaps in on every publish. No migration
-// reads them; they are here so check 4 covers every replaced table, and so a migration that
-// makes something depend on one is caught there, by name. Columns and types are exactly the
-// builders' output on nba_darko's codex/wowy-import-20260928-v1 (pipeline_scripts/publish/
-// website.py, website_comps.py, website_daily.py); the indexes are its TABLE_INDEXES, so a
-// foreign key to one of their unique keys can be created and then reported.
-const REBUILT_TABLE_STUBS = [
+// The eight tables the publisher replaces with a plain DROP TABLE (REPLACED_TABLES), each
+// exactly as a swap leaves it: every column with the type the builder publishes on nba_darko's
+// codex/wowy-import-20260928-v1 (pipeline_scripts/publish/website.py, website_comps.py,
+// website_daily.py), and the keys and indexes of its TABLE_INDEXES. With every column present,
+// a migration that makes something depend on one of them applies and check 4 names the
+// dependent, instead of the replay stopping earlier at "column does not exist"; the unique
+// keys let a foreign key to them be created and reported too. player_ratings' and
+// lineup_ratings' index statements are TABLE_INDEXES' SQL verbatim. Migrations 20260710_002,
+// _004 and _005 create three of those indexes with `if not exists`, so here, as in production
+// after any swap, they find them already present.
+const REPLACED_TABLE_STUBS = [
+    `create table public.player_ratings (
+        nba_id bigint, date date, season integer, team_name text, tm_id integer, opp_id integer,
+        future_game integer, active_roster smallint, available real, poss real, dpm real,
+        o_dpm real, d_dpm real, box_dpm real, box_odpm real, box_ddpm real, on_off_dpm real,
+        on_off_odpm real, on_off_ddpm real, age double precision, career_game_num integer,
+        seconds_played integer, position text, position_num double precision, x_position text,
+        bayes_rapm_off real, bayes_rapm_def real, bayes_rapm_total real, rapm_exposure real,
+        x_minutes real, x_pace real, x_pts_100 real, x_ast_100 real, x_orb_100 real,
+        x_drb_100 real, x_stl_100 real, x_blk_100 real, x_tov_100 real, x_fga_100 real,
+        x_fg3a_100 real, x_fta_100 real, x_fg_pct real, x_fg3_pct real, x_ft_pct real,
+        tr_minutes real, tr_starter real, tr_fg3_pct real, tr_ft_pct real,
+        projected_years_remaining real, projected_years_remaining_cal real,
+        x_retirement_age double precision, x_retirement_age_cal double precision, s1 real,
+        s2 real, s3 real, s4 real, s5 real, s6 real, s7 real, s8 real, s9 real, s10 real,
+        s11 real, s12 real, s13 real, s14 real, s15 real, game_value double precision,
+        wins_pg double precision, warp double precision, sal_poolshare double precision,
+        sal_vetfloor double precision, sal_market double precision,
+        sal_market_fixed double precision, actual_salary double precision,
+        surplus_value double precision);
+    ALTER TABLE public.player_ratings ADD CONSTRAINT pk_player_ratings PRIMARY KEY (nba_id, date);
+    CREATE INDEX idx_ratings_date ON public.player_ratings (date DESC);
+    CREATE INDEX idx_ratings_season ON public.player_ratings (season);
+    CREATE INDEX idx_ratings_nba_id ON public.player_ratings (nba_id);
+    CREATE INDEX idx_ratings_active_latest ON public.player_ratings (season DESC, active_roster, nba_id, date DESC);
+    CREATE INDEX idx_ratings_leaderboard_team_opener ON public.player_ratings (season, team_name, date ASC);
+    CREATE INDEX idx_ratings_player_team_latest ON public.player_ratings (nba_id, date DESC) INCLUDE (team_name, tm_id) WHERE team_name IS NOT NULL AND tm_id > 0;`,
+    `create table public.lineup_ratings (
+        off_elo_rating double precision, off_total_poss double precision,
+        off_season_poss double precision, player_1_id bigint, player_2_id bigint, player_1 text,
+        player_2 text, def_elo_rating double precision, def_total_poss double precision,
+        def_season_poss double precision, net_elo_rating double precision,
+        min_season_poss double precision, tm_id bigint, off_synergy double precision,
+        def_synergy double precision, net_synergy double precision, off_prior double precision,
+        def_prior double precision, net_prior double precision,
+        total_off_rating double precision, total_def_rating double precision,
+        total_net_rating double precision, group_key text, lineup_size bigint, variant text,
+        expansion_mode text, net_rating_model text, player_3 text, player_3_id bigint,
+        player_4 text, player_4_id bigint, player_5 text, player_5_id bigint, computed_on date);
+    CREATE INDEX idx_lineup_variant ON public.lineup_ratings (variant, lineup_size);
+    CREATE INDEX idx_lineup_poss ON public.lineup_ratings (min_season_poss DESC);
+    CREATE INDEX idx_lineup_tm ON public.lineup_ratings (tm_id);`,
     `create table public.season_calendar (
         season integer, first_game date, earliest_team_finale date, regular_season_end date,
         last_game date);
@@ -345,7 +385,7 @@ const db = new PGlite();
 await db.waitReady;
 const [{ v }] = await rows(db, 'select version() as v');
 console.log(`${v.split(',')[0]}; ${MIGRATIONS.length} migrations from ${MIGRATIONS_DIR}`);
-for (const sql of [...ROLES, ...TABLE_STUBS, ...REBUILT_TABLE_STUBS]) await db.exec(sql);
+for (const sql of [...ROLES, ...TABLE_STUBS, ...REPLACED_TABLE_STUBS]) await db.exec(sql);
 
 console.log('\n1. Replay in filename order');
 for (const m of MIGRATIONS) {
