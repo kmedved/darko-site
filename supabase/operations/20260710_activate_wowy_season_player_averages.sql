@@ -3,10 +3,14 @@
 --
 -- Run only after migration 011 has provisioned public.wowy_season_player_averages,
 -- later WOWY schema migrations (currently through 20260711_001) are applied,
--- and `nba_darko/pipeline_scripts/wowy_rapm/scripts/publish_wowy_season_player_averages.py --publish`
--- has loaded its checked artifact. This file opens and commits its own
--- transaction; run it with a client in autocommit mode, not inside another
--- transaction.
+-- and the season-average publisher has loaded its checked artifact. Run that
+-- publisher (nba_darko/pipeline_scripts/publish/wowy/publish_wowy_season_player_averages.py)
+-- from the nba_darko repository root, as the pipeline's authorized writer:
+--
+--     python -m pipeline_scripts.publish.wowy.publish_wowy_season_player_averages --publish
+--
+-- This file opens and commits its own transaction; run it with a client in
+-- autocommit mode, not inside another transaction.
 --
 -- The guard fails closed: it compares every published `(season, nba_id)` group
 -- with public.wowy_ratings, including each simple (unweighted) player-game mean,

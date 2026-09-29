@@ -143,7 +143,7 @@ nba_darko/pipeline_scripts/wowy_rapm/scripts/export_wowy_site.py
 It should produce:
 
 ```text
-nba_darko/pipeline_scripts/wowy_rapm/reports/publication/wowy_player_game.parquet
+$NBA_DARKO_RUNTIME_ROOT/wowy_rapm/derived/publication/current/wowy_player_game.parquet
 nba_darko/pipeline_scripts/wowy_rapm/reports/publication/wowy_player_game_manifest.json
 ```
 
@@ -215,7 +215,10 @@ Enable RLS and grant anonymous/authenticated users `SELECT` only, matching the
 other public analytical tables. Do not expose insert, update, delete, or
 truncate permissions to public clients.
 
-Integrate the export into `1_historic_darko/push_website.py`. Upload into a
+Integrate the export into `1_historic_darko/push_website.py`. (As implemented, the
+model-owned `nba_darko/pipeline_scripts/publish/wowy/publish_wowy_site.py` publishes it
+instead, run from the `nba_darko` root as
+`python -m pipeline_scripts.publish.wowy.publish_wowy_site`.) Upload into a
 staging table first. After the staging checks pass, replace the contents of
 `public.wowy_ratings` inside one transaction (`TRUNCATE` followed by
 `INSERT ... SELECT` from staging) so a failure rolls back to the old public

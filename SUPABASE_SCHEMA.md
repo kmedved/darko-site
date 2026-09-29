@@ -131,9 +131,11 @@ the 1956-57 season onward, including NBA and ABA postseason games and with no ex
   recorded in its publication manifest
 - **Update strategy:** validated staging COPY followed by transactional table replacement
 - **Source:** the WOWY program's certified player-game export, published by
-  `nba_darko/pipeline_scripts/wowy_rapm/scripts/publish_wowy_site.py` from
+  `nba_darko/pipeline_scripts/publish/wowy/publish_wowy_site.py` from
   `$NBA_DARKO_RUNTIME_ROOT/wowy_rapm/derived/publication/current/wowy_player_game.parquet`
-  (the program was imported into `nba_darko` on 2026-09-28)
+  (the program was imported into `nba_darko` on 2026-09-28; its publishers live in
+  `pipeline_scripts/publish/wowy/` and run from the `nba_darko` root as
+  `python -m pipeline_scripts.publish.wowy.<module>`)
 - **RLS:** Read-only for `anon` and `authenticated` via
   `supabase/migrations/20260710_001_add_wowy_ratings.sql`.
 
@@ -186,7 +188,8 @@ observation published for that player in the selected NBA season; they are not a
 snapshot and are not exposure- or minutes-weighted.
 
 This is an intentional two-phase publication: apply 011 and the subsequent WOWY schema migrations,
-run the checked model publisher, deploy the context-aware `/wowy` UI, then explicitly run the manual operation
+run the checked model publisher (`python -m pipeline_scripts.publish.wowy.publish_wowy_season_player_averages --publish`
+from the `nba_darko` root), deploy the context-aware `/wowy` UI, then explicitly run the manual operation
 `supabase/operations/20260710_activate_wowy_season_player_averages.sql`. That operation owns its
 own transaction. The UI reads `snapshot_context`, so it truthfully presents opening-game rows
 until the cutover and averages afterward. The manual operation fails closed unless the average table covers every
@@ -223,9 +226,11 @@ Daily/Final Cut and season-average/opening constraints to 1957. Season-Adjusted
 and box context stay at 1978. It also embeds historical player and league
 identity in each publication-owned table, permits nonzero negative IDs on WOWY
 surfaces only, and keeps the incumbent 1978 publication valid before the atomic
-data replacement. The model publisher updates the private season-average
-activation marker and publication coverage metadata atomically with the public
-tables, so their recorded range and counts cannot lag the data.
+data replacement. The model publisher
+(`nba_darko/pipeline_scripts/publish/wowy/publish_unified_1957.py`) updates the
+private season-average activation marker and publication coverage metadata
+atomically with the public tables, so their recorded range and counts cannot lag
+the data.
 
 ### All-time WOWY season leaderboard
 
@@ -557,14 +562,14 @@ Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at
 
 **Connection:** Uses `SUPABASE_PG_DSN` env var, falling back to `fixed_data/supabase_secret.json`.
 
-The model-owned `nba_darko/pipeline_scripts/wowy_rapm/scripts/publish_wowy_site.py` independently validates the certified
+The model-owned `nba_darko/pipeline_scripts/publish/wowy/publish_wowy_site.py` independently validates the certified
 WOWY manifest, COPY-loads a temporary staging table, verifies keys/counts/date coverage, and replaces
 `wowy_ratings` plus `wowy_publication` in one transaction. It never uses the generic drop/recreate
 uploader, so indexes, grants, constraints, and RLS survive publication.
 
 `nba_darko/pipeline_scripts/wowy_rapm/scripts/export_wowy_season_opening_snapshots.py` builds the matching all-era
 opening-game artifact from the certified player-game publication plus BBRef historical team data.
-`scripts/publish_wowy_season_opening_snapshots.py` validates season coverage, team context, keys,
+`nba_darko/pipeline_scripts/publish/wowy/publish_wowy_season_opening_snapshots.py` validates season coverage, team context, keys,
 and RAPM decomposition before atomically replacing `wowy_season_opening_snapshots`.
 
 ---
