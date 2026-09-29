@@ -366,7 +366,7 @@ export const ASK_PAGES = Object.freeze([
 	{ re: /^(wowy|wowy rapm|rapm)$/, label: 'WOWY RAPM', href: '/wowy' },
 	{ re: /^(standings|playoff odds|odds|sims?|simulations?)$/, label: 'Standings', href: '/standings' },
 	{ re: /^(teams?|team ratings|power (order|rankings?)|offense (vs|against) defense)$/, label: 'Teams', href: '/teams' },
-	{ re: /^(trajectories|trajectory|careers?|career arcs?)$/, label: 'Trajectories', href: '/trajectories' },
+	{ re: /^(trajectories|trajectory|careers?|career arcs?)$/, label: 'Career Trajectories', href: '/trajectories' },
 	{ re: /^(longevity|retirement|career length)$/, label: 'Longevity', href: '/longevity' },
 	{ re: /^(lineups?|five-man|5-man)$/, label: 'Lineups', href: '/lineups' },
 	{ re: /^(scatter|scatterplot|scatter plot)$/, label: 'Scatterplot', href: '/scatterplot' },

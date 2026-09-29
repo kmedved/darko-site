@@ -912,13 +912,15 @@
     </div>
 </div>
 
+<!-- The headers screen readers use. They carry the columns' classes, so a column hidden on a phone
+     (Team) leaves this row too and the headers still match the cells. -->
 {#snippet standardSemanticHeaderRow()}
     <tr class="table-semantic-row sr-only">
         {#each playerColumns as column (column.key)}
             {#if column.sortable === false}
-                <th scope="col">{column.label}</th>
+                <th scope="col" class={column.alignClass}>{column.label}</th>
             {:else}
-                <th scope="col" aria-sort={getSortAriaValue(activeSortColumn, sortDirection, column.key)}>{column.label}</th>
+                <th scope="col" class={column.alignClass} aria-sort={getSortAriaValue(activeSortColumn, sortDirection, column.key)}>{column.label}</th>
             {/if}
         {/each}
     </tr>

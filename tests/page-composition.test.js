@@ -86,6 +86,36 @@ test("a phone's leaderboard shows the DPM beside the name, and the name stays wh
 	assert.match(await read('src/app.css'), /\[data-overflow-left\]::before \{\s*left: var\(--pinned-width, 0px\);/);
 });
 
+test('narrow-screen layouts leave Shiny, the percentile labels and the screen-reader headers intact', async () => {
+	const [shinyCss, percentiles, board] = await Promise.all([
+		read('src/shiny-view.css'),
+		read('src/lib/components/TalentPercentilesChart.svelte'),
+		read('src/routes/+page.svelte')
+	]);
+	// Shiny's sidebar rating resets the grid areas the Modern header uses on a phone.
+	assert.match(shinyCss, /\.player-profile-page \.profile-score \{\s*grid-template-columns: minmax\(0, 1fr\) auto;\s*grid-template-areas: none;/);
+	assert.match(shinyCss, /\.player-profile-page :is\(\.profile-score-label, \.profile-score-value\) \{\s*grid-area: auto;/);
+	assert.match(shinyCss, /\.player-profile-page \.profile-score-split \{\s*grid-area: auto;\s*grid-column: 1 \/ -1;/);
+	// The percentile chart leaves room for the subtitle over the first row's label.
+	assert.match(percentiles, /const MARGIN_TOP = 68;/);
+	assert.match(percentiles, /: MARGIN_TOP \+ selectedMetrics\.length \* ROW_HEIGHT \+ 65/);
+	assert.match(percentiles, /const margin = \{ top: MARGIN_TOP,/);
+	// The screen-reader header row carries each column's class, so a phone drops Team from it too.
+	const semantic = board.slice(board.indexOf('{#snippet standardSemanticHeaderRow()}'), board.indexOf('{#snippet standardHeaderRows()}'));
+	assert.equal((semantic.match(/<th scope="col" class=\{column\.alignClass\}/g) ?? []).length, 2);
+});
+
+test('the top bar keeps every page link: Ask DARKO and the Time Machine turn to icons where room is short', async () => {
+	const [layout, shinyCss] = await Promise.all([read('src/routes/+layout.svelte'), read('src/shiny-view.css')]);
+	assert.match(layout, /@media \(max-width: 1440px\) \{\s*\.ask-nav-toggle,\s*\.tm-nav-toggle:not\(\.rewound\) \{\s*padding: 0 7px;/);
+	assert.match(layout, /\.ask-nav-label,\s*\.ask-nav-kbd,\s*\.tm-nav-toggle:not\(\.rewound\) \.tm-nav-label \{\s*display: none;/);
+	// Icon-only, the button still has a name.
+	assert.match(layout, /class="ask-nav-toggle"\s*aria-label="Ask DARKO"/);
+	// Shiny's larger type and legacy logo need the icons sooner, and the lockup steps aside.
+	assert.match(shinyCss, /@media \(max-width: 1600px\) \{\s*:root\[data-view='shiny'\] \.ask-nav-toggle,/);
+	assert.match(shinyCss, /@media \(max-width: 1320px\) \{\s*:root\[data-view='shiny'\] \.legacy-logo-lockup \{\s*display: none;/);
+});
+
 test('The Daily is off the menus between seasons and back on the morning of October 22', async () => {
 	const [{ DAILY_RETURNS, dailyListed }, { askPages, ASK_PAGES }] = await Promise.all([
 		import('../src/lib/utils/daily.js'),

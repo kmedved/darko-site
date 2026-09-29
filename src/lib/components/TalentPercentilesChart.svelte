@@ -26,10 +26,13 @@
 
 	const ROW_HEIGHT = 50;
 	const BAR_HEIGHT = 18;
+	// Room for the title and subtitle over the first row's label, which on a narrow chart sits
+	// under the centred subtitle rather than beside it.
+	const MARGIN_TOP = 68;
 	const chartHeight = $derived(
 		displayMode.view === 'shiny'
 			? Math.min(460, 320 + Math.max(0, selectedMetrics.length - 5) * 18)
-			: 55 + selectedMetrics.length * ROW_HEIGHT + 65
+			: MARGIN_TOP + selectedMetrics.length * ROW_HEIGHT + 65
 	);
 
 	const ZONE_DEFS = [
@@ -98,7 +101,7 @@
 
 		const clipId = 'gauge-clip-' + Math.random().toString(36).slice(2, 8);
 
-		const margin = { top: 55, right: 20, bottom: 55, left: 20 };
+		const margin = { top: MARGIN_TOP, right: 20, bottom: 55, left: 20 };
 		const w = width - margin.left - margin.right;
 
 		const g = svg

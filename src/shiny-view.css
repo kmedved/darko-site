@@ -1375,8 +1375,11 @@
     font-size: 12px;
 }
 
+/* The Shiny sidebar's own rating layout: label and number on a line, the split under them. It
+   resets the grid areas the Modern header uses on narrow screens. */
 :root[data-view='shiny'] .player-profile-page .profile-score {
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: none;
     align-items: baseline;
     justify-items: stretch;
     gap: 8px;
@@ -1385,6 +1388,10 @@
     border-top: 1px solid var(--border-subtle);
     font-size: 12px;
     text-align: left;
+}
+
+:root[data-view='shiny'] .player-profile-page :is(.profile-score-label, .profile-score-value) {
+    grid-area: auto;
 }
 
 :root[data-view='shiny'] .player-profile-page .profile-score-value {
@@ -1396,6 +1403,7 @@
 }
 
 :root[data-view='shiny'] .player-profile-page .profile-score-split {
+    grid-area: auto;
     grid-column: 1 / -1;
     justify-items: stretch;
     gap: 8px;
@@ -1524,6 +1532,26 @@
 
 :root[data-view='shiny'] .team-detail-page .stat-box:last-child {
     border-right: 0;
+}
+
+/* Shiny's 14px links and its legacy logo take more room than the modern bar: Ask DARKO and the
+   Time Machine show only their icons below 1600px (a rewound date stays), and the legacy lockup
+   steps aside below 1320px, so every page link keeps its place until the menu button takes over. */
+@media (max-width: 1600px) {
+    :root[data-view='shiny'] .ask-nav-toggle,
+    :root[data-view='shiny'] .tm-nav-toggle:not(.rewound) {
+        padding: 0 7px;
+    }
+
+    :root[data-view='shiny'] :is(.ask-nav-label, .ask-nav-kbd, .tm-nav-toggle:not(.rewound) .tm-nav-label) {
+        display: none;
+    }
+}
+
+@media (max-width: 1320px) {
+    :root[data-view='shiny'] .legacy-logo-lockup {
+        display: none;
+    }
 }
 
 @media (max-width: 1180px) {

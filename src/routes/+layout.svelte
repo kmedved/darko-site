@@ -32,10 +32,12 @@
 	const THEME_KEY = 'darko-theme';
 	const THEMES = ['black', 'dark', 'light', 'white'];
 	const THEME_ICONS = ['⚫', '🌙', '☀️', '⚪'];
-	// Players, teams and the stats pages, then the two labs; the specialist views sit under More.
+	// Players (with Career Trajectories, DARKO's signature view), teams and the stats pages, then
+	// the two labs; the specialist views sit under More.
 	const PRIMARY_NAV_ITEMS = [
 		{ href: '/daily', label: 'The Daily', match: (path) => path === '/daily' },
 		{ href: '/', label: 'Active Leaderboard', match: (path) => path === '/' },
+		{ href: '/trajectories', label: 'Career Trajectories', match: (path) => path === '/trajectories' },
 		{ href: '/teams', label: 'Teams', match: (path) => path === '/teams' || path.startsWith('/team/') },
 		{ href: '/standings', label: 'Standings', match: (path) => path.startsWith('/standings') },
 		{ href: '/wowy', label: 'WOWY RAPM', match: (path) => path.startsWith('/wowy') },
@@ -45,7 +47,6 @@
 	];
 	const MORE_NAV_ITEMS = [
 		{ href: '/rewind', label: 'Rewind', match: (path) => path === '/rewind' },
-		{ href: '/trajectories', label: 'Trajectories', match: (path) => path === '/trajectories' },
 		{ href: '/longevity', label: 'Longevity', match: (path) => path.startsWith('/longevity') },
 		{ href: '/scatterplot', label: 'Scatterplot', match: (path) => path === '/scatterplot' },
 		{ href: '/compare', label: 'Compare', match: (path) => path === '/compare' },
@@ -487,6 +488,8 @@
 		<button
 			type="button"
 			class="ask-nav-toggle"
+			aria-label="Ask DARKO"
+			title="Ask DARKO"
 			aria-haspopup="dialog"
 			aria-keyshortcuts="Meta+K Control+K /"
 			onclick={() => (askOpen = true)}
@@ -679,6 +682,21 @@
 		border-color: #cccccc;
 		color: #333333;
 		font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	}
+
+	/* Short of a wide window, Ask DARKO and the Time Machine show just their icons, which leaves
+	   the page links their room; a rewound Time Machine keeps its date on show. */
+	@media (max-width: 1440px) {
+		.ask-nav-toggle,
+		.tm-nav-toggle:not(.rewound) {
+			padding: 0 7px;
+		}
+
+		.ask-nav-label,
+		.ask-nav-kbd,
+		.tm-nav-toggle:not(.rewound) .tm-nav-label {
+			display: none;
+		}
 	}
 
 	@media (max-width: 720px) {
