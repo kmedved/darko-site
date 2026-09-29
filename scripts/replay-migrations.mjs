@@ -25,8 +25,12 @@
 //      and service_role yes, PUBLIC no.
 //   6. Idempotence: re-applying 20260929_001 on its own succeeds and leaves all of its
 //      functions with the same EXECUTE rule (a function a later migration dropped must not
-//      come back executable by PUBLIC); re-applying the later migrations that touch those
-//      functions restores a function catalog identical to the post-replay one.
+//      come back executable by PUBLIC); re-applying the later migrations that re-create,
+//      drop, alter, grant or revoke on those functions restores, for every function
+//      20260929_001 defines or a later migration drops, the post-replay catalog entry in
+//      each of CATALOG_FIELDS: signature, arguments with defaults, return type, language,
+//      body, settings (proconfig, e.g. search_path), security definer, volatility, strict,
+//      parallel safety, leakproof, ACL and owner.
 //   7. get_wowy_leaderboard_seasons() lists opening-snapshot seasons before activation and
 //      season-average seasons once the operation's marker row exists, including as anon.
 //
@@ -103,6 +107,24 @@ const DEPENDENTS_SQL = `
     where c.relnamespace = 'public'::regnamespace and c.relname = any($1)
     order by 1, 2`;
 
+// Every field the idempotence check compares for each tracked function:
+// [column alias, catalog expression, label].
+const CATALOG_FIELDS = [
+    ['signature', 'p.oid::regprocedure::text', 'signature'],
+    ['arguments', 'pg_get_function_arguments(p.oid)', 'arguments with defaults'],
+    ['result', 'pg_get_function_result(p.oid)', 'return type'],
+    ['lanname', 'l.lanname', 'language'],
+    ['prosrc', 'p.prosrc', 'body'],
+    ['proconfig', 'p.proconfig::text', 'settings (proconfig, e.g. search_path)'],
+    ['prosecdef', 'p.prosecdef', 'security definer'],
+    ['provolatile', 'p.provolatile', 'volatility'],
+    ['proisstrict', 'p.proisstrict', 'strict'],
+    ['proparallel', 'p.proparallel', 'parallel safety'],
+    ['proleakproof', 'p.proleakproof', 'leakproof'],
+    ['acl', 'p.proacl::text', 'ACL'],
+    ['owner', 'pg_get_userbyid(p.proowner)', 'owner']
+];
+
 // ---------------------------------------------------------------------------------------
 // What 20260929_001 defines, and what later migrations do to those names.
 if (!MIGRATIONS.some((m) => m.name === REASSERT)) {
@@ -116,7 +138,7 @@ const REASSERTED = [
 ].map(([, fn, lang, body]) => ({ fn, lang, body }));
 const LATER = MIGRATIONS.filter((m) => m.name > REASSERT);
 const LATER_DROPS = LATER.flatMap((m) =>
-    [...m.sql.matchAll(/drop function if exists (public\.(\w+)\([^)]*\))/g)].map(
+    [...m.sql.matchAll(/drop function if exists (public\.(\w+)\([^)]*\))/gi)].map(
         ([, signature, fn]) => ({ signature, fn })
     )
 );
@@ -124,14 +146,18 @@ const LATER_DROPS = LATER.flatMap((m) =>
 const lastLaterEvent = new Map();
 for (const m of LATER) {
     for (const [, kind, fn] of m.sql.matchAll(
-        /(create or replace function|drop function if exists) public\.(\w+)\(/g
+        /(create or replace function|drop function if exists) public\.(\w+)\(/gi
     )) {
-        lastLaterEvent.set(fn, kind.startsWith('drop') ? 'drop' : 'create');
+        lastLaterEvent.set(fn, kind.toLowerCase().startsWith('drop') ? 'drop' : 'create');
     }
 }
+// Later migrations that re-create, drop, alter, grant or revoke on a reasserted function.
 const LATER_TOUCHING = LATER.filter((m) =>
-    [...m.sql.matchAll(/(?:create or replace function|drop function if exists) public\.(\w+)\(/g)]
-        .some(([, fn]) => REASSERTED.some((d) => d.fn === fn))
+    [
+        ...m.sql.matchAll(
+            /(?:create or replace function|drop function if exists|alter function|on function) public\.(\w+)\(/gi
+        )
+    ].some(([, fn]) => REASSERTED.some((d) => d.fn === fn))
 );
 const TRACKED = [...new Set([...REASSERTED.map((d) => d.fn), ...LATER_DROPS.map((d) => d.fn)])];
 
@@ -162,14 +188,33 @@ async function execOrRollback(db, sql) {
 async function functionRows(db) {
     return rows(
         db,
-        `select p.proname, p.oid::regprocedure::text as signature, l.lanname, p.prosrc,
-                p.proacl::text as acl, p.prosecdef, p.provolatile,
-                pg_get_userbyid(p.proowner) as owner
+        `select p.proname, ${CATALOG_FIELDS.map(([alias, expr]) => `${expr} as ${alias}`).join(', ')}
          from pg_proc p join pg_language l on l.oid = p.prolang
          where p.pronamespace = 'public'::regnamespace and p.proname = any($1)
          order by p.proname, signature`,
         [TRACKED]
     );
+}
+
+// Each difference between two functionRows() snapshots, as "signature: label a -> b".
+function catalogDifferences(before, after) {
+    const bySignature = (list) => new Map(list.map((r) => [r.signature, r]));
+    const a = bySignature(before);
+    const b = bySignature(after);
+    const out = [];
+    for (const sig of new Set([...a.keys(), ...b.keys()])) {
+        if (!a.has(sig) || !b.has(sig)) {
+            out.push(`${sig}: ${a.has(sig) ? 'gone' : 'appeared'}`);
+            continue;
+        }
+        for (const [alias, , label] of CATALOG_FIELDS) {
+            const [x, y] = [a.get(sig)[alias], b.get(sig)[alias]];
+            if (JSON.stringify(x) !== JSON.stringify(y)) {
+                out.push(`${sig}: ${label} ${JSON.stringify(x)} -> ${JSON.stringify(y)}`);
+            }
+        }
+    }
+    return out;
 }
 
 async function checkReplacedTableDependents(db) {
@@ -302,7 +347,6 @@ console.log('\n5. EXECUTE after the full replay (anon, authenticated, service_ro
 await checkGrants(db);
 
 console.log('\n6. Idempotence');
-const before = JSON.stringify(afterReplay);
 let e = await execOrRollback(db, sqlOf(REASSERT));
 check(!e, `${R} applied again on its own${e ? `: ${fmtErr(e)}` : ''}`);
 await checkDefinitions(db);
@@ -311,10 +355,12 @@ for (const m of LATER_TOUCHING) {
     e = await execOrRollback(db, m.sql);
     check(!e, `${m.name} applied again${e ? `: ${fmtErr(e)}` : ''}`);
 }
+const differences = catalogDifferences(afterReplay, await functionRows(db));
 check(
-    JSON.stringify(await functionRows(db)) === before,
-    `function catalog (signature, language, body, ACL, owner) identical to the post-replay state after re-applying ${[R, ...LATER_TOUCHING.map((m) => m.name.slice(0, 12))].join(' + ')}`
+    differences.length === 0,
+    `after re-applying ${[R, ...LATER_TOUCHING.map((m) => m.name.slice(0, 12))].join(' + ')}, the ${afterReplay.length} functions 20260929_001 defines or later migrations drop match the post-replay catalog in: ${CATALOG_FIELDS.map(([, , label]) => label).join(', ')}`
 );
+for (const d of differences) console.log(`    differs: ${d}`);
 
 console.log('\n7. Activation-aware get_wowy_leaderboard_seasons()');
 await db.exec(`
