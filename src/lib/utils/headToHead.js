@@ -7,6 +7,7 @@
 
 import { formatFixed, formatMillions, formatPercent, formatSignedMetric, printedNumber } from './csvPresets.js';
 import { formatAsOfDate } from './timeMachine.js';
+import { ratingDate } from './frozenRatings.js';
 
 // Formats print with a plain minus and a tenth's precision, which printedNumber reads back.
 
@@ -79,7 +80,8 @@ const DAY_MS = 86_400_000;
  * stand at, since Compare shows each player's latest available ratings; null for anyone current.
  */
 export function snapshotNote(player, now = new Date()) {
-	const date = typeof player?.date === 'string' ? player.date.slice(0, 10) : '';
+	const stamp = ratingDate(player);
+	const date = typeof stamp === 'string' ? stamp.slice(0, 10) : '';
 	const time = Date.parse(`${date}T00:00:00Z`);
 	if (!Number.isFinite(time) || now.getTime() - time < 365 * DAY_MS) return null;
 	return `Ratings as of ${formatAsOfDate(date, { short: true })}`;

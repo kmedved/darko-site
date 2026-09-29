@@ -29,7 +29,7 @@
 	import { normalizeComps } from '$lib/utils/comps.js';
 	import { AS_OF_PARAM, formatAsOfDate, parseAsOfDate } from '$lib/utils/timeMachine.js';
 	import { isRapmMetric, staleRapmDate } from '$lib/utils/latestRapm.js';
-	import { seasonRows } from '$lib/utils/playerSeasons.js';
+	import { seasonRows, seasonUnderWay } from '$lib/utils/playerSeasons.js';
 	import { projectedBoxScore } from '$lib/utils/boxScore.js';
 	import { seasonOfRow } from '$lib/utils/seismograph.js';
 	import {
@@ -124,11 +124,11 @@
 	// With the Time Machine set, the sidebar rating and the Seismograph follow that date.
 	const asOfDate = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
 	// Season by season: in the Time Machine only seasons over by its date; in season, a current
-	// player's current season (a next-game row with a real team) is marked "so far". A retired
-	// player's last row also has a real team, which alone would mark their final season.
+	// player's current season (a recent next-game row with a real team) is marked "so far". A
+	// retired player's last row also has a real team, which alone would mark their final season.
 	const inProgressSeason = $derived.by(() => {
 		const latest = historyRows.at(-1);
-		return latest && Number(latest.tm_id) > 0 && !asOfDate && isCurrentPlayer ? Number(latest.season) : null;
+		return seasonUnderWay(latest) && !asOfDate && isCurrentPlayer ? Number(latest.season) : null;
 	});
 	// The player's last game played (not the next game's forecast row).
 	const lastPlayed = $derived(lastPlayedDate(historyRows));
@@ -868,7 +868,7 @@
 							<div>
 								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Career</p>
 								<h2 id="seasons-title">Season by season</h2>
-								<p class="seismograph-lede">DPM at the last game day of each season since 1996-97.</p>
+								<p class="seismograph-lede">DPM going into each season's last game, since 1996-97.</p>
 							</div>
 						</header>
 						<SeasonBySeason rows={seasonsTable} playerName={playerInfo.player_name} />

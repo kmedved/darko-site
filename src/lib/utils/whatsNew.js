@@ -141,7 +141,7 @@ export const WHATS_NEW = Object.freeze([
 		key: 'comps',
 		title: 'Comps & futures',
 		launched: '2026-09-28T11:44:44Z',
-		text: "The ten player-seasons since 1996-97 most like a player's latest, at the same age, and a fan chart of what the 25 closest did over the next five seasons, including how many were still in the league.",
+		text: "The ten player-seasons since 1996-97 most like a player's latest, at the same age, and a fan chart of what the 25 closest did over the next five seasons, including how many still played 10 or more games.",
 		cta: "See Wembanyama's comps",
 		href: '/player/1641705#comps'
 	},

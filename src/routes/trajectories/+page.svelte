@@ -61,6 +61,9 @@
 	const starterPlayerById = $derived(
 		new Map([...STARTER_PLAYERS, ...newsPlayers].map((player) => [player.nbaId, player]))
 	);
+	const moreStarters = $derived(
+		STARTER_PLAYERS.filter((starter) => !selectedPlayers.some((player) => player.nba_id === starter.nbaId))
+	);
 	// Why each player on the chart is in the news, in the chart's order and colors.
 	const newsNotes = $derived(
 		selectedPlayers.flatMap((player, index) => {
@@ -212,7 +215,7 @@
 					} else if (timeScale === 'age') {
 						val = Number.parseFloat(row.age);
 					} else {
-						val = Number.parseFloat(row.career_game_num);
+						val = gameX(row);
 					}
 					if (val == null || !Number.isFinite(val)) return false;
 					if (rangeFilterMin != null && val < rangeFilterMin) return false;
@@ -222,6 +225,11 @@
 			}
 			if (timeScale === 'seasons') {
 				rows = isWowyMetric ? computeSeasonXFromEndYear(rows) : computeSeasonX(rows);
+			} else if (timeScale === 'games') {
+				rows = rows.flatMap((row) => {
+					const x = gameX(row);
+					return x === null ? [] : [{ ...row, _gameX: x }];
+				});
 			}
 			return { ...p, color: getSeriesColor(index, displayMode.view), rows };
 		})
@@ -251,6 +259,14 @@
 		return Number.isFinite(value) ? value : null;
 	}
 
+	// Games are games played: DARKO's rows carry game_num (null on a day the player sat out, a
+	// forecast or an offseason row; career_game_num counts those too), and every WOWY row is a
+	// game played, its career_game_num the count.
+	function gameX(row) {
+		const value = Number.parseFloat(isWowyMetric ? row?.career_game_num : row?.game_num);
+		return Number.isFinite(value) ? value : null;
+	}
+
 	function xFromRow(row) {
 		if (timeScale === 'seasons') {
 			const value = Number.parseFloat(row?._seasonX);
@@ -260,8 +276,7 @@
 			const value = Number.parseFloat(row?.age);
 			return Number.isFinite(value) ? value : null;
 		}
-		const value = Number.parseFloat(row?.career_game_num);
-		return Number.isFinite(value) ? value : null;
+		return gameX(row);
 	}
 
 	function buildMetricPoints(players) {
@@ -277,6 +292,7 @@
 		);
 	}
 
+	// Ten games played in a row, whatever the chart's scale.
 	function buildRollingSummaries(players) {
 		const summaries = [];
 
@@ -284,12 +300,12 @@
 			const points = (player.rows || [])
 				.map((row) => {
 					const value = valueFromRow(row);
-					const x = xFromRow(row);
-					if (value == null || x == null) return null;
-					return { value, x };
+					const game = gameX(row);
+					if (value == null || game == null) return null;
+					return { value, game };
 				})
 				.filter(Boolean)
-				.sort((a, b) => a.x - b.x);
+				.sort((a, b) => a.game - b.game);
 
 			if (points.length < ROLLING_WINDOW_SIZE) continue;
 
@@ -328,6 +344,7 @@
 		const playerStats = players
 			.map((player) => {
 				const values = (player.rows || [])
+					.filter((row) => gameX(row) != null)
 					.map(valueFromRow)
 					.filter((value) => value != null);
 				const deviation = standardDeviation(values);
@@ -339,17 +356,19 @@
 	}
 
 	function buildTrajectoryStats() {
-		const peakPoint = bestBy(metricPoints, (point) => point.value);
-		const lowPoint = worstBy(metricPoints, (point) => point.value);
+		// Over games played: in Age and Seasons the chart also draws the days between.
+		const gamePoints = metricPoints.filter((point) => gameX(point.row) != null);
+		const peakPoint = bestBy(gamePoints, (point) => point.value);
+		const lowPoint = worstBy(gamePoints, (point) => point.value);
 		const bestRolling = bestBy(rollingSummaries, (summary) => summary.value);
 		const worstRolling = worstBy(rollingSummaries, (summary) => summary.value);
 		const consistent = mostConsistentPlayer(chartData);
 
 		return [
 			{
-				label: 'Games Tracked',
-				value: formatInteger(metricPoints.length),
-				detail: 'Total'
+				label: 'Games Played',
+				value: formatInteger(gamePoints.length),
+				detail: selectedPlayers.length > 1 ? 'All players' : isWowyMetric ? 'In the WOWY data' : 'Since 1996-97'
 			},
 			{
 				label: `Peak ${selectedMetricLabel}`,
@@ -781,7 +800,6 @@
 							<span class="player-chip" style:--player-color={getSeriesColor(index, displayMode.view)}>
 								<span>
 									<strong>{p.player_name}</strong>
-									<small>{p.nba_id}</small>
 								</span>
 								<button
 									type="button"
@@ -798,19 +816,30 @@
 						onSelect={addPlayer}
 						exclude={excludeIds}
 					/>
-					<div class="trajectory-starter-grid" aria-label="Starter players">
-						{#each STARTER_PLAYERS as starter (starter.nbaId)}
-							<button
-								type="button"
-								class="trajectory-starter"
-								onclick={() => loadPlayerById(starter.nbaId)}
-								disabled={loading || selectedPlayers.some((p) => p.nba_id === starter.nbaId)}
-							>
-								<strong>{starter.label}</strong>
-								<span>{starter.detail}</span>
-							</button>
-						{/each}
-					</div>
+					{#if selectedPlayers.length === 0}
+						<div class="trajectory-starter-grid" aria-label="Starter players">
+							{#each STARTER_PLAYERS as starter (starter.nbaId)}
+								<button
+									type="button"
+									class="trajectory-starter"
+									onclick={() => loadPlayerById(starter.nbaId)}
+									disabled={loading}
+								>
+									<strong>{starter.label}</strong>
+									<span>{starter.detail}</span>
+								</button>
+							{/each}
+						</div>
+					{:else if moreStarters.length > 0}
+						<div class="trajectory-starter-row" aria-label="Suggested players">
+							<span>Add</span>
+							{#each moreStarters as starter (starter.nbaId)}
+								<button type="button" onclick={() => loadPlayerById(starter.nbaId)} disabled={loading}>
+									{starter.label}
+								</button>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			</aside>
 
@@ -1088,12 +1117,6 @@
 		font-weight: 850;
 	}
 
-	.player-chip small {
-		font-family: var(--font-mono);
-		font-size: 11px;
-		color: color-mix(in srgb, var(--text) 74%, transparent);
-	}
-
 	.chip-remove {
 		width: 22px;
 		height: 22px;
@@ -1239,6 +1262,43 @@
 		color: var(--text-secondary);
 		font-size: 11px;
 		line-height: 1.2;
+	}
+
+	.trajectory-starter-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.trajectory-starter-row > span {
+		color: var(--text-secondary);
+		font-size: 12px;
+		font-weight: 700;
+	}
+
+	.trajectory-starter-row button {
+		min-height: 26px;
+		padding: 3px 10px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--bg-surface);
+		color: var(--text);
+		cursor: pointer;
+		font-family: var(--font-sans);
+		font-size: 12px;
+		font-weight: 700;
+		transition: border-color 0.15s, background-color 0.15s;
+	}
+
+	.trajectory-starter-row button:hover:not(:disabled) {
+		border-color: var(--accent);
+		background: var(--bg-elevated);
+	}
+
+	.trajectory-starter-row button:disabled {
+		cursor: not-allowed;
+		opacity: 0.55;
 	}
 
 	.trajectory-empty-actions {

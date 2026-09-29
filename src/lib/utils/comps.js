@@ -48,8 +48,9 @@ export function weightedPercentiles(values, weights, probabilities = FAN_PERCENT
 
 /**
  * One entry per season ahead: the comps' weighted 10th, 25th, 50th, 75th and 90th percentile
- * DPM (null when fewer than MIN_FAN_COMPS played that season), the weighted share still in the
- * league and how many comps had a rating.
+ * DPM (null when fewer than MIN_FAN_COMPS played that season), the weighted share with a season
+ * of 10+ games (the only seasons the comps carry a DPM for: a short or injured season counts as
+ * one without, like a season out of the league) and how many comps had a rating.
  */
 export function compsFan(comps) {
 	const rows = comps ?? [];

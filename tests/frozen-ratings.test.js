@@ -3,7 +3,10 @@ import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '../src/lib/utils/frozenRatings.js';
+import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow, ratingDate } from '../src/lib/utils/frozenRatings.js';
+import { csvText } from '../src/lib/utils/csv.js';
+import { compareCsvColumns } from '../src/lib/utils/csvPresets.js';
+import { snapshotNote } from '../src/lib/utils/headToHead.js';
 
 const read = (file) => fs.readFile(path.resolve(process.cwd(), file), 'utf8');
 
@@ -47,4 +50,28 @@ test('the snapshot, histories and season lines all freeze at the last game', asy
 	assert.match(loader, /return freezeHistory\(\(data \|\| \[\]\)\.slice\(\)\.reverse\(\)\)\s*\.slice\(-limit\)/);
 	// The leaderboard's season lines stop at the last game day.
 	assert.match(loader, /if \(isOffseasonRow\(row\)\) continue;/);
+});
+
+test('a frozen rating keeps its own date, which the Compare CSV prints', async () => {
+	const frozen = freezeRow(offseason, lastGame);
+	assert.equal(frozen.rating_date, '2026-04-30');
+	assert.equal(frozen.date, '2026-07-26', 'the projections keep their date');
+	assert.equal(ratingDate(frozen), '2026-04-30');
+	assert.equal(ratingDate(lastGame), '2026-04-30', 'a row as it is stands at its own date');
+	assert.equal(ratingDate(null), null);
+	assert.equal(freezeHistory([lastGame, offseason]).at(-1).rating_date, '2026-04-30');
+
+	// The export the review ran: Jokic's +7.4 is dated April 30, not the offseason row's July 26.
+	const [header, line] = csvText({ rows: [{ player_name: 'Nikola Jokic', ...frozen }], columns: compareCsvColumns })
+		.trim()
+		.split(/\r?\n/);
+	const at = header.split(',').indexOf('Ratings as of');
+	assert.equal(line.split(',')[at], '2026-04-30');
+	assert.equal(line.split(',')[header.split(',').indexOf('DPM')], '+7.4');
+	// A retired player's note reads the same date.
+	assert.match(snapshotNote({ date: '2030-07-26', rating_date: '2026-04-30' }, new Date('2030-08-01T00:00:00Z')), /Apr 30, 2026/);
+
+	// Today's snapshot fetches each last game day with its date.
+	const loader = await read('src/lib/server/supabase.js');
+	assert.match(loader, /\.select\(\['nba_id', 'date', \.\.\.FROZEN_RATING_FIELDS\]\.join\(', '\)\)/);
 });

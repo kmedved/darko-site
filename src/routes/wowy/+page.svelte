@@ -21,6 +21,7 @@
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
+    import { matchName } from '$lib/utils/nameSearch.js';
 
     let { data } = $props();
 
@@ -333,11 +334,15 @@
             )
             : heightScopedPlayers
     );
+    // A team, league, position or season as typed; a name as every player search matches it
+    // (nameSearch.js: accents, word order, initials), and a name a letter or two off only when
+    // nothing else matches. All-time pages come from the server, which searches the same way.
     const filteredPlayers = $derived.by(() => {
-        const query = searchQuery.trim().toLocaleLowerCase();
+        const typed = searchQuery.trim();
+        const query = typed.toLocaleLowerCase();
         if (!query) return possessionScopedPlayers;
 
-        return possessionScopedPlayers.filter((player) => {
+        const strict = possessionScopedPlayers.filter((player) => {
             const searchable = [
                 player?.player_name,
                 player?.team_name,
@@ -350,8 +355,10 @@
                 playerFilterPosition(player),
                 player?.season
             ].join(' ').toLocaleLowerCase();
-            return searchable.includes(query);
+            return searchable.includes(query) || matchName(typed, player?.player_name, { typos: false }) !== null;
         });
+        if (strict.length > 0) return strict;
+        return possessionScopedPlayers.filter((player) => matchName(typed, player?.player_name) !== null);
     });
     const sortedPlayers = $derived.by(() =>
         getSortedRows(filteredPlayers, {

@@ -51,6 +51,8 @@
 
 	const isCategories = $derived(Boolean(FANTASY_PRESETS[preset]?.categories));
 	const valueLabel = $derived(isCategories ? 'Total z' : 'FP/G');
+	// Pinned at the right on phones, the score column's width puts the scroll fade beside it.
+	let valueColumnWidth = $state(0);
 	const board = $derived.by(() =>
 		buildFantasyBoard(data.players, { preset, customWeights, minMinutes: MIN_PROJECTED_MINUTES })
 	);
@@ -340,7 +342,7 @@
 			</p>
 		{/if}
 
-		<div class="table-scroll-host" use:scrollEdges={'.table-wrapper'}>
+		<div class="table-scroll-host" style:--value-col-width="{valueColumnWidth}px" use:scrollEdges={'.table-wrapper'}>
 			<div class="table-wrapper" data-shiny-table>
 				<table>
 					<thead>
@@ -376,6 +378,7 @@
 								scope="col"
 								class="align-right value-col"
 								class:active={sortColumn === 'value'}
+								bind:clientWidth={valueColumnWidth}
 								aria-sort={getSortAriaValue(sortColumn, sortDirection, 'value')}
 							>
 								<button type="button" class="sort-button" onclick={() => toggleSort('value')}>
@@ -860,6 +863,19 @@
 			left: auto;
 			box-shadow: none;
 		}
+
+		/* The score the ranking comes from stays in view at the right while the categories scroll. */
+		.table-scroll-host {
+			--pinned-right-width: var(--value-col-width, 0px);
+		}
+
+		th.value-col,
+		td.value-cell {
+			position: sticky;
+			right: 0;
+			z-index: 1;
+			box-shadow: -1px 0 0 var(--border-subtle);
+		}
 	}
 	/* End touch/mobile scroll mode */
 
@@ -896,6 +912,18 @@
 			top: auto;
 			left: auto;
 			box-shadow: none;
+		}
+
+		.table-scroll-host {
+			--pinned-right-width: var(--value-col-width, 0px);
+		}
+
+		th.value-col,
+		td.value-cell {
+			position: sticky;
+			right: 0;
+			z-index: 1;
+			box-shadow: -1px 0 0 var(--border-subtle);
 		}
 	}
 </style>

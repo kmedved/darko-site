@@ -16,6 +16,8 @@ import { leagueTeamRatings } from '$lib/utils/teamDna.js';
 import { fillLatestRapm } from '$lib/utils/latestRapm.js';
 import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '$lib/utils/frozenRatings.js';
 import { searchByName } from '$lib/utils/nameSearch.js';
+import { mergeWowyPages, namesMatching, wowySearchWord } from '$lib/utils/wowySearch.js';
+import { withGameNumbers } from '$lib/utils/seismograph.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -225,6 +227,9 @@ const TRAJECTORY_RATING_COLUMNS = [
     'on_off_dpm',
     'age',
     'career_game_num',
+    // For game_num (getFullPlayerTrajectoryHistory): career_game_num counts rows, not games.
+    'seconds_played',
+    'future_game',
     'bayes_rapm_total',
     'x_minutes',
     'x_pace',
@@ -942,6 +947,12 @@ function normalizeWowyAllTimePageOptions(options = {}) {
 
 async function getWowyAllTimePageForMode(ratingMode, options = {}) {
     const normalized = normalizeWowyAllTimePageOptions(options);
+    const page = await fetchWowyAllTimePage(ratingMode, normalized);
+    if (!normalized.search || page.totalCount > 0 || !page.activated) return page;
+    return (await wowyPageByNames(ratingMode, normalized)) ?? page;
+}
+
+async function fetchWowyAllTimePage(ratingMode, normalized) {
     const cachePrefix =
         ratingMode === 'adjusted' ? 'wowyAdjustedAllTimePlayers' : 'wowyAllTimePlayers';
     const key = cacheKey(cachePrefix, JSON.stringify(normalized));
@@ -987,6 +998,53 @@ async function getWowyAllTimePageForMode(ratingMode, options = {}) {
         cacheStore.delete(key);
     }
     return page;
+}
+
+/**
+ * A WOWY search that finds nothing as typed ("jokíc nik", "wembanyana") looks again by player,
+ * matched as every player search matches (utils/nameSearch.js): the WOWY players whose rows
+ * hold the query's longest word, else DARKO's players (1996-97 on), which also catch typos. The
+ * page is those players' seasons, in the order asked for; null when no player matches.
+ */
+async function wowyPageByNames(ratingMode, normalized) {
+    const names = await wowySearchNames(ratingMode, normalized);
+    if (names.length === 0) return null;
+    const pages = await Promise.all(
+        names.map((name) =>
+            fetchWowyAllTimePage(ratingMode, {
+                ...normalized,
+                search: name,
+                offset: 0,
+                limit: WOWY_ALL_TIME_PAGE_SIZE
+            })
+        )
+    );
+    const page = mergeWowyPages(pages, normalized);
+    return page.totalCount > 0 ? page : null;
+}
+
+/** The players a WOWY search names, by their names as stored, best first; five at most. */
+async function wowySearchNames(ratingMode, normalized) {
+    let names = [];
+    const word = wowySearchWord(normalized.search);
+    if (word) {
+        const page = await fetchWowyAllTimePage(ratingMode, {
+            ...normalized,
+            search: word,
+            offset: 0,
+            limit: WOWY_ALL_TIME_PAGE_SIZE
+        });
+        names = namesMatching(normalized.search, page.players);
+    }
+    if (names.length === 0) {
+        const index = await getPlayersIndex();
+        const rank = (player) => {
+            const dpm = Number.parseFloat(player?.dpm);
+            return Number.isFinite(dpm) ? 100 + dpm : 0;
+        };
+        names = searchByName(index, normalized.search, { rank, limit: 5 }).map((player) => player.player_name);
+    }
+    return [...new Set(names.filter(Boolean))].slice(0, 5);
 }
 
 /** Get one filtered, deterministically sorted all-time Average WOWY page. */
@@ -1323,7 +1381,7 @@ async function lastGameDayRows(rows, season) {
         const chunks = await mapWithConcurrency(requests, PLAYERS_AS_OF_CONCURRENCY, async ({ date, ids: dateIds }) => {
             const { data, error: rowsError } = await supabase
                 .from('player_ratings')
-                .select(['nba_id', ...FROZEN_RATING_FIELDS].join(', '))
+                .select(['nba_id', 'date', ...FROZEN_RATING_FIELDS].join(', '))
                 .eq('date', date)
                 .in('nba_id', dateIds)
                 .gt('tm_id', 0);
@@ -1450,19 +1508,26 @@ export async function searchAllPlayers(searchTerm) {
         );
         if (validPlayers.length === 0) return [];
 
-        const { data: snapshots, error: snapshotError } = await supabase.rpc(
-            'get_latest_player_search_ratings',
-            { p_ids: validPlayers.map((player) => player.nba_id) }
-        );
-        if (snapshotError) throw snapshotError;
-
+        // A current player already carries today's snapshot, as the leaderboard shows it (the
+        // index merges getActivePlayers, ratings frozen at each player's last game); only the
+        // others, without one, take their latest row.
+        const pastIds = validPlayers.filter((player) => player.date == null).map((player) => player.nba_id);
         const snapshotById = new Map();
-        for (const row of Array.isArray(snapshots) ? snapshots : []) {
-            snapshotById.set(row.nba_id, row);
+        if (pastIds.length > 0) {
+            const { data: snapshots, error: snapshotError } = await supabase.rpc(
+                'get_latest_player_search_ratings',
+                { p_ids: pastIds }
+            );
+            if (snapshotError) throw snapshotError;
+            for (const row of Array.isArray(snapshots) ? snapshots : []) {
+                snapshotById.set(row.nba_id, row);
+            }
         }
 
         return validPlayers.map((player) =>
-            mergePlayerWithActiveSnapshot(player, snapshotById.get(player.nba_id))
+            snapshotById.has(player.nba_id)
+                ? mergePlayerWithActiveSnapshot(player, snapshotById.get(player.nba_id))
+                : player
         );
     });
 }
@@ -1540,13 +1605,21 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
     });
 }
 
-/** Get the complete career projection used only by the Trajectories page. */
-export function getFullPlayerTrajectoryHistory(nbaId, options = {}) {
-    return getFullPlayerHistory(nbaId, {
+/**
+ * Get the complete career projection used only by the Trajectories page, each row with
+ * game_num: the games played through it (seismograph.js withGameNumbers), null on a day the
+ * player sat out, a forecast or an offseason row.
+ */
+export async function getFullPlayerTrajectoryHistory(nbaId, options = {}) {
+    const history = await getFullPlayerHistory(nbaId, {
         ...options,
         columns: TRAJECTORY_RATING_COLUMNS,
         cachePrefix: 'fullPlayerTrajectoryHistory'
     });
+    return {
+        ...history,
+        rows: withGameNumbers(history.rows).map(({ seconds_played, future_game, ...row }) => row)
+    };
 }
 
 const UNDEFINED_COLUMN = '42703';

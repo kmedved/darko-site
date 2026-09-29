@@ -682,7 +682,8 @@ a:hover { color: var(--accent-hover); }
     pointer-events: none;
 }
 
-/* A table with pinned columns sets --pinned-width, so the fade starts where the scrolling does. */
+/* A table with pinned columns sets --pinned-width (left) or --pinned-right-width, so the fade
+   starts where the scrolling does. */
 [data-overflow-left]::before {
     left: var(--pinned-width, 0px);
     background:
@@ -691,7 +692,7 @@ a:hover { color: var(--accent-hover); }
 }
 
 [data-overflow-right]::after {
-    right: 0;
+    right: var(--pinned-right-width, 0px);
     background:
         linear-gradient(to left, var(--border), transparent 8px),
         linear-gradient(to right, transparent, color-mix(in srgb, var(--bg-surface) 94%, transparent));

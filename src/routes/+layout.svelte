@@ -598,6 +598,12 @@
 </div>
 
 <main id="main-content" tabindex="-1">
+    <!-- The strip says this beside its controls; folded, or on a phone, the page says it here. -->
+    {#if timeMachine.date && !isDateAwarePath($page.url.pathname)}
+        <p class="container tm-today-note" role="note">
+            This page shows today's data; the Time Machine is set to {foldedDateLabel}.
+        </p>
+    {/if}
     {@render children()}
 </main>
 
@@ -625,6 +631,26 @@
 
 	:global(:root[data-time-machine='collapsed']) .tm-nav-toggle {
 		display: inline-flex;
+	}
+
+	.tm-today-note {
+		display: none;
+		margin-top: 10px;
+		margin-bottom: -2px;
+		color: var(--time-text);
+		font-size: 12px;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+
+	:global(:root[data-time-machine='collapsed']) .tm-today-note {
+		display: block;
+	}
+
+	@media (max-width: 900px) {
+		.tm-today-note {
+			display: block;
+		}
 	}
 
 	.tm-nav-toggle:hover {

@@ -1,9 +1,10 @@
+import fs from 'node:fs/promises';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { projectedBoxScore } from '../src/lib/utils/boxScore.js';
 import { projectPerGame } from '../src/lib/utils/fantasyScoring.js';
-import { echoRows, seasonRows } from '../src/lib/utils/playerSeasons.js';
+import { echoRows, seasonRows, seasonUnderWay } from '../src/lib/utils/playerSeasons.js';
 
 const near = (a, b) => Math.abs(a - b) < 1e-9;
 
@@ -86,4 +87,20 @@ test('player pages and the Teams page wire the ports in', async () => {
     assert.match(teams, /teamsOverview\(ratings, sim\)/);
     const layout = await read('src/routes/+layout.svelte');
     assert.match(layout, /\{ href: '\/teams', label: 'Teams'/);
+});
+
+test('a season is "so far" only while its latest row is recent, so the 2026 Finalists read final', async () => {
+    const today = new Date('2026-09-29T12:00:00Z');
+    // Wembanyama: his rows end at a June 5 forecast, with the Spurs; no offseason row followed.
+    assert.equal(seasonUnderWay({ date: '2026-06-05', tm_id: 1610612759, future_game: 1 }, today), false);
+    // In season: the next game's forecast, or a game a few weeks back.
+    assert.equal(seasonUnderWay({ date: '2026-10-24', tm_id: 1610612759, future_game: 1 }, new Date('2026-10-22T12:00:00Z')), true);
+    assert.equal(seasonUnderWay({ date: '2026-02-10', tm_id: 1610612759 }, new Date('2026-02-24T12:00:00Z')), true);
+    // An offseason row, or none.
+    assert.equal(seasonUnderWay({ date: '2026-07-26', tm_id: -999 }, new Date('2026-07-27T12:00:00Z')), false);
+    assert.equal(seasonUnderWay(null, today), false);
+
+    const page = await fs.readFile('src/routes/player/[nbaId]/+page.svelte', 'utf8');
+    assert.match(page, /return seasonUnderWay\(latest\) && !asOfDate && isCurrentPlayer \? Number\(latest\.season\) : null;/);
+    assert.match(page, /DPM going into each season's last game, since 1996-97\./);
 });

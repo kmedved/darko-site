@@ -136,8 +136,11 @@ test('player name search decorates only matched IDs', async () => {
     assert.match(block, /const index = await getPlayersIndex\(\);/);
     assert.match(block, /searchByName\([\s\S]*?limit: 15/);
     assert.doesNotMatch(block, /\.ilike\(/);
-    assert.match(block, /\.rpc\(\s*'get_latest_player_search_ratings'/);
-    assert.match(block, /p_ids: validPlayers\.map/);
+    // A current player keeps the index's snapshot (today's, frozen at the last game, as the
+    // leaderboard shows it); only players without one fetch their latest row.
+    assert.match(block, /const pastIds = validPlayers\.filter\(\(player\) => player\.date == null\)/);
+    assert.match(block, /\.rpc\(\s*'get_latest_player_search_ratings',\s*\{ p_ids: pastIds \}/);
+    assert.match(block, /snapshotById\.has\(player\.nba_id\)\s*\? mergePlayerWithActiveSnapshot\(player, snapshotById\.get\(player\.nba_id\)\)\s*: player/);
     assert.doesNotMatch(block, /getActivePlayers\(/);
 });
 

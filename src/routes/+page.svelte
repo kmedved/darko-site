@@ -586,6 +586,15 @@
     }
 
     // The view's address, with the question as it stands, for pasting elsewhere.
+    // Down to the insight cards where they sit under the table; focus follows for keyboards.
+    function jumpToInsights() {
+        const rail = document.getElementById('insights');
+        if (!rail) return;
+        const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        rail.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
+        rail.focus({ preventScroll: true });
+    }
+
     async function copyViewLink() {
         const url = new URL($page.url);
         url.search = leaderboardSearchParams(urlState, $page.url.searchParams).toString();
@@ -980,7 +989,7 @@
                         <div class="control-actions">
                             <button
                                 type="button"
-                                class="tool-action modern-only"
+                                class="tool-action tool-action--compare modern-only"
                                 class:active={picking}
                                 aria-pressed={picking}
                                 aria-label="Compare players"
@@ -1073,6 +1082,9 @@
                                 <path d="M1.5 11.5l3.5-4 3 2.5 5.5-6.5" />
                             </svg>
                             Season trend
+                        </button>
+                        <button type="button" class="insights-jump" onclick={jumpToInsights}>
+                            Insights <span aria-hidden="true">↓</span>
                         </button>
                     </div>
 
@@ -1231,7 +1243,7 @@
                     {/if}
                 </section>
 
-                <aside class="insight-rail" aria-label="Leaderboard insights">
+                <aside class="insight-rail" id="insights" tabindex="-1" aria-label="Leaderboard insights">
                     <section class="insight-card insight-card--distribution" data-shiny-surface="panel">
                         <div class="insight-card-header insight-card-header--distribution">
                             <div class="distribution-title-control">
@@ -1721,7 +1733,6 @@
     .view-bar {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         gap: 12px;
         margin: 0 0 10px;
         border-bottom: 1px solid var(--border-subtle);
@@ -1759,6 +1770,7 @@
         display: inline-flex;
         flex: none;
         align-items: center;
+        margin-left: auto;
         gap: 6px;
         height: 30px;
         padding: 0 11px;
@@ -1775,6 +1787,38 @@
 
     .trend-toggle:hover {
         color: var(--text);
+    }
+
+    /* Shown while the insight cards sit under the table (below 1840px). */
+    .insights-jump {
+        display: none;
+        flex: none;
+        align-items: center;
+        gap: 4px;
+        height: 30px;
+        margin-left: -4px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+        color: var(--accent);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 750;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .insights-jump:hover {
+        background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+    }
+
+    .insight-rail {
+        scroll-margin-top: calc(var(--nav-sticky-offset, 0px) + 12px);
+    }
+
+    .insight-rail:focus {
+        outline: none;
     }
 
     .trend-toggle.active {
@@ -2733,6 +2777,10 @@
             grid-template-columns: 1fr;
         }
 
+        .insights-jump {
+            display: inline-flex;
+        }
+
         .insight-rail {
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
@@ -2922,8 +2970,18 @@
             display: none;
         }
 
+        /* Compare keeps its word: the box alone reads as a checkbox. */
+        .tool-action--compare {
+            gap: 4px;
+        }
+
+        .tool-action--compare .tool-label {
+            display: inline;
+            font-size: 12px;
+        }
+
         .tool-action {
-            padding: 0 11px;
+            padding: 0 6px;
         }
 
         .view-bar {
@@ -2935,6 +2993,23 @@
 
         .view-bar::-webkit-scrollbar {
             display: none;
+        }
+
+        /* The way down stays at the bar's end while the tabs scroll under it. */
+        .insights-jump {
+            position: sticky;
+            right: 0;
+            box-shadow: -14px 0 10px -6px var(--bg);
+        }
+
+        .insights-jump::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            bottom: -4px;
+            left: 100%;
+            width: 12px;
+            background: var(--bg);
         }
 
         .filters-ranges {

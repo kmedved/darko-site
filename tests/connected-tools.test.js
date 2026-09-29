@@ -517,3 +517,38 @@ test('from the site review: player URLs, projected minutes, positions, the skip 
 	const rules = JSON.parse(vercel).headers.map((rule) => rule.source);
 	assert.ok(rules.includes('/fonts/(.*)') && rules.includes('/darko-about-logo.png'));
 });
+
+test('from the v0.1.68 reviews: phone labels, a way down to the insights, the podium\'s motion', async () => {
+	const board = await read('src/routes/+page.svelte');
+	// Compare keeps its word on a phone; the other actions stay icons.
+	assert.match(board, /class="tool-action tool-action--compare modern-only"/);
+	assert.match(board, /@media \(max-width: 640px\) \{\s*\.tool-label \{\s*display: none;\s*\}[\s\S]*?\.tool-action--compare \.tool-label \{\s*display: inline;/);
+	// Below 1840px the insight cards sit under the table; the table's bar has a way down to them.
+	assert.match(board, /<button type="button" class="insights-jump" onclick=\{jumpToInsights\}>/);
+	assert.match(board, /<aside class="insight-rail" id="insights" tabindex="-1" aria-label="Leaderboard insights">/);
+	assert.match(board, /@media \(max-width: 1839px\) \{[\s\S]*?\.insights-jump \{\s*display: inline-flex;/);
+	assert.match(board, /rail\.scrollIntoView\(\{ behavior: still \? 'auto' : 'smooth', block: 'start' \}\);\s*rail\.focus\(\{ preventScroll: true \}\);/);
+
+	// The podium rises once, when it comes into view; another five fade in instead.
+	const podium = await read('src/lib/components/LeaderPodium.svelte');
+	assert.match(podium, /use:riseInView/);
+	assert.match(podium, /\{#key lineup\}\s*<div class="podium-lineup" in:fadeIn>/);
+	assert.match(podium, /return fade\(node, \{ duration: reducedMotion\(\) \? 0 : 150 \}\);/);
+	assert.match(podium, /if \(untrack\(\(\) => entrance\) !== 'waiting'\) entrance = 'settled';/);
+	assert.match(podium, /\{ threshold: 0\.35 \}/);
+	assert.match(podium, /\.settled \.podium-block,\s*\.settled \.podium-photo,\s*\.settled \.chaser,/);
+	assert.doesNotMatch(podium, /\{#key lineup\}\s*<div class="podium-stage"/);
+
+	// A rewound Time Machine on a page that shows today's data says so where a phone can see it.
+	const layout = await read('src/routes/+layout.svelte');
+	assert.match(layout, /\{#if timeMachine\.date && !isDateAwarePath\(\$page\.url\.pathname\)\}\s*<p class="container tm-today-note" role="note">/);
+	assert.match(layout, /:global\(:root\[data-time-machine='collapsed'\]\) \.tm-today-note \{\s*display: block;/);
+	assert.match(layout, /@media \(max-width: 900px\) \{\s*\.tm-today-note \{\s*display: block;/);
+
+	// Fantasy on a phone: the score the ranking comes from stays pinned at the right.
+	const fantasy = await read('src/routes/projections/+page.svelte');
+	assert.equal((fantasy.match(/th\.value-col,\s*td\.value-cell \{\s*position: sticky;\s*right: 0;/g) || []).length, 2);
+	assert.match(fantasy, /bind:clientWidth=\{valueColumnWidth\}/);
+	const app = await read('src/app.css');
+	assert.match(app, /\[data-overflow-right\]::after \{\s*right: var\(--pinned-right-width, 0px\);/);
+});
