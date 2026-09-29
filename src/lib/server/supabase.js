@@ -15,6 +15,7 @@ import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilte
 import { leagueTeamRatings } from '$lib/utils/teamDna.js';
 import { fillLatestRapm } from '$lib/utils/latestRapm.js';
 import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '$lib/utils/frozenRatings.js';
+import { searchByName } from '$lib/utils/nameSearch.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -1432,20 +1433,20 @@ export async function searchAllPlayers(searchTerm) {
 
     const key = cacheKey('searchPlayers', normalizedTerm);
     return runCached(key, CACHE_MS.searchPlayers, async () => {
-        // Only players DARKO rated (a season of ratings): the table also holds every player since
-        // the 1940s, and their pages don't exist.
-        const { data: players, error } = await supabase
-            .from('players')
-            .select(PLAYERS_DIM_COLUMNS)
-            .ilike('player_name', `%${normalizedTerm}%`)
-            .not('season', 'is', null)
-            .order('player_name', { ascending: true })
-            .limit(15);
-
-        if (error) throw error;
-
-        const validPlayers = (players || []).filter(
-            (player) => Number.isInteger(player?.nba_id) && player.nba_id > 0
+        // Only players DARKO rated (the index: a season of ratings), matched as every player search
+        // matches (nameSearch.js), so "alex sa" finds Alexandre Sarr: current players first, better
+        // ones first among them.
+        const index = await getPlayersIndex();
+        const validPlayers = searchByName(
+            index.filter((player) => Number.isInteger(player?.nba_id) && player.nba_id > 0),
+            normalizedTerm,
+            {
+                rank: (player) => {
+                    const dpm = Number.parseFloat(player?.dpm);
+                    return Number.isFinite(dpm) ? 100 + dpm : 0;
+                },
+                limit: 15
+            }
         );
         if (validPlayers.length === 0) return [];
 

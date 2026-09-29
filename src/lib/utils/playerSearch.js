@@ -1,3 +1,5 @@
+import { searchByName } from './nameSearch.js';
+
 export const PLAYER_SEARCH_MIN_QUERY_LENGTH = 2;
 export const PLAYER_SEARCH_RESULTS_LIMIT = 8;
 
@@ -26,14 +28,19 @@ export function filterPlayerSearchResults(
     exclude = [],
     limit = PLAYER_SEARCH_RESULTS_LIMIT
 ) {
-    const normalizedQuery = String(query || '').trim().toLowerCase();
+    const normalizedQuery = String(query || '').trim();
     if (normalizedQuery.length < PLAYER_SEARCH_MIN_QUERY_LENGTH) {
         return [];
     }
 
-    const matchingPlayers = (players || []).filter((player) =>
-        String(player?.player_name || '').toLowerCase().includes(normalizedQuery)
-    );
+    // Accents, word order, initials and typos forgiven (nameSearch.js); better players first at
+    // equal strength.
+    const matchingPlayers = searchByName(players, normalizedQuery, {
+        rank: (player) => {
+            const dpm = Number.parseFloat(player?.dpm);
+            return Number.isFinite(dpm) ? dpm : -99;
+        }
+    });
 
     return filterExcludedPlayers(matchingPlayers, exclude, limit);
 }

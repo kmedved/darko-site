@@ -132,7 +132,10 @@ test('player name search decorates only matched IDs', async () => {
     const block = contents.slice(start, end);
 
     assert.ok(start >= 0 && end > start, 'player search helper should be discoverable');
-    assert.match(block, /\.limit\(15\)/);
+    // Every rated player's name, matched as every search matches (nameSearch.js), fifteen at most.
+    assert.match(block, /const index = await getPlayersIndex\(\);/);
+    assert.match(block, /searchByName\([\s\S]*?limit: 15/);
+    assert.doesNotMatch(block, /\.ilike\(/);
     assert.match(block, /\.rpc\(\s*'get_latest_player_search_ratings'/);
     assert.match(block, /p_ids: validPlayers\.map/);
     assert.doesNotMatch(block, /getActivePlayers\(/);

@@ -5,6 +5,7 @@
 	import { browser } from '$app/environment';
 	import { afterNavigate, replaceState } from '$app/navigation';
 	import { exportCsvRows, getFantasyCsvColumns } from '$lib/utils/csvPresets.js';
+	import { searchByName } from '$lib/utils/nameSearch.js';
 	import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
 	import { getPositionCategory } from '$lib/utils/positionCategories.js';
 	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
@@ -58,10 +59,11 @@
 			teamAbbr(a).localeCompare(teamAbbr(b))
 		)
 	);
+	// Names match as every player search does (nameSearch.js).
+	const nameMatches = $derived(query.trim() ? new Set(searchByName(board, query)) : null);
 	const filteredRows = $derived.by(() => {
-		const needle = query.trim().toLowerCase();
 		return board.filter((row) => {
-			if (needle && !String(row.player_name || '').toLowerCase().includes(needle)) return false;
+			if (nameMatches && !nameMatches.has(row)) return false;
 			if (teamFilter && row.team_name !== teamFilter) return false;
 			if (positionFilter && getPositionCategory(row.position) !== positionFilter) return false;
 			return true;
