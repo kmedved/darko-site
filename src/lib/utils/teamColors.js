@@ -43,3 +43,27 @@ const TEAM_COLORS = Object.freeze({
 export function teamColor(teamName) {
 	return TEAM_COLORS[teamAbbr(teamName)] ?? null;
 }
+
+// Relative luminance, as WCAG measures contrast.
+function luminance(hex) {
+	const [r, g, b] = [1, 3, 5].map((start) => {
+		const channel = Number.parseInt(hex.slice(start, start + 2), 16) / 255;
+		return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+	});
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+export function contrastRatio(a, b) {
+	const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+	return (light + 0.05) / (dark + 0.05);
+}
+
+const INK_LIGHT = '#ffffff';
+const INK_DARK = '#0a0b0d';
+
+/** Text set on the team's colour: white or near-black, whichever reads better; null without a team. */
+export function teamInk(teamName) {
+	const color = teamColor(teamName);
+	if (!color) return null;
+	return contrastRatio(color, INK_LIGHT) >= contrastRatio(color, INK_DARK) ? INK_LIGHT : INK_DARK;
+}

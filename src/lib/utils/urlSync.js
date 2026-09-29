@@ -18,13 +18,29 @@ export function isIncomingNavigation({ type, to, pathname, ownHref = null }) {
 	return pathAndSearch(to.url) !== ownHref;
 }
 
+// The address of the Time Machine's date change under way, from the moment it starts until it lands.
+let dateChange = null;
+
+/**
+ * The Time Machine marks a date change as it starts one, and calls the function this returns once
+ * the change has landed (see keepsPendingState).
+ */
+export function markDateChange(url) {
+	const href = pathAndSearch(url);
+	dateChange = href;
+	return () => {
+		if (dateChange === href) dateChange = null;
+	};
+}
+
 /**
  * Whether a navigation starting while the page still has a change to write should leave that
- * change standing: one that stays on the page, and isn't the page's own write. Its address was
- * built from the URL before the change (the Time Machine and the season menu build theirs from
- * the current URL), so reading it back would undo what the reader just did.
+ * change standing. Only a Time Machine date change on the page does: its address was built from
+ * the URL before the change, so reading it back would undo what the reader just did. Anything
+ * else brings the question the reader asked for (a link such as Active Leaderboard, Back/Forward,
+ * Ask DARKO), and the season menu builds its address from the change itself.
  */
-export function keepsPendingState({ writePending, to, pathname, ownHref = null }) {
-	if (!writePending || !to?.url || to.url.pathname !== pathname) return false;
-	return pathAndSearch(to.url) !== ownHref;
+export function keepsPendingState({ writePending, type, to, pathname }) {
+	if (!writePending || type === 'popstate' || !to?.url || to.url.pathname !== pathname) return false;
+	return dateChange !== null && pathAndSearch(to.url) === dateChange;
 }

@@ -158,6 +158,11 @@
 				{selectedPlayers.length}/4 players
 				<a class="compare-careers" href={careersHref}>Open in Career Trajectories →</a>
 			</div>
+			<!-- What the figures are, for any number of players, as a table or as cards. -->
+			<p class="compare-note">
+				Each player's latest available DARKO projections. Games are counted from 1996-97, when
+				DARKO's data begins.
+			</p>
 		{/if}
 	</div>
 
@@ -228,6 +233,13 @@
 	.compare-careers {
 		color: var(--accent);
 		font-weight: 700;
+	}
+
+	.compare-note {
+		margin: 0;
+		color: var(--text-muted);
+		font-size: 12px;
+		line-height: 1.45;
 	}
 
 	.compare-chips {

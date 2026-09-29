@@ -48,6 +48,18 @@ export function careerGames(seasons) {
 	return { regular, playoffs };
 }
 
+/** careerGames for every player in a run of season rows, as a Map by nba_id. */
+export function careerGamesById(seasonRows) {
+	const seasonsById = new Map();
+	for (const row of seasonRows ?? []) {
+		const id = Number(row?.nba_id);
+		if (!Number.isInteger(id)) continue;
+		if (!seasonsById.has(id)) seasonsById.set(id, []);
+		seasonsById.get(id).push(row);
+	}
+	return new Map([...seasonsById].map(([id, seasons]) => [id, careerGames(seasons)]));
+}
+
 /** Where a current player's DPM ranks among everyone on today's board: { rank, of }. */
 export function dpmRank(nbaId, activePlayers) {
 	const ranked = (activePlayers ?? [])

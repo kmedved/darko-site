@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 
 import { getLongevityRows } from '$lib/server/supabase.js';
+import { getCareerGames } from '$lib/server/daily.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
@@ -16,7 +17,7 @@ export async function GET({ setHeaders }) {
     });
 
     try {
-        const rows = await getLongevityRows({ activeOnly: true });
+        const rows = await getLongevityRows({ activeOnly: true, loadGames: getCareerGames });
         return json(rows);
     } catch (e) {
         throw error(500, e?.message || 'Failed to load longevity data');
