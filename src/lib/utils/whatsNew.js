@@ -12,6 +12,37 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'leaderboard-views',
+		title: 'Leaderboard views you can share',
+		launched: '2026-09-29T02:51:13Z',
+		text: 'Filter the leaderboard by ranges of age, minutes, DPM, offense and defense, narrow it to a set of columns, and copy a link that opens the same view. Tick up to four players to open them together in Compare, Career Trajectories or the Scatterplot.',
+		cta: 'Open the leaderboard',
+		href: '/'
+	},
+	{
+		key: 'head-to-head',
+		title: 'Two players, head to head',
+		launched: '2026-09-29T02:51:13Z',
+		text: 'Compare two players and a table sets their ratings, shooting and fair salary side by side, marking who leads where more is better, and by how much.',
+		cta: 'Compare Jokic and Wembanyama',
+		href: '/compare?ids=203999,1641705'
+	},
+	{
+		key: 'player-sections',
+		title: 'Player pages that keep your place',
+		launched: '2026-09-29T02:51:13Z',
+		text: "A player page's section links stay in view as you scroll and mark where you are, and each past season's DPM opens the leaderboard as it stood on that season's last game day.",
+		cta: "See Jokic's page",
+		href: '/player/203999'
+	},
+	{
+		key: 'ratings-dates',
+		kind: 'design',
+		title: 'Dated ratings',
+		launched: '2026-09-29T02:51:13Z',
+		text: 'The leaderboard, player pages and team pages say the date their ratings run through.'
+	},
+	{
 		key: 'trajectories-news',
 		title: 'Players in the news',
 		launched: '2026-09-29T02:02:23Z',

@@ -60,9 +60,20 @@ test('items stay for 30 days from launch, newest first', () => {
     assert.equal(newFeatureCount(late), 14);
 
     // Just after: Career Trajectories on the players in the news.
-    const nextMorning = new Date('2026-09-29T03:00:00Z');
+    const nextMorning = new Date('2026-09-29T02:30:00Z');
     assert.deepEqual(keys(currentNews(nextMorning)).slice(0, 2), ['trajectories-news', 'page-headers']);
     assert.equal(newFeatureCount(nextMorning), 15);
+
+    // Then the connected research tools, and a design note on dated ratings.
+    const researchTools = new Date('2026-09-29T03:00:00Z');
+    assert.deepEqual(keys(currentNews(researchTools)).slice(0, 5), [
+        'leaderboard-views',
+        'head-to-head',
+        'player-sections',
+        'ratings-dates',
+        'trajectories-news'
+    ]);
+    assert.equal(newFeatureCount(researchTools), 18);
 
     // The Daily is off the site between seasons and counts as new from its return.
     assert.equal(WHATS_NEW.find((item) => item.key === 'daily').launched, DAILY_RETURNS);
@@ -72,6 +83,10 @@ test('items stay for 30 days from launch, newest first', () => {
     // A month on, the first night's launches have left and the later ones remain.
     assert.deepEqual(keys(currentNews(new Date('2026-10-27T12:00:00Z'))), [
         'daily',
+        'leaderboard-views',
+        'head-to-head',
+        'player-sections',
+        'ratings-dates',
         'trajectories-news',
         'page-headers',
         'distribution-motion',
