@@ -46,7 +46,8 @@
 - Fantasy Lab (`/projections`) scoring and per-game conversion: `src/lib/utils/fantasyScoring.js`
 - Player-page Seismograph: `src/lib/utils/seismograph.js`. Each `player_ratings` row is the forecast going
   into that day's game, so a game's update is the next row minus that row; offseason rows (`tm_id` -999) end a season.
-  Opponents come from `opp_id`, published by nba_darko's `push_website.py`.
+  Opponents come from `opp_id`, published by nba_darko's `pipeline_scripts/publish/website.py`
+  (formerly `1_historic_darko/push_website.py`, which the Part A pipeline branch still uses).
 - Time Machine (`?asof=YYYY-MM-DD`): helpers in `src/lib/utils/timeMachine.js`, the strip in
   `src/lib/components/TimeMachine.svelte`, kept across navigation by `beforeNavigate` in `+layout.svelte`.
   Date-aware routes: `/`, `/player/*`, `/lab`, `/rewind`; snapshots come from `getPlayersAsOf` in `supabase.js`.
@@ -55,14 +56,15 @@
   `app.html` applies the same rule before first paint, and `--time-machine-height` drops to 0 so sticky
   offsets follow. Its colour, `--time`, is each theme's `--accent` by design.
 - History tables `season_calendar` and `rating_frames` (Rewind, the strip's trace) come from nba_darko's
-  `push_website.py` (`build_season_calendar`, `build_rating_frames`), read in `src/lib/server/history.js`.
+  `pipeline_scripts/publish/website.py` (`build_season_calendar`, `build_rating_frames`), read in
+  `src/lib/server/history.js`.
   In `npm run dev` only, `DARKO_LOCAL_DATA_DIR` points at JSON files from the same builder.
 - Roster Lab math: `src/lib/utils/rosterLab.js`; Rewind helpers: `src/lib/utils/rewind.js`.
 - The leaderboard's players and a player page's career history ship column by column
   (`packRows` in the loader, `unpackRows` in the page; `src/lib/utils/columnar.js`).
 - `/lineups` loads the selected size's rows plus every size's counts (`getLineupSizeCounts`), and ships
   them packed (`packLineups` / `unpackLineups` in `src/lib/utils/lineupTransport.js`).
-- Supabase schema, column mappings, API data layer, pipeline scripts, and freshness: `SUPABASE_SCHEMA.md`
+- Supabase schema, column mappings, API data layer, the pipeline publisher, and freshness: `SUPABASE_SCHEMA.md`
 
 ## Workflow Notes
 

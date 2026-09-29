@@ -58,7 +58,8 @@ already carry the skill percentiles.
   tables in with a plain `DROP TABLE`, which does not remove string-bodied SQL functions,
   and asks PostgREST to reload its schema cache. Add a new function as a site migration;
   a publish will not remove it.
-- Until the fix in `push_website.py`, every publish left `players.draft_year` and `draft_slot`
+- Until the fix in nba_darko's publisher (`pipeline_scripts/publish/website.py`, formerly
+  `1_historic_darko/push_website.py`), every publish left `players.draft_year` and `draft_slot`
   empty (a float-text-to-integer cast nulled all 3,704) and gave 403 of 530 active players no
   `current_team` (the offseason placeholder rows have none), so Rate a Player showed everyone as
   "Undrafted" and most teams as "?". Draft pick 0 is a territorial pick.
@@ -67,9 +68,9 @@ already carry the skill percentiles.
 - Season-end rows in the prototype count playoff games in games and minutes.
 - Comps, Roster Lab team ratings and fantasy values are prototype calculations, not DARKO
   outputs. nba_darko builds comps with the prototype's method (`pipeline_scripts/publish/
-  website_comps.py`, called by `push_website.py`); on the same bundle it reproduced the
-  prototype exactly, and it then counts only regular-season games toward a season's games,
-  which left 475 of 530 top-ten lists unchanged (99.3% of comps). The page draws the fan
+  website_comps.py`, called by `pipeline_scripts/publish/website.py`); on the same bundle it
+  reproduced the prototype exactly, and it then counts only regular-season games toward a
+  season's games, which left 475 of 530 top-ten lists unchanged (99.3% of comps). The page draws the fan
   from the 25 published comps (`utils/comps.js`, matching the prototype to 1e-14). The team-rating wins fit is computed in the page from the ratings it shows.
 
 ## Color tokens

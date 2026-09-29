@@ -6,8 +6,9 @@ Reference for the Supabase (Postgres) tables powering darko-site. Use this when 
 
 ```
 Python pipeline (nba_darko, run on the writer Mac)
-  → 1_historic_darko/push_website.py builds each website table as a Polars frame
-  → uploads every table into a "<table>__next" staging table the site cannot read
+  → pipeline_scripts/publish/website.py builds each website table as a Polars frame
+  → uploads each table (for player_ratings, only its changed days unless it is rebuilt)
+    into a "<table>__next" staging table the site cannot read
   → one short transaction swaps the staged tables in (plain DROP TABLE + RENAME),
     re-applies row-level security, records the publication, and NOTIFYs PostgREST
   → calls the Vercel deploy hook so the site redeploys with an empty cache
@@ -17,6 +18,11 @@ SvelteKit (darko-site/, deployed on Vercel)
   → src/lib/server/supabase.js — all DB access, caching, field mapping
   → API routes in src/routes/api/ serve JSON to frontend components
 ```
+
+The publisher is `pipeline_scripts/publish/website.py` in `nba_darko` (formerly
+`1_historic_darko/push_website.py`, which the Part A pipeline branch
+`codex/website-function-ownership-20260928-v1` still uses); see
+[Pipeline publisher](#pipeline-publisher). The WOWY tables have their own publishers.
 
 **Ownership.** `nba_darko` owns the tables it publishes: columns, indexes, staging and
 swap, and the read policies on tables the swap recreates. `darko-site` owns application
@@ -39,15 +45,16 @@ Core fact table. One row per player per game-date.
 - **Primary key:** `(nba_id, date)`
 - **Indexes:** `date DESC`, `season`, `nba_id`
 - **Rows:** ~1,089,000
-- **Update strategy:** only the days whose fingerprints changed are replaced (row locks, readers never wait); a full staged rebuild and swap when `--full-player-ratings` is passed, nothing is published yet, or the columns or fingerprints no longer match.
+- **Update strategy:** only the days whose fingerprints changed are replaced (row locks, readers never wait); a full staged rebuild and swap when `--full-player-ratings` is passed, nothing is published yet, more than a quarter of the rows changed, or the columns or fingerprints no longer match.
 
-Built by `build_supabase_tables.py` which left-joins six source files on `(nba_id, date)`:
+Built by `build_supabase_tables()` in `pipeline_scripts/publish/website.py`, which left-joins six
+source files on `(nba_id, date)`, each filtered to the base table's keys before it is collected:
 
 | Source parquet | Join type | Columns contributed |
 |---|---|---|
 | `temp/spm_outputs.parq` | base table | nba_id, date, season, team_name, tm_id, future_game, active_roster, available, poss, dpm/o_dpm/d_dpm, box_dpm/box_odpm/box_ddpm, on_off_dpm/on_off_odpm/on_off_ddpm |
 | `5_assembled_features.parq` | left join | age, career_game_num, seconds_played, position, position_num, x_position |
-| `bayes_rapm_ratings.parq` | left join (semi-join filtered) | bayes_rapm_off, bayes_rapm_def, bayes_rapm_total, rapm_exposure |
+| `bayes_rapm_ratings.parq` | left join | bayes_rapm_off, bayes_rapm_def, bayes_rapm_total, rapm_exposure |
 | `talent_game_predictions.parq` | left join | x_minutes, x_pace, x_{stat}_100 columns, x_{pct} columns, tr_minutes, tr_starter, tr_fg3_pct, tr_ft_pct |
 | `temp/nba_survivorship.parq` | left join | projected_years_remaining, projected_years_remaining_cal, x_retirement_age, x_retirement_age_cal, s1–s15 |
 | `dpm_salary.parq` | left join | game_value, wins_pg, warp, sal_market_fixed, actual_salary, surplus_value |
@@ -284,7 +291,7 @@ Dimension table. One row per player.
 
 - **Primary key:** `nba_id`
 - **Rows:** ~5,347
-- **Update strategy:** TRUNCATE + reload every run
+- **Update strategy:** upserted on `nba_id` every publish (`INSERT ... ON CONFLICT DO UPDATE`); a player the bundle lacks keeps his row
 - **Source:** `supabase_tables/players.parq`, built from `player_master_crosswalk.csv` + latest row per player from `spm_outputs` + `rookie_season` from `nba_survivorship`
 - **RLS:** Enabled by `supabase/migrations/20260529_001_lock_public_read_tables.sql`; `anon` and `authenticated` keep `SELECT` only.
 
@@ -381,7 +388,7 @@ Win probability distribution. One row per team per win count.
 Five-man lineup ratings used by the `/lineups` page. One row per lineup variant.
 
 - **Rows:** varies by upload
-- **Update strategy:** reloads with the lineup upload pipeline
+- **Update strategy:** rebuilt and swapped in on every publish (`--no-full-reload lineup_ratings` refills the existing table instead)
 - **RLS:** Enabled by `supabase/migrations/20260616_001_lock_public_fact_tables.sql`; `anon` and `authenticated` keep `SELECT` only for the `/lineups` page.
 - **Frontend note:** `/lineups` reads `team_name` when present and falls back to `"Team pending"` while that column is rolling out.
 - **Variant note:** `variant='pi'` stays PI; `variant='raw'` and `variant='npi'` are both normalized into the NPI bucket on the frontend during the upload transition.
@@ -489,9 +496,9 @@ with no game in a window is left out of it. Built by `build_rating_moves()` in
 - **Site reads:** all thirteen
 
 Each **Columns** list above is its builder's exact output, in order; the builder in nba_darko
-(`pipeline_scripts/publish/website.py` is the publisher older notes call
-`1_historic_darko/push_website.py`) and its test in `tests/test_website*.py` are the source of
-truth, and `TABLE_INDEXES` in `website.py` defines the indexes. **Site reads** names the
+(`pipeline_scripts/publish/website.py`, formerly `1_historic_darko/push_website.py`, and its
+helpers) and its test in `tests/test_website*.py` are the source of truth, and
+`TABLE_INDEXES` in `website.py` defines the indexes. **Site reads** names the
 columns the site selects or filters on. The builders compute `seconds_played`, `last_played`
 and `age_year` along the way but publish none of them.
 
@@ -551,7 +558,7 @@ The longevity page uses aliased field names. The mapping happens in `getLongevit
 
 ### Caching
 
-All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. Cache clears on server restart / Vercel redeploy. **After uploading new data to Supabase, you must redeploy to Vercel to see changes immediately** (otherwise wait for TTL expiry).
+All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. Cache clears on server restart / Vercel redeploy. The publisher calls the Vercel deploy hook after every publish (see [Pipeline publisher](#pipeline-publisher)). **After any other change to Supabase data, redeploy to Vercel to see it immediately** (otherwise wait for TTL expiry).
 
 | Cache key | TTL |
 |---|---|
@@ -603,72 +610,112 @@ Deferred shifts to evaluate:
 
 ---
 
-## Pipeline Scripts
+## Pipeline publisher
 
-The two Python scripts that build and upload data live in the DARKO pipeline repo (outside `darko-site/`). They are **not** part of the SvelteKit project but are the sole source of truth for Supabase data.
+Every table documented above except the WOWY tables is published by one script in the
+`nba_darko` repository, outside `darko-site/`: `pipeline_scripts/publish/website.py` (formerly
+`1_historic_darko/push_website.py`, which the Part A pipeline branch still uses; that copy has
+no writer guard and gives a table it creates no row-level security, and otherwise behaves the
+same). It is the source of truth for those tables' data, columns and indexes.
+`pipeline_scripts/run_all.py` runs it as the `push-website` stage, in two actions: a build
+(`--skip-upload`) and a publish (`--skip-build`). Run by hand from the `nba_darko` root,
+`python pipeline_scripts/publish/website.py` does both.
 
-### `build_supabase_tables.py` — Build parquet files
+### Build
 
-Joins six source parquet files into two Supabase-ready tables using Polars lazy scans + semi-joins (avoids eagerly loading the 15.7 M-row RAPM table).
+`build_supabase_tables()` reads the runtime root (`--runtime-root`, default
+`NBA_DARKO_RUNTIME_ROOT`) and writes the release bundle to `supabase_tables/`:
 
-**Inputs** (all relative to the DARKO project root):
+- `player_ratings`: the six-source join described under [player_ratings](#player_ratings),
+  checked for duplicate `(nba_id, date)` keys and for the base table's row count;
+- `players`: `player_master_crosswalk.csv`, each player's latest `spm_outputs` row, and
+  `rookie_season` from `nba_survivorship`;
+- `lineup_ratings` from the PI and NPI lineup Elo files in `external_share/`;
+- `season_calendar`, `rating_frames`, `player_comps`, `player_seasons`, `game_updates` and
+  `rating_moves`, by the builders named in their sections above.
 
-| File | Approx rows | Role |
-|---|---:|---|
-| `calculated_data/temp/spm_outputs.parq` | 1,089,000 | Base grain (defines the key space) |
-| `calculated_data/5_assembled_features.parq` | 1,089,000 | Bio columns: age, career_game_num, position, etc. |
-| `calculated_data/bayes_rapm_ratings.parq` | 15,700,000 | RAPM ratings (semi-join filtered before collect) |
-| `calculated_data/talent_game_predictions.parq` | 1,089,000 | Projected per-100, shooting, minutes, pace |
-| `calculated_data/temp/nba_survivorship.parq` | 1,084,000 | Survivorship curves s1–s15, retirement age |
-| `calculated_data/dpm_salary.parq` | varies | DPM-based salary valuation (game_value, warp, sal_market_fixed, surplus_value) |
+`season_sim` and `win_distribution` are published from `calculated_data/` as they are. A
+manifest (`supabase_tables/player_ratings.manifest.json`) seals the bundle with the hashes of
+its sources, builder code and outputs, and the publish refuses a bundle that changed after it
+was read.
 
-**Outputs:**
-- `supabase_tables/players.parq` — dimension (one row per player)
-- `supabase_tables/player_ratings.parq` — fact (one row per player per date, 72 columns)
+### Publish
 
-**Validation:** Asserts no duplicate `(nba_id, date)` rows and that row count equals the base table after all joins.
+1. **Writer guard.** The publish runs inside the pipeline's single-writer scope
+   (`pipeline_scripts/lib/writer_guard.py`) and fails before connecting when this Mac is not the
+   writer. Under `run_all.py` it verifies the runner's inherited full-run lock; run by hand it
+   requires `NBA_DARKO_WRITE_ENABLED=1` and an `NBA_DARKO_MACHINE_ID` that matches `WRITER.txt`
+   in the runtime root, and holds the full-run lock until it finishes. A build-only run
+   (`--skip-upload`) needs no guard.
+2. **Connection.** `SUPABASE_PG_DSN` is required. The session sets a 10-minute
+   `statement_timeout` and a 5-minute `idle_in_transaction_session_timeout`, so a stalled
+   upload rolls back instead of holding locks.
+3. **Changed days of `player_ratings`.** Each publication records the SHA-256 of every day of
+   `player_ratings` (of the exact CSV it uploads for that date) in `player_ratings_days`, and
+   the table's columns, rows and days in `website_publication`. Both tables are private:
+   row-level security on and no grants to `anon` or `authenticated`. The next publication
+   uploads only the days whose fingerprint changed and, in the swap, deletes those dates (and
+   any that left the bundle) and inserts the new rows: row locks only, so readers never wait.
+   It rebuilds the whole table instead when `--full-player-ratings` is passed, nothing is
+   published yet, no fingerprints are recorded, the fingerprint method or the columns changed,
+   the live rows no longer match their fingerprints, or more than a quarter of the rows changed.
+4. **Staging.** Each table is uploaded first into `<table>__next`, which has row-level security
+   on and no grants to `anon` or `authenticated`, so the site cannot read it; the published
+   tables stay unlocked meanwhile. Rows go in by `COPY ... FROM STDIN` in CSV chunks of 10,000
+   rows (`--copy-chunksize`), over up to 8 connections for large tables (`--copy-workers`). A
+   table that will be replaced gets its keys and indexes (`TABLE_INDEXES`) and `ANALYZE` while
+   still staged.
+5. **Swap.** One short transaction (`lock_timeout` 3 s; up to five attempts 15 s apart while
+   readers hold the tables) first does the row-lock work (the `players` upsert,
+   `player_ratings`' changed days and their fingerprints), then locks every table it replaces or
+   refills in one `LOCK TABLE ... IN ACCESS EXCLUSIVE MODE`, then publishes each table:
 
-### `1_historic_darko/push_website.py` — Upload to Supabase Postgres
+   | Table | Mode | In the swap |
+   |---|---|---|
+   | `player_ratings` when rebuilt, `lineup_ratings`, `season_calendar`, `rating_frames`, `player_comps`, `player_seasons`, `game_updates`, `rating_moves` | replace | plain `DROP TABLE` of the published table (no `CASCADE`), `ALTER TABLE <table>__next RENAME TO <table>`, indexes renamed, then row-level security enabled, policy `allow_public_read` (`SELECT` to `anon`, `authenticated`) recreated, `REVOKE ALL` from `PUBLIC`, `anon`, `authenticated`, and `GRANT SELECT` to `anon`, `authenticated` |
+   | `player_ratings` otherwise | changed days | `DELETE` the changed and removed dates, `INSERT` the staged rows |
+   | `players` | upsert | `INSERT ... ON CONFLICT (nba_id) DO UPDATE`; rows the bundle lacks stay |
+   | `season_sim`, `win_distribution` | reload | `TRUNCATE` and `INSERT`; the table keeps its definition, policies and grants |
+   | a table that does not exist yet | create | `CREATE TABLE` and `COPY` (and `players`' primary key), then the same row-level security, policy and grants as a replaced table |
 
-Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at 50,000 rows with `tqdm` progress.
+   It then checks that `player_ratings` holds exactly the bundle's rows over its fingerprinted
+   days, records the publication in `website_publication`, and issues
+   `NOTIFY pgrst, 'reload schema'`, which PostgREST receives on commit and which makes it see
+   the new relations. Any failure, including a `DROP TABLE` blocked by a dependent object
+   (see Ownership under [Architecture](#architecture)), rolls the whole swap back: the old
+   tables keep serving and the staging tables are dropped.
+6. **Verification.** It prints every published table's row count, the latest date, and the top
+   five players by DPM and PI five-man lineups.
+7. **Site refresh.** After the publication commits, `refresh_site_cache()`
+   (`pipeline_scripts/publish/site_refresh.py`) POSTs the Vercel deploy hook in
+   `DARKO_SITE_DEPLOY_HOOK`; the redeploy starts the site with an empty in-memory cache.
+   Without the hook, or if the call fails, the publication stands and pages refresh as their
+   caches expire.
 
-**Upload modes per table:**
+The publisher never creates, replaces or drops a Postgres function; see Ownership above.
 
-| Table | `full_reload=True` | `full_reload=False` | Fresh (table missing) |
-|---|---|---|---|
-| `players` | TRUNCATE + reload (CASCADE to elo_ratings) | same | CREATE + bulk load + PK + read-only RLS via darko-site migration |
-| `player_ratings` | DROP + CREATE + bulk load + indexes + RLS | DELETE current season + INSERT (atomic) | CREATE + bulk load + indexes + RLS |
-| `season_sim` | TRUNCATE + reload | same | CREATE + bulk load + read-only RLS via darko-site migration |
-| `win_distribution` | TRUNCATE + reload | same | CREATE + bulk load + read-only RLS via darko-site migration |
+### WOWY publishers
 
-**Indexes created on `player_ratings`:**
-- `pk_player_ratings PRIMARY KEY (nba_id, date)`
-- `idx_ratings_date (date DESC)`
-- `idx_ratings_season (season)`
-- `idx_ratings_nba_id (nba_id)`
-- `idx_ratings_active_latest (season DESC, active_roster, nba_id, date DESC)`
-- `idx_ratings_leaderboard_team_opener (season, team_name, date ASC)`
-- `idx_ratings_player_team_latest (nba_id, date DESC) INCLUDE (team_name, tm_id)` for valid team rows
-- Read-only RLS plus `SELECT` grants for `anon` and `authenticated`
-- Invoker-safe player-rating RPCs restored after every fresh/full rebuild: `get_active_player_ratings`, `get_latest_player_teams`, `get_leaderboard_seasons`, `get_season_start_player_ratings`, `get_latest_player_search_ratings`, and `get_active_wowy_player_ratings`. `get_wowy_leaderboard_seasons` and `get_wowy_season_player_ratings` are also kept in sync there, but their all-era source is the independent `wowy_season_player_averages` table, so they survive a `player_ratings` rebuild.
+The WOWY tables (`wowy_ratings`, `wowy_publication`, `wowy_season_opening_snapshots`,
+`wowy_season_player_averages` and their siblings) are not touched by `website.py`. The WOWY
+RAPM program (GitHub `kmedved/wowy-rapm`, the Dropbox checkout `33_wowy_rapm`, being imported
+into `nba_darko` as `pipeline_scripts/wowy_rapm/`) has its own publishers. `publish_wowy_site.py`
+independently validates the certified WOWY manifest, COPY-loads a temporary staging table,
+verifies keys, counts and date coverage, and in one transaction replaces the rows of
+`wowy_ratings` (`TRUNCATE` and `INSERT`) and upserts the `wowy_publication` row. It never drops
+a table, so indexes, grants, constraints and row-level security on the WOWY tables survive
+publication.
 
-**Connection:** Uses `SUPABASE_PG_DSN` env var, falling back to `fixed_data/supabase_secret.json`.
-
-The model-owned `33_wowy_rapm/scripts/publish_wowy_site.py` independently validates the certified
-WOWY manifest, COPY-loads a temporary staging table, verifies keys/counts/date coverage, and replaces
-`wowy_ratings` plus `wowy_publication` in one transaction. It never uses the generic drop/recreate
-uploader, so indexes, grants, constraints, and RLS survive publication.
-
-`33_wowy_rapm/scripts/export_wowy_season_opening_snapshots.py` builds the matching all-era
-opening-game artifact from the certified player-game publication plus BBRef historical team data.
-`scripts/publish_wowy_season_opening_snapshots.py` validates season coverage, team context, keys,
-and RAPM decomposition before atomically replacing `wowy_season_opening_snapshots`.
+`export_wowy_season_opening_snapshots.py` builds the matching all-era opening-game artifact
+from the certified player-game publication plus BBRef historical team data.
+`publish_wowy_season_opening_snapshots.py` validates season coverage, team context, keys, and
+RAPM decomposition before atomically replacing the rows of `wowy_season_opening_snapshots`.
 
 ---
 
 ## Pipeline Freshness Requirements
 
-**All source parquet files must cover the same date range.** The build script left-joins everything onto `spm_outputs` by `(nba_id, date)`. If any source file lags behind, those columns will be null for all dates beyond that file's max date.
+**All source parquet files must cover the same date range.** The build (`build_supabase_tables()` in `website.py`) left-joins everything onto `spm_outputs` by `(nba_id, date)`. If any source file lags behind, those columns will be null for all dates beyond that file's max date.
 
 `getActivePlayers()` always returns the most recent active-roster row per player in the latest season, including `future_game = 1` projection rows. If that row has null survivorship/projections/RAPM because the source file was stale at build time, the entire column appears empty on the site — even though older rows in the DB have the data.
 
@@ -676,7 +723,7 @@ The homepage's historical leaderboard uses `get_season_start_player_ratings(p_se
 
 **Debugging null columns on the site:**
 1. Check max dates of all source parquet files — they should match `spm_outputs`
-2. If a file is stale, re-run its pipeline notebook
-3. Run `build_supabase_tables.py` — check the coverage line in output
-4. Run `upload_to_supabase.py`
-5. Redeploy on Vercel (or restart dev server) to clear in-memory cache
+2. If a file is stale, re-run the pipeline stage that writes it (`pipeline_scripts/run_all.py`; `pipeline_scripts/manifest.py` lists each stage's outputs)
+3. From the `nba_darko` root, run `python pipeline_scripts/publish/website.py --skip-upload` and check the `coverage` line it prints; it rebuilds the bundle without publishing
+4. On the writer Mac, run `python pipeline_scripts/publish/website.py --skip-build` to publish that bundle (or leave the next `run_all.py` to do it)
+5. The publish calls the Vercel deploy hook; without one, redeploy on Vercel (or restart the dev server) to clear the in-memory cache
