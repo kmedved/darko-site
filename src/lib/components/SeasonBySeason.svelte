@@ -1,8 +1,11 @@
 <script>
 	// A player's seasons since 1996-97, newest first (seasonRows in utils/playerSeasons.js): DPM at
-	// each season's last game day, and where it ranks among seasons at the same age.
+	// each season's last game day, and where it ranks among seasons at the same age. Each DPM opens
+	// the leaderboard on its own day, where the player shows that same rating among their peers.
 	import { ordinal } from '$lib/utils/daily.js';
 	import { formatSigned } from '$lib/utils/seismograph.js';
+	import { seasonBoardHref } from '$lib/utils/playerSeasons.js';
+	import { formatAsOfDate } from '$lib/utils/timeMachine.js';
 
 	let { rows = [], playerName = '' } = $props();
 
@@ -35,7 +38,13 @@
 					<td>{row.age ?? '—'}</td>
 					<td>{row.games}{#if row.playoffGames > 0}<span class="playoffs">{' '}+{row.playoffGames}</span>{/if}</td>
 					<td>{one(row.mpg)}</td>
-					<td class="dpm">{formatSigned(row.dpm)}</td>
+					<td class="dpm">
+						{#if seasonBoardHref(row) && row.dpm !== null}
+							<a href={seasonBoardHref(row)} title={`The leaderboard on ${formatAsOfDate(row.date)}`}>{formatSigned(row.dpm)}</a>
+						{:else}
+							{formatSigned(row.dpm)}
+						{/if}
+					</td>
 					<td>{formatSigned(row.offense)}</td>
 					<td>{formatSigned(row.defense)}</td>
 					<td class="rank">
@@ -52,7 +61,8 @@
 </div>
 <p class="season-note">
 	Games are regular season; +n are playoff games. "For his age" ranks the season's DPM among every
-	season at the same age since 1996-97 with 20 or more games.
+	season at the same age since 1996-97 with 20 or more games. A season's DPM opens the leaderboard
+	on its last game day.
 </p>
 
 <style>
@@ -104,6 +114,20 @@
 	.season-table .dpm {
 		font-weight: 600;
 		color: var(--text);
+	}
+
+	.season-table .dpm a {
+		color: inherit;
+		text-decoration: underline;
+		text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+		text-decoration-thickness: 1px;
+		text-underline-offset: 3px;
+	}
+
+	.season-table .dpm a:hover,
+	.season-table .dpm a:focus-visible {
+		color: var(--accent);
+		text-decoration-color: currentColor;
 	}
 
 	.so-far,

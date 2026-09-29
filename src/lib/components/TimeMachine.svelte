@@ -7,6 +7,7 @@
 	import {
 		HISTORY_START,
 		addDays,
+		daysBetween,
 		formatAsOfDate,
 		frameIndexAtOrBefore,
 		isDateAwarePath,
@@ -15,6 +16,7 @@
 		seasonLabelFromEndYear,
 		withAsOf
 	} from '$lib/utils/timeMachine.js';
+	import { latestSeason, monthTicks, snapDate, stepDate, stripScale } from '$lib/utils/timeStrip.js';
 
 	const KEY_COMMIT_DELAY_MS = 320;
 	const PRELOAD_DWELL_MS = 160;
@@ -53,13 +55,21 @@
 	const shown = $derived(preview === TODAY ? null : (preview ?? asOf));
 	const located = $derived(shown ? locateDate(calendar, shown) : null);
 	const pad = 8;
+	// Past seasons share the left of the strip and snap to weekly frames; the latest season has
+	// its own stretch on the right and snaps to the day.
+	const latest = $derived(latestSeason(calendar));
+	const seasonStart = $derived(latest?.start ?? null);
+	const pastFrames = $derived(seasonStart ? frameDates.filter((date) => date < seasonStart) : frameDates);
 	const x = $derived(
-		d3
-			.scaleUtc()
-			.domain([new Date(`${addDays(HISTORY_START, -20)}T00:00:00Z`), new Date(`${todayEdge}T00:00:00Z`)])
-			.range([pad, Math.max(pad + 1, stripWidth - pad)])
+		stripScale({ width: stripWidth, start: addDays(HISTORY_START, -20), breakAt: latest?.breakAt, end: todayEdge, pad })
 	);
-	const y = $derived(d3.scaleLinear().domain([2, 10]).range([23, 5]).clamp(true));
+	const splitX = $derived(latest ? x(new Date(`${latest.breakAt}T00:00:00Z`)) : null);
+	const latestLabel = $derived(latest ? seasonLabelFromEndYear(latest.row.season) : '');
+	const months = $derived(
+		latest && stripWidth > 0 ? monthTicks(x, { from: latest.start, to: todayEdge, split: splitX }) : []
+	);
+	// The trace keeps below the year and month labels along the top.
+	const y = $derived(d3.scaleLinear().domain([2, 10]).range([24, 11]).clamp(true));
 	const tracePath = $derived.by(() => {
 		if (!trace.length || stripWidth <= 0) return '';
 		let d = '';
@@ -72,15 +82,19 @@
 	const seasonBands = $derived(
 		calendar.map((row) => ({
 			season: row.season,
+			current: row.season === latest?.row.season,
 			x0: x(new Date(`${row.first_game}T00:00:00Z`)),
 			x1: x(new Date(`${row.regular_season_end}T00:00:00Z`))
 		}))
 	);
-	const decadeTicks = $derived(
-		calendar
-			.filter((row) => (row.season - 1) % 10 === 0)
+	// Every fifth year on the past seasons (tenth on a phone), clear of the latest season's label.
+	const yearTicks = $derived.by(() => {
+		const every = stripWidth < 560 ? 10 : 5;
+		return calendar
+			.filter((row) => (row.season - 1) % every === 0 && (!latest || row.season < latest.row.season - 2))
 			.map((row) => ({ label: String(row.season - 1), x: x(new Date(`${row.first_game}T00:00:00Z`)) }))
-	);
+			.filter((tick) => splitX === null || tick.x < splitX - 34);
+	});
 	const handleX = $derived(shown ? x(new Date(`${shown}T00:00:00Z`)) : x(new Date(`${todayEdge}T00:00:00Z`)));
 
 	$effect(() => {
@@ -105,17 +119,9 @@
 		return x.invert(pixel).toISOString().slice(0, 10);
 	}
 
-	/** The nearest weekly frame, or null (today) past the last season. */
+	/** The day in the latest season, else the nearest weekly frame; null (today) past its last game. */
 	function snap(date) {
-		if (!frameDates.length) return date > lastGame ? null : date < HISTORY_START ? HISTORY_START : date;
-		if (date > addDays(frameDates.at(-1), 30) && date > lastGame) return null;
-		const index = frameIndexAtOrBefore(frameDates, date);
-		if (index < 0) return frameDates[0];
-		const next = frameDates[index + 1];
-		if (next && Date.parse(next) - Date.parse(date) < Date.parse(date) - Date.parse(frameDates[index])) {
-			return next;
-		}
-		return frameDates[index];
+		return snapDate(date, { seasonStart, lastGame, pastFrames, historyStart: HISTORY_START });
 	}
 
 	// Resting on a week (pointer or keys) preloads that date's page, so the commit lands at once.
@@ -170,12 +176,11 @@
 		hover = null;
 	}
 
-	function stepFrames(delta) {
-		if (!frameDates.length) return;
+	// A step is a day in the latest season and a week before it.
+	function step(delta) {
+		if (!calendar.length) return;
 		const current = preview === TODAY ? null : (preview ?? asOf);
-		let index = current ? frameIndexAtOrBefore(frameDates, current) : frameDates.length;
-		index = Math.min(Math.max(index + delta, 0), frameDates.length);
-		preview = index >= frameDates.length ? TODAY : frameDates[index];
+		preview = stepDate(current, delta, { seasonStart, lastGame, pastFrames }) ?? TODAY;
 		scheduleCommit();
 	}
 
@@ -203,10 +208,10 @@
 
 	function handleKeydown(event) {
 		const actions = {
-			ArrowLeft: () => (event.shiftKey ? stepSeasons(-1) : stepFrames(-1)),
-			ArrowDown: () => stepFrames(-1),
-			ArrowRight: () => (event.shiftKey ? stepSeasons(1) : stepFrames(1)),
-			ArrowUp: () => stepFrames(1),
+			ArrowLeft: () => (event.shiftKey ? stepSeasons(-1) : step(-1)),
+			ArrowDown: () => step(-1),
+			ArrowRight: () => (event.shiftKey ? stepSeasons(1) : step(1)),
+			ArrowUp: () => step(1),
 			PageDown: () => stepSeasons(-1),
 			PageUp: () => stepSeasons(1),
 			Home: () => {
@@ -258,7 +263,10 @@
 		return formatAsOfDate(shown, { short: true });
 	});
 	const contextText = $derived.by(() => {
-		if (!shown || !located) return rewound || preview ? '' : 'Drag back to any week since 1996-97';
+		if (!shown || !located) {
+			if (rewound || preview) return '';
+			return latestLabel ? `Drag back to any day of ${latestLabel} or any week since 1996-97` : 'Drag back to any week since 1996-97';
+		}
 		return `${seasonLabelFromEndYear(located.season)} ${PHASE_LABELS[located.phase] ?? ''}`.trim();
 	});
 </script>
@@ -289,10 +297,10 @@
 						viewBox={`0 0 ${stripWidth} 30`}
 						role="slider"
 						tabindex="0"
-						aria-label="Time Machine date. Arrow keys move a week, Shift+arrow a season, End returns to today."
+						aria-label="Time Machine date. Arrow keys move a week, or a day in the latest season; Shift+arrow a season; End returns to today."
 						aria-valuemin={0}
-						aria-valuemax={frameDates.length}
-						aria-valuenow={shown ? Math.max(0, frameIndexAtOrBefore(frameDates, shown)) : frameDates.length}
+						aria-valuemax={daysBetween(HISTORY_START, todayEdge)}
+						aria-valuenow={Math.max(0, daysBetween(HISTORY_START, shown ?? todayEdge))}
 						aria-valuetext={shown ? formatAsOfDate(shown) : 'Today'}
 						onpointerdown={handlePointerDown}
 						onpointermove={handlePointerMove}
@@ -304,16 +312,26 @@
 						{#each seasonBands as band (band.season)}
 							<rect
 								class="tm-band"
+								class:current={band.current}
 								x={band.x0}
-								y="26"
+								y={band.current ? 24.5 : 26}
 								width={Math.max(1, band.x1 - band.x0)}
-								height="3"
+								height={band.current ? 4.5 : 3}
 								rx="1"
 							/>
 						{/each}
-						{#each decadeTicks as tick (tick.label)}
+						{#each yearTicks as tick (tick.label)}
 							<text class="tm-tick" x={tick.x + 2} y="9">{tick.label}</text>
 						{/each}
+						{#if splitX !== null}
+							<!-- The break: the latest season's own stretch starts here. -->
+							<line class="tm-split" x1={splitX} x2={splitX} y1="1" y2="29" />
+							<text class="tm-tick tm-tick--season" x={splitX + 4} y="9">{latestLabel}</text>
+							{#each months as month (month.key)}
+								<line class="tm-month" x1={month.x} x2={month.x} y1="19" y2="22" />
+								{#if month.label}<text class="tm-tick" x={month.x + 2} y="9">{month.label}</text>{/if}
+							{/each}
+						{/if}
 						{#if tracePath}<path class="tm-trace" d={tracePath} />{/if}
 						{#if hover && !dragging}
 							<line class="tm-hover" x1={hover.left} x2={hover.left} y1="2" y2="29" />
@@ -454,7 +472,7 @@
 		width: 15px;
 		height: 15px;
 		fill: none;
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-width: 1.7;
 		stroke-linecap: round;
 		stroke-linejoin: round;
@@ -474,7 +492,7 @@
 
 	.tm-date {
 		font-family: var(--font-mono);
-		font-weight: 600;
+		font-weight: var(--figure-weight-strong);
 		color: var(--text);
 		font-variant-numeric: tabular-nums;
 	}
@@ -527,9 +545,31 @@
 		fill: var(--border);
 	}
 
+	/* The latest season, scrubbed by the day, in the Time Machine's color. */
+	.tm-band.current {
+		fill: color-mix(in srgb, var(--time) 16%, transparent);
+		stroke: var(--time);
+		stroke-width: 1;
+	}
+
+	.tm-split {
+		stroke: var(--border);
+		stroke-width: 1;
+	}
+
+	.tm-month {
+		stroke: var(--graphic-muted);
+		stroke-width: 1;
+	}
+
 	.tm-tick {
 		font-size: 11px;
 		fill: var(--text-secondary);
+	}
+
+	.tm-tick--season {
+		font-weight: 600;
+		fill: var(--text);
 	}
 
 	.tm-trace {
@@ -540,7 +580,7 @@
 	}
 
 	.tm-hover {
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-width: 1;
 		stroke-dasharray: 2 2;
 	}

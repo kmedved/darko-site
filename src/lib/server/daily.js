@@ -39,6 +39,24 @@ async function readPages(makeQuery) {
     }
 }
 
+/**
+ * The last game day in the published updates: the latest game today's ratings take in. The
+ * ratings' own dates can't say this, since in season each player's latest row is the forecast
+ * for their next game, dated that day.
+ */
+export async function getLatestGameDate() {
+    const local = await readLocalTable('game_updates');
+    if (local) {
+        const dates = local.map((row) => String(row?.date ?? '').slice(0, 10)).filter(Boolean).sort();
+        return dates.at(-1) ?? null;
+    }
+    return missingAsNull(async () => {
+        const { data, error } = await supabase.from('game_updates').select('date').order('date', { ascending: false }).limit(1);
+        if (error) throw error;
+        return data?.[0]?.date ? String(data[0].date).slice(0, 10) : null;
+    });
+}
+
 /** Every rating_moves row: about 550 players in each of three periods. */
 export async function getRatingMoves() {
     const local = await readLocalTable('rating_moves');

@@ -44,8 +44,11 @@
 </svg>
 
 <style>
+	/* Never wider than its column: a narrower one scales the whole line down, end dot included. */
 	.sparkline {
 		display: block;
+		max-width: 100%;
+		height: auto;
 		overflow: visible;
 	}
 
@@ -54,6 +57,7 @@
 		stroke-width: 1.5;
 		stroke-linejoin: round;
 		stroke-linecap: round;
+		vector-effect: non-scaling-stroke;
 	}
 
 	.sparkline-zero {

@@ -2,7 +2,12 @@
 	// One dot per player, stacked in columns by value. Players outside `highlight` are faint and
 	// stack above the rest, so a filtered set keeps its own shape along the axis. Hovering a dot
 	// names the player; clicking opens their page (on touch, the first tap names, the second opens).
+	// A new stat or filter moves every dot to its new place in a left-to-right wave: across on an
+	// ease, then up or down into its stack with a small bounce (CSS transitions, so a change in
+	// mid-flight turns the dots around from wherever they are). Reduced motion moves them at once.
 	import * as d3 from 'd3';
+	import { prefersReducedMotion } from 'svelte/motion';
+	import { fade } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 
 	let {
@@ -19,6 +24,10 @@
 	const AXIS = 22;
 	const MAX_PITCH = 5;
 	const MIN_PITCH = 1.75;
+	// The wave: the rightmost dot sets off this long after the leftmost, and each dot a little
+	// after the one under it, so a column fills from the bottom.
+	const WAVE_MS = 220;
+	const STACK_MS = 3;
 
 	let width = $state(0);
 	// By id, so the ring follows its player when the dots are laid out again.
@@ -60,12 +69,18 @@
 		}
 		const base = Math.max(plotHeight, tallest * pitch) + 4;
 		const levels = new Map();
-		const dots = ordered.map((point) => {
+		const placed = new Map();
+		for (const point of ordered) {
 			const bin = binOf(point, pitch);
 			const level = levels.get(bin) ?? 0;
 			levels.set(bin, level + 1);
-			return { ...point, on: on(point), cx: bin * pitch, cy: base - pitch / 2 - level * pitch };
-		});
+			const cx = bin * pitch;
+			const delay = Math.round((cx / width) * WAVE_MS + Math.min(level, 40) * STACK_MS);
+			placed.set(point.id, { on: on(point), cx, cy: base - pitch / 2 - level * pitch, delay });
+		}
+		// The dots keep the order they came in: the stacking order changes with every stat, and a
+		// dot moved in the page would jump to its new place instead of travelling there.
+		const dots = valid.map((point) => ({ ...point, ...placed.get(point.id) }));
 		return { dots, pitch, r: pitch * 0.42, base, height: base + AXIS, ticks: scale.ticks(tickCount) };
 	});
 
@@ -113,15 +128,27 @@
 			onclick={open}
 		>
 			<svg {width} height={layout.height} viewBox="0 0 {width} {layout.height}" role="img" aria-label={label}>
+				<!-- A tick that stays slides with the scale; a new one fades in, an old one out. -->
 				{#each layout.ticks as tick (tick)}
-					<line class="dot-grid" class:zero={tick === 0} x1={scale(tick)} x2={scale(tick)} y1="0" y2={layout.base} />
-					<text class="dot-tick" x={scale(tick)} y={layout.base + 16} text-anchor="middle">{formatTick(tick)}</text>
+					<g class="dot-axis" style:transform="translateX({scale(tick)}px)" transition:fade={{ duration: prefersReducedMotion.current ? 0 : 220 }}>
+						<line class="dot-grid" class:zero={tick === 0} x1="0" x2="0" y1="0" y2={layout.base} />
+						<text class="dot-tick" x="0" y={layout.base + 16} text-anchor="middle">{formatTick(tick)}</text>
+					</g>
 				{/each}
 				{#if Number.isFinite(mean)}
-					<line class="dot-mean" x1={scale(mean)} x2={scale(mean)} y1="0" y2={layout.base} />
+					<line class="dot-mean" x1="0" x2="0" y1="0" y2={layout.base} style:transform="translateX({scale(mean)}px)" />
 				{/if}
+				<!-- Across on the outer group, up or down on the dot: two timings make the path a curve. -->
 				{#each layout.dots as dot (dot.id)}
-					<circle class="dot" class:off={!dot.on} cx={dot.cx} cy={dot.cy} r={layout.r} />
+					<g class="dot-slot" style:transform="translateX({dot.cx}px)" style:transition-delay="{dot.delay}ms">
+						<circle
+							class="dot"
+							class:off={!dot.on}
+							r={layout.r}
+							style:transform="translateY({dot.cy}px)"
+							style:transition-delay="{dot.delay}ms"
+						/>
+					</g>
 				{/each}
 				{#if hovered}
 					<circle class="dot-ring" cx={hovered.cx} cy={hovered.cy} r={layout.r + 2.5} />
@@ -161,12 +188,24 @@
 		overflow: visible;
 	}
 
+	.dot-slot {
+		transition: transform 680ms cubic-bezier(0.65, 0, 0.35, 1);
+	}
+
 	.dot {
 		fill: var(--text);
+		transition:
+			transform 680ms cubic-bezier(0.34, 1.45, 0.64, 1),
+			fill 300ms ease;
 	}
 
 	.dot.off {
-		fill: color-mix(in srgb, var(--text-muted) 32%, transparent);
+		fill: color-mix(in srgb, var(--graphic-muted) 32%, transparent);
+	}
+
+	.dot-axis,
+	.dot-mean {
+		transition: transform 680ms cubic-bezier(0.65, 0, 0.35, 1);
 	}
 
 	.dot-grid {
@@ -179,8 +218,17 @@
 	}
 
 	.dot-mean {
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-dasharray: 3 4;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.dot-slot,
+		.dot,
+		.dot-axis,
+		.dot-mean {
+			transition: none;
+		}
 	}
 
 	.dot-ring {

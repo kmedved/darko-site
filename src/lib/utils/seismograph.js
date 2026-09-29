@@ -55,6 +55,19 @@ function ratingOf(row) {
     return dpm === null || o === null || d === null ? null : { dpm, o, d };
 }
 
+/**
+ * The day of the player's last game played, or null before any; rows after it are the forecast
+ * for a game not yet played, or the offseason's. It says nothing of whether the rating shown
+ * takes that game in: a player's final row is the rating going into their last game.
+ */
+export function lastPlayedDate(rows) {
+    for (let index = (rows?.length ?? 0) - 1; index >= 0; index -= 1) {
+        const row = rows[index];
+        if (!isOffseasonRow(row) && playedGame(row)) return dateOnly(row.date);
+    }
+    return null;
+}
+
 /** Seasons (ending years) with at least one game played, newest first. */
 export function getSeismographSeasons(rows) {
     const seasons = new Set();

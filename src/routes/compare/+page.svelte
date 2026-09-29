@@ -1,8 +1,9 @@
 <script>
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { goto } from '$app/navigation';
-	import PlayerSearch from '$lib/components/PlayerSearch.svelte';
+	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import PlayerCard from '$lib/components/PlayerCard.svelte';
+	import HeadToHead from '$lib/components/HeadToHead.svelte';
 	import { exportCsvRows, compareCsvColumns } from '$lib/utils/csvPresets.js';
 	import { getContext } from 'svelte';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
@@ -91,6 +92,8 @@
 	}
 
 	const excludeIds = $derived(selectedPlayers.map((player) => player.nba_id));
+	// The same players' careers on one chart.
+	const careersHref = $derived(`/trajectories?ids=${excludeIds.join(',')}`);
 
 	const gridCols = $derived(
 		selectedPlayers.length <= 1
@@ -131,10 +134,29 @@
 	</PageHeader>
 
 	<div class="compare-search-panel" data-shiny-surface="well">
-		<PlayerSearch onSelect={addPlayer} exclude={excludeIds} />
+		<!-- Anyone DARKO has rated, current or retired, as profiles and links allow. -->
+		<AllPlayerSearch onSelect={addPlayer} exclude={excludeIds} />
 		{#if selectedPlayers.length > 0}
+			<!-- The players, each removable here, above the tables and cards however long they run. -->
+			<ul class="compare-chips" aria-label="Players compared">
+				{#each selectedPlayers as player, index (player.nba_id)}
+					<li style:--player-color={getSeriesColor(index, displayMode?.view)}>
+						<span class="compare-chip-dot" aria-hidden="true"></span>
+						{player.player_name}
+						<button
+							type="button"
+							onclick={() => removePlayer(player.nba_id)}
+							disabled={loading}
+							aria-label={`Remove ${player.player_name}`}
+						>
+							×
+						</button>
+					</li>
+				{/each}
+			</ul>
 			<div class="compare-count">
 				{selectedPlayers.length}/4 players
+				<a class="compare-careers" href={careersHref}>Open in Career Trajectories →</a>
 			</div>
 		{/if}
 	</div>
@@ -149,6 +171,13 @@
 
 	{#if loading && selectedPlayers.length > 0}
 		<div class="loading" style="margin-bottom: 16px;">Updating compare list...</div>
+	{/if}
+
+	{#if selectedPlayers.length === 2}
+		<HeadToHead
+			players={selectedPlayers}
+			colors={[getSeriesColor(0, displayMode?.view), getSeriesColor(1, displayMode?.view)]}
+		/>
 	{/if}
 
 	{#if selectedPlayers.length > 0}
@@ -189,8 +218,68 @@
 	}
 
 	.compare-count {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 14px;
 		color: var(--text-muted);
 		font-size: 12px;
+	}
+
+	.compare-careers {
+		color: var(--accent);
+		font-weight: 700;
+	}
+
+	.compare-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin: 4px 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.compare-chips li {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 30px;
+		padding: 0 4px 0 10px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--bg-surface);
+		color: var(--text);
+		font-size: 12px;
+		font-weight: 650;
+	}
+
+	.compare-chip-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--player-color);
+	}
+
+	.compare-chips button {
+		width: 22px;
+		height: 22px;
+		border: 0;
+		border-radius: 50%;
+		background: none;
+		color: var(--text-muted);
+		font-size: 15px;
+		line-height: 1;
+		cursor: pointer;
+	}
+
+	.compare-chips button:hover:not(:disabled) {
+		background: var(--bg-hover);
+		color: var(--text);
+	}
+
+	.compare-careers:hover {
+		text-decoration: underline;
+		text-underline-offset: 2px;
 	}
 
 	.compare-empty-state {

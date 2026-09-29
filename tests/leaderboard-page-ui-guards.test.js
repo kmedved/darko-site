@@ -59,9 +59,11 @@ test('leaderboard defaults to Current and loads historical snapshots from the UR
         fs.readFile(path.resolve(process.cwd(), LEADERBOARD_PAGE_SERVER), 'utf8')
     ]);
 
-    assert.match(page, /import \{ goto \} from '\$app\/navigation';/);
+    assert.match(page, /import \{ afterNavigate, beforeNavigate, goto \} from '\$app\/navigation';/);
     assert.match(page, /<option value="current">Current<\/option>/);
-    assert.match(page, /goto\(`\/\$\{suffix\}`, \{ keepFocus: true \}\)/);
+    // A season pick keeps the board's question: filters, sort and columns go along.
+    assert.match(page, /const params = leaderboardSearchParams\(urlState\);\s*if \(season !== 'current'\) params\.set\('season', season\);/);
+    assert.match(page, /goto\(`\/\$\{search \? `\?\$\{search\}` : ''\}`, \{ keepFocus: true \}\)/);
     assert.match(page, /data\.selectedSeason === null/);
     assert.match(server, /url\.searchParams\.get\('season'\)/);
     assert.match(server, /getLeaderboardSeasons\(\)/);
@@ -101,6 +103,20 @@ test('WOWY RAPM is a primary navigation destination', async () => {
         /\{ href: '\/wowy', label: 'WOWY RAPM', match: \(path\) => path\.startsWith\('\/wowy'\) \}/,
         'WOWY RAPM should remain active for the leaderboard and its article'
     );
+});
+
+test('Teams and the two labs are in the top bar; the specialist views are under More', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), LAYOUT_FILE), 'utf8');
+    const primary = contents.match(/const PRIMARY_NAV_ITEMS = \[([\s\S]*?)\];/)[1];
+    const more = contents.match(/const MORE_NAV_ITEMS = \[([\s\S]*?)\];/)[1];
+    const hrefs = (block) => [...block.matchAll(/href: '([^']+)'/g)].map((match) => match[1]);
+
+    assert.deepEqual(hrefs(primary), ['/daily', '/', '/trajectories', '/teams', '/standings', '/wowy', '/lineups', '/lab', '/projections']);
+    assert.deepEqual(hrefs(more), ['/rewind', '/longevity', '/scatterplot', '/compare', '/rate', '/about']);
+    // Career Trajectories, DARKO's signature view, sits beside the leaderboard.
+    assert.match(primary, /\{ href: '\/trajectories', label: 'Career Trajectories', match: \(path\) => path === '\/trajectories' \}/);
+    // A team's own page counts as Teams.
+    assert.match(primary, /label: 'Teams', match: \(path\) => path === '\/teams' \|\| path\.startsWith\('\/team\/'\)/);
 });
 
 test('desktop navigation switches to drawer before links can overflow', async () => {
