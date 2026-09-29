@@ -21,6 +21,7 @@
 		formatGameDate,
 		formatSigned,
 		getSeismographSeasons,
+		lastPlayedDate,
 		seasonLabel
 	} from '$lib/utils/seismograph.js';
 	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
@@ -122,12 +123,15 @@
 
 	// With the Time Machine set, the sidebar rating and the Seismograph follow that date.
 	const asOfDate = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
-	// Season by season: in the Time Machine only seasons over by its date; in season, the current
-	// one (a next-game row with a real team) is marked "so far".
+	// Season by season: in the Time Machine only seasons over by its date; in season, a current
+	// player's current season (a next-game row with a real team) is marked "so far". A retired
+	// player's last row also has a real team, which alone would mark their final season.
 	const inProgressSeason = $derived.by(() => {
 		const latest = historyRows.at(-1);
-		return latest && Number(latest.tm_id) > 0 && !asOfDate ? Number(latest.season) : null;
+		return latest && Number(latest.tm_id) > 0 && !asOfDate && isCurrentPlayer ? Number(latest.season) : null;
 	});
+	// The last game the rating takes in, which a forecast row for the next game is not.
+	const ratedThrough = $derived(lastPlayedDate(historyRows));
 	const seasonsTable = $derived(seasonRows(data.seasons, { asOf: asOfDate, inProgress: inProgressSeason }));
 	const echoes = $derived(data.echoes ?? []);
 	const asOfRow = $derived.by(() => {
@@ -405,8 +409,10 @@
 			const root = document.documentElement;
 			if (current && window.innerHeight + window.scrollY >= root.scrollHeight - 2) current = ids.at(-1);
 			activeSection = current;
-			const header = document.querySelector('.profile-header');
-			jumpStuck = header ? header.getBoundingClientRect().bottom < bar.top : false;
+			// Stuck once the bar sits at its sticky offset; resting under the header it is lower,
+			// and in the Shiny view (not sticky) the offset is "auto", so never.
+			const stickyTop = Number.parseFloat(getComputedStyle(jumpNav).top);
+			jumpStuck = Number.isFinite(stickyTop) && Math.abs(bar.top - stickyTop) < 1;
 		};
 		const schedule = () => {
 			if (!frame) frame = requestAnimationFrame(update);
@@ -556,8 +562,8 @@
 									defense={playerRating.defense}
 									labels
 								/>
-								{#if !asOfDate && currentDate}
-									<span class="profile-score-date">Rated through {currentDate}</span>
+								{#if !asOfDate && ratedThrough}
+									<span class="profile-score-date">Rated through {formatAsOfDate(ratedThrough, { short: true })}</span>
 								{/if}
 							</div>
 						</div>

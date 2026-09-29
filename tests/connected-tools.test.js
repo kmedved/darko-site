@@ -10,12 +10,16 @@ import {
 	matchesRanges,
 	RANGE_FILTERS,
 	rangeLabel,
-	readLeaderboardState
+	readLeaderboardState,
+	sameLeaderboardState
 } from '../src/lib/utils/leaderboardState.js';
 import { columnGroupCells, COLUMN_SETS, leaderboardTableColumns } from '../src/lib/utils/leaderboardColumns.js';
 import { AGE_GROUPS, POSITION_GROUPS } from '../src/lib/utils/leaderboardViews.js';
-import { seasonRows } from '../src/lib/utils/playerSeasons.js';
-import { latestDate } from '../src/lib/utils/timeMachine.js';
+import { seasonBoardHref, seasonRows } from '../src/lib/utils/playerSeasons.js';
+import { lastPlayedDate } from '../src/lib/utils/seismograph.js';
+import { isIncomingNavigation, pathAndSearch } from '../src/lib/utils/urlSync.js';
+import { readScatterState, scatterSearch } from '../src/lib/utils/scatterplotState.js';
+import { headToHeadRows } from '../src/lib/utils/headToHead.js';
 
 const read = (file) => fs.readFile(path.resolve(process.cwd(), file), 'utf8');
 const OPTIONS = {
@@ -115,58 +119,108 @@ test('column sets keep the player and DPM, and group headings span their columns
 	assert.equal(all.reduce((sum, cell) => sum + cell.span, 0), leaderboardTableColumns().length);
 });
 
-test('ratings dates: the latest among rows, and each season’s last game day', () => {
-	assert.equal(latestDate([{ date: '2026-07-20' }, { date: '2026-07-26T00:00:00' }, { date: null }, {}]), '2026-07-26');
-	assert.equal(latestDate([]), null);
-	const rows = seasonRows([{ season: 2025, date: '2025-04-13', tm_id: 1610612743, games: 70, dpm: 7.1, o_dpm: 5 }]);
-	assert.equal(rows[0].date, '2025-04-13');
+test('freshness: a player is rated through their last game played, and each season links to its own day', () => {
+	const rows = [
+		{ date: '2026-05-30', tm_id: 1610612759, seconds_played: 2514, future_game: 0 },
+		{ date: '2026-06-03', tm_id: 1610612759, seconds_played: 2268, future_game: 0 },
+		// The forecast for a game not yet played, and a game sat out, are not games played.
+		{ date: '2026-06-05', tm_id: 1610612759, seconds_played: 0, future_game: 1 }
+	];
+	assert.equal(lastPlayedDate(rows), '2026-06-03');
+	assert.equal(lastPlayedDate([...rows, { date: '2026-07-26', tm_id: -999, seconds_played: 0 }]), '2026-06-03');
+	assert.equal(lastPlayedDate([{ date: '2025-10-22', tm_id: 1, seconds_played: 0, future_game: 1 }]), null);
+
+	// Every season, the one still being played included, opens the board on its own recorded day.
+	const seasons = seasonRows([{ season: 2016, date: '2016-04-13', tm_id: 1610612747, games: 66, dpm: -1.87, o_dpm: -0.8 }], {
+		inProgress: 2016
+	});
+	assert.equal(seasonBoardHref(seasons[0]), '/?asof=2016-04-13');
+	assert.equal(seasonBoardHref({ date: null }), null);
 	assert.equal(seasonRows([{ season: 2025, date: 'x', dpm: 1 }])[0].date, null);
 });
 
-test('the leaderboard keeps its question in the URL, with Modern-only tools and a picking tray', async () => {
-	const [board, server] = await Promise.all([read('src/routes/+page.svelte'), read('src/routes/+page.server.js')]);
-	// Written in place a moment after a change, and never after the reader has left.
-	assert.match(board, /applyUrlState\(\$page\.url\.searchParams\);/);
-	assert.match(board, /goto\(href, \{ replaceState: true, keepFocus: true, noScroll: true \}\), 300\)/);
-	assert.match(board, /beforeNavigate\(\(\{ to \}\) => \{\s*if \(to\?\.url\.pathname !== \$page\.url\.pathname\) clearTimeout\(urlSyncTimer\);/);
-	assert.match(board, /if \(\(type === 'link' \|\| type === 'popstate'\) && to\?\.url\.pathname === '\/'\) applyUrlState\(to\.url\.searchParams\);/);
-	// The ranges and column sets are the Modern view's; Shiny keeps every column and its own filters.
-	assert.match(board, /const activeRanges = \$derived\(isShinyView \? \{\} : cleanRanges\(ranges\)\);/);
-	assert.match(board, /set: isShinyView \? 'all' : columnSet/);
-	assert.match(board, /:global\(:root\[data-view='shiny'\]\) \.modern-only \{\s*display: none;/);
-	// The group row is a sizing row with set heights, so the sticky header's sum can't feed itself.
-	assert.match(board, /<tr class="group-row table-sizing-row">/);
-	assert.match(board, /\.grouped \.group-row th \{\s*height: 22px;/);
-	assert.match(board, /\.grouped \.header-row th \{\s*height: 40px;/);
-	// Up to four picks go on together.
-	assert.match(board, /href="\/compare\?ids=\{pickedIds\}"/);
-	assert.match(board, /href="\/trajectories\?ids=\{pickedIds\}"/);
-	assert.match(board, /href="\/scatterplot\?ids=\{pickedIds\}"/);
-	assert.match(board, /disabled=\{!isPicked\(player\) && picked\.length >= MAX_PICKS\}/);
-	// Today's board says how fresh it is.
-	assert.match(server, /ratingsThrough: asOf \|\| selectedSeason !== null \? null : latestDate\(snapshot\)/);
-	assert.match(board, /Ratings through \{formatAsOfDate\(data\.ratingsThrough\)\}\./);
+test('navigation: the page’s own writes are skipped, and every other arrival is read back', () => {
+	const at = (href) => ({ url: new URL(href, 'https://www.darko.app') });
+	const own = '/?team=DEN&cols=impact';
+	assert.equal(pathAndSearch(at(own).url), own);
+	// The page's first load is already read, and its own in-place write isn't news.
+	assert.equal(isIncomingNavigation({ type: 'enter', to: at('/?team=DEN'), pathname: '/' }), false);
+	assert.equal(isIncomingNavigation({ type: 'goto', to: at(own), pathname: '/', ownHref: own }), false);
+	// Ask DARKO's goto('/'), a link, Back/Forward and the Time Machine all bring a question.
+	assert.equal(isIncomingNavigation({ type: 'goto', to: at('/'), pathname: '/', ownHref: own }), true);
+	assert.equal(isIncomingNavigation({ type: 'link', to: at('/'), pathname: '/' }), true);
+	assert.equal(isIncomingNavigation({ type: 'popstate', to: at('/?team=BOS'), pathname: '/' }), true);
+	assert.equal(isIncomingNavigation({ type: 'goto', to: at('/?asof=2025-01-01&team=DEN'), pathname: '/', ownHref: own }), true);
+	// Leaving the page isn't for it to read.
+	assert.equal(isIncomingNavigation({ type: 'link', to: at('/player/2544'), pathname: '/' }), false);
+
+	// Applying the same question again (the Time Machine carries it along) changes nothing.
+	const state = readLeaderboardState(new URLSearchParams('team=DEN&dpm_min=2&sort=x_minutes'), OPTIONS);
+	const carried = readLeaderboardState(new URLSearchParams('asof=2025-01-01&sort=x_minutes&dpm_min=2&team=DEN'), OPTIONS);
+	assert.ok(sameLeaderboardState(state, carried));
+	assert.ok(!sameLeaderboardState(state, readLeaderboardState(new URLSearchParams(''), OPTIONS)));
 });
 
-test('the Scatterplot, Compare, player and team pages take the handoffs', async () => {
-	const [scatter, chart, compare, player, seasons, team] = await Promise.all([
-		read('src/routes/scatterplot/+page.svelte'),
-		read('src/lib/components/ScatterplotChart.svelte'),
-		read('src/routes/compare/+page.svelte'),
+test('the Scatterplot’s URL reads back into its settings, unknowns falling back', () => {
+	const stats = ['o_dpm', 'd_dpm', 'dpm', 'x_fg3_pct'];
+	const state = readScatterState(new URLSearchParams('x=dpm&y=x_fg3_pct&mpg=20&color=0&ids=203999,1641705,203999,-1'), stats);
+	assert.deepEqual(state, { x: 'dpm', y: 'x_fg3_pct', mpg: 20, color: false, ids: [203999, 1641705] });
+	assert.equal(scatterSearch(state), 'x=dpm&y=x_fg3_pct&mpg=20&color=0&ids=203999,1641705');
+	assert.deepEqual(readScatterState(new URLSearchParams(scatterSearch(state)), stats), state);
+	// A clean address is the default chart: More → Scatterplot starts over.
+	assert.deepEqual(readScatterState(new URLSearchParams(''), stats), { x: 'o_dpm', y: 'd_dpm', mpg: 0, color: true, ids: [] });
+	assert.equal(scatterSearch(readScatterState(new URLSearchParams('x=nope&mpg=99'), stats)), '');
+});
+
+test('head to head: leads read from the printed values, gaps in the stat’s units, no verdict on volume', () => {
+	const rows = headToHeadRows(
+		{ dpm: 6.84, x_fg_pct: 0.534, x_fg3_pct: 0.3386, sal_market_fixed: 101.43e6, x_minutes: 31.7, x_pts_100: 31.2 },
+		{ dpm: 6.41, x_fg_pct: 0.492, x_fg3_pct: 0.3394, sal_market_fixed: 82.8e6, x_minutes: 35, x_pts_100: 35 }
+	);
+	const row = (key) => rows.find((entry) => entry.key === key);
+	assert.deepEqual([row('dpm').lead, row('dpm').edge], [0, '0.4']);
+	assert.deepEqual([row('x_fg_pct').lead, row('x_fg_pct').edge], [0, '4.2 pp']);
+	// 33.86% and 33.94% both print as 33.9%: a tie, not a lead of 0.1.
+	assert.deepEqual([row('x_fg3_pct').left, row('x_fg3_pct').right, row('x_fg3_pct').lead], ['33.9%', '33.9%', null]);
+	assert.equal(row('sal_market_fixed').edge, '$18.6M');
+	assert.equal(row('x_minutes').label, 'Projected MPG');
+	assert.equal(row('x_minutes').lead, null);
+	assert.equal(row('x_pts_100').lead, null);
+	assert.equal(row('box_dpm'), undefined, 'a stat neither player has is left out');
+});
+
+test('the pages behind the fixes: freshness from games, picks that stay honest, Modern-only sharing', async () => {
+	const [board, server, daily, teamLoader, team, player, seasons, scatter, chart] = await Promise.all([
+		read('src/routes/+page.svelte'),
+		read('src/routes/+page.server.js'),
+		read('src/lib/server/daily.js'),
+		read('src/lib/server/teamPage.js'),
+		read('src/lib/components/TeamDetailView.svelte'),
 		read('src/routes/player/[nbaId]/+page.svelte'),
 		read('src/lib/components/SeasonBySeason.svelte'),
-		read('src/lib/components/TeamDetailView.svelte')
+		read('src/routes/scatterplot/+page.svelte'),
+		read('src/lib/components/ScatterplotChart.svelte')
 	]);
-	assert.match(scatter, /put\('ids', highlightIds\.join\(','\), ''\);/);
-	assert.match(scatter, /highlight=\{highlightIds\}/);
-	assert.match(chart, /highlighted\.size > 0 && !isHighlighted\(d\) \? 0\.22/);
-	assert.match(compare, /\{#if selectedPlayers\.length === 2\}\s*<HeadToHead/);
-	assert.match(compare, /const careersHref = \$derived\(`\/trajectories\?ids=\$\{excludeIds\.join\(','\)\}`\);/);
-	// The section links stay in view (Modern), marking the section being read.
-	assert.match(player, /\.profile-jump \{\s*position: sticky;\s*top: var\(--nav-sticky-offset, 64px\);/);
-	assert.match(player, /aria-current=\{activeSection === section\.id \? 'location' : undefined\}/);
-	assert.match(player, /:global\(:root\[data-view='shiny'\]\) \.profile-jump \{\s*position: static;/);
-	assert.match(player, /Rated through \{currentDate\}/);
-	assert.match(seasons, /return row\.date \? `\/\?\$\{AS_OF_PARAM\}=\$\{row\.date\}` : null;/);
+	// "Ratings through" is the last game in the published updates, not a forecast row's date.
+	assert.match(daily, /\.from\('game_updates'\)\.select\('date'\)\.order\('date', \{ ascending: false \}\)\.limit\(1\)/);
+	assert.match(server, /\[snapshot, ratingsThrough\] = await Promise\.all\(\[getActivePlayers\(\), getLatestGameDate\(\)\]\)/);
+	assert.match(teamLoader, /Promise\.all\(\[getTeamPageData\(teamName\), getLatestGameDate\(\)\]\)/);
 	assert.match(team, /Ratings through \{formatAsOfDate\(ratingsThrough, \{ short: true \}\)\}/);
+	assert.match(player, /const ratedThrough = \$derived\(lastPlayedDate\(historyRows\)\);/);
+	// "So far" is for a current player's season, not a retired player's last.
+	assert.match(player, /!asOfDate && isCurrentPlayer \? Number\(latest\.season\) : null/);
+	assert.match(seasons, /href=\{seasonBoardHref\(row\)\}/);
+	// The name joins the section bar only once the bar has reached its sticky offset.
+	assert.match(player, /jumpStuck = Number\.isFinite\(stickyTop\) && Math\.abs\(bar\.top - stickyTop\) < 1;/);
+
+	// Copy link, like the ranges and column sets, is the Modern view's.
+	assert.match(board, /class="toggle-chip modern-only"\s*title="Copy a link/);
+	// From a past board the Scatterplot is off, with the reason in view.
+	assert.match(board, /\{#if pastBoard\}\s*<button type="button" class="pick-action" disabled aria-describedby="pick-past-note">Scatterplot<\/button>/);
+	assert.match(board, /\{#if showsValueColumn\}\s*<p class="leaderboard-value-note">/);
+	assert.match(board, /\.grouped \.group-row th \{[^}]*font-size: 11px;/);
+	// The Scatterplot draws only picks it has, and fades the rest only when one is drawn.
+	assert.match(scatter, /highlight=\{highlightedPlayers\.map\(\(player\) => Number\(player\.nba_id\)\)\}/);
+	assert.match(scatter, /\{#if highlightIds\.length > 0\}/);
+	assert.match(chart, /picks\.length > 0 && !isHighlighted\(d\) \? 0\.22/);
 });

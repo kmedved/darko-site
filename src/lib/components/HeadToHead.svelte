@@ -1,69 +1,11 @@
 <script>
-	// Two players a stat to a row: the stat's name down the middle and each player's value on their
-	// side. For the ratings, shooting and fair salary, where more is better, the leading value is
-	// marked and the middle says by how much; volume, minutes and age are shown without a verdict.
-	import { formatFixed, formatMillions, formatPercent, formatSignedMetric } from '$lib/utils/csvPresets.js';
+	// Two players a stat to a row (headToHeadRows in utils/headToHead.js): the stat's name down the
+	// middle and each player's value on their side, the leader marked where more is better.
+	import { headToHeadRows } from '$lib/utils/headToHead.js';
 
 	let { players = [], colors = [] } = $props();
 
-	const ROWS = [
-		{ key: 'dpm', label: 'DPM', format: 'signed', better: true },
-		{ key: 'o_dpm', label: 'Offense', format: 'signed', better: true },
-		{ key: 'd_dpm', label: 'Defense', format: 'signed', better: true },
-		{ key: 'box_dpm', label: 'Box DPM', format: 'signed', better: true },
-		{ key: 'on_off_dpm', label: 'On/off DPM', format: 'signed', better: true },
-		{ key: 'x_fg_pct', label: 'FG%', format: 'percent', better: true },
-		{ key: 'x_fg3_pct', label: '3P%', format: 'percent', better: true },
-		{ key: 'x_ft_pct', label: 'FT%', format: 'percent', better: true },
-		{ key: 'sal_market_fixed', label: 'Fair salary', format: 'money', better: true },
-		{ key: 'x_pts_100', label: 'Points per 100', format: 'fixed' },
-		{ key: 'x_ast_100', label: 'Assists per 100', format: 'fixed' },
-		{ key: 'x_minutes', label: 'Minutes', format: 'fixed' },
-		{ key: 'age', label: 'Age', format: 'age' },
-		{ key: 'career_game_num', label: 'Career games', format: 'count' }
-	];
-
-	function number(value) {
-		const n = Number.parseFloat(value);
-		return Number.isFinite(n) ? n : null;
-	}
-
-	function display(value, format) {
-		if (value === null) return '—';
-		if (format === 'signed') return formatSignedMetric(value);
-		if (format === 'percent') return formatPercent(value);
-		if (format === 'money') return formatMillions(value);
-		if (format === 'age') return String(Math.floor(value));
-		if (format === 'count') return formatFixed(value, 0);
-		return formatFixed(value, 1);
-	}
-
-	// The gap in the stat's own units: points of DPM, percentage points, millions.
-	function gap(difference, format) {
-		if (format === 'percent') return `${(difference * 100).toFixed(1)} pts`;
-		if (format === 'money') return formatMillions(difference);
-		return difference.toFixed(1);
-	}
-
-	// A gap too small to show at the stat's precision is a tie, not a lead of "0.0".
-	const TIE_BELOW = { percent: 0.0005, money: 50_000 };
-
-	const rows = $derived.by(() => {
-		const [left, right] = players;
-		return ROWS.map((row) => {
-			const a = number(left?.[row.key]);
-			const b = number(right?.[row.key]);
-			const apart = a !== null && b !== null && Math.abs(a - b) >= (TIE_BELOW[row.format] ?? 0.05);
-			const lead = row.better && apart ? (a > b ? 0 : 1) : null;
-			return {
-				...row,
-				left: display(a, row.format),
-				right: display(b, row.format),
-				lead,
-				edge: lead === null ? null : gap(Math.abs(a - b), row.format)
-			};
-		}).filter((row) => row.left !== '—' || row.right !== '—');
-	});
+	const rows = $derived(headToHeadRows(players[0], players[1]));
 </script>
 
 {#if players.length === 2}
@@ -99,6 +41,10 @@
 				{/each}
 			</tbody>
 		</table>
+		<p class="h2h-caption">
+			Ratings, shooting, scoring, assists and minutes are DARKO's current projections. Shooting gaps
+			are in percentage points (pp).
+		</p>
 	</div>
 {/if}
 
@@ -191,6 +137,12 @@
 		text-decoration-color: var(--player-color);
 		text-decoration-thickness: 2px;
 		text-underline-offset: 4px;
+	}
+
+	.h2h-caption {
+		margin: 8px 0 0;
+		color: var(--text-muted);
+		font-size: 12px;
 	}
 
 	@media (max-width: 560px) {

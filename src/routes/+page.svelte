@@ -29,8 +29,10 @@
         leaderboardSearchParams,
         matchesRanges,
         RANGE_FILTERS,
-        readLeaderboardState
+        readLeaderboardState,
+        sameLeaderboardState
     } from '$lib/utils/leaderboardState.js';
+    import { isIncomingNavigation, pathAndSearch } from '$lib/utils/urlSync.js';
     import { startWatchlist, watchlist } from '$lib/utils/watchlist.js';
     import { dailyListed } from '$lib/utils/daily.js';
     import { filterPlayers } from '$lib/utils/playerTableFilters.js';
@@ -110,6 +112,8 @@
     );
     // A heading row names the column groups (Impact, Role, Per 100, Shooting, Value), Modern only.
     const columnGroups = $derived(isShinyView ? [] : columnGroupCells(playerColumns));
+    // The note on $ Value, only while that column is on the board.
+    const showsValueColumn = $derived(playerColumns.some((column) => column.key === 'sal_market_fixed'));
     const dataColumns = $derived(playerColumns.filter((column) => column.sortable !== false));
     const sortConfigs = $derived(buildPlayerTableSortConfig(dataColumns));
     // Sorting by a column that has gone (Since, after leaving the Time Machine) falls back to DPM.
@@ -173,28 +177,42 @@
         return players.filter((player) => player?.team_name === activeTeamFilter);
     });
 
-    // The question the URL asks (leaderboardState.js), read as the page opens and again when a
-    // link or Back/Forward brings another; written back a moment after it changes.
+    // The question the URL asks (leaderboardState.js): read as the page opens and whenever a
+    // navigation brings another, and written back in place a moment after a control changes.
     applyUrlState($page.url.searchParams);
 
     function applyUrlState(params) {
-        const state = readLeaderboardState(params, {
+        const incoming = readLeaderboardState(params, {
             teams: teamOptions,
             positions: POSITION_GROUPS.map((group) => group.key),
             ages: AGE_GROUPS.map((group) => group.key),
             dists: distributionMetrics.map((metric) => metric.key),
             columnSets: COLUMN_SETS.map((set) => set.key)
         });
-        teamFilter = state.team;
-        positionFilter = state.position;
-        ageFilter = state.age;
-        watchOnly = state.watch;
-        searchQuery = state.q;
-        sortColumn = state.sort;
-        sortDirection = state.dir;
-        distributionMetric = state.dist;
-        columnSet = state.cols;
-        ranges = state.ranges;
+        const current = {
+            team: teamFilter,
+            position: positionFilter,
+            age: ageFilter,
+            watch: watchOnly,
+            q: searchQuery,
+            sort: sortColumn,
+            dir: sortDirection,
+            dist: distributionMetric,
+            cols: columnSet,
+            ranges
+        };
+        // The same question again (the Time Machine carries it along) keeps the reader's page.
+        if (sameLeaderboardState(incoming, current)) return;
+        teamFilter = incoming.team;
+        positionFilter = incoming.position;
+        ageFilter = incoming.age;
+        watchOnly = incoming.watch;
+        searchQuery = incoming.q;
+        sortColumn = incoming.sort;
+        sortDirection = incoming.dir;
+        distributionMetric = incoming.dist;
+        columnSet = incoming.cols;
+        ranges = incoming.ranges;
         leaderboardPage = 1;
     }
 
@@ -211,6 +229,8 @@
         ranges
     });
     let urlSyncTimer = 0;
+    // The address this page last wrote, so its own navigation isn't read back as an incoming one.
+    let ownHref = null;
 
     // In place rather than as a new history entry, so Back still leaves the board.
     $effect(() => {
@@ -218,17 +238,23 @@
         const next = leaderboardSearchParams(urlState, current.searchParams).toString();
         if (next === current.searchParams.toString()) return;
         const href = `${current.pathname}${next ? `?${next}` : ''}`;
-        urlSyncTimer = setTimeout(() => goto(href, { replaceState: true, keepFocus: true, noScroll: true }), 300);
+        urlSyncTimer = setTimeout(() => {
+            ownHref = href;
+            goto(href, { replaceState: true, keepFocus: true, noScroll: true });
+        }, 300);
         return () => clearTimeout(urlSyncTimer);
     });
 
-    // Leaving the board drops a write still waiting, which would otherwise pull the reader back.
+    // Any other navigation drops a write still waiting: it was worked out from the address before,
+    // and would undo the navigation. Once there, the page writes again if it needs to.
     beforeNavigate(({ to }) => {
-        if (to?.url.pathname !== $page.url.pathname) clearTimeout(urlSyncTimer);
+        if (!to?.url || pathAndSearch(to.url) !== ownHref) clearTimeout(urlSyncTimer);
     });
 
+    // A link, Back/Forward, Ask DARKO or the Time Machine arriving here brings its own question.
     afterNavigate(({ type, to }) => {
-        if ((type === 'link' || type === 'popstate') && to?.url.pathname === '/') applyUrlState(to.url.searchParams);
+        if (isIncomingNavigation({ type, to, pathname: '/', ownHref })) applyUrlState(to.url.searchParams);
+        ownHref = null;
     });
 
     // The stat ranges are the Modern view's; the Shiny view filters each column in its own row.
@@ -424,10 +450,13 @@
     function selectSeason(event) {
         const season = event.currentTarget.value;
         if (season === 'asof') return;
-        // A season pick leaves the Time Machine, which would otherwise override it.
+        // A season pick leaves the Time Machine, which would otherwise override it, and keeps the
+        // board's question (filters, sort, columns) for the new season.
         timeMachine.date = null;
-        const suffix = season === 'current' ? '' : `?season=${encodeURIComponent(season)}`;
-        goto(`/${suffix}`, { keepFocus: true });
+        const params = leaderboardSearchParams(urlState);
+        if (season !== 'current') params.set('season', season);
+        const search = params.toString();
+        goto(`/${search ? `?${search}` : ''}`, { keepFocus: true });
     }
 
     function toggleSort(column) {
@@ -517,6 +546,8 @@
     // Up to four players, ticked in the rank column, go on to Compare, Career Trajectories or the
     // Scatterplot together.
     const pickedIds = $derived(picked.map((player) => player.nba_id).join(','));
+    // A season's or the Time Machine's board, whose ratings Compare and the Scatterplot don't show.
+    const pastBoard = $derived(activeSeason !== 'current');
 
     function isPicked(player) {
         return picked.some((entry) => entry.nba_id === Number(player?.nba_id));
@@ -758,50 +789,7 @@
                             </select>
                         </div>
 
-                        <div class="control-field">
-                            <select
-                                id="position-filter"
-                                value={positionFilter}
-                                onchange={(event) => {
-                                    positionFilter = event.currentTarget.value;
-                                    leaderboardPage = 1;
-                                }}
-                                aria-label="Position"
-                            >
-                                {#each POSITION_GROUPS as group (group.key)}
-                                    <option value={group.key}>{group.label}</option>
-                                {/each}
-                            </select>
-                        </div>
-
-                        <div class="control-field">
-                            <select
-                                id="age-filter"
-                                value={ageFilter}
-                                onchange={(event) => {
-                                    ageFilter = event.currentTarget.value;
-                                    leaderboardPage = 1;
-                                }}
-                                aria-label="Age"
-                            >
-                                {#each AGE_GROUPS as group (group.key)}
-                                    <option value={group.key}>{group.label}</option>
-                                {/each}
-                            </select>
-                        </div>
-
-                        <div class="control-field control-field--columns modern-only">
-                            <select
-                                id="column-set"
-                                value={columnSet}
-                                onchange={(event) => (columnSet = event.currentTarget.value)}
-                                aria-label="Columns"
-                            >
-                                {#each COLUMN_SETS as set (set.key)}
-                                    <option value={set.key}>{set.label}</option>
-                                {/each}
-                            </select>
-                        </div>
+                        {@render secondaryFilters('')}
 
                         <div class="control-field control-field--search">
                             <div class="search-control">
@@ -878,9 +866,11 @@
                                 </svg>
                                 Pick to compare
                             </button>
+                            <!-- Modern only: the link carries the Modern view's question, not the Shiny
+                                 view's column filters. -->
                             <button
                                 type="button"
-                                class="toggle-chip"
+                                class="toggle-chip modern-only"
                                 title="Copy a link to the board with these filters, this sort and these columns"
                                 onclick={copyViewLink}
                             >
@@ -902,7 +892,10 @@
                     </div>
 
                     {#if rangesOpen && !isShinyView}
-                        <div class="range-filters" id="leaderboard-ranges" role="group" aria-label="Filter by range">
+                        <div class="range-filters" id="leaderboard-ranges" role="group" aria-label="More filters">
+                            <div class="range-secondary">
+                                {@render secondaryFilters('-more')}
+                            </div>
                             {#each RANGE_FILTERS as filter (filter.key)}
                                 <div class="range-filter">
                                     <span class="range-label">{filter.label}</span>
@@ -947,10 +940,12 @@
                         </div>
                     {/if}
 
-                    <p class="leaderboard-value-note">
-                        <strong>$ Value</strong> is DARKO's fair-salary estimate.
-                        <a href="/about/fair-salary">See how it is calculated →</a>
-                    </p>
+                    {#if showsValueColumn}
+                        <p class="leaderboard-value-note">
+                            <strong>$ Value</strong> is DARKO's fair-salary estimate.
+                            <a href="/about/fair-salary">See how it is calculated →</a>
+                        </p>
+                    {/if}
 
                     <div
                         class="table-wrapper table-shell"
@@ -1224,13 +1219,73 @@
                 {#if picked.length > 0}
                     <a class="pick-action pick-action--primary" href="/compare?ids={pickedIds}">Compare</a>
                     <a class="pick-action" href="/trajectories?ids={pickedIds}">Careers</a>
-                    <a class="pick-action" href="/scatterplot?ids={pickedIds}">Scatterplot</a>
+                    {#if pastBoard}
+                        <button type="button" class="pick-action" disabled aria-describedby="pick-past-note">Scatterplot</button>
+                    {:else}
+                        <a class="pick-action" href="/scatterplot?ids={pickedIds}">Scatterplot</a>
+                    {/if}
                 {/if}
                 <button type="button" class="pick-action" onclick={stopPicking}>Done</button>
             </div>
+            <!-- Compare and the Scatterplot show today's data, not the board's date. -->
+            {#if pastBoard && picked.length > 0}
+                <p class="pick-tray-note" id="pick-past-note">
+                    From a past board: Compare shows each player's latest ratings, and the Scatterplot only
+                    current players.
+                </p>
+            {/if}
         </div>
     {/if}
 </div>
+
+<!-- Position, age and the column set: in the row of controls, and on a phone inside More filters
+     instead (`suffix` keeps the two copies' ids apart). -->
+{#snippet secondaryFilters(suffix)}
+    <div class="control-field control-field--secondary">
+        <select
+            id={`position-filter${suffix}`}
+            value={positionFilter}
+            onchange={(event) => {
+                positionFilter = event.currentTarget.value;
+                leaderboardPage = 1;
+            }}
+            aria-label="Position"
+        >
+            {#each POSITION_GROUPS as group (group.key)}
+                <option value={group.key}>{group.label}</option>
+            {/each}
+        </select>
+    </div>
+
+    <div class="control-field control-field--secondary">
+        <select
+            id={`age-filter${suffix}`}
+            value={ageFilter}
+            onchange={(event) => {
+                ageFilter = event.currentTarget.value;
+                leaderboardPage = 1;
+            }}
+            aria-label="Age"
+        >
+            {#each AGE_GROUPS as group (group.key)}
+                <option value={group.key}>{group.label}</option>
+            {/each}
+        </select>
+    </div>
+
+    <div class="control-field control-field--columns control-field--secondary modern-only">
+        <select
+            id={`column-set${suffix}`}
+            value={columnSet}
+            onchange={(event) => (columnSet = event.currentTarget.value)}
+            aria-label="Columns"
+        >
+            {#each COLUMN_SETS as set (set.key)}
+                <option value={set.key}>{set.label}</option>
+            {/each}
+        </select>
+    </div>
+{/snippet}
 
 <!-- The headers screen readers use. They carry the columns' classes, so a column hidden on a phone
      (Team) leaves this row too and the headers still match the cells. -->
@@ -1431,6 +1486,11 @@
         gap: 6px;
     }
 
+    /* Position, age and columns join More filters only on a phone (see the 640px rules). */
+    .range-secondary {
+        display: none;
+    }
+
     .range-label {
         min-width: 32px;
         color: var(--text);
@@ -1560,6 +1620,14 @@
         font-weight: 700;
     }
 
+    .pick-tray-note {
+        flex-basis: 100%;
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
     .pick-list {
         display: flex;
         flex-wrap: wrap;
@@ -1622,9 +1690,14 @@
         cursor: pointer;
     }
 
-    .pick-action:hover {
+    .pick-action:hover:not(:disabled) {
         border-color: var(--accent);
         color: var(--text);
+    }
+
+    .pick-action:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
     }
 
     /* Like the site's .btn-primary, which this page's touch layout hides. */
@@ -1930,7 +2003,7 @@
         box-shadow: none;
         border-bottom: 0;
         color: var(--text-muted);
-        font-size: 10px;
+        font-size: 11px;
         letter-spacing: 0.08em;
         text-align: left;
     }
@@ -2580,6 +2653,44 @@
 
         .dpm-split :global(.od-bar) {
             width: 42px;
+        }
+    }
+
+    /* A phone keeps the board's first rows in view: season, team and search stay in the row of
+       controls, position, age and columns move into More filters, and the toggles share one line
+       that scrolls sideways. The Shiny view, without More filters, keeps its controls in place. */
+    @media (max-width: 640px) {
+        :global(:root:not([data-view='shiny'])) .leaderboard-controls .control-field--secondary {
+            display: none;
+        }
+
+        .range-secondary {
+            display: grid;
+            flex-basis: 100%;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .range-secondary .control-field--columns {
+            grid-column: 1 / -1;
+        }
+
+        /* The right edge fades, so toggles past it read as more to scroll to. */
+        .control-toggles {
+            flex-wrap: nowrap;
+            margin-right: -12px;
+            padding-right: 12px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+        }
+
+        .control-toggles::-webkit-scrollbar {
+            display: none;
+        }
+
+        .toggle-chip {
+            flex: 0 0 auto;
         }
     }
 </style>

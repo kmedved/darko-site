@@ -61,7 +61,9 @@ test('leaderboard defaults to Current and loads historical snapshots from the UR
 
     assert.match(page, /import \{ afterNavigate, beforeNavigate, goto \} from '\$app\/navigation';/);
     assert.match(page, /<option value="current">Current<\/option>/);
-    assert.match(page, /goto\(`\/\$\{suffix\}`, \{ keepFocus: true \}\)/);
+    // A season pick keeps the board's question: filters, sort and columns go along.
+    assert.match(page, /const params = leaderboardSearchParams\(urlState\);\s*if \(season !== 'current'\) params\.set\('season', season\);/);
+    assert.match(page, /goto\(`\/\$\{search \? `\?\$\{search\}` : ''\}`, \{ keepFocus: true \}\)/);
     assert.match(page, /data\.selectedSeason === null/);
     assert.match(server, /url\.searchParams\.get\('season'\)/);
     assert.match(server, /getLeaderboardSeasons\(\)/);

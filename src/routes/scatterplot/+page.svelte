@@ -1,11 +1,13 @@
 <script>
-	import { goto } from '$app/navigation';
+	import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ScatterplotChart from '$lib/components/ScatterplotChart.svelte';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 	import { isRapmMetric, staleRapmDate } from '$lib/utils/latestRapm.js';
+	import { readScatterState, scatterSearch, scatterSearchParams } from '$lib/utils/scatterplotState.js';
 	import { formatAsOfDate } from '$lib/utils/timeMachine.js';
+	import { isIncomingNavigation, pathAndSearch } from '$lib/utils/urlSync.js';
 
 	let { data } = $props();
 
@@ -41,53 +43,65 @@
 	];
 	const ALL_STATS = STAT_GROUPS.flatMap((group) => group.stats);
 
-	// The chart's settings and highlighted players (?ids=, as the leaderboard's picks send them)
-	// live in the URL, so a view can be shared or reloaded.
-	const initial = $page.url.searchParams;
-	const statParam = (key, fallback) => (ALL_STATS.includes(initial.get(key)) ? initial.get(key) : fallback);
-	const mpgParam = Number.parseInt(initial.get('mpg') ?? '', 10);
-
-	let xMetric = $state(statParam('x', 'o_dpm'));
-	let yMetric = $state(statParam('y', 'd_dpm'));
-	let colorByPosition = $state(initial.get('color') !== '0');
-	let mpgMinimum = $state(Number.isInteger(mpgParam) && mpgParam > 0 && mpgParam <= 40 ? mpgParam : 0);
-	let highlightIds = $state(
-		[...new Set((initial.get('ids') ?? '').split(',').map((id) => Number.parseInt(id, 10)))]
-			.filter((id) => Number.isInteger(id) && id > 0)
-			.slice(0, 8)
-	);
+	// The chart's settings and highlighted players live in the URL (scatterplotState.js): read as
+	// the page opens and whenever a navigation brings another, written back a moment after a change.
+	const initial = readScatterState($page.url.searchParams, ALL_STATS);
+	let xMetric = $state(initial.x);
+	let yMetric = $state(initial.y);
+	let colorByPosition = $state(initial.color);
+	let mpgMinimum = $state(initial.mpg);
+	let highlightIds = $state(initial.ids);
 	let filtersOpen = $state(false);
 	let innerHeight = $state(900);
 
 	// The chart takes the height the window has left under the header and controls.
 	const chartHeight = $derived(Math.min(760, Math.max(420, innerHeight - 340)));
 
+	const scatterState = $derived({ x: xMetric, y: yMetric, mpg: mpgMinimum, color: colorByPosition, ids: highlightIds });
+	let urlSyncTimer = 0;
+	// The address this page last wrote, so its own navigation isn't read back as an incoming one.
+	let ownHref = null;
+
 	$effect(() => {
 		const current = $page.url;
-		const params = new URLSearchParams(current.searchParams);
-		const put = (key, value, fallback) => (value === fallback ? params.delete(key) : params.set(key, String(value)));
-		put('x', xMetric, 'o_dpm');
-		put('y', yMetric, 'd_dpm');
-		put('mpg', Number(mpgMinimum), 0);
-		put('color', colorByPosition ? '1' : '0', '1');
-		put('ids', highlightIds.join(','), '');
-		const next = params.toString();
-		if (next === current.searchParams.toString()) return;
-		// Commas stay commas in the address, as Compare and Career Trajectories write them.
-		const search = next.replaceAll('%2C', ',');
-		const timer = setTimeout(
-			() => goto(`${current.pathname}${search ? `?${search}` : ''}`, { replaceState: true, keepFocus: true, noScroll: true }),
-			200
-		);
-		return () => clearTimeout(timer);
+		if (scatterSearchParams(scatterState, current.searchParams).toString() === current.searchParams.toString()) return;
+		const search = scatterSearch(scatterState, current.searchParams);
+		const href = `${current.pathname}${search ? `?${search}` : ''}`;
+		urlSyncTimer = setTimeout(() => {
+			ownHref = href;
+			goto(href, { replaceState: true, keepFocus: true, noScroll: true });
+		}, 200);
+		return () => clearTimeout(urlSyncTimer);
+	});
+
+	// Any other navigation drops a write still waiting, which would undo it.
+	beforeNavigate(({ to }) => {
+		if (!to?.url || pathAndSearch(to.url) !== ownHref) clearTimeout(urlSyncTimer);
+	});
+
+	// A link (More → Scatterplot), Back/Forward or Ask DARKO arriving here brings its own settings.
+	afterNavigate(({ type, to }) => {
+		if (isIncomingNavigation({ type, to, pathname: '/scatterplot', ownHref })) {
+			const incoming = readScatterState(to.url.searchParams, ALL_STATS);
+			if (scatterSearch(incoming) !== scatterSearch(scatterState)) {
+				xMetric = incoming.x;
+				yMetric = incoming.y;
+				mpgMinimum = incoming.mpg;
+				colorByPosition = incoming.color;
+				highlightIds = incoming.ids;
+			}
+		}
+		ownHref = null;
 	});
 
 	const highlightSet = $derived(new Set(highlightIds));
+	// The picks this chart can draw; the rest (players off today's board) are only counted.
 	const highlightedPlayers = $derived(
 		highlightIds
 			.map((id) => (data.players || []).find((player) => Number(player.nba_id) === id))
 			.filter(Boolean)
 	);
+	const missingHighlights = $derived(highlightIds.length - highlightedPlayers.length);
 
 	// Highlighted players stay on the chart whatever the minutes minimum.
 	const filteredPlayers = $derived.by(() => {
@@ -169,7 +183,8 @@
 		</div>
 
 		<div class="scatterplot-chart-area" data-shiny-surface="plot">
-			{#if highlightedPlayers.length > 0}
+			<!-- Every pick is accounted for: the ones on the chart as chips, the rest counted. -->
+			{#if highlightIds.length > 0}
 				<div class="scatter-highlights" role="group" aria-label="Highlighted players">
 					<span class="scatter-highlights-label">Highlighted</span>
 					{#each highlightedPlayers as player (player.nba_id)}
@@ -182,6 +197,12 @@
 							{player.player_name}<span aria-hidden="true">×</span>
 						</button>
 					{/each}
+					{#if missingHighlights > 0}
+						<span class="scatter-highlights-missing">
+							{missingHighlights === 1 ? 'One pick isn’t' : `${missingHighlights} picks aren’t`} on this chart, which
+							shows current players only.
+						</span>
+					{/if}
 					<button type="button" class="highlight-clear" onclick={() => (highlightIds = [])}>Clear</button>
 				</div>
 			{/if}
@@ -191,7 +212,7 @@
 				{yMetric}
 				{colorByPosition}
 				height={chartHeight}
-				highlight={highlightIds}
+				highlight={highlightedPlayers.map((player) => Number(player.nba_id))}
 			/>
 		</div>
 		{#if rapmFrom}
@@ -252,6 +273,10 @@
 	.scatter-highlights-label {
 		color: var(--text-secondary);
 		font-weight: 700;
+	}
+
+	.scatter-highlights-missing {
+		color: var(--text-secondary);
 	}
 
 	.highlight-chip {

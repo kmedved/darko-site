@@ -112,6 +112,11 @@ export function leaderboardSearchParams(state, base = '') {
     return params;
 }
 
+/** Whether two states ask the same question, as their URLs would say it. */
+export function sameLeaderboardState(a, b) {
+    return leaderboardSearchParams(a).toString() === leaderboardSearchParams(b).toString();
+}
+
 /** "DPM ≥ +2", "MPG ≤ 30", "Age 22 to 25". */
 export function rangeLabel(filter, range) {
     const min = range?.min ?? null;

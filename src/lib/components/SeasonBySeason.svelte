@@ -1,24 +1,16 @@
 <script>
 	// A player's seasons since 1996-97, newest first (seasonRows in utils/playerSeasons.js): DPM at
 	// each season's last game day, and where it ranks among seasons at the same age. Each DPM opens
-	// the leaderboard on that day (the season still being played, today's), to see the peers.
+	// the leaderboard on its own day, where the player shows that same rating among their peers.
 	import { ordinal } from '$lib/utils/daily.js';
 	import { formatSigned } from '$lib/utils/seismograph.js';
-	import { AS_OF_PARAM, formatAsOfDate } from '$lib/utils/timeMachine.js';
+	import { seasonBoardHref } from '$lib/utils/playerSeasons.js';
+	import { formatAsOfDate } from '$lib/utils/timeMachine.js';
 
 	let { rows = [], playerName = '' } = $props();
 
 	function one(value) {
 		return value === null || value === undefined ? '—' : value.toFixed(1);
-	}
-
-	function boardHref(row) {
-		if (row.inProgress) return '/';
-		return row.date ? `/?${AS_OF_PARAM}=${row.date}` : null;
-	}
-
-	function boardTitle(row) {
-		return row.inProgress ? "Today's leaderboard" : `The leaderboard on ${formatAsOfDate(row.date)}`;
 	}
 </script>
 
@@ -47,8 +39,8 @@
 					<td>{row.games}{#if row.playoffGames > 0}<span class="playoffs">{' '}+{row.playoffGames}</span>{/if}</td>
 					<td>{one(row.mpg)}</td>
 					<td class="dpm">
-						{#if boardHref(row) && row.dpm !== null}
-							<a href={boardHref(row)} title={boardTitle(row)}>{formatSigned(row.dpm)}</a>
+						{#if seasonBoardHref(row) && row.dpm !== null}
+							<a href={seasonBoardHref(row)} title={`The leaderboard on ${formatAsOfDate(row.date)}`}>{formatSigned(row.dpm)}</a>
 						{:else}
 							{formatSigned(row.dpm)}
 						{/if}

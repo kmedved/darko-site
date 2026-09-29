@@ -241,6 +241,8 @@
 				: (isShinyView ? SHINY_COLORS.scatterBase : 'var(--accent)');
 		const highlighted = new Set((highlight ?? []).map(Number));
 		const isHighlighted = (d) => highlighted.has(Number(d.player.nba_id));
+		// The rest fade only when a pick is actually drawn (one without both stats isn't).
+		const picks = points.filter(isHighlighted);
 		g.selectAll('circle.scatter-dot')
 			.data(points)
 			.join('circle')
@@ -252,13 +254,12 @@
 			// Modern dots are solid, since translucency pulls the palette under 3:1 contrast; a ring in
 			// the background colour keeps overlapping players apart. Highlighting fades the rest.
 			.attr('opacity', (d) =>
-				highlighted.size > 0 && !isHighlighted(d) ? 0.22 : (isShinyView ? shinyScatter.pointOpacity : 1)
+				picks.length > 0 && !isHighlighted(d) ? 0.22 : (isShinyView ? shinyScatter.pointOpacity : 1)
 			)
 			.attr('stroke', 'var(--bg-surface)')
 			.attr('stroke-width', isShinyView ? 0.5 : 1);
 
 		// The highlighted players on top, larger and named, the name turning inward near the edge.
-		const picks = points.filter(isHighlighted);
 		if (picks.length > 0) {
 			const pickG = g.append('g').attr('class', 'scatter-picks');
 			pickG.selectAll('circle')

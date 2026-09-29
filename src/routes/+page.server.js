@@ -4,9 +4,10 @@ import {
     getSeasonStartPlayers
 } from '$lib/server/supabase.js';
 import { AS_OF_EDGE_CACHE, getPlayersOnDate } from '$lib/server/history.js';
+import { getLatestGameDate } from '$lib/server/daily.js';
 import { projectPlayers } from '$lib/server/playerViews.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
-import { AS_OF_PARAM, latestDate, parseAsOfDate } from '$lib/utils/timeMachine.js';
+import { AS_OF_PARAM, parseAsOfDate } from '$lib/utils/timeMachine.js';
 import { packRows } from '$lib/utils/columnar.js';
 import { withChangeSince } from '$lib/utils/leaderboardViews.js';
 
@@ -29,6 +30,7 @@ export async function load({ url, setHeaders }) {
     let today = null;
     let asOf = null;
     let selectedSeason = null;
+    let ratingsThrough = null;
     if (asOfDate) {
         // Today's board too, for each player's rating now and the change since the date.
         const [allSeasons, result, current] = await Promise.all([
@@ -44,9 +46,12 @@ export async function load({ url, setHeaders }) {
         seasons = await getLeaderboardSeasons();
         const requestedSeason = parseSeasonEndYear(url.searchParams.get('season'));
         selectedSeason = seasons.includes(requestedSeason) ? requestedSeason : null;
-        snapshot = selectedSeason === null
-            ? await getActivePlayers()
-            : await getSeasonStartPlayers(selectedSeason);
+        if (selectedSeason === null) {
+            // Today's board says how fresh it is: the last game its ratings take in.
+            [snapshot, ratingsThrough] = await Promise.all([getActivePlayers(), getLatestGameDate()]);
+        } else {
+            snapshot = await getSeasonStartPlayers(selectedSeason);
+        }
     }
     const projected = projectPlayers(snapshot, 'leaderboard');
     const players = today ? withChangeSince(projected, today) : projected;
@@ -60,8 +65,7 @@ export async function load({ url, setHeaders }) {
         seasons,
         selectedSeason,
         asOf,
-        // Today's board says how fresh it is: the last day any player's rating moved.
-        ratingsThrough: asOf || selectedSeason !== null ? null : latestDate(snapshot)
+        ratingsThrough
     };
 }
 

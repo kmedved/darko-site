@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
+import { getLatestGameDate } from '$lib/server/daily.js';
 import { getTeamPageData } from '$lib/server/supabase.js';
 import { knownTeamName } from '$lib/utils/teamRouteUtils.js';
 
@@ -32,11 +33,13 @@ export async function getTeamPagePayload({
     normalizeTeamParam
 }) {
     const teamName = resolveTeamPageName(rawTeamParam, normalizeTeamParam);
-    const teamData = await getTeamPageData(teamName);
+    // The rating says how fresh it is: the last game its players' ratings take in.
+    const [teamData, ratingsThrough] = await Promise.all([getTeamPageData(teamName), getLatestGameDate()]);
 
     return {
         teamName,
-        ...teamData
+        ...teamData,
+        ratingsThrough
     };
 }
 

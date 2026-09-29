@@ -35,7 +35,7 @@
     import PageHeader from '$lib/components/PageHeader.svelte';
     import { NBA_TEAMS, teamAbbr, teamId as teamIdFromName } from '$lib/utils/teamAbbreviations.js';
     import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
-    import { formatAsOfDate, latestDate } from '$lib/utils/timeMachine.js';
+    import { formatAsOfDate } from '$lib/utils/timeMachine.js';
 
     let {
         teamName = '',
@@ -45,7 +45,9 @@
         league = [],
         sim = null,
         winDist = [],
-        lineups = { top: [], worst: [] }
+        lineups = { top: [], worst: [] },
+        // The last game the ratings take in (daily.js getLatestGameDate).
+        ratingsThrough = null
     } = $props();
 
     let sortColumn = $state('player_name');
@@ -64,8 +66,6 @@
     const simFinished = $derived(sim ? isSeasonComplete([sim]) : false);
 
     const teamPlayers = $derived(players || []);
-    // How fresh the rating is: the last day any of these players' ratings moved.
-    const ratingsThrough = $derived(latestDate(teamPlayers));
     const teamPlayerHeatScales = $derived(buildPresetHeatScales(teamPlayers, 'talent'));
     const dpmTintLimit = $derived(tintLimit(teamPlayers.map((player) => player?.dpm)));
     const teamWinDist = $derived(winDist || []);

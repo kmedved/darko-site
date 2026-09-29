@@ -4,8 +4,16 @@
  * the current players whose ten closest comps include one of this player's seasons.
  */
 
-import { seasonLabelFromEndYear } from './timeMachine.js';
+import { AS_OF_PARAM, seasonLabelFromEndYear } from './timeMachine.js';
 import { teamAbbrFromId } from './teamAbbreviations.js';
+
+/**
+ * The leaderboard on a season's own recorded day, so the player shows the rating the table
+ * lists, even for the season still being played; null without a date.
+ */
+export function seasonBoardHref(row) {
+	return row?.date ? `/?${AS_OF_PARAM}=${row.date}` : null;
+}
 
 function toNumber(value) {
 	const n = typeof value === 'number' ? value : Number.parseFloat(value);
