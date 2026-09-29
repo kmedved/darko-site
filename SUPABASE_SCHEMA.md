@@ -23,8 +23,10 @@ swap, and the read policies on tables the swap recreates. `darko-site` owns appl
 state (the Elo vote path and `elo_rate_limits`) and every Postgres function, through
 `supabase/migrations/`. The publisher never issues `CREATE OR REPLACE FUNCTION`, and a
 publish never removes a function: string-bodied SQL functions record no dependency on the
-tables they name. `supabase/migrations/20260929_001_reassert_function_ownership.sql` puts
-production at this repository's definitions and can be re-run at any time.
+tables they name. `supabase/migrations/20260929_001_reassert_function_ownership.sql` put
+production at this repository's definitions as of that migration. It is a point-in-time
+reassertion: later migrations redefine or drop some of those functions, so re-running 001
+must be followed by re-running, in filename order, every later migration that touches them.
 
 ---
 
@@ -407,70 +409,91 @@ Five-man lineup ratings used by the `/lineups` page. One row per lineup variant.
 
 ### season_calendar
 
-First game, last regular-season game and last game of every season. Built by
-`build_season_calendar()` in `1_historic_darko/push_website.py`; rebuilt and swapped in on every
-publish. Read by `src/lib/server/history.js` for the Time Machine and Rewind.
+First game, first team finale, last regular-season game and last game of every season. Built by
+`build_season_calendar()` in `pipeline_scripts/publish/website.py`; rebuilt and swapped in on
+every publish. Read by `src/lib/server/history.js` for the Time Machine and Rewind.
 
 - **Unique index:** `(season)`
-- **Columns:** `season`, `first_game`, `regular_season_end`, `earliest_team_finale` (the first
-  date any team played its last regular-season game), `last_game`
+- **Columns:** `season`, `first_game`, `earliest_team_finale` (the first date any team played its
+  last regular-season game), `regular_season_end`, `last_game`
+- **Site reads:** all five
 
 ### rating_frames
 
-The weekly top players by DPM in every regular season since 1996-97, with each player's latest
-rating at that frame. Built by `build_rating_frames()` in `1_historic_darko/push_website.py`;
-rebuilt and swapped in on every publish. Read by `src/lib/server/history.js` for Rewind.
+The weekly top 20 players by DPM in every regular season since 1996-97, each at his latest
+rating as of the frame date. Frames fall on every seventh day of the regular season and on its
+last day; a player needs three games that season and a game in the 28 days before the frame.
+Built by `build_rating_frames()` in `pipeline_scripts/publish/website.py`; rebuilt and swapped
+in on every publish. Read by `src/lib/server/history.js` for Rewind.
 
 - **Unique index:** `(frame_date, rank)`; index on `season`
-- **Columns:** `frame_date`, `rank`, `season`, `nba_id`, `player_name`, `date`, `tm_id`,
-  `team_name`, `dpm`, `o_dpm`, `d_dpm`, `seconds_played`, `games`, `last_played`
+- **Columns:** `frame_date`, `season`, `rank`, `nba_id`, `player_name`, `tm_id`, `team_name`,
+  `dpm`, `o_dpm`, `d_dpm`, `games` (games played that season through the frame)
+- **Site reads:** all eleven
 
 ### player_comps
 
-The closest historical comps for every current player, closest first, each comp at its
-closest season with five finished seasons of futures. Built by
-`pipeline_scripts/publish/website_comps.py`; rebuilt and swapped in on every publish. Read by
+Up to 25 historical comps for every current player, closest first, each comp at its
+closest season with five finished seasons of futures. Built by `build_player_comps()` in
+`pipeline_scripts/publish/website_comps.py`, called by `build_comps_table()` in
+`pipeline_scripts/publish/website.py`; rebuilt and swapped in on every publish. Read by
 `src/lib/server/comps.js` for player pages and Echoes.
 
 - **Unique index:** `(nba_id, rank)`; index on `comp_id`
 - **Columns:** `nba_id`, `season`, `as_of`, `age`, `dpm`, `rank`, `comp_id`, `comp_name`,
   `comp_season`, `comp_age`, `comp_dpm`, `comp_o_dpm`, `comp_d_dpm`, `similarity`, `weight`,
   `dpm_next_1` … `dpm_next_5`
+- **Site reads:** all twenty (player pages filter on `nba_id`; Echoes read `nba_id`, `rank`,
+  `comp_season` and `similarity` filtered on `comp_id`)
 
 ### player_seasons
 
-Every player-season at its last game day. Built by `build_player_seasons()` in
-`pipeline_scripts/publish/website_daily.py`; rebuilt and swapped in on every publish. Read by
-`src/lib/server/daily.js` for The Daily and player-page season tables.
+Every player-season since 1996-97 at its last game day, with regular-season games and minutes,
+playoff games, and where its DPM ranks among all seasons at the same whole-year age. Built by
+`build_player_seasons()` in `pipeline_scripts/publish/website_daily.py`; rebuilt and swapped in
+on every publish. Read by `src/lib/server/daily.js` for The Daily and player-page season
+tables.
 
 - **Unique index:** `(nba_id, season)`; index on `(season, age_rank)`
-- **Columns:** `nba_id`, `season`, `player_name`, `tm_id`, `date`, `age`, `age_year`, `dpm`,
-  `o_dpm`, `d_dpm`, `games`, `playoff_games`, `minutes`, `seconds_played`, `age_rank`,
-  `age_count`
+- **Columns:** `nba_id`, `season`, `player_name`, `date`, `tm_id`, `age`, `dpm`, `o_dpm`,
+  `d_dpm`, `games` (regular season), `minutes` (regular season), `playoff_games`, `age_rank`,
+  `age_count` (both null for a season with fewer than 20 regular-season games or no age)
+- **Site reads:** all fourteen
 
 ### game_updates
 
-Every game of the current season each player played, with the rating going into it and coming
+Every game of the latest season each player played, with the rating going into it and coming
 out. Built by `build_game_updates()` in `pipeline_scripts/publish/website_daily.py`; rebuilt
-and swapped in on every publish. Read by `src/lib/server/daily.js` for The Daily and the
-Seismograph.
+and swapped in on every publish. Read by `src/lib/server/daily.js` for The Daily's biggest
+updates and its sparklines (also served by `/api/daily/watch`).
 
 - **Unique index:** `(nba_id, date)`; index on `date`
-- **Columns:** `nba_id`, `player_name`, `date`, `season`, `game_type`, `tm_id`, `opp_id`,
-  `player_game`, `minutes`, `seconds_played`, `dpm_before`, `o_before`, `d_before`,
-  `dpm_after`, `o_after`, `d_after`, `dpm_update`, `o_update`, `d_update`, `abs_update`
+- **Columns:** `nba_id`, `player_name`, `date`, `season`, `player_game`, `game_type`, `tm_id`,
+  `opp_id`, `minutes`, `dpm_before`, `o_before`, `d_before`, `dpm_after`, `o_after`,
+  `d_after`, `dpm_update`, `o_update`, `d_update`, `abs_update`
+- **Site reads:** `nba_id`, `player_name`, `date`, `game_type`, `tm_id`, `opp_id`, `minutes`,
+  `dpm_before`, `o_before`, `dpm_after`, `dpm_update`, `o_update`, `d_update`, `abs_update`;
+  not `season`, `player_game`, `d_before`, `o_after` or `d_after`
 
 ### rating_moves
 
-Rating changes into the latest published date over 7 days, 30 days and since the season began.
-Built by `build_rating_moves()` in `pipeline_scripts/publish/website_daily.py`; rebuilt and
-swapped in on every publish. Read by `src/lib/server/daily.js` for The Daily.
+Each player's rating change into the latest published date over 7 days, 30 days and since the
+season began (`period` `'7'`, `'30'` or `'season'`), with the games played in between; a player
+with no game in a window is left out of it. Built by `build_rating_moves()` in
+`pipeline_scripts/publish/website_daily.py`; rebuilt and swapped in on every publish. Read by
+`src/lib/server/daily.js` for The Daily and `/api/daily/watch`.
 
 - **Unique index:** `(period, nba_id)`
 - **Columns:** `period`, `start_date`, `end_date`, `nba_id`, `player_name`, `tm_id`, `games`,
   `dpm_from`, `o_from`, `dpm_to`, `o_to`, `delta`, `o_delta`
+- **Site reads:** all thirteen
 
-Column lists above are the ones the site reads; each builder is the source of truth.
+Each **Columns** list above is its builder's exact output, in order; the builder in nba_darko
+(`pipeline_scripts/publish/website.py` is the publisher older notes call
+`1_historic_darko/push_website.py`) and its test in `tests/test_website*.py` are the source of
+truth, and `TABLE_INDEXES` in `website.py` defines the indexes. **Site reads** names the
+columns the site selects or filters on. The builders compute `seconds_played`, `last_played`
+and `age_year` along the way but publish none of them.
 
 ## SvelteKit Data Access Layer
 
