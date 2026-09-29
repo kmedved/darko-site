@@ -12,6 +12,14 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'trajectories-news',
+		title: 'Players in the news',
+		launched: '2026-09-29T02:02:23Z',
+		text: "Career Trajectories opens on the players most in the day's NBA news, with a line over the chart on why each one is in it.",
+		cta: 'Open Career Trajectories',
+		href: '/trajectories'
+	},
+	{
 		key: 'page-headers',
 		title: 'Player and team pages, rearranged',
 		launched: '2026-09-28T23:17:09Z',
