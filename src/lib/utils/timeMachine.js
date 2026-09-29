@@ -80,6 +80,16 @@ export function formatAsOfDate(date, { weekday = false, short = false } = {}) {
 	});
 }
 
+/** The latest YYYY-MM-DD among rows' `date` fields (dates or timestamps), or null. */
+export function latestDate(rows) {
+	let latest = null;
+	for (const row of rows ?? []) {
+		const date = typeof row?.date === 'string' ? row.date.slice(0, 10) : '';
+		if (/^\d{4}-\d{2}-\d{2}$/.test(date) && (latest === null || date > latest)) latest = date;
+	}
+	return latest;
+}
+
 export function seasonLabelFromEndYear(season) {
 	const year = Number.parseInt(season, 10);
 	return Number.isInteger(year) ? `${year - 1}-${String(year).slice(2)}` : '';

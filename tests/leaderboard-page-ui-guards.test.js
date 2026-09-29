@@ -59,7 +59,7 @@ test('leaderboard defaults to Current and loads historical snapshots from the UR
         fs.readFile(path.resolve(process.cwd(), LEADERBOARD_PAGE_SERVER), 'utf8')
     ]);
 
-    assert.match(page, /import \{ goto \} from '\$app\/navigation';/);
+    assert.match(page, /import \{ afterNavigate, beforeNavigate, goto \} from '\$app\/navigation';/);
     assert.match(page, /<option value="current">Current<\/option>/);
     assert.match(page, /goto\(`\/\$\{suffix\}`, \{ keepFocus: true \}\)/);
     assert.match(page, /data\.selectedSeason === null/);

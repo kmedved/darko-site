@@ -86,7 +86,7 @@ test('the player page wires the jump menu, rank, Lab link, contract panel and co
         read('src/routes/player/[nbaId]/+page.svelte'),
         read('src/routes/player/[nbaId]/+page.server.js')
     ]);
-    assert.match(page, /\{#each sections as section \(section\.id\)\}\s*<a href="#\{section\.id\}">/);
+    assert.match(page, /\{#each sections as section \(section\.id\)\}\s*<a\s+href="#\{section\.id\}"/);
     // Every section the menu can name has that id on the page.
     for (const id of ['seismograph', 'comps', 'echoes', 'career', 'contract', 'seasons', 'percentiles', 'box-score']) {
         assert.match(page, new RegExp(`id="${id}"`), id);

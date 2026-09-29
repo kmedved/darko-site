@@ -26,9 +26,12 @@ export function seasonRows(seasons, { asOf = null, inProgress = null } = {}) {
 			const offense = toNumber(row.o_dpm);
 			const defense = toNumber(row.d_dpm) ?? (dpm !== null && offense !== null ? dpm - offense : null);
 			const age = toNumber(row.age);
+			const date = String(row.date ?? '').slice(0, 10);
 			return {
 				season: Number(row.season),
 				label: seasonLabelFromEndYear(row.season),
+				// The season's last game day, which opens the leaderboard as it stood then.
+				date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
 				team: teamAbbrFromId(row.tm_id) || '—',
 				age: age === null ? null : Math.floor(age),
 				games,

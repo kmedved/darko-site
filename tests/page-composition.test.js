@@ -17,8 +17,8 @@ test('the player page leads with the player, then the sections, each chart with 
 	const markup = page.slice(page.indexOf('</script>'), page.indexOf('<style>'));
 
 	// Header, then the jump menu, then the Seismograph: nothing else in between on a phone.
-	assert.ok(at(markup, /<header class="profile-header">/) < at(markup, /<nav class="profile-jump"/));
-	assert.ok(at(markup, /<nav class="profile-jump"/) < at(markup, /id="seismograph"/));
+	assert.ok(at(markup, /<header class="profile-header">/) < at(markup, /<nav\s+class="profile-jump"/));
+	assert.ok(at(markup, /<nav\s+class="profile-jump"/) < at(markup, /id="seismograph"/));
 	assert.match(markup, /<span class="profile-score-value">\{formatSigned\(playerRating\.dpm, 1\)\}<\/span>/);
 
 	// Each chart's controls sit over it; the Shiny sidebar renders the same controls itself.
@@ -80,7 +80,7 @@ test("a phone's leaderboard shows the DPM beside the name, and the name stays wh
 	// On a touch screen the rank and name columns, and their header cells, stay pinned.
 	const touch = board.slice(board.indexOf('/* Touch/mobile scroll mode */'), board.indexOf('/* End touch/mobile scroll mode */'));
 	assert.doesNotMatch(touch, /\.leaderboard-cell--player \{\s*position: static;/);
-	assert.match(touch, /\.table-sizing-head :is\(\.header-row, \.column-filter-row\) th:nth-child\(2\) \{\s*left: var\(--frozen-rank-width\);/);
+	assert.match(touch, /\.table-sizing-head :is\(\.group-row, \.header-row, \.column-filter-row\) th:nth-child\(2\) \{\s*left: var\(--frozen-rank-width\);/);
 	// The scroll fade starts after the pinned columns instead of covering them.
 	assert.match(board, /--pinned-width: calc\(var\(--frozen-rank-width\) \+ var\(--frozen-player-width\)\);/);
 	assert.match(await read('src/app.css'), /\[data-overflow-left\]::before \{\s*left: var\(--pinned-width, 0px\);/);

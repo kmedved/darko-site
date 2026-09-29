@@ -383,6 +383,55 @@
 		})
 	);
 
+	// The jump menu marks the section in view, and names the player once the header has gone by.
+	let jumpNav = $state(null);
+	let activeSection = $state(null);
+	let jumpStuck = $state(false);
+
+	$effect(() => {
+		if (!jumpNav) return;
+		const ids = sections.map((section) => section.id);
+		let frame = 0;
+		const update = () => {
+			frame = 0;
+			if (!jumpNav) return;
+			const bar = jumpNav.getBoundingClientRect();
+			let current = null;
+			for (const id of ids) {
+				const top = document.getElementById(id)?.getBoundingClientRect().top;
+				if (top !== undefined && top <= bar.bottom + 24) current = id;
+			}
+			// At the foot of the page the last section is the one being read, however short.
+			const root = document.documentElement;
+			if (current && window.innerHeight + window.scrollY >= root.scrollHeight - 2) current = ids.at(-1);
+			activeSection = current;
+			const header = document.querySelector('.profile-header');
+			jumpStuck = header ? header.getBoundingClientRect().bottom < bar.top : false;
+		};
+		const schedule = () => {
+			if (!frame) frame = requestAnimationFrame(update);
+		};
+		schedule();
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', schedule);
+		return () => {
+			cancelAnimationFrame(frame);
+			window.removeEventListener('scroll', schedule);
+			window.removeEventListener('resize', schedule);
+		};
+	});
+
+	// On a phone the links scroll sideways; the marked one is brought into view.
+	$effect(() => {
+		if (!jumpNav || !activeSection || jumpNav.scrollWidth <= jumpNav.clientWidth) return;
+		const link = jumpNav.querySelector(`a[href="#${activeSection}"]`);
+		if (!link) return;
+		const hidden =
+			link.offsetLeft < jumpNav.scrollLeft ||
+			link.offsetLeft + link.offsetWidth > jumpNav.scrollLeft + jumpNav.clientWidth;
+		if (hidden) jumpNav.scrollTo({ left: link.offsetLeft - 16, behavior: 'smooth' });
+	});
+
 	function handleSelectPlayer(player) {
 		goto(`/player/${player.nba_id}`);
 	}
@@ -507,6 +556,9 @@
 									defense={playerRating.defense}
 									labels
 								/>
+								{#if !asOfDate && currentDate}
+									<span class="profile-score-date">Rated through {currentDate}</span>
+								{/if}
 							</div>
 						</div>
 					{/if}
@@ -533,9 +585,21 @@
 		<div class="profile-content">
 			{#if playerInfo}
 				{#if sections.length > 1}
-					<nav class="profile-jump" aria-label="Sections of {playerInfo.player_name}'s page">
+					<nav
+						class="profile-jump"
+						class:stuck={jumpStuck}
+						bind:this={jumpNav}
+						aria-label="Sections of {playerInfo.player_name}'s page"
+					>
+						<span class="profile-jump-name" aria-hidden="true">{playerInfo.player_name}</span>
 						{#each sections as section (section.id)}
-							<a href="#{section.id}">{section.label}</a>
+							<a
+								href="#{section.id}"
+								class:active={activeSection === section.id}
+								aria-current={activeSection === section.id ? 'location' : undefined}
+							>
+								{section.label}
+							</a>
 						{/each}
 					</nav>
 				{/if}
@@ -1018,6 +1082,11 @@
 		width: 180px;
 	}
 
+	.profile-score-date {
+		color: var(--text-muted);
+		font-size: 12px;
+	}
+
 	.profile-score-note {
 		color: var(--time-text);
 		font-size: 13px;
@@ -1222,15 +1291,50 @@
 		border-radius: var(--radius);
 		padding: 18px 20px;
 		/* The jump menu's links land with the heading clear of the sticky nav. */
-		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
+		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + var(--section-clearance, 16px));
 	}
 
-	/* The jump menu: one quiet row of links to the sections this player's page shows. */
+	/* The jump menu: one quiet row of links to the sections this player's page shows. It stays
+	   under the site's bar as the page scrolls, marks the section in view and, once the header
+	   has gone by, names the player. Section headings land clear of both. */
+	.player-profile-page {
+		--section-clearance: 60px;
+	}
+
 	.profile-jump {
+		position: sticky;
+		top: var(--nav-sticky-offset, 64px);
+		z-index: 20;
 		display: flex;
 		flex-wrap: wrap;
+		align-items: center;
 		gap: 2px;
 		margin: -8px 0 -4px -10px;
+		padding: 4px 0;
+		background: var(--bg);
+	}
+
+	.profile-jump.stuck {
+		box-shadow: 0 1px 0 var(--border);
+	}
+
+	.profile-jump-name {
+		display: none;
+	}
+
+	.profile-jump.stuck .profile-jump-name {
+		display: inline-block;
+		max-width: 15rem;
+		margin-right: 6px;
+		padding: 5px 12px 5px 10px;
+		border-right: 1px solid var(--border);
+		overflow: hidden;
+		color: var(--text);
+		font-family: var(--font-display);
+		font-size: 14px;
+		font-weight: 800;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.profile-jump a {
@@ -1246,6 +1350,29 @@
 	.profile-jump a:focus-visible {
 		background: var(--bg-hover);
 		color: var(--text);
+	}
+
+	.profile-jump a.active {
+		background: var(--bg-hover);
+		color: var(--text);
+		box-shadow: inset 0 -2px 0 var(--accent);
+	}
+
+	/* The Shiny view keeps its sidebar layout, with the links where they sit. */
+	:global(:root[data-view='shiny']) .player-profile-page {
+		--section-clearance: 16px;
+	}
+
+	:global(:root[data-view='shiny']) .profile-jump {
+		position: static;
+	}
+
+	:global(:root[data-view='shiny']) .profile-jump.stuck {
+		box-shadow: none;
+	}
+
+	:global(:root[data-view='shiny']) .profile-jump.stuck .profile-jump-name {
+		display: none;
 	}
 
 	.comps-summary {
@@ -1352,7 +1479,7 @@
 		gap: 14px;
 		min-width: 0;
 		/* Ask DARKO links to #comps; the heading clears the sticky nav. */
-		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
+		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + var(--section-clearance, 16px));
 	}
 
 	.seismograph-panel {
@@ -1361,7 +1488,7 @@
 		gap: 14px;
 		min-width: 0;
 		/* What's new links to #seismograph; the heading clears the sticky nav. */
-		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
+		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + var(--section-clearance, 16px));
 	}
 
 	.seismograph-header {
@@ -1623,6 +1750,11 @@
 		}
 
 		.profile-jump::-webkit-scrollbar {
+			display: none;
+		}
+
+		/* No room for the name beside the links; the site's bar names the page. */
+		.profile-jump.stuck .profile-jump-name {
 			display: none;
 		}
 	}

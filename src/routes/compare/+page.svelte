@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import PlayerSearch from '$lib/components/PlayerSearch.svelte';
 	import PlayerCard from '$lib/components/PlayerCard.svelte';
+	import HeadToHead from '$lib/components/HeadToHead.svelte';
 	import { exportCsvRows, compareCsvColumns } from '$lib/utils/csvPresets.js';
 	import { getContext } from 'svelte';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
@@ -91,6 +92,8 @@
 	}
 
 	const excludeIds = $derived(selectedPlayers.map((player) => player.nba_id));
+	// The same players' careers on one chart.
+	const careersHref = $derived(`/trajectories?ids=${excludeIds.join(',')}`);
 
 	const gridCols = $derived(
 		selectedPlayers.length <= 1
@@ -135,6 +138,7 @@
 		{#if selectedPlayers.length > 0}
 			<div class="compare-count">
 				{selectedPlayers.length}/4 players
+				<a class="compare-careers" href={careersHref}>Open in Career Trajectories →</a>
 			</div>
 		{/if}
 	</div>
@@ -149,6 +153,13 @@
 
 	{#if loading && selectedPlayers.length > 0}
 		<div class="loading" style="margin-bottom: 16px;">Updating compare list...</div>
+	{/if}
+
+	{#if selectedPlayers.length === 2}
+		<HeadToHead
+			players={selectedPlayers}
+			colors={[getSeriesColor(0, displayMode?.view), getSeriesColor(1, displayMode?.view)]}
+		/>
 	{/if}
 
 	{#if selectedPlayers.length > 0}
@@ -189,8 +200,21 @@
 	}
 
 	.compare-count {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 14px;
 		color: var(--text-muted);
 		font-size: 12px;
+	}
+
+	.compare-careers {
+		color: var(--accent);
+		font-weight: 700;
+	}
+
+	.compare-careers:hover {
+		text-decoration: underline;
+		text-underline-offset: 2px;
 	}
 
 	.compare-empty-state {

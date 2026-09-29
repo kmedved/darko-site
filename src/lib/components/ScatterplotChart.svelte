@@ -10,12 +10,14 @@
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
+	// `highlight`: nba_ids to draw large and named, with everyone else faded.
 	let {
 		players = [],
 		xMetric = 'o_dpm',
 		yMetric = 'd_dpm',
 		colorByPosition = true,
-		height = 500
+		height = 500,
+		highlight = []
 	} = $props();
 
 	let containerEl = $state(null);
@@ -116,6 +118,7 @@
 		void players;
 		void displayMode.view;
 		void HEIGHT;
+		void highlight;
 		renderChart();
 		return withResizeObserver({ element: containerEl, onResize: renderChart });
 	});
@@ -232,6 +235,12 @@
 
 		// Dots
 		const dotRadius = isShinyView ? shinyScatter.pointRadius : (isMobile ? 3 : 4);
+		const dotFill = (d) =>
+			colorByPosition
+				? (isShinyView ? getShinyPositionColor(d.player.position) : getPositionColor(d.player.position))
+				: (isShinyView ? SHINY_COLORS.scatterBase : 'var(--accent)');
+		const highlighted = new Set((highlight ?? []).map(Number));
+		const isHighlighted = (d) => highlighted.has(Number(d.player.nba_id));
 		g.selectAll('circle.scatter-dot')
 			.data(points)
 			.join('circle')
@@ -239,16 +248,43 @@
 			.attr('cx', (d) => x(d.xVal))
 			.attr('cy', (d) => y(d.yVal))
 			.attr('r', dotRadius)
-			.attr('fill', (d) =>
-				colorByPosition
-					? (isShinyView ? getShinyPositionColor(d.player.position) : getPositionColor(d.player.position))
-					: (isShinyView ? SHINY_COLORS.scatterBase : 'var(--accent)')
-			)
+			.attr('fill', dotFill)
 			// Modern dots are solid, since translucency pulls the palette under 3:1 contrast; a ring in
-			// the background colour keeps overlapping players apart.
-			.attr('opacity', isShinyView ? shinyScatter.pointOpacity : 1)
+			// the background colour keeps overlapping players apart. Highlighting fades the rest.
+			.attr('opacity', (d) =>
+				highlighted.size > 0 && !isHighlighted(d) ? 0.22 : (isShinyView ? shinyScatter.pointOpacity : 1)
+			)
 			.attr('stroke', 'var(--bg-surface)')
 			.attr('stroke-width', isShinyView ? 0.5 : 1);
+
+		// The highlighted players on top, larger and named, the name turning inward near the edge.
+		const picks = points.filter(isHighlighted);
+		if (picks.length > 0) {
+			const pickG = g.append('g').attr('class', 'scatter-picks');
+			pickG.selectAll('circle')
+				.data(picks)
+				.join('circle')
+				.attr('cx', (d) => x(d.xVal))
+				.attr('cy', (d) => y(d.yVal))
+				.attr('r', dotRadius + 3)
+				.attr('fill', dotFill)
+				.attr('stroke', 'var(--text)')
+				.attr('stroke-width', 1.5);
+			pickG.selectAll('text')
+				.data(picks)
+				.join('text')
+				.attr('x', (d) => (x(d.xVal) > w - 130 ? x(d.xVal) - dotRadius - 7 : x(d.xVal) + dotRadius + 7))
+				.attr('y', (d) => y(d.yVal))
+				.attr('dy', '0.35em')
+				.attr('text-anchor', (d) => (x(d.xVal) > w - 130 ? 'end' : 'start'))
+				.attr('font-size', '12px')
+				.attr('font-weight', 700)
+				.style('fill', 'var(--text)')
+				.style('paint-order', 'stroke')
+				.style('stroke', 'var(--bg-surface)')
+				.style('stroke-width', '3px')
+				.text((d) => d.player.player_name);
+		}
 
 		// X axis
 		const xAxisCall = d3.axisBottom(x).ticks(layout.xTicks);

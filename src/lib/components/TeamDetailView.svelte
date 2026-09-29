@@ -35,6 +35,7 @@
     import PageHeader from '$lib/components/PageHeader.svelte';
     import { NBA_TEAMS, teamAbbr, teamId as teamIdFromName } from '$lib/utils/teamAbbreviations.js';
     import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
+    import { formatAsOfDate, latestDate } from '$lib/utils/timeMachine.js';
 
     let {
         teamName = '',
@@ -63,6 +64,8 @@
     const simFinished = $derived(sim ? isSeasonComplete([sim]) : false);
 
     const teamPlayers = $derived(players || []);
+    // How fresh the rating is: the last day any of these players' ratings moved.
+    const ratingsThrough = $derived(latestDate(teamPlayers));
     const teamPlayerHeatScales = $derived(buildPresetHeatScales(teamPlayers, 'talent'));
     const dpmTintLimit = $derived(tintLimit(teamPlayers.map((player) => player?.dpm)));
     const teamWinDist = $derived(winDist || []);
@@ -398,6 +401,9 @@
                             label="About the wins"
                         ><span class="info-dot" aria-hidden="true">i</span></MetricTooltip>
                     </p>
+                    {#if ratingsThrough}
+                        <p class="team-score-date">Ratings through {formatAsOfDate(ratingsThrough, { short: true })}</p>
+                    {/if}
                 </div>
             {/if}
         {/snippet}
@@ -697,6 +703,12 @@
     .team-score-note {
         color: var(--text-secondary);
         font-size: 13px;
+    }
+
+    .team-score-date {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 12px;
     }
 
     /* Too narrow for the rating beside the name: it moves under it, the number then the split. */

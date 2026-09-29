@@ -1,4 +1,6 @@
 <script>
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ScatterplotChart from '$lib/components/ScatterplotChart.svelte';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
@@ -6,16 +8,6 @@
 	import { formatAsOfDate } from '$lib/utils/timeMachine.js';
 
 	let { data } = $props();
-
-	let xMetric = $state('o_dpm');
-	let yMetric = $state('d_dpm');
-	let colorByPosition = $state(true);
-	let mpgMinimum = $state(0);
-	let filtersOpen = $state(false);
-	let innerHeight = $state(900);
-
-	// The chart takes the height the window has left under the header and controls.
-	const chartHeight = $derived(Math.min(760, Math.max(420, innerHeight - 340)));
 
 	const STAT_GROUPS = [
 		{
@@ -47,10 +39,60 @@
 			stats: ['sal_market_fixed', 'surplus_value']
 		}
 	];
+	const ALL_STATS = STAT_GROUPS.flatMap((group) => group.stats);
 
+	// The chart's settings and highlighted players (?ids=, as the leaderboard's picks send them)
+	// live in the URL, so a view can be shared or reloaded.
+	const initial = $page.url.searchParams;
+	const statParam = (key, fallback) => (ALL_STATS.includes(initial.get(key)) ? initial.get(key) : fallback);
+	const mpgParam = Number.parseInt(initial.get('mpg') ?? '', 10);
+
+	let xMetric = $state(statParam('x', 'o_dpm'));
+	let yMetric = $state(statParam('y', 'd_dpm'));
+	let colorByPosition = $state(initial.get('color') !== '0');
+	let mpgMinimum = $state(Number.isInteger(mpgParam) && mpgParam > 0 && mpgParam <= 40 ? mpgParam : 0);
+	let highlightIds = $state(
+		[...new Set((initial.get('ids') ?? '').split(',').map((id) => Number.parseInt(id, 10)))]
+			.filter((id) => Number.isInteger(id) && id > 0)
+			.slice(0, 8)
+	);
+	let filtersOpen = $state(false);
+	let innerHeight = $state(900);
+
+	// The chart takes the height the window has left under the header and controls.
+	const chartHeight = $derived(Math.min(760, Math.max(420, innerHeight - 340)));
+
+	$effect(() => {
+		const current = $page.url;
+		const params = new URLSearchParams(current.searchParams);
+		const put = (key, value, fallback) => (value === fallback ? params.delete(key) : params.set(key, String(value)));
+		put('x', xMetric, 'o_dpm');
+		put('y', yMetric, 'd_dpm');
+		put('mpg', Number(mpgMinimum), 0);
+		put('color', colorByPosition ? '1' : '0', '1');
+		put('ids', highlightIds.join(','), '');
+		const next = params.toString();
+		if (next === current.searchParams.toString()) return;
+		// Commas stay commas in the address, as Compare and Career Trajectories write them.
+		const search = next.replaceAll('%2C', ',');
+		const timer = setTimeout(
+			() => goto(`${current.pathname}${search ? `?${search}` : ''}`, { replaceState: true, keepFocus: true, noScroll: true }),
+			200
+		);
+		return () => clearTimeout(timer);
+	});
+
+	const highlightSet = $derived(new Set(highlightIds));
+	const highlightedPlayers = $derived(
+		highlightIds
+			.map((id) => (data.players || []).find((player) => Number(player.nba_id) === id))
+			.filter(Boolean)
+	);
+
+	// Highlighted players stay on the chart whatever the minutes minimum.
 	const filteredPlayers = $derived.by(() => {
 		return (data.players || []).filter((p) => {
-			if (mpgMinimum <= 0) return true;
+			if (mpgMinimum <= 0 || highlightSet.has(Number(p.nba_id))) return true;
 			const mpg = Number.parseFloat(p.x_minutes);
 			return Number.isFinite(mpg) && mpg >= mpgMinimum;
 		});
@@ -127,12 +169,29 @@
 		</div>
 
 		<div class="scatterplot-chart-area" data-shiny-surface="plot">
+			{#if highlightedPlayers.length > 0}
+				<div class="scatter-highlights" role="group" aria-label="Highlighted players">
+					<span class="scatter-highlights-label">Highlighted</span>
+					{#each highlightedPlayers as player (player.nba_id)}
+						<button
+							type="button"
+							class="highlight-chip"
+							onclick={() => (highlightIds = highlightIds.filter((id) => id !== Number(player.nba_id)))}
+							aria-label={`Stop highlighting ${player.player_name}`}
+						>
+							{player.player_name}<span aria-hidden="true">×</span>
+						</button>
+					{/each}
+					<button type="button" class="highlight-clear" onclick={() => (highlightIds = [])}>Clear</button>
+				</div>
+			{/if}
 			<ScatterplotChart
 				players={filteredPlayers}
 				{xMetric}
 				{yMetric}
 				{colorByPosition}
 				height={chartHeight}
+				highlight={highlightIds}
 			/>
 		</div>
 		{#if rapmFrom}
@@ -179,6 +238,56 @@
 
 	.scatterplot-chart-area {
 		min-width: 0;
+	}
+
+	.scatter-highlights {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px 8px;
+		margin-bottom: 10px;
+		font-size: 12px;
+	}
+
+	.scatter-highlights-label {
+		color: var(--text-secondary);
+		font-weight: 700;
+	}
+
+	.highlight-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 28px;
+		padding: 0 8px 0 10px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--bg-surface);
+		color: var(--text);
+		font: inherit;
+		font-weight: 650;
+		cursor: pointer;
+	}
+
+	.highlight-chip span {
+		color: var(--text-muted);
+		font-size: 15px;
+		line-height: 1;
+	}
+
+	.highlight-chip:hover,
+	.highlight-chip:focus-visible {
+		border-color: var(--accent);
+	}
+
+	.highlight-clear {
+		padding: 4px;
+		border: 0;
+		background: none;
+		color: var(--accent);
+		font: inherit;
+		font-weight: 750;
+		cursor: pointer;
 	}
 
 	@media (min-width: 769px) {

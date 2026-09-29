@@ -6,7 +6,7 @@ import {
 import { AS_OF_EDGE_CACHE, getPlayersOnDate } from '$lib/server/history.js';
 import { projectPlayers } from '$lib/server/playerViews.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
-import { AS_OF_PARAM, parseAsOfDate } from '$lib/utils/timeMachine.js';
+import { AS_OF_PARAM, latestDate, parseAsOfDate } from '$lib/utils/timeMachine.js';
 import { packRows } from '$lib/utils/columnar.js';
 import { withChangeSince } from '$lib/utils/leaderboardViews.js';
 
@@ -59,7 +59,9 @@ export async function load({ url, setHeaders }) {
         }))),
         seasons,
         selectedSeason,
-        asOf
+        asOf,
+        // Today's board says how fresh it is: the last day any player's rating moved.
+        ratingsThrough: asOf || selectedSeason !== null ? null : latestDate(snapshot)
     };
 }
 
