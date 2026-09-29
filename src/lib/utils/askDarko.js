@@ -275,9 +275,10 @@ export function parseLeaderboardQuestion(normalized, raw = normalized) {
 /** Rows for a leaderboard question, with a title and the column it ranks by. */
 export function runLeaderboardQuestion(filter, players, { season = null } = {}) {
 	const sort = filter.sort;
-	let rows = (players ?? []).filter((row) =>
-		// Rotation players only, unless the question names a team.
-		filter.team ? row.team_name === filter.team.name : isRotationPlayer(row)
+	// Rotation players only, on a team or across the league, so a player with a few minutes a
+	// game doesn't top a team's list.
+	let rows = (players ?? []).filter(
+		(row) => isRotationPlayer(row) && (!filter.team || row.team_name === filter.team.name)
 	);
 	if (filter.position) {
 		const categories = POSITION_GROUPS[filter.position].categories;

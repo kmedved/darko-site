@@ -134,8 +134,8 @@
     ];
     const distributionMetrics = [
         { key: 'dpm', label: 'DPM', kind: 'signed' },
-        { key: 'o_dpm', label: 'Offensive DPM', kind: 'signed' },
-        { key: 'd_dpm', label: 'Defensive DPM', kind: 'signed' },
+        { key: 'o_dpm', label: 'Offense', kind: 'signed' },
+        { key: 'd_dpm', label: 'Defense', kind: 'signed' },
         { key: 'box_dpm', label: 'Box DPM', kind: 'signed' },
         { key: 'on_off_dpm', label: 'On/Off DPM', kind: 'signed' },
         { key: 'x_minutes', label: 'MPG', kind: 'fixed', decimals: 1 },
@@ -657,11 +657,12 @@
         return `DPM ${span}, ${formatSignedMetric(values[0], 1)} to ${formatSignedMetric(values.at(-1), 1)}`;
     }
 
+    // No projected minutes (DARKO publishes some below zero) reads as not projected, not 0.0.
     function fmtMpg(min) {
         if (min === null || min === undefined) return '—';
         const n = Number.parseFloat(min);
-        if (!Number.isFinite(n)) return '—';
-        return formatFixed(Math.max(0, n), 1);
+        if (!Number.isFinite(n) || n <= 0) return '—';
+        return formatFixed(n, 1);
     }
 
     function exportPlayersCsv() {

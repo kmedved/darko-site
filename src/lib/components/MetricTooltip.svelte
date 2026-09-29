@@ -166,6 +166,7 @@
     }
 
     .metric-tooltip-trigger {
+        position: relative;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -178,6 +179,13 @@
         padding: 0;
         font: inherit;
         cursor: help;
+    }
+
+    /* A finger-sized target around a small label or dot, without moving anything. */
+    .metric-tooltip-trigger::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
     }
 
     .metric-tooltip-trigger:focus-visible {

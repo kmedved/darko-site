@@ -478,3 +478,42 @@ test('a player\'s year in the league counts from the first season DARKO lists', 
 	assert.equal(leagueYear({ season: 2026 }), null);
 	assert.equal(leagueYear({ rookie_season: 2024 }), null);
 });
+
+test('from the site review: player URLs, projected minutes, positions, the skip link and caching', async () => {
+	const { parsePlayerRouteId } = await import('../src/lib/server/playerPage.js');
+	const { projectedBoxScore } = await import('../src/lib/utils/boxScore.js');
+	// A player URL is digits only: anything else is a 404, and a decimal isn't a second address.
+	assert.equal(parsePlayerRouteId('203999'), 203999);
+	for (const bad of ['abc', '0', '-5', '1628983.5', '0203999', '']) {
+		assert.throws(() => parsePlayerRouteId(bad), (error) => error?.status === 404, bad);
+	}
+
+	// No projected minutes (some are published below zero): not projected, not a line of zeros.
+	const bench = { x_minutes: -9.9, x_pace: 99, x_pts_100: 20 };
+	const benchBox = projectedBoxScore(bench);
+	assert.equal(benchBox.projected, false);
+	assert.ok(benchBox.rows.every((row) => row.perGame === null && row.per100 !== null));
+	assert.equal(projectedBoxScore({ ...bench, x_minutes: 24 }).projected, true);
+	const minutes = headToHeadRows({ x_minutes: -3 }, { x_minutes: 24.6 }).find((row) => row.key === 'x_minutes');
+	assert.deepEqual([minutes.left, minutes.right], ['—', '24.6']);
+
+	const [board, card, player, loader, layout, vercel] = await Promise.all([
+		read('src/routes/+page.svelte'),
+		read('src/lib/components/PlayerCard.svelte'),
+		read('src/routes/player/[nbaId]/+page.svelte'),
+		read('src/lib/server/supabase.js'),
+		read('src/routes/+layout.svelte'),
+		read('vercel.json')
+	]);
+	assert.match(board, /if \(!Number\.isFinite\(n\) \|\| n <= 0\) return '—';/);
+	assert.match(card, /<span class="value">\{mpg\(player\.x_minutes\)\}<\/span>/);
+	assert.match(player, /It projects no minutes for \{playerInfo\.player_name\} right now,\s*so there is no per-game line\./);
+	// PG reads G, as SG does.
+	assert.match(loader, /'PG': 'G', 'SG': 'G'/);
+	// The keyboard can skip the menu.
+	assert.match(layout, /<a class="skip-link" href="#main-content">Skip to content<\/a>\s*<nav class="site-nav">/);
+	assert.match(layout, /<main id="main-content" tabindex="-1">/);
+	// Fonts and the About logo cache like the other logos.
+	const rules = JSON.parse(vercel).headers.map((rule) => rule.source);
+	assert.ok(rules.includes('/fonts/(.*)') && rules.includes('/darko-about-logo.png'));
+});

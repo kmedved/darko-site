@@ -103,11 +103,11 @@ export function exportCsvRows({ rows = [], columns = [], filename }) {
 
 export const metricDisplayLabels = Object.freeze({
     dpm: 'DPM',
-    o_dpm: 'ODPM',
-    d_dpm: 'DDPM',
+    o_dpm: 'Offense',
+    d_dpm: 'Defense',
     box_dpm: 'Box DPM',
-    box_odpm: 'Box Off',
-    box_ddpm: 'Box Def',
+    box_odpm: 'Box offense',
+    box_ddpm: 'Box defense',
     on_off_dpm: 'On/Off DPM',
     on_off_odpm: 'On/Off Off',
     on_off_ddpm: 'On/Off Def',

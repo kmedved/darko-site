@@ -698,6 +698,7 @@
 
     .team-score-split :global(.od-bar) {
         width: 180px;
+        max-width: 100%;
     }
 
     .team-score-note {
@@ -738,9 +739,14 @@
             grid-area: value;
         }
 
+        /* The split takes the column beside the number and no more, so on a narrow phone the bar
+           shortens rather than running off the screen. */
         .team-score-split {
             grid-area: split;
+            grid-template-columns: minmax(0, 1fr);
             justify-items: start;
+            justify-self: stretch;
+            min-width: 0;
         }
 
         .team-score-note {

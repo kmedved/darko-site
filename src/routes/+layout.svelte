@@ -388,6 +388,9 @@
 
 <svelte:window onclick={handleWindowClick} onkeydown={handleWindowKeydown} />
 
+<!-- The first stop for the keyboard, past the menu to the page. -->
+<a class="skip-link" href="#main-content">Skip to content</a>
+
 <nav class="site-nav">
     <div class="container">
 		<button class="mobile-menu-btn" onclick={toggleMobileMenu} aria-label="Toggle menu" aria-expanded={mobileMenuOpen}>
@@ -594,7 +597,7 @@
 	</div>
 </div>
 
-<main>
+<main id="main-content" tabindex="-1">
     {@render children()}
 </main>
 
@@ -811,15 +814,28 @@
 		user-select: none;
 	}
 
+	/* The control is 24px tall for a finger; the track drawn inside it stays 6px. */
 	.theme-slider__input {
 		-webkit-appearance: none;
 		appearance: none;
 		width: 72px;
+		height: 24px;
+		margin: 0;
+		background: transparent;
+		outline: none;
+		cursor: pointer;
+	}
+
+	.theme-slider__input::-webkit-slider-runnable-track {
 		height: 6px;
 		border-radius: 3px;
 		background: linear-gradient(to right, #000, #0c1622, #faf0e0, #fff);
-		outline: none;
-		cursor: pointer;
+	}
+
+	.theme-slider__input::-moz-range-track {
+		height: 6px;
+		border-radius: 3px;
+		background: linear-gradient(to right, #000, #0c1622, #faf0e0, #fff);
 	}
 
 	.theme-slider__input::-webkit-slider-thumb {
@@ -827,6 +843,8 @@
 		appearance: none;
 		width: 18px;
 		height: 18px;
+		/* Centred on the 6px track. */
+		margin-top: -6px;
 		border-radius: 50%;
 		background: #ffffff;
 		border: 1px solid rgba(0,0,0,0.05);
@@ -863,6 +881,7 @@
 		border: 1px solid var(--border);
 		border-radius: 4px;
 		padding: 4px 8px;
+		min-height: 24px;
 		font-size: 11px;
 		font-family: var(--font-sans);
 		cursor: pointer;
@@ -1258,4 +1277,29 @@
 			width: 100%;
 		}
 	}
+
+    /* Out of sight until the keyboard reaches it. */
+    .skip-link {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 1000;
+        padding: 10px 14px;
+        border-radius: var(--radius-sm);
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        transform: translateY(-160%);
+        transition: transform 0.15s ease;
+    }
+
+    .skip-link:focus-visible {
+        transform: none;
+        outline: 2px solid var(--text);
+        outline-offset: 2px;
+    }
+
+    main:focus {
+        outline: none;
+    }
 </style>

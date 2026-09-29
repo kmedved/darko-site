@@ -75,7 +75,8 @@ test('player pages get draft year, pick, country and size without adding them to
 test('the leaderboard sparklines read one season of DPM for a page of players', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), SUPABASE_FILE), 'utf8');
     const trends = contents.slice(contents.indexOf('export async function getSeasonTrends'));
-    assert.match(trends, /\.select\('nba_id, date, dpm', options\)\s*\.in\('nba_id', wanted\)\s*\.eq\('season', seasonEndYear\)/);
+    // tm_id tells the offseason row, which the lines leave out (utils/frozenRatings.js).
+    assert.match(trends, /\.select\('nba_id, date, dpm, tm_id', options\)\s*\.in\('nba_id', wanted\)\s*\.eq\('season', seasonEndYear\)/);
     // The Time Machine stops the lines at its date.
     assert.match(trends, /if \(through\) query = query\.lte\('date', through\);/);
     assert.match(trends, /\.slice\(0, SEASON_TREND_MAX_IDS\)/);

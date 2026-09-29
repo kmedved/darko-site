@@ -132,11 +132,11 @@
 
 	const talentTypes = [
 		{ key: 'dpm', label: 'DARKO DPM' },
-		{ key: 'o_dpm', label: 'O-DPM' },
-		{ key: 'd_dpm', label: 'D-DPM' },
+		{ key: 'o_dpm', label: 'Offense' },
+		{ key: 'd_dpm', label: 'Defense' },
 		{ key: 'box_dpm', label: 'Box DPM' },
-		{ key: 'box_odpm', label: 'Box O-DPM' },
-		{ key: 'box_ddpm', label: 'Box D-DPM' },
+		{ key: 'box_odpm', label: 'Box offense' },
+		{ key: 'box_ddpm', label: 'Box defense' },
 		{ key: 'on_off_dpm', label: 'On/Off DPM' },
 		{ key: 'bayes_rapm_total', label: 'RAPM' },
 		{ key: 'wowy_rapm', label: 'WOWY RAPM' },

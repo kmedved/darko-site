@@ -14,6 +14,7 @@ import { asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
 import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilterOptions.js';
 import { leagueTeamRatings } from '$lib/utils/teamDna.js';
 import { fillLatestRapm } from '$lib/utils/latestRapm.js';
+import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '$lib/utils/frozenRatings.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -373,7 +374,7 @@ const POSITION_MAP = {
     'Guard': 'G', 'Forward': 'F', 'Center': 'C',
     'Guard-Forward': 'G-F', 'Forward-Guard': 'F-G',
     'Forward-Center': 'F-C', 'Center-Forward': 'C-F',
-    'SG': 'G', 'SF': 'F', 'PF': 'F'
+    'PG': 'G', 'SG': 'G', 'SF': 'F', 'PF': 'F'
 };
 
 const WOWY_FILTER_POSITION_MAP = {
@@ -764,10 +765,13 @@ async function loadAllActivePlayers() {
         return [];
     }
 
-    const unique = await getLatestCurrentSeasonRatingRows(latestSeason);
+    const latestRows = await getLatestCurrentSeasonRatingRows(latestSeason);
+    // Each player as of their own last game (utils/frozenRatings.js).
+    const lastGames = await lastGameDayRows(latestRows, latestSeason);
+    const unique = latestRows.map((row) => freezeRow(row, lastGames.get(row.nba_id)));
     const ids = unique.map((row) => row.nba_id);
     const playersMap = await getCurrentSeasonPlayerDimsByIds(latestSeason, ids);
-    const latestDate = unique.reduce(
+    const latestDate = latestRows.reduce(
         (latest, row) => (!latest || row?.date > latest ? row.date : latest),
         null
     );
@@ -1175,7 +1179,7 @@ export async function getSeasonTrends(ids, season, { through = null } = {}) {
         (options) => {
             let query = supabase
                 .from('player_ratings')
-                .select('nba_id, date, dpm', options)
+                .select('nba_id, date, dpm, tm_id', options)
                 .in('nba_id', wanted)
                 .eq('season', seasonEndYear);
             if (through) query = query.lte('date', through);
@@ -1185,6 +1189,8 @@ export async function getSeasonTrends(ids, season, { through = null } = {}) {
     );
     const trends = {};
     for (const row of rows) {
+        // A season's line runs through its game days, not the offseason row after them.
+        if (isOffseasonRow(row)) continue;
         const dpm = Number.parseFloat(row.dpm);
         if (Number.isFinite(dpm)) (trends[row.nba_id] ??= []).push(Math.round(dpm * 100) / 100);
     }
@@ -1286,6 +1292,51 @@ function fetchAsOfWindow(season, anchorDate, calendarRow) {
 }
 
 /**
+ * The last game-day rows of the players whose latest row is an offseason row, by nba_id, for
+ * freezeRow (utils/frozenRatings.js): each player's last game day from the season table, then
+ * that day's ratings. Best effort: without them the offseason rows stay as they are.
+ */
+async function lastGameDayRows(rows, season) {
+    const ids = rows.filter(isOffseasonRow).map((row) => row.nba_id);
+    if (ids.length === 0) return new Map();
+    try {
+        const { data: seasons, error } = await supabase
+            .from('player_seasons')
+            .select('nba_id, date')
+            .eq('season', season)
+            .in('nba_id', ids);
+        if (error) throw error;
+        const idsByDate = new Map();
+        for (const row of seasons ?? []) {
+            const date = String(row.date ?? '').slice(0, 10);
+            if (!date) continue;
+            if (!idsByDate.has(date)) idsByDate.set(date, []);
+            idsByDate.get(date).push(row.nba_id);
+        }
+        const requests = [];
+        for (const [date, dateIds] of idsByDate) {
+            for (let start = 0; start < dateIds.length; start += PLAYERS_AS_OF_ID_CHUNK) {
+                requests.push({ date, ids: dateIds.slice(start, start + PLAYERS_AS_OF_ID_CHUNK) });
+            }
+        }
+        const chunks = await mapWithConcurrency(requests, PLAYERS_AS_OF_CONCURRENCY, async ({ date, ids: dateIds }) => {
+            const { data, error: rowsError } = await supabase
+                .from('player_ratings')
+                .select(['nba_id', ...FROZEN_RATING_FIELDS].join(', '))
+                .eq('date', date)
+                .in('nba_id', dateIds)
+                .gt('tm_id', 0);
+            if (rowsError) throw rowsError;
+            return data ?? [];
+        });
+        return new Map(chunks.flat().map((row) => [row.nba_id, row]));
+    } catch (error) {
+        console.error('last game-day ratings failed', error);
+        return new Map();
+    }
+}
+
+/**
  * Every player's latest rating on or before `asOf` (the Time Machine date), in the same shape
  * as getActivePlayers() for the fields the date-aware views read. A player needs a row (a game,
  * or a day on a roster) in the two weeks of play before the date; once any team's season has
@@ -1357,12 +1408,15 @@ export async function getPlayerHistory(nbaId, limit = 500) {
             .select(RATING_COLUMNS)
             .eq('nba_id', nbaId)
             .order('date', { ascending: false })
-            .limit(limit);
+            .limit(limit + 1);
 
         if (error) throw error;
         const playersMap = await getPlayersMapByIds([nbaId]);
         const playerDim = playersMap.get(nbaId);
-        return (data || []).slice().reverse().map((row) => mergeWithPlayerDim(row, playerDim));
+        // One row more than asked, so the newest (an offseason row) has the game day before it.
+        return freezeHistory((data || []).slice().reverse())
+            .slice(-limit)
+            .map((row) => mergeWithPlayerDim(row, playerDim));
     });
 }
 
@@ -1467,6 +1521,9 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
             if (extraError) throw extraError;
             truncated = (extraRows || []).length > 0;
         }
+
+        // An offseason row takes the ratings of the game day before it (utils/frozenRatings.js).
+        allData = freezeHistory(allData);
 
         if (!mergePlayerDim) {
             return { rows: allData, truncated, maxRows };

@@ -56,6 +56,12 @@
         return formatFixed(val, decimals);
     }
 
+    // No projected minutes (some are published below zero) reads as not projected.
+    function mpg(val) {
+        const n = Number.parseFloat(val);
+        return Number.isFinite(n) && n > 0 ? formatFixed(n, 1) : '—';
+    }
+
     function cls(val) {
         const n = Number.parseFloat(val);
         if (!Number.isFinite(n)) return '';
@@ -105,15 +111,15 @@
             <span class="value {cls(player.d_dpm)}">{formatSignedMetric(player.d_dpm)}</span>
         </div>
         <div class="stat-row">
-            <span class="label">Box Total</span>
+            <span class="label">Box DPM</span>
             <span class="value {cls(player.box_dpm)}">{formatSignedMetric(player.box_dpm)}</span>
         </div>
         <div class="stat-row">
-            <span class="label">Box Off</span>
+            <span class="label">Box offense</span>
             <span class="value {cls(player.box_odpm)}">{formatSignedMetric(player.box_odpm)}</span>
         </div>
         <div class="stat-row">
-            <span class="label">Box Def</span>
+            <span class="label">Box defense</span>
             <span class="value {cls(player.box_ddpm)}">{formatSignedMetric(player.box_ddpm)}</span>
         </div>
         <div class="stat-row">
@@ -153,7 +159,7 @@
         </div>
         <div class="stat-row">
             <span class="label">MPG</span>
-            <span class="value">{fmt(player.x_minutes, 1)}</span>
+            <span class="value">{mpg(player.x_minutes)}</span>
         </div>
         <div class="stat-row">
             <span class="label">Pace</span>

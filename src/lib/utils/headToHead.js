@@ -22,7 +22,7 @@ export const HEAD_TO_HEAD_ROWS = Object.freeze([
 	{ key: 'sal_market_fixed', label: 'Fair salary', format: 'money', better: true },
 	{ key: 'x_pts_100', label: 'Points per 100', format: 'fixed' },
 	{ key: 'x_ast_100', label: 'Assists per 100', format: 'fixed' },
-	{ key: 'x_minutes', label: 'Projected MPG', format: 'fixed' },
+	{ key: 'x_minutes', label: 'Projected MPG', format: 'minutes' },
 	{ key: 'age', label: 'Age', format: 'age' },
 	// Games played since 1996-97, as profiles count them (comparePage.js from player_seasons).
 	{ key: 'games_regular', label: 'Regular-season games', format: 'count' },
@@ -42,6 +42,8 @@ export function displayValue(value, format) {
 	if (format === 'money') return formatMillions(value);
 	if (format === 'age') return String(Math.floor(value));
 	if (format === 'count') return Math.round(value).toLocaleString('en-US');
+	// No projected minutes (some are published below zero) reads as not projected.
+	if (format === 'minutes') return value > 0 ? formatFixed(value, 1) : '—';
 	return formatFixed(value, 1);
 }
 
