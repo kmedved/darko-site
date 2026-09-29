@@ -455,6 +455,19 @@
 				</div>
 
 				<div class="lab-minutes">
+					<!-- Where the sides stack, this bar stays under the site's bar while this team's
+					     sliders scroll: the rating being changed, beside its minutes. -->
+					<p class="lab-live" aria-hidden="true">
+						<img class="lab-live-logo" src={logoUrl(state.team)} alt="" width="20" height="20" />
+						<b>{state.abbr}</b>
+						<span class="lab-live-rating">{formatSigned(state.rating.rating, 1)}</span>
+						{#if Math.abs(state.rating.rating - state.base.rating) >= 0.05}
+							<span class:up={state.rating.rating > state.base.rating} class:down={state.rating.rating < state.base.rating}>
+								{formatSigned(state.rating.rating - state.base.rating, 1)}
+							</span>
+						{/if}
+						<span class="lab-live-wins">{Math.round(state.wins)} wins</span>
+					</p>
 					<div class="lab-minutes-row">
 						<span>Minutes <b class:off={Math.abs(state.minutes - TEAM_MINUTES) > 1}>{Math.round(state.minutes)}</b> of {TEAM_MINUTES}</span>
 						{#if state.salary > 0}
@@ -729,10 +742,11 @@
 	}
 
 	.lab-stat-value {
-		font-family: var(--font-mono);
-		font-size: 28px;
-		font-weight: 700;
-		line-height: 1.15;
+		font-family: var(--font-display);
+		font-size: 30px;
+		font-weight: 800;
+		font-stretch: 110%;
+		line-height: 1.1;
 		color: var(--text);
 		font-variant-numeric: tabular-nums;
 	}
@@ -769,6 +783,7 @@
 
 	.lab-minutes b {
 		font-family: var(--font-mono);
+		font-weight: var(--figure-weight-strong);
 		color: var(--text);
 	}
 
@@ -796,6 +811,10 @@
 
 	.lab-meter i.off {
 		background: var(--negative);
+	}
+
+	.lab-live {
+		display: none;
 	}
 
 	.lab-roster {
@@ -1019,9 +1038,11 @@
 	}
 
 	.lab-pct {
-		font-family: var(--font-mono);
-		font-size: 28px;
-		font-weight: 700;
+		font-family: var(--font-display);
+		font-size: 30px;
+		font-weight: 800;
+		font-stretch: 110%;
+		font-variant-numeric: tabular-nums;
 		line-height: 1.1;
 		color: var(--text);
 	}
@@ -1067,7 +1088,7 @@
 	}
 
 	.lab-grid.zero {
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-dasharray: none;
 	}
 
@@ -1094,7 +1115,7 @@
 	.lab-label {
 		font-family: var(--font-mono);
 		font-size: 12px;
-		font-weight: 700;
+		font-weight: var(--figure-weight-strong);
 		fill: var(--text);
 	}
 
@@ -1109,6 +1130,66 @@
 		.lab-sides,
 		.lab-bottom {
 			grid-template-columns: 1fr;
+		}
+
+		/* One side at a time on screen: the team being edited keeps its rating and minutes in view,
+		   just under the site's bar, until its own section scrolls away. */
+		.lab-minutes {
+			position: sticky;
+			top: var(--nav-sticky-offset);
+			z-index: 5;
+			gap: 4px;
+			margin: 0 -18px 10px;
+			padding: 6px 18px 8px;
+			background: var(--bg-surface);
+			border-bottom: 1px solid var(--border-subtle);
+		}
+
+		.lab-live {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 4px 10px;
+			margin: 0;
+			font-size: 13px;
+			color: var(--text-secondary);
+		}
+
+		.lab-live-logo {
+			width: 20px;
+			height: 20px;
+			object-fit: contain;
+		}
+
+		.lab-live b {
+			color: var(--text);
+		}
+
+		.lab-live-rating {
+			font-family: var(--font-display);
+			font-size: 19px;
+			font-weight: 800;
+			font-stretch: 108%;
+			font-variant-numeric: tabular-nums;
+			color: var(--text);
+		}
+
+		.lab-live .up,
+		.lab-live .down {
+			font-family: var(--font-mono);
+			font-weight: var(--figure-weight-strong);
+		}
+
+		.lab-live .up {
+			color: var(--positive);
+		}
+
+		.lab-live .down {
+			color: var(--negative);
+		}
+
+		.lab-live-wins {
+			margin-left: auto;
 		}
 	}
 
@@ -1155,7 +1236,23 @@
 		}
 
 		.lab-stat-value {
-			font-size: 20px;
+			font-size: 22px;
+		}
+
+		.lab-minutes {
+			margin: 0 -14px 10px;
+			padding: 6px 14px 8px;
+		}
+
+		/* The roster's sliders come straight after the rating; the Minutes chart follows them. */
+		.lab-side {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.lab-dna {
+			order: 1;
+			margin: 16px 0 0;
 		}
 
 		.lab-panel-head {

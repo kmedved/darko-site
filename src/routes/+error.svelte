@@ -3,6 +3,7 @@
 	// else (usually the database not answering in time) offers another try.
 	import { page } from '$app/stores';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { dailyListed } from '$lib/utils/daily.js';
 
 	const notFound = $derived($page.status === 404);
 	const title = $derived(notFound ? 'Page not found' : 'Something went wrong');
@@ -24,7 +25,7 @@
 			<button class="btn" type="button" onclick={() => location.reload()}>Try again</button>
 		{/if}
 		<a class="btn" href="/">Go to the leaderboard</a>
-		<a class="btn" href="/daily">Read The Daily</a>
+		{#if dailyListed()}<a class="btn" href="/daily">Read The Daily</a>{/if}
 	</div>
 </div>
 

@@ -286,9 +286,10 @@
 
     .rate-card-elo-result {
         margin-top: 10px;
-        font-family: var(--font-mono);
-        font-size: 20px;
-        font-weight: 700;
+        font-family: var(--font-display);
+        font-size: 21px;
+        font-weight: 750;
+        font-stretch: 106%;
         letter-spacing: -0.01em;
     }
 

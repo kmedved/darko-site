@@ -298,11 +298,13 @@
 	}
 
 	.rewind-date {
-		font-family: var(--font-mono);
-		font-size: 28px;
-		font-weight: 700;
+		font-family: var(--font-display);
+		font-size: 30px;
+		font-weight: 800;
+		font-stretch: 112%;
+		font-variant-numeric: tabular-nums;
 		line-height: 1.1;
-		letter-spacing: -0.02em;
+		letter-spacing: -0.015em;
 		color: var(--time-text);
 		font-variant-numeric: tabular-nums;
 	}
@@ -322,6 +324,7 @@
 
 	.rewind-leader b {
 		font-family: var(--font-mono);
+		font-weight: var(--figure-weight-strong);
 		color: var(--text);
 	}
 

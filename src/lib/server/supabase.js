@@ -200,7 +200,8 @@ const RATING_COLUMNS = [
     's15',
     'sal_market_fixed',
     'surplus_value',
-    'actual_salary'
+    'actual_salary',
+    'warp'
 ].join(', ');
 
 // The Trajectories page needs complete careers but only its selectable metrics.
@@ -272,9 +273,9 @@ const PLAYERS_DIM_COLUMNS = [
     'position',
     'rookie_season'
 ].join(', ');
-// Where a player was drafted, for the player page's header only: PLAYERS_DIM_COLUMNS also
-// feeds the players index that search downloads.
-const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot';
+// Where a player was drafted and is from, and their size, for the player page's header only:
+// PLAYERS_DIM_COLUMNS also feeds the players index that search downloads.
+const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot, country, height, weight';
 
 const WOWY_RATING_COLUMNS = [
     'nba_id',
@@ -1129,6 +1130,38 @@ export async function getSeasonStartPlayers(season) {
     });
 }
 
+export const SEASON_TREND_MAX_IDS = 60;
+
+/**
+ * The leaderboard's sparklines: each player's DPM on every day of one season they have a
+ * rating, oldest first, as { [nba_id]: [dpm, ...] }. `through` (YYYY-MM-DD) stops the lines
+ * at a Time Machine date. Not cached here: the endpoint's edge cache keys it by the ids.
+ */
+export async function getSeasonTrends(ids, season, { through = null } = {}) {
+    const wanted = [...new Set(ids.map(Number).filter((id) => Number.isInteger(id) && id > 0))]
+        .slice(0, SEASON_TREND_MAX_IDS);
+    const seasonEndYear = Number.parseInt(season, 10);
+    if (!wanted.length || !Number.isInteger(seasonEndYear)) return {};
+    const rows = await fetchAllPages(
+        (options) => {
+            let query = supabase
+                .from('player_ratings')
+                .select('nba_id, date, dpm', options)
+                .in('nba_id', wanted)
+                .eq('season', seasonEndYear);
+            if (through) query = query.lte('date', through);
+            return query.order('nba_id').order('date');
+        },
+        { guessPages: 3 }
+    );
+    const trends = {};
+    for (const row of rows) {
+        const dpm = Number.parseFloat(row.dpm);
+        if (Number.isFinite(dpm)) (trends[row.nba_id] ??= []).push(Math.round(dpm * 100) / 100);
+    }
+    return trends;
+}
+
 // A rostered player has a row on every team game day, rest days included, so two weeks of
 // rows find everyone on a roster (the All-Star break is the longest regular pause).
 const PLAYERS_AS_OF_WINDOW_DAYS = 14;
@@ -1471,7 +1504,10 @@ export async function getFullPlayerProfileHistory(nbaId, options = {}) {
         playerInfo: info && {
             ...info,
             draft_year: draft?.draft_year ?? null,
-            draft_slot: draft?.draft_slot ?? null
+            draft_slot: draft?.draft_slot ?? null,
+            country: draft?.country ?? null,
+            height: draft?.height ?? null,
+            weight: draft?.weight ?? null
         }
     };
 }

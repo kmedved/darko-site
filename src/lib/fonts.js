@@ -1,6 +1,7 @@
 // Optional interface fonts (Display → Font). Each loads only when someone picks it; DM Mono, the
-// number font every page uses, is the only web font app.html loads for everyone. app.html keeps a
-// copy of this map for its before-paint script (tests/fonts.test.js checks the two agree).
+// number font, and Archivo, the display font, are the only web fonts app.html loads for everyone.
+// app.html keeps a copy of this map for its before-paint script (tests/fonts.test.js checks the
+// two agree).
 export const OPTIONAL_FONT_FAMILIES = Object.freeze({
 	inter: 'Inter:wght@400;500;600;700',
 	roboto: 'Roboto:wght@400;500;700',

@@ -947,7 +947,7 @@
     }
 
     td.tint-cell {
-        font-weight: 700;
+        font-weight: var(--figure-weight-strong);
     }
 
     td.rk,
@@ -1062,7 +1062,7 @@
         color: var(--text-secondary);
         font-size: 11px;
         font-family: var(--font-mono);
-        font-weight: 800;
+        font-weight: var(--figure-weight-strong);
     }
 
     .insight-info {
@@ -1071,7 +1071,7 @@
         border-radius: 50%;
         display: inline-grid;
         place-items: center;
-        border: 1px solid var(--text-muted);
+        border: 1px solid var(--graphic-muted);
     }
 
     .odds-distribution {
@@ -1093,6 +1093,7 @@
         color: var(--text);
         font-family: var(--font-mono);
         font-size: 12px;
+        font-weight: var(--figure-weight-strong);
         text-align: right;
     }
 
@@ -1134,6 +1135,7 @@
         color: var(--accent);
         font-family: var(--font-mono);
         font-size: 16px;
+        font-weight: var(--figure-weight-strong);
     }
 
     .favorite-list {
@@ -1158,7 +1160,7 @@
     .favorite-rank {
         color: var(--text-secondary);
         font-family: var(--font-mono);
-        font-weight: 850;
+        font-weight: var(--figure-weight-strong);
     }
 
     .favorite-logo {
@@ -1204,6 +1206,7 @@
         color: var(--accent);
         font-family: var(--font-mono);
         font-size: 14px;
+        font-weight: var(--figure-weight-strong);
     }
 
     .rail-link {

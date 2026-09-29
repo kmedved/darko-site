@@ -25,6 +25,16 @@ const DAY_MS = 86_400_000;
 // Playoff and play-in games (game_id // 10,000,000).
 const POSTSEASON_TYPES = new Set([4, 5]);
 
+// Between seasons The Daily is off the menus, What's new and Ask DARKO. It comes back on the
+// morning of Thursday, October 22, 2026 (2026-27 opens Tuesday, October 20), once the first
+// games' ratings are in. The page itself still opens at /daily.
+export const DAILY_RETURNS = '2026-10-22T12:00:00Z';
+
+/** Whether the site lists The Daily at `now`. */
+export function dailyListed(now = new Date()) {
+	return now.getTime() >= Date.parse(DAILY_RETURNS);
+}
+
 function toNumber(value) {
 	const n = typeof value === 'number' ? value : Number.parseFloat(value);
 	return Number.isFinite(n) ? n : null;
@@ -149,6 +159,21 @@ export function ageRecordText(row) {
 /** A player's ratings from `start` on, for a sparkline: series is [[date, dpm], ...]. */
 export function seriesFrom(series, start) {
 	return (series ?? []).filter(([date]) => !start || date >= start).map(([, value]) => value);
+}
+
+/**
+ * The same ratings with their dates, for a chart with a time axis. Each game's date has the rating
+ * going into it; the rating out of the latest game shares that date, so it is placed a day later,
+ * when it takes effect. Dates never repeat.
+ */
+export function datedSeriesFrom(series, start) {
+	const points = [];
+	for (const [date, value] of series ?? []) {
+		if ((start && date < start) || !Number.isFinite(value)) continue;
+		const previous = points.at(-1)?.[0];
+		points.push([previous && date <= previous ? daysBefore(previous, -1) : date, value]);
+	}
+	return points;
 }
 
 /** The board's rows from ratings rows (active players, or any date's), best first. */

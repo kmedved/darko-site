@@ -13,7 +13,9 @@
 		date = '',
 		percentiles = [],
 		selectedMetrics = [],
-		rawValues = {}
+		rawValues = {},
+		// Names that beat the shared metric labels here, like the skills' ("Rim protection").
+		labels = {}
 	} = $props();
 
 	let chartRootEl = $state(null);
@@ -24,10 +26,13 @@
 
 	const ROW_HEIGHT = 50;
 	const BAR_HEIGHT = 18;
+	// Room for the title and subtitle over the first row's label, which on a narrow chart sits
+	// under the centred subtitle rather than beside it.
+	const MARGIN_TOP = 68;
 	const chartHeight = $derived(
 		displayMode.view === 'shiny'
 			? Math.min(460, 320 + Math.max(0, selectedMetrics.length - 5) * 18)
-			: 55 + selectedMetrics.length * ROW_HEIGHT + 65
+			: MARGIN_TOP + selectedMetrics.length * ROW_HEIGHT + 65
 	);
 
 	const ZONE_DEFS = [
@@ -45,7 +50,11 @@
 		return ZONE_DEFS[0];
 	}
 
-	const PERCENT_METRICS = new Set(['tr_fg3_pct', 'tr_ft_pct', 'x_fg_pct', 'x_fg3_pct', 'x_ft_pct']);
+	const PERCENT_METRICS = new Set(['tr_fg3_pct', 'tr_ft_pct', 'x_fg_pct', 'x_fg3_pct', 'x_ft_pct', 'ts_pct', 'tov_pct']);
+
+	function labelFor(metric) {
+		return labels[metric] ?? getMetricDisplayLabel(metric);
+	}
 	const MONEY_METRICS = new Set(['sal_market_fixed']);
 	const SIGNED_METRICS = new Set([
 		'dpm', 'o_dpm', 'd_dpm', 'box_dpm', 'box_odpm', 'box_ddpm',
@@ -92,7 +101,7 @@
 
 		const clipId = 'gauge-clip-' + Math.random().toString(36).slice(2, 8);
 
-		const margin = { top: 55, right: 20, bottom: 55, left: 20 };
+		const margin = { top: MARGIN_TOP, right: 20, bottom: 55, left: 20 };
 		const w = width - margin.left - margin.right;
 
 		const g = svg
@@ -129,7 +138,7 @@
 				.attr('font-size', '12px')
 				.attr('font-weight', '600')
 				.style('fill', 'var(--text)')
-				.text(getMetricDisplayLabel(d.metric));
+				.text(labelFor(d.metric));
 
 			// Tier label (above bar, right)
 			rowG.append('text')
@@ -217,7 +226,7 @@
 						metric: d.metric,
 						percentile: d.value,
 						raw: rawFormatted,
-						label: getMetricDisplayLabel(d.metric),
+						label: labelFor(d.metric),
 						px,
 						py
 					};
@@ -356,7 +365,7 @@
 					metric: point.metric,
 					percentile: point.value,
 					raw: fmtRawValue(point.metric, rawValues[point.metric]),
-					label: getMetricDisplayLabel(point.metric),
+					label: labelFor(point.metric),
 					px: margin.left + x(point.metric) + x.bandwidth() / 2 + svgRect.left - containerRect.left,
 					py: margin.top + y(point.value) + svgRect.top - containerRect.top
 				};
@@ -368,7 +377,7 @@
 		const xAxis = g
 			.append('g')
 			.attr('transform', `translate(0,${innerHeight})`)
-			.call(d3.axisBottom(x).tickFormat((metric) => getMetricDisplayLabel(metric)));
+			.call(d3.axisBottom(x).tickFormat((metric) => labelFor(metric)));
 		xAxis.select('.domain').attr('stroke', 'var(--shiny-season-rule)');
 		xAxis.selectAll('.tick line').attr('stroke', 'var(--shiny-season-rule)');
 		xAxis

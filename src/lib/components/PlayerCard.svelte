@@ -5,6 +5,7 @@
     import { formatMinutes, formatSignedMetric, formatPercent, formatFixed } from '$lib/utils/csvPresets.js';
     import { staleRapmDate } from '$lib/utils/latestRapm.js';
     import { formatAsOfDate } from '$lib/utils/timeMachine.js';
+    import { snapshotNote } from '$lib/utils/headToHead.js';
 
     // `color` is this player's series colour on the Compare page, so each card's sparkline matches
     // its player rather than turning green or red with the sign of their DPM.
@@ -69,8 +70,9 @@
         <div class="info">
             <h2>{player.player_name}</h2>
             <div class="sub">
-                {[player.team_name, player.position || '?', `Age ${formatFixed(player.age, 0)}`].filter(Boolean).join(' · ')}
+                {[player.team_name, player.position || '?', Number.isFinite(Number.parseFloat(player.age)) ? `Age ${Math.floor(Number.parseFloat(player.age))}` : null].filter(Boolean).join(' · ')}
             </div>
+            {#if snapshotNote(player)}<div class="sub as-of">{snapshotNote(player)}</div>{/if}
         </div>
         <button type="button" class="remove-btn" onclick={onRemove} title="Remove">✕</button>
     </div>
@@ -131,9 +133,15 @@
             <span class="label">Minutes (trend)</span>
             <span class="value">{formatMinutes(player.tr_minutes)}</span>
         </div>
+        <!-- Games played since 1996-97 from the season table, as profiles count them; the rows'
+             career_game_num counts model rows, not games. -->
         <div class="stat-row">
-            <span class="label">Career Games</span>
-            <span class="value">{formatFixed(player.career_game_num, 0)}</span>
+            <span class="label">Games</span>
+            <span class="value">{player.games_regular == null ? '—' : Number(player.games_regular).toLocaleString('en-US')}</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">Playoff games</span>
+            <span class="value">{player.games_playoffs == null ? '—' : Number(player.games_playoffs).toLocaleString('en-US')}</span>
         </div>
         <div class="stat-row">
             <span class="label">3P% (trend)</span>

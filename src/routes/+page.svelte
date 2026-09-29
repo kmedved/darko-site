@@ -1,5 +1,6 @@
 <script>
-    import { goto } from '$app/navigation';
+    import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
+    import { page } from '$app/stores';
     import {
         exportCsvRows,
         leaderboardCsvColumns,
@@ -8,11 +9,32 @@
         formatSignedMetric
     } from '$lib/utils/csvPresets.js';
     import {
+        buildPlayerTableSortConfig,
+        COLUMN_SETS,
+        columnGroupCells,
         formatLeaderboardCell,
         getLeaderboardCellValue,
-        LEADERBOARD_COLUMNS,
-        leaderboardSortConfig
+        leaderboardTableColumns
     } from '$lib/utils/leaderboardColumns.js';
+    import {
+        AGE_GROUPS,
+        filterLeaderboardRows,
+        matchesPosition,
+        POSITION_GROUPS,
+        trendSeason
+    } from '$lib/utils/leaderboardViews.js';
+    import {
+        cleanRanges,
+        filterChips,
+        leaderboardSearchParams,
+        matchesRanges,
+        RANGE_FILTERS,
+        readLeaderboardState,
+        sameLeaderboardState
+    } from '$lib/utils/leaderboardState.js';
+    import { isIncomingNavigation, keepsPendingState, pathAndSearch } from '$lib/utils/urlSync.js';
+    import { startWatchlist, watchlist } from '$lib/utils/watchlist.js';
+    import { dailyListed } from '$lib/utils/daily.js';
     import { filterPlayers } from '$lib/utils/playerTableFilters.js';
     import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
@@ -29,11 +51,17 @@
         getMetricHeatVariables
     } from '$lib/utils/metricHeatScales.js';
     import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+    import CountUp from '$lib/components/CountUp.svelte';
     import DotDistribution from '$lib/components/DotDistribution.svelte';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
+    import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
-    import StatTile from '$lib/components/StatTile.svelte';
-    import { getContext } from 'svelte';
+    import Sparkline from '$lib/components/Sparkline.svelte';
+    import LeaderCards from '$lib/components/LeaderCards.svelte';
+    import WatchStar from '$lib/components/WatchStar.svelte';
+    import { getContext, onMount } from 'svelte';
+    import { prefersReducedMotion } from 'svelte/motion';
+    import { fly } from 'svelte/transition';
 
     let { data } = $props();
 
@@ -42,9 +70,24 @@
     let searchQuery = $state('');
     let columnFilters = $state({});
     let teamFilter = $state('all');
+    let positionFilter = $state('all');
+    let ageFilter = $state('all');
+    let watchOnly = $state(false);
+    // The season sparklines are optional, and this browser remembers the choice.
+    let showTrends = $state(false);
+    // Sparkline values by board ("season:date"), then by player: { [key]: { [nba_id]: [dpm...] } }.
+    let trendsByBoard = $state({});
     let leaderboardPage = $state(1);
     let positionView = $state('all');
     let distributionMetric = $state('dpm');
+    // The Modern view's column set, stat ranges ({ dpm: { min, max } }) and picked players.
+    let columnSet = $state('all');
+    let ranges = $state({});
+    let filtersOpen = $state(false);
+    let filtersAnchor = $state(null);
+    let picking = $state(false);
+    let picked = $state([]);
+    let linkCopied = $state(false);
     let standardTableRoot = $state(null);
     let standardBodyScroller = $state(null);
     let standardBodyTable = $state(null);
@@ -56,8 +99,27 @@
 
     const TOP_POSITION_MIN_GAMES = 20;
     const LEADERBOARD_PAGE_SIZE = 50;
+    const TRENDS_STORAGE_KEY = 'darko-leaderboard-trends';
+    const MAX_PICKS = 4;
     const players = $derived(Array.isArray(data.players) ? data.players : unpackRows(data.players));
-    const playerColumns = LEADERBOARD_COLUMNS;
+    // The split bar after Def, the optional sparkline, and with the Time Machine set Now and Since.
+    // The Shiny view keeps every column, as the archived app did.
+    const playerColumns = $derived(
+        leaderboardTableColumns({
+            trends: showTrends,
+            asOf: Boolean(data.asOf),
+            set: isShinyView ? 'all' : columnSet
+        })
+    );
+    // A heading row names the column groups (Impact, Role, Per 100, Shooting, Value), Modern only.
+    const columnGroups = $derived(isShinyView ? [] : columnGroupCells(playerColumns));
+    // The note on $ Value, only while that column is on the board.
+    const showsValueColumn = $derived(playerColumns.some((column) => column.key === 'sal_market_fixed'));
+    const dataColumns = $derived(playerColumns.filter((column) => column.sortable !== false));
+    const sortConfigs = $derived(buildPlayerTableSortConfig(dataColumns));
+    // Sorting by a column that has gone (Since, after leaving the Time Machine) falls back to DPM.
+    const activeSortColumn = $derived(sortConfigs[sortColumn] ? sortColumn : 'dpm');
+    const watchSet = $derived(new Set($watchlist));
     const textSortColumns = new Set(['_rank', 'player_name', 'team_name', 'position']);
     const positionTabs = [
         { key: 'all', label: 'All' },
@@ -116,17 +178,122 @@
         return players.filter((player) => player?.team_name === activeTeamFilter);
     });
 
+    // The question the URL asks (leaderboardState.js): read as the page opens and whenever a
+    // navigation brings another, and written back in place a moment after a control changes.
+    applyUrlState($page.url.searchParams);
+
+    function applyUrlState(params) {
+        const incoming = readLeaderboardState(params, {
+            teams: teamOptions,
+            positions: POSITION_GROUPS.map((group) => group.key),
+            ages: AGE_GROUPS.map((group) => group.key),
+            dists: distributionMetrics.map((metric) => metric.key),
+            columnSets: COLUMN_SETS.map((set) => set.key)
+        });
+        const current = {
+            team: teamFilter,
+            position: positionFilter,
+            age: ageFilter,
+            watch: watchOnly,
+            q: searchQuery,
+            sort: sortColumn,
+            dir: sortDirection,
+            dist: distributionMetric,
+            cols: columnSet,
+            ranges
+        };
+        // The same question again (the Time Machine carries it along) keeps the reader's page.
+        if (sameLeaderboardState(incoming, current)) return;
+        teamFilter = incoming.team;
+        positionFilter = incoming.position;
+        ageFilter = incoming.age;
+        watchOnly = incoming.watch;
+        searchQuery = incoming.q;
+        sortColumn = incoming.sort;
+        sortDirection = incoming.dir;
+        distributionMetric = incoming.dist;
+        columnSet = incoming.cols;
+        ranges = incoming.ranges;
+        leaderboardPage = 1;
+    }
+
+    const urlState = $derived({
+        team: activeTeamFilter,
+        position: positionFilter,
+        age: ageFilter,
+        watch: watchOnly,
+        q: searchQuery,
+        sort: activeSortColumn,
+        dir: sortDirection,
+        dist: distributionMetric,
+        cols: columnSet,
+        ranges
+    });
+    let urlSyncTimer = 0;
+    // The address this page last wrote, so its own navigation isn't read back as an incoming one.
+    let ownHref = null;
+    // A change not yet written to the URL, and whether a navigation that started meanwhile should
+    // leave it standing (see beforeNavigate).
+    let writePending = false;
+    let keepLocalQuestion = false;
+
+    // In place rather than as a new history entry, so Back still leaves the board.
+    $effect(() => {
+        const current = $page.url;
+        const next = leaderboardSearchParams(urlState, current.searchParams).toString();
+        if (next === current.searchParams.toString()) {
+            writePending = false;
+            return;
+        }
+        const href = `${current.pathname}${next ? `?${next}` : ''}`;
+        writePending = true;
+        urlSyncTimer = setTimeout(() => {
+            writePending = false;
+            ownHref = href;
+            goto(href, { replaceState: true, keepFocus: true, noScroll: true });
+        }, 300);
+        return () => clearTimeout(urlSyncTimer);
+    });
+
+    // Any other navigation drops a write still waiting, which was worked out from the address
+    // before and would undo it. One that stays on the board (the Time Machine, the season menu)
+    // was built from the URL before the change, so the change stands over what it brings, and
+    // the page writes it onto the new address.
+    beforeNavigate(({ to }) => {
+        if (to?.url && pathAndSearch(to.url) === ownHref) return;
+        clearTimeout(urlSyncTimer);
+        keepLocalQuestion = keepsPendingState({ writePending, to, pathname: '/', ownHref });
+        writePending = false;
+    });
+
+    // A link, Back/Forward, Ask DARKO or the Time Machine arriving here brings its own question.
+    afterNavigate(({ type, to }) => {
+        if (keepLocalQuestion) keepLocalQuestion = false;
+        else if (isIncomingNavigation({ type, to, pathname: '/', ownHref })) applyUrlState(to.url.searchParams);
+        ownHref = null;
+    });
+
+    // The stat ranges are the Modern view's; the Shiny view filters each column in its own row.
+    const activeRanges = $derived(isShinyView ? {} : cleanRanges(ranges));
+    const rangeCount = $derived(Object.keys(activeRanges).length);
+
     const filteredPlayers = $derived.by(() => {
-        const columnMatched = filterPlayers(teamScopedPlayers, playerColumns, columnFilters);
+        const grouped = filterLeaderboardRows(teamScopedPlayers, {
+            position: positionFilter,
+            age: ageFilter,
+            watchlist: watchOnly ? watchSet : null
+        });
+        const ranged = rangeCount > 0 ? grouped.filter((player) => matchesRanges(player, activeRanges)) : grouped;
+        const columnMatched = filterPlayers(ranged, dataColumns, columnFilters);
         if (!searchQuery.trim()) return columnMatched;
-        return filterPlayers(columnMatched, playerColumns, { player_name: searchQuery });
+        return filterPlayers(columnMatched, dataColumns, { player_name: searchQuery });
     });
 
     const sortedPlayers = $derived.by(() =>
         getSortedRows(filteredPlayers, {
-            sortColumn,
+            sortColumn: activeSortColumn,
             sortDirection,
-            sortConfigs: leaderboardSortConfig
+            sortConfigs
         })
     );
     const leaderboardPageCount = $derived(
@@ -151,11 +318,11 @@
     );
 
     const leaderCards = $derived.by(() => [
-        buildLeaderCard(teamScopedPlayers, 'Best DPM', 'dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Best Offensive DPM', 'o_dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Best Defensive DPM', 'd_dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Best 3PT Shooter', 'x_fg3_pct', formatPercent),
-        buildLeaderCard(teamScopedPlayers, 'Best FT Shooter', 'x_ft_pct', formatPercent)
+        buildLeaderCard(teamScopedPlayers, 'Top DPM', 'dpm'),
+        buildLeaderCard(teamScopedPlayers, 'Top offense', 'o_dpm'),
+        buildLeaderCard(teamScopedPlayers, 'Top defense', 'd_dpm'),
+        buildLeaderCard(teamScopedPlayers, 'Top 3PT%', 'x_fg3_pct', formatPercent),
+        buildLeaderCard(teamScopedPlayers, 'Top FT%', 'x_ft_pct', formatPercent)
     ]);
 
     const selectedDistributionMetric = $derived(
@@ -179,7 +346,7 @@
 
     const topPositionPlayers = $derived.by(() =>
         teamScopedPlayers
-            .filter((player) => matchesPositionView(player, positionView))
+            .filter((player) => matchesPosition(player, positionView))
             .filter((player) => hasMinimumGames(player, TOP_POSITION_MIN_GAMES))
             .filter((player) => Number.isFinite(toNumber(player?.dpm)))
             .slice()
@@ -187,20 +354,83 @@
             .slice(0, 5)
     );
 
-    const leaderboardCsvColumnsForExport = leaderboardCsvColumns
-        .filter((col) => col.accessor !== 'bayes_rapm_total' && col.accessor !== 'tr_minutes')
-        .map((col) =>
-            col.accessor === 'x_minutes'
-                ? { ...col, format: fmtMpg }
-                : col
-        );
+    // With the Time Machine set, the export carries Now and Since after DDPM, like the table.
+    const leaderboardCsvColumnsForExport = $derived(
+        leaderboardCsvColumns
+            .filter((col) => col.accessor !== 'bayes_rapm_total' && col.accessor !== 'tr_minutes')
+            .flatMap((col) => {
+                if (col.accessor === 'x_minutes') return [{ ...col, format: fmtMpg }];
+                if (col.accessor !== 'd_dpm' || !data.asOf) return [col];
+                return [
+                    col,
+                    { header: 'DPM now', accessor: 'now_dpm', format: formatSignedMetric },
+                    { header: 'Since', accessor: 'since_dpm', format: formatSignedMetric }
+                ];
+            })
+    );
+
+    // The board the sparklines follow: its season, stopping at the Time Machine's date.
+    const trendBoard = $derived.by(() => {
+        const season = trendSeason({ asOf: data.asOf, selectedSeason: data.selectedSeason, players });
+        const through = data.asOf?.date ?? null;
+        return season ? { season, through, key: `${season}:${through ?? ''}` } : null;
+    });
+    const boardTrends = $derived(trendBoard ? (trendsByBoard[trendBoard.key] ?? {}) : {});
+
+    onMount(() => {
+        startWatchlist();
+        try {
+            showTrends = localStorage.getItem(TRENDS_STORAGE_KEY) === '1';
+        } catch {
+            // Storage can be unavailable; the sparklines just start hidden.
+        }
+    });
+
+    function setShowTrends(value) {
+        showTrends = value;
+        try {
+            localStorage.setItem(TRENDS_STORAGE_KEY, value ? '1' : '0');
+        } catch {
+            // The choice still holds until the page closes.
+        }
+    }
+
+    // Sparklines load a page at a time, for the players on it that the board hasn't loaded yet.
+    $effect(() => {
+        if (!showTrends || !trendBoard) return;
+        const board = trendBoard;
+        const loaded = trendsByBoard[board.key] ?? {};
+        const missing = visibleLeaderboardPlayers
+            .map((player) => Number(player?.nba_id))
+            .filter((id) => Number.isInteger(id) && id > 0 && !(id in loaded))
+            .sort((a, b) => a - b);
+        if (!missing.length) return;
+
+        let cancelled = false;
+        const params = new URLSearchParams({ ids: missing.join(','), season: String(board.season) });
+        if (board.through) params.set('through', board.through);
+        fetch(`/api/history/trends?${params}`)
+            .then((response) => (response.ok ? response.json() : { trends: {} }))
+            .catch(() => ({ trends: {} }))
+            .then(({ trends = {} }) => {
+                if (cancelled) return;
+                // A player without a line that season counts as loaded, so it isn't requested again.
+                const next = { ...(trendsByBoard[board.key] ?? {}) };
+                for (const id of missing) next[id] = trends[id] ?? [];
+                trendsByBoard = { ...trendsByBoard, [board.key]: next };
+            });
+        return () => {
+            cancelled = true;
+        };
+    });
 
     $effect(() => {
-        sortColumn;
+        activeSortColumn;
         sortDirection;
         searchQuery;
         activeTeamFilter;
         activeSeason;
+        playerColumns.length;
         sortedPlayers.length;
         standardTableRoot;
         standardBodyScroller;
@@ -236,15 +466,18 @@
     function selectSeason(event) {
         const season = event.currentTarget.value;
         if (season === 'asof') return;
-        // A season pick leaves the Time Machine, which would otherwise override it.
+        // A season pick leaves the Time Machine, which would otherwise override it, and keeps the
+        // board's question (filters, sort, columns) for the new season.
         timeMachine.date = null;
-        const suffix = season === 'current' ? '' : `?season=${encodeURIComponent(season)}`;
-        goto(`/${suffix}`, { keepFocus: true });
+        const params = leaderboardSearchParams(urlState);
+        if (season !== 'current') params.set('season', season);
+        const search = params.toString();
+        goto(`/${search ? `?${search}` : ''}`, { keepFocus: true });
     }
 
     function toggleSort(column) {
         ({ sortColumn, sortDirection } = getNextSortState({
-            sortColumn,
+            sortColumn: activeSortColumn,
             sortDirection,
             column,
             defaultDirection: textSortColumns.has(column) ? 'asc' : 'desc'
@@ -263,6 +496,112 @@
             leaderboardPage = 1;
         }
     });
+
+    // One chip per filter in force, each removable, so a missing player can be explained.
+    const chips = $derived(
+        filterChips(
+            {
+                team: activeTeamFilter,
+                position: positionFilter,
+                age: ageFilter,
+                watch: watchOnly,
+                q: searchQuery,
+                ranges: activeRanges
+            },
+            { positions: POSITION_GROUPS, ages: AGE_GROUPS }
+        )
+    );
+
+    function removeChip(key) {
+        if (key === 'team') teamFilter = 'all';
+        else if (key === 'position') positionFilter = 'all';
+        else if (key === 'age') ageFilter = 'all';
+        else if (key === 'watch') watchOnly = false;
+        else if (key === 'q') searchQuery = '';
+        else if (key.startsWith('range:')) {
+            const next = { ...ranges };
+            delete next[key.slice('range:'.length)];
+            ranges = next;
+        }
+        leaderboardPage = 1;
+    }
+
+    // The Filters button counts what its panel holds: position, age group and each stat range.
+    const filterCount = $derived(
+        (positionFilter !== 'all' ? 1 : 0) + (ageFilter !== 'all' ? 1 : 0) + rangeCount
+    );
+
+    function clearPanelFilters() {
+        positionFilter = 'all';
+        ageFilter = 'all';
+        ranges = {};
+        leaderboardPage = 1;
+    }
+
+    // The panel closes on a press outside it or on Escape, which hands focus back to its button.
+    function closeFiltersFromOutside(event) {
+        if (filtersOpen && filtersAnchor && !filtersAnchor.contains(event.target)) filtersOpen = false;
+    }
+
+    function closeFiltersOnEscape(event) {
+        if (!filtersOpen || event.key !== 'Escape') return;
+        filtersOpen = false;
+        filtersAnchor?.querySelector('button')?.focus();
+    }
+
+    function clearFilters() {
+        teamFilter = 'all';
+        positionFilter = 'all';
+        ageFilter = 'all';
+        watchOnly = false;
+        searchQuery = '';
+        ranges = {};
+        leaderboardPage = 1;
+    }
+
+    /** A range's bound from its input: blank or unreadable clears it. */
+    function setRange(key, bound, raw) {
+        const value = String(raw).trim() === '' ? null : Number(raw);
+        ranges = {
+            ...ranges,
+            [key]: { ...(ranges[key] ?? { min: null, max: null }), [bound]: Number.isFinite(value) ? value : null }
+        };
+        leaderboardPage = 1;
+    }
+
+    // The view's address, with the question as it stands, for pasting elsewhere.
+    async function copyViewLink() {
+        const url = new URL($page.url);
+        url.search = leaderboardSearchParams(urlState, $page.url.searchParams).toString();
+        try {
+            await navigator.clipboard.writeText(url.href);
+            linkCopied = true;
+            setTimeout(() => (linkCopied = false), 2000);
+        } catch {
+            window.prompt('Copy the link to this view:', url.href);
+        }
+    }
+
+    // Up to four players, ticked in the rank column, go on to Compare, Career Trajectories or the
+    // Scatterplot together.
+    const pickedIds = $derived(picked.map((player) => player.nba_id).join(','));
+    // A season's or the Time Machine's board, whose ratings Compare and the Scatterplot don't show.
+    const pastBoard = $derived(activeSeason !== 'current');
+
+    function isPicked(player) {
+        return picked.some((entry) => entry.nba_id === Number(player?.nba_id));
+    }
+
+    function togglePick(player) {
+        const id = Number(player?.nba_id);
+        if (isPicked(player)) picked = picked.filter((entry) => entry.nba_id !== id);
+        else if (picked.length < MAX_PICKS) picked = [...picked, { nba_id: id, player_name: player.player_name }];
+    }
+
+    function stopPicking() {
+        picking = false;
+        picked = [];
+    }
 
     // Numbers stay in neutral ink; DPM, the column the table ranks by, carries a diverging tint.
     function statClass(column, value) {
@@ -289,6 +628,19 @@
         return classes.filter(Boolean).join(' ');
     }
 
+    /** "C-F · 31": the position and whole-year age under a player's name. */
+    function positionAndAge(player) {
+        const age = toNumber(player?.age);
+        return [player?.position, age === null ? null : String(Math.floor(age))].filter(Boolean).join(' · ');
+    }
+
+    /** "DPM this season, +5.2 to +7.4" for a sparkline's screen-reader label. */
+    function trendLabel(values) {
+        if (!values?.length) return '';
+        const span = asOf ? 'this season to date' : 'this season';
+        return `DPM ${span}, ${formatSignedMetric(values[0], 1)} to ${formatSignedMetric(values.at(-1), 1)}`;
+    }
+
     function fmtMpg(min) {
         if (min === null || min === undefined) return '—';
         const n = Number.parseFloat(min);
@@ -305,27 +657,28 @@
         });
     }
 
-    function metricLeader(rows, metric) {
-        return rows.reduce((best, player) => {
-            const value = toNumber(player?.[metric]);
-            if (value === null) return best;
-            if (!best || value > best.value) {
-                return { player, value };
-            }
-            return best;
-        }, null);
-    }
-
+    // The leader in `metric`, and how far ahead of the next player: "1.2 ahead of Gilgeous-Alexander".
     function buildLeaderCard(rows, title, metric, formatter = formatSignedMetric) {
-        const leader = metricLeader(rows, metric);
-        const value = leader?.value ?? null;
+        const [leader, next] = rows
+            .map((player) => ({ player, value: toNumber(player?.[metric]) }))
+            .filter((entry) => entry.value !== null)
+            .sort((a, b) => b.value - a.value);
         return {
             title,
             metric,
             player: leader?.player ?? null,
-            value,
-            displayValue: formatter(value)
+            value: leader?.value ?? null,
+            displayValue: formatter(leader?.value ?? null),
+            margin: leader && next ? leadMargin(leader.value - next.value, next.player, metric) : null
         };
+    }
+
+    // Shooting leads are in percentage points; a lead too small to print is level.
+    function leadMargin(gap, player, metric) {
+        const name = String(player?.player_name ?? '').split(' ').slice(1).join(' ') || player?.player_name;
+        const amount = metric.endsWith('_pct') ? (gap * 100).toFixed(1) : gap.toFixed(1);
+        if (Number(amount) === 0) return `Level with ${name}`;
+        return `${amount}${metric.endsWith('_pct') ? ' pp' : ''} ahead of ${name}`;
     }
 
     function playerHeadshotUrl(player) {
@@ -350,6 +703,11 @@
         return formatFixed(n, compact ? 0 : (metric.decimals ?? 1));
     }
 
+    /** A figure under the dot plot, in the selected stat's format. */
+    function formatDistributionFigure(value) {
+        return formatDistributionValue(value, selectedDistributionMetric);
+    }
+
     /** Axis labels: "+2", "0", "-2"; "35%"; "12.5". */
     function formatDistributionTick(value, metric) {
         if (metric.kind === 'percent') return `${+(value * 100).toFixed(1)}%`;
@@ -365,7 +723,7 @@
             .sort((a, b) => a - b);
 
         if (values.length === 0) {
-            return { meanValue: null, mean: '—', median: '—', topTen: '—', players: 0 };
+            return { meanValue: null, medianValue: null, topTenValue: null, players: 0 };
         }
 
         const meanValue = values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -374,22 +732,7 @@
         const topValues = values.slice(-topCount);
         const topTenValue = topValues.reduce((sum, value) => sum + value, 0) / topValues.length;
 
-        return {
-            meanValue,
-            mean: formatDistributionValue(meanValue, metric),
-            median: formatDistributionValue(medianValue, metric),
-            topTen: formatDistributionValue(topTenValue, metric),
-            players: values.length
-        };
-    }
-
-    function matchesPositionView(player, view) {
-        if (view === 'all') return true;
-        const position = String(player?.position || '').toUpperCase();
-        if (view === 'guards') return position.includes('G');
-        if (view === 'forwards') return position.includes('F');
-        if (view === 'centers') return position.includes('C');
-        return true;
+        return { meanValue, medianValue, topTenValue, players: values.length };
     }
 
     function hasMinimumGames(player, minGames) {
@@ -409,7 +752,9 @@
     <title>DARKO DPM — NBA Player Projections</title>
 </svelte:head>
 
-<div class="leaderboard-page" data-shiny-page>
+<svelte:window onpointerdown={closeFiltersFromOutside} onkeydown={closeFiltersOnEscape} />
+
+<div class="leaderboard-page" class:picking={picking && !isShinyView} data-shiny-page>
     <div class="container leaderboard-container">
         <PageHeader id="leaderboard-title" title="DPM Leaderboard">
             {#if asOf}
@@ -417,38 +762,34 @@
                     DARKO as of {formatAsOfDate(asOf.date)}{asOf.season ? ` · ${formatSeasonEndYearLabel(asOf.season)} season` : ''}.
                     Each player's latest rating on that date.
                 </p>
+            {:else if data.ratingsThrough}
+                <p class="page-lede">
+                    Daily Player Metrics for every NBA player. Ratings through {formatAsOfDate(data.ratingsThrough)}.
+                </p>
             {:else}
                 <p class="page-lede">Daily Player Metrics for every NBA player, updated nightly.</p>
             {/if}
         </PageHeader>
 
-        <section class="stat-strip" aria-label="Leaderboard leaders">
-            {#each leaderCards as card (card.title)}
-                <StatTile label={card.title} value={card.displayValue} photo={playerHeadshotUrl(card.player)}>
-                    {#if card.player}
-                        <a class="leader-player" href={datedHref(`/player/${card.player.nba_id}`)}>
-                            {#if teamLogoUrl(card.player)}
-                                <img src={teamLogoUrl(card.player)} alt="" loading="lazy" onerror={hideBrokenImage} />
-                            {/if}
-                            <span>
-                                {card.player.player_name}
-                                <small>{teamAbbr(card.player.team_name)}</small>
-                            </span>
-                        </a>
-                    {:else}
-                        <span class="leader-player leader-player--empty">No player</span>
-                    {/if}
-                </StatTile>
-            {/each}
-        </section>
+        <LeaderCards
+            cards={leaderCards}
+            href={(player) => datedHref(`/player/${player.nba_id}`)}
+            photo={playerHeadshotUrl}
+            logo={teamLogoUrl}
+        />
 
         {#if players.length === 0}
             <div class="empty-state">No players are available for {activeSeasonLabel.toLowerCase()}.</div>
         {:else}
             <div class="leaderboard-workspace">
                 <section class="leaderboard-table-panel" aria-label={`${activeSeasonLabel} player leaderboard`}>
+                    <!-- One row: which board (season, team), who (search, Filters, the watchlist), and
+                         quiet actions at the end. Position, age and the stat ranges live in the Filters
+                         panel; the column sets and the season line sit on the table, as tabs. The Shiny
+                         view keeps its archived row: position and age menus, the trend toggle, the CSV
+                         button. -->
                     <div class="leaderboard-controls" data-shiny-surface="well">
-                        <div class="control-field">
+                        <div class="control-field control-field--season">
                             <select
                                 id="season-filter"
                                 value={activeSeason}
@@ -482,6 +823,38 @@
                             </select>
                         </div>
 
+                        <div class="control-field shiny-only">
+                            <select
+                                id="position-filter"
+                                value={positionFilter}
+                                onchange={(event) => {
+                                    positionFilter = event.currentTarget.value;
+                                    leaderboardPage = 1;
+                                }}
+                                aria-label="Position"
+                            >
+                                {#each POSITION_GROUPS as group (group.key)}
+                                    <option value={group.key}>{group.label}</option>
+                                {/each}
+                            </select>
+                        </div>
+
+                        <div class="control-field shiny-only">
+                            <select
+                                id="age-filter"
+                                value={ageFilter}
+                                onchange={(event) => {
+                                    ageFilter = event.currentTarget.value;
+                                    leaderboardPage = 1;
+                                }}
+                                aria-label="Age"
+                            >
+                                {#each AGE_GROUPS as group (group.key)}
+                                    <option value={group.key}>{group.label}</option>
+                                {/each}
+                            </select>
+                        </div>
+
                         <div class="control-field control-field--search">
                             <div class="search-control">
                                 <input
@@ -498,22 +871,229 @@
                             </div>
                         </div>
 
+                        <div class="control-toggles">
+                            <div class="filters-anchor modern-only" bind:this={filtersAnchor}>
+                                <button
+                                    type="button"
+                                    class="toggle-chip"
+                                    class:active={filtersOpen || filterCount > 0}
+                                    aria-expanded={filtersOpen}
+                                    aria-controls="leaderboard-filters"
+                                    onclick={() => (filtersOpen = !filtersOpen)}
+                                >
+                                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                        <path d="M2 4h12M4.5 8h7M7 12h2" />
+                                    </svg>
+                                    Filters
+                                    {#if filterCount > 0}<span class="toggle-count">{filterCount}</span>{/if}
+                                </button>
+                                {#if filtersOpen && !isShinyView}
+                                    <div class="filters-panel" id="leaderboard-filters" role="dialog" aria-label="Filters">
+                                        <div class="filters-head">
+                                            <strong>Filters</strong>
+                                            {#if filterCount > 0}
+                                                <button type="button" class="filter-clear" onclick={clearPanelFilters}>Clear</button>
+                                            {/if}
+                                        </div>
+                                        <p class="filters-label" id="filters-position">Position</p>
+                                        <div class="segmented" role="group" aria-labelledby="filters-position">
+                                            {#each POSITION_GROUPS as group (group.key)}
+                                                <button
+                                                    type="button"
+                                                    class:active={positionFilter === group.key}
+                                                    aria-pressed={positionFilter === group.key}
+                                                    onclick={() => {
+                                                        positionFilter = group.key;
+                                                        leaderboardPage = 1;
+                                                    }}
+                                                >
+                                                    {group.key === 'all' ? 'All' : group.label}
+                                                </button>
+                                            {/each}
+                                        </div>
+                                        <p class="filters-label" id="filters-age">Age</p>
+                                        <div class="segmented" role="group" aria-labelledby="filters-age">
+                                            {#each AGE_GROUPS as group (group.key)}
+                                                <button
+                                                    type="button"
+                                                    class:active={ageFilter === group.key}
+                                                    aria-pressed={ageFilter === group.key}
+                                                    onclick={() => {
+                                                        ageFilter = group.key;
+                                                        leaderboardPage = 1;
+                                                    }}
+                                                >
+                                                    {group.key === 'all' ? 'All' : group.key === '30+' ? '30+' : group.label}
+                                                </button>
+                                            {/each}
+                                        </div>
+                                        <p class="filters-label">Ranges</p>
+                                        <div class="filters-ranges">
+                                            {#each RANGE_FILTERS as filter (filter.key)}
+                                                <div class="range-field">
+                                                    <span class="range-label">{filter.label}</span>
+                                                    <input
+                                                        type="number"
+                                                        inputmode="decimal"
+                                                        step={filter.step}
+                                                        placeholder="Min"
+                                                        value={ranges[filter.key]?.min ?? ''}
+                                                        oninput={(event) => setRange(filter.key, 'min', event.currentTarget.value)}
+                                                        aria-label={`${filter.label} at least`}
+                                                    />
+                                                    <span class="range-dash" aria-hidden="true">–</span>
+                                                    <input
+                                                        type="number"
+                                                        inputmode="decimal"
+                                                        step={filter.step}
+                                                        placeholder="Max"
+                                                        value={ranges[filter.key]?.max ?? ''}
+                                                        oninput={(event) => setRange(filter.key, 'max', event.currentTarget.value)}
+                                                        aria-label={`${filter.label} at most`}
+                                                    />
+                                                </div>
+                                            {/each}
+                                        </div>
+                                    </div>
+                                {/if}
+                            </div>
+                            <button
+                                type="button"
+                                class="toggle-chip"
+                                class:active={watchOnly}
+                                aria-pressed={watchOnly}
+                                title={`Only the players you follow. Star a player to follow them here${dailyListed() ? ' and in The Daily' : ''}.`}
+                                onclick={() => {
+                                    watchOnly = !watchOnly;
+                                    leaderboardPage = 1;
+                                }}
+                            >
+                                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                    <path d="M8 1.6l1.9 4 4.4.5-3.3 3 .9 4.3L8 11.3l-3.9 2.1.9-4.3-3.3-3 4.4-.5z" />
+                                </svg>
+                                Watchlist
+                                {#if watchSet.size > 0}<span class="toggle-count">{watchSet.size}</span>{/if}
+                            </button>
+                            <button
+                                type="button"
+                                class="toggle-chip shiny-only"
+                                class:active={showTrends}
+                                aria-pressed={showTrends}
+                                title="A small line of each player's DPM through the season"
+                                onclick={() => setShowTrends(!showTrends)}
+                            >
+                                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                    <path class="toggle-line" d="M1.5 11.5l3.5-4 3 2.5 5.5-6.5" />
+                                </svg>
+                                Season trend
+                            </button>
+                        </div>
+
+                        <div class="control-actions">
+                            <button
+                                type="button"
+                                class="tool-action modern-only"
+                                class:active={picking}
+                                aria-pressed={picking}
+                                aria-label="Compare players"
+                                title="Tick up to four players to open in Compare, Career Trajectories or the Scatterplot"
+                                onclick={() => (picking ? stopPicking() : (picking = true))}
+                            >
+                                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+                                    <path d="M2.5 2.5h11v11h-11zM5 8l2 2 4-4.5" />
+                                </svg>
+                                <span class="tool-label">Compare</span>
+                            </button>
+                            <!-- Modern only: the link carries the Modern view's question, not the Shiny
+                                 view's column filters. -->
+                            <button
+                                type="button"
+                                class="tool-action modern-only"
+                                aria-label="Copy a link to this view"
+                                title="Copy a link to the board with these filters, this sort and these columns"
+                                onclick={copyViewLink}
+                            >
+                                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+                                    <path d="M6.5 9.5l3-3M7 4.5l1.3-1.3a2.6 2.6 0 0 1 3.7 3.7L10.7 8.2M9 11.5l-1.3 1.3a2.6 2.6 0 0 1-3.7-3.7L5.3 7.8" />
+                                </svg>
+                                <span class="tool-label" aria-live="polite">{linkCopied ? 'Copied' : 'Share'}</span>
+                            </button>
+                            <button
+                                type="button"
+                                class="tool-action tool-action--csv modern-only"
+                                aria-label="Download CSV"
+                                title="Download the board as CSV"
+                                onclick={exportPlayersCsv}
+                                disabled={sortedPlayers.length === 0}
+                            >
+                                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+                                    <path d="M8 2.5v8M4.5 7.5L8 11l3.5-3.5M3 13.5h10" />
+                                </svg>
+                                <span class="tool-label">CSV</span>
+                            </button>
+                            <button
+                                class="btn shiny-only"
+                                type="button"
+                                onclick={exportPlayersCsv}
+                                disabled={sortedPlayers.length === 0}
+                            >
+                                Download CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    {#if chips.length > 0}
+                        <div class="active-filters modern-only" role="group" aria-label="Filters in force">
+                            <span class="active-filters-count">{sortedPlayers.length} of {players.length} players</span>
+                            {#each chips as chip (chip.key)}
+                                <button
+                                    type="button"
+                                    class="filter-chip"
+                                    onclick={() => removeChip(chip.key)}
+                                    aria-label={`Remove the filter ${chip.label}`}
+                                >
+                                    {chip.label}<span aria-hidden="true">×</span>
+                                </button>
+                            {/each}
+                            <button type="button" class="filter-clear" onclick={clearFilters}>Clear all</button>
+                        </div>
+                    {/if}
+
+                    <!-- The table's own bar: its column sets as tabs, and the season line. -->
+                    <div class="view-bar modern-only">
+                        <div class="column-tabs" role="group" aria-label="Columns">
+                            {#each COLUMN_SETS as set (set.key)}
+                                <button
+                                    type="button"
+                                    class:active={columnSet === set.key}
+                                    aria-pressed={columnSet === set.key}
+                                    onclick={() => (columnSet = set.key)}
+                                >
+                                    {set.label}
+                                </button>
+                            {/each}
+                        </div>
                         <button
-                            class="btn"
                             type="button"
-                            onclick={exportPlayersCsv}
-                            disabled={sortedPlayers.length === 0}
+                            class="trend-toggle"
+                            class:active={showTrends}
+                            aria-pressed={showTrends}
+                            title="A small line of each player's DPM through the season"
+                            onclick={() => setShowTrends(!showTrends)}
                         >
-                            Download CSV
+                            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                <path d="M1.5 11.5l3.5-4 3 2.5 5.5-6.5" />
+                            </svg>
+                            Season trend
                         </button>
                     </div>
 
-                    <p class="leaderboard-value-note">
-                        <strong>$ Value</strong> is DARKO's fair-salary estimate.
-                        <a href="/about/fair-salary">See how it is calculated →</a>
-                    </p>
-
-                    <div class="table-wrapper table-shell" data-shiny-table bind:this={standardTableRoot}>
+                    <div
+                        class="table-wrapper table-shell"
+                        class:grouped={columnGroups.length > 0}
+                        data-shiny-table
+                        bind:this={standardTableRoot}
+                    >
                         <div class="sticky-header-shell">
                             <div class="table-header-scroll" bind:this={standardHeaderScroller}>
                                 <table class="sticky-header-table" role="presentation" bind:this={standardHeaderTable}>
@@ -533,7 +1113,11 @@
                                 <tbody>
                                     {#if sortedPlayers.length === 0}
                                         <tr>
-                                            <td class="empty-row" colspan={playerColumns.length}>No matching players.</td>
+                                            <td class="empty-row" colspan={playerColumns.length}>
+                                                {watchOnly && watchSet.size === 0
+                                                    ? 'You aren’t following anyone yet. Star a player to follow them.'
+                                                    : 'No matching players.'}
+                                            </td>
                                         </tr>
                                     {:else}
                                         {#each visibleLeaderboardPlayers as player, index (player.nba_id)}
@@ -541,23 +1125,64 @@
                                                 {#each playerColumns as column (column.key)}
                                                     {@const globalIndex = (activeLeaderboardPage - 1) * LEADERBOARD_PAGE_SIZE + index}
                                                     {@const value = getLeaderboardCellValue(player, column, globalIndex)}
-                                                    {#if column.key === 'player_name'}
+                                                    {#if column.key === '_rank' && picking && !isShinyView}
                                                         <td class={cellClass(column, value)}>
-                                                            <a class="player-link" href={datedHref(`/player/${player.nba_id}`)}>
-                                                                {#if isShinyView && playerHeadshotUrl(player)}
-                                                                    <img
-                                                                        src={playerHeadshotUrl(player)}
-                                                                        alt=""
-                                                                        width="20"
-                                                                        height="20"
-                                                                        class="leaderboard-headshot"
-                                                                        loading="lazy"
-                                                                        onerror={hideBrokenImage}
-                                                                    />
-                                                                {/if}
-                                                                <span>{player.player_name}</span>
-                                                                {#if player.position}<small>{player.position}</small>{/if}
-                                                            </a>
+                                                            <input
+                                                                type="checkbox"
+                                                                class="pick-box"
+                                                                checked={isPicked(player)}
+                                                                disabled={!isPicked(player) && picked.length >= MAX_PICKS}
+                                                                onchange={(event) => {
+                                                                    togglePick(player);
+                                                                    // A fifth pick is refused; the box shows that.
+                                                                    event.currentTarget.checked = isPicked(player);
+                                                                }}
+                                                                aria-label={`Pick ${player.player_name}`}
+                                                            />
+                                                        </td>
+                                                    {:else if column.key === 'dpm'}
+                                                        <!-- The number, and under it how it splits into offense and defense. -->
+                                                        <td class={cellClass(column, value)} style={cellStyle(column, value)}>
+                                                            <span class="dpm-figure">{formatLeaderboardCell(column, value)}</span>
+                                                            <span class="dpm-split">
+                                                                <OffenseDefenseBar offense={player.o_dpm} defense={player.d_dpm} max={6} />
+                                                            </span>
+                                                        </td>
+                                                    {:else if column.kind === 'trend'}
+                                                        {@const trend = boardTrends[player.nba_id]}
+                                                        <td class="leaderboard-cell leaderboard-cell--drawn leaderboard-cell--trend">
+                                                            {#if trend === undefined}
+                                                                <span class="trend-pending" aria-hidden="true"></span>
+                                                            {:else if trend.length > 1}
+                                                                <Sparkline values={trend} width={84} height={22} label={trendLabel(trend)} />
+                                                            {:else}
+                                                                <span class="cell-muted">—</span>
+                                                            {/if}
+                                                        </td>
+                                                    {:else if column.key === 'player_name'}
+                                                        <td class={cellClass(column, value)}>
+                                                            <span class="player-cell">
+                                                                <WatchStar nbaId={Number(player.nba_id)} name={player.player_name} compact />
+                                                                <a class="player-link" href={datedHref(`/player/${player.nba_id}`)}>
+                                                                    {#if isShinyView && playerHeadshotUrl(player)}
+                                                                        <img
+                                                                            src={playerHeadshotUrl(player)}
+                                                                            alt=""
+                                                                            width="20"
+                                                                            height="20"
+                                                                            class="leaderboard-headshot"
+                                                                            loading="lazy"
+                                                                            onerror={hideBrokenImage}
+                                                                        />
+                                                                    {/if}
+                                                                    <!-- The name, and under it the position and age: "C-F · 31". On a
+                                                                         phone the team leads that line, in place of the Team column. -->
+                                                                    <span class="player-text">
+                                                                        <span>{player.player_name}</span>
+                                                                        {#if positionAndAge(player) || player.team_name}<small>{#if player.team_name}<span class="player-team-inline">{teamAbbr(player.team_name)}{positionAndAge(player) ? ' · ' : ''}</span>{/if}{positionAndAge(player)}</small>{/if}
+                                                                    </span>
+                                                                </a>
+                                                            </span>
                                                         </td>
                                                     {:else if column.key === 'team_name'}
                                                         <td class={cellClass(column, value)}>
@@ -610,6 +1235,12 @@
                             </button>
                         </nav>
                     {/if}
+                    {#if showsValueColumn}
+                        <p class="leaderboard-value-note">
+                            <strong>$ Value</strong> is DARKO's fair-salary estimate.
+                            <a href="/about/fair-salary">See how it is calculated →</a>
+                        </p>
+                    {/if}
                 </section>
 
                 <aside class="insight-rail" aria-label="Leaderboard insights">
@@ -640,24 +1271,28 @@
                                 label={`Distribution of ${activeSeasonLabel.toLowerCase()} player ${selectedDistributionMetric.label}, one dot per player`}
                             />
                         </div>
-                        <div class="distribution-stats">
-                            <div>
-                                <span>Mean</span>
-                                <strong>{distribution.mean}</strong>
+                        <!-- A filter runs each figure to its new value; a new stat brings in a new set,
+                             rather than running a DPM through percentages on the way. -->
+                        {#key selectedDistributionMetric.key}
+                            <div class="distribution-stats" in:fly={{ y: 6, duration: prefersReducedMotion.current ? 0 : 260 }}>
+                                <div>
+                                    <span>Mean</span>
+                                    <strong><CountUp value={distribution.meanValue} format={formatDistributionFigure} /></strong>
+                                </div>
+                                <div>
+                                    <span>Median</span>
+                                    <strong><CountUp value={distribution.medianValue} format={formatDistributionFigure} /></strong>
+                                </div>
+                                <div>
+                                    <span>Top 10%</span>
+                                    <strong><CountUp value={distribution.topTenValue} format={formatDistributionFigure} /></strong>
+                                </div>
+                                <div>
+                                    <span>Players</span>
+                                    <strong><CountUp value={distribution.players} format={(value) => Math.round(value ?? 0)} /></strong>
+                                </div>
                             </div>
-                            <div>
-                                <span>Median</span>
-                                <strong>{distribution.median}</strong>
-                            </div>
-                            <div>
-                                <span>Top 10%</span>
-                                <strong>{distribution.topTen}</strong>
-                            </div>
-                            <div>
-                                <span>Players</span>
-                                <strong>{distribution.players}</strong>
-                            </div>
-                        </div>
+                        {/key}
                         <p class="shiny-plot-caption">@kmedved | www.darko.app | @anpatt7</p>
                     </section>
 
@@ -711,53 +1346,113 @@
             </div>
         {/if}
     </div>
+
+    {#if picking && !isShinyView}
+        <div class="pick-tray" role="region" aria-label="Players picked to compare">
+            <p class="pick-tray-title">
+                {picked.length === 0 ? 'Tick up to four players in the rank column' : `${picked.length} of ${MAX_PICKS} picked`}
+            </p>
+            {#if picked.length > 0}
+                <ul class="pick-list">
+                    {#each picked as player (player.nba_id)}
+                        <li>
+                            <span>{player.player_name}</span>
+                            <button type="button" onclick={() => togglePick(player)} aria-label={`Unpick ${player.player_name}`}>×</button>
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
+            <div class="pick-actions">
+                {#if picked.length > 0}
+                    <a class="pick-action pick-action--primary" href="/compare?ids={pickedIds}">Compare</a>
+                    <a class="pick-action" href="/trajectories?ids={pickedIds}">Careers</a>
+                    {#if pastBoard}
+                        <button type="button" class="pick-action" disabled aria-describedby="pick-past-note">Scatterplot</button>
+                    {:else}
+                        <a class="pick-action" href="/scatterplot?ids={pickedIds}">Scatterplot</a>
+                    {/if}
+                {/if}
+                <button type="button" class="pick-action" onclick={stopPicking}>Done</button>
+            </div>
+            <!-- Compare and the Scatterplot show today's data, not the board's date. -->
+            {#if pastBoard && picked.length > 0}
+                <p class="pick-tray-note" id="pick-past-note">
+                    From a past board: Compare shows each player's latest ratings, and the Scatterplot only
+                    current players.
+                </p>
+            {/if}
+        </div>
+    {/if}
 </div>
 
+<!-- The headers screen readers use. They carry the columns' classes, so a column hidden on a phone
+     (Team) leaves this row too and the headers still match the cells. -->
 {#snippet standardSemanticHeaderRow()}
     <tr class="table-semantic-row sr-only">
         {#each playerColumns as column (column.key)}
-            <th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}>{column.label}</th>
+            {#if column.sortable === false}
+                <th scope="col" class={column.alignClass}>{column.label}</th>
+            {:else}
+                <th scope="col" class={column.alignClass} aria-sort={getSortAriaValue(activeSortColumn, sortDirection, column.key)}>{column.label}</th>
+            {/if}
         {/each}
     </tr>
 {/snippet}
 
 {#snippet standardHeaderRows()}
+    <!-- The column groups, over the columns they cover. Each column outside a group has its own
+         empty cell, with the column's class, so it hides and pins along with its column. -->
+    {#if columnGroups.length > 0}
+        <tr class="group-row table-sizing-row">
+            {#each columnGroups as group (group.key)}
+                {#if group.label}
+                    <th class={group.alignClass} colspan={group.span} scope="colgroup">{group.label}</th>
+                {:else}
+                    <th class={group.alignClass}></th>
+                {/if}
+            {/each}
+        </tr>
+    {/if}
     <tr class="header-row table-sizing-row">
         {#each playerColumns as column (column.key)}
-            <th
-                class="{column.alignClass} sortable {sortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
-                onclick={() => toggleSort(column.key)}
-                aria-sort={getSortAriaValue(sortColumn, sortDirection, column.key)}
-            >
-                <span class="header-label-wrap">
-                    {#if column.metricKey}
-                        <MetricTooltip text={getMetricDefinition(column.metricKey)}>
+            {#if column.sortable === false}
+                <th class={column.alignClass}>{column.label}</th>
+            {:else}
+                <th
+                    class="{column.alignClass} sortable {activeSortColumn === column.key ? 'active' : ''} {column.metricKey ? 'has-tooltip' : ''}"
+                    onclick={() => toggleSort(column.key)}
+                    aria-sort={getSortAriaValue(activeSortColumn, sortDirection, column.key)}
+                >
+                    <span class="header-label-wrap">
+                        {#if column.metricKey}
+                            <MetricTooltip text={getMetricDefinition(column.metricKey)}>
+                                <span>{column.label}</span>
+                            </MetricTooltip>
+                        {:else}
                             <span>{column.label}</span>
-                        </MetricTooltip>
-                    {:else}
-                        <span>{column.label}</span>
-                    {/if}
-                    <!-- The keyboard's way to sort; clicking anywhere else in the header works too. -->
-                    <button
-                        type="button"
-                        class="sort-button"
-                        aria-label={`Sort by ${column.label}`}
-                        onclick={(event) => {
-                            event.stopPropagation();
-                            toggleSort(column.key);
-                        }}
-                    >
-                        <span class="sort-indicator" aria-hidden="true">{getSortGlyph(sortColumn, sortDirection, column.key)}</span>
-                    </button>
-                </span>
-            </th>
+                        {/if}
+                        <!-- The keyboard's way to sort; clicking anywhere else in the header works too. -->
+                        <button
+                            type="button"
+                            class="sort-button"
+                            aria-label={`Sort by ${column.label}`}
+                            onclick={(event) => {
+                                event.stopPropagation();
+                                toggleSort(column.key);
+                            }}
+                        >
+                            <span class="sort-indicator" aria-hidden="true">{getSortGlyph(activeSortColumn, sortDirection, column.key)}</span>
+                        </button>
+                    </span>
+                </th>
+            {/if}
         {/each}
     </tr>
     {#if isShinyView}
         <tr class="column-filter-row table-sizing-row">
             {#each playerColumns as column (column.key)}
                 <th class={column.alignClass}>
-                    {#if column.key !== '_rank'}
+                    {#if column.key !== '_rank' && column.sortable !== false}
                         <input
                             type="text"
                             value={columnFilters[column.key] || ''}
@@ -783,43 +1478,6 @@
         padding-bottom: 28px;
     }
 
-    .leader-player {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 6px;
-        color: var(--text);
-        min-width: 0;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .leader-player:hover {
-        color: var(--accent);
-    }
-
-    .leader-player img {
-        width: 22px;
-        height: 22px;
-        object-fit: contain;
-        flex: 0 0 auto;
-    }
-
-    .leader-player span {
-        display: grid;
-        min-width: 0;
-    }
-
-    .leader-player small {
-        color: var(--text-muted);
-        font-size: 11px;
-        font-weight: 600;
-    }
-
-    .leader-player--empty {
-        color: var(--text-muted);
-    }
-
     .leaderboard-workspace {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
@@ -832,12 +1490,526 @@
         min-width: 0;
     }
 
+    /* Season, team, position and age, the search taking what's left, then the toggles and the
+       export; the row wraps rather than squeezing. */
     .leaderboard-controls {
-        display: grid;
-        grid-template-columns: minmax(150px, 180px) minmax(140px, 180px) minmax(220px, 1fr) auto;
+        display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         align-items: center;
         margin-bottom: 14px;
+    }
+
+    .leaderboard-controls .control-field {
+        flex: 0 1 150px;
+        min-width: 120px;
+    }
+
+    .leaderboard-controls .control-field--season {
+        flex-basis: 180px;
+    }
+
+    .leaderboard-controls .control-field--search {
+        flex: 1 1 220px;
+    }
+
+    .control-toggles {
+        display: flex;
+        gap: 8px;
+    }
+
+    /* The column sets, the Filters panel, the chips, picking and sharing are the Modern view's;
+       the Shiny view keeps the archived app's row, table and per-column filters. */
+    :global(:root[data-view='shiny']) .modern-only {
+        display: none;
+    }
+
+    :global(:root:not([data-view='shiny'])) .shiny-only {
+        display: none;
+    }
+
+    /* Filters: a panel under its button, over the table, until a press outside or Escape. */
+    .filters-anchor {
+        position: relative;
+    }
+
+    .filters-panel {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        z-index: 45;
+        width: 400px;
+        max-width: calc(100vw - 24px);
+        padding: 14px 16px 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--bg-elevated);
+        box-shadow: 0 18px 44px color-mix(in srgb, var(--text) 16%, transparent);
+    }
+
+    .filters-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        color: var(--text);
+        font-size: 14px;
+    }
+
+    .filters-label {
+        margin: 12px 0 6px;
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    /* One choice among a few: joined buttons, the chosen one filled. */
+    .segmented {
+        display: flex;
+        padding: 3px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg);
+    }
+
+    .segmented button {
+        flex: 1 1 auto;
+        height: 30px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: calc(var(--radius-sm) - 2px);
+        background: none;
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 650;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .segmented button:hover {
+        color: var(--text);
+    }
+
+    .segmented button.active {
+        background: var(--bg-surface);
+        color: var(--text);
+        box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 18%, transparent);
+    }
+
+    .filters-ranges {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 14px;
+    }
+
+    .range-field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .range-label {
+        flex: none;
+        width: 32px;
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 750;
+    }
+
+    .range-dash {
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+
+    .range-field input {
+        flex: 1 1 0;
+        width: 100%;
+        min-width: 0;
+        height: 32px;
+        padding: 0 8px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .range-field input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+
+    /* The row's actions, quiet: text and an icon, no box until hovered. */
+    .control-actions {
+        display: flex;
+        gap: 2px;
+        margin-left: auto;
+    }
+
+    .tool-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 42px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: var(--radius-sm);
+        background: none;
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .tool-action:hover:not(:disabled) {
+        background: var(--bg-hover);
+        color: var(--text);
+    }
+
+    .tool-action:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+    }
+
+    .tool-action.active {
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        color: var(--text);
+    }
+
+    .tool-action:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .tool-action svg path,
+    .trend-toggle svg path {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+    }
+
+    /* The table's bar: its column sets as tabs, the season line at the end. */
+    .view-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 0 10px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .column-tabs {
+        display: flex;
+        gap: 2px;
+    }
+
+    .column-tabs button {
+        height: 38px;
+        padding: 0 12px;
+        border: 0;
+        background: none;
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+        box-shadow: inset 0 -2px 0 transparent;
+    }
+
+    .column-tabs button:hover {
+        color: var(--text);
+    }
+
+    .column-tabs button.active {
+        color: var(--text);
+        box-shadow: inset 0 -2px 0 var(--accent);
+    }
+
+    .trend-toggle {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        gap: 6px;
+        height: 30px;
+        padding: 0 11px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: none;
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .trend-toggle:hover {
+        color: var(--text);
+    }
+
+    .trend-toggle.active {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+        color: var(--text);
+    }
+
+    .active-filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 8px;
+        margin: -4px 0 12px;
+        font-size: 12px;
+    }
+
+    .active-filters-count {
+        margin-right: 4px;
+        color: var(--text-secondary);
+        font-weight: 650;
+    }
+
+    .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        padding: 0 8px 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--bg-surface);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 650;
+        cursor: pointer;
+    }
+
+    .filter-chip span {
+        color: var(--text-muted);
+        font-size: 15px;
+        line-height: 1;
+    }
+
+    .filter-chip:hover,
+    .filter-chip:focus-visible {
+        border-color: var(--accent);
+    }
+
+    .filter-clear {
+        padding: 4px;
+        border: 0;
+        background: none;
+        color: var(--accent);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 750;
+        cursor: pointer;
+    }
+
+    .filter-clear:hover {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    /* Picking players: a checkbox in place of each rank, and a tray of the picks at the foot of
+       the screen, clear of the last rows. */
+    .leaderboard-page.picking {
+        padding-bottom: 96px;
+    }
+
+    .pick-box {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        vertical-align: middle;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+
+    .pick-tray {
+        position: fixed;
+        left: 50%;
+        bottom: 16px;
+        z-index: 60;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        width: min(760px, calc(100vw - 32px));
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--bg-elevated);
+        box-shadow: 0 14px 36px color-mix(in srgb, var(--text) 18%, transparent);
+        transform: translateX(-50%);
+    }
+
+    .pick-tray-title {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .pick-tray-note {
+        flex-basis: 100%;
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .pick-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .pick-list li {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 28px;
+        padding: 0 4px 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--bg-surface);
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 650;
+    }
+
+    .pick-list button {
+        width: 22px;
+        height: 22px;
+        border: 0;
+        border-radius: 50%;
+        background: none;
+        color: var(--text-muted);
+        font-size: 15px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .pick-list button:hover {
+        background: var(--bg-hover);
+        color: var(--text);
+    }
+
+    .pick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-left: auto;
+    }
+
+    .pick-action {
+        display: inline-flex;
+        align-items: center;
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-surface);
+        color: var(--text);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .pick-action:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--text);
+    }
+
+    .pick-action:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
+    /* Like the site's .btn-primary, which this page's touch layout hides. */
+    .pick-action--primary,
+    .pick-action--primary:hover {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+    }
+
+    .pick-action--primary:hover {
+        border-color: var(--accent-hover);
+        background: var(--accent-hover);
+    }
+
+    .toggle-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 42px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .toggle-chip:hover {
+        border-color: var(--text-muted);
+        color: var(--text);
+    }
+
+    .toggle-chip:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+    }
+
+    .toggle-chip.active {
+        border-color: var(--accent);
+        color: var(--text);
+        background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
+    }
+
+    .toggle-chip svg path {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.4;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+    }
+
+    .toggle-chip.active svg path {
+        color: var(--accent);
+    }
+
+    .toggle-count {
+        min-width: 18px;
+        padding: 1px 5px;
+        border-radius: 999px;
+        background: var(--bg-hover);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-align: center;
     }
 
     .leaderboard-value-note {
@@ -893,7 +2065,7 @@
         top: 50%;
         width: 11px;
         height: 11px;
-        border: 1.6px solid var(--text-muted);
+        border: 1.6px solid var(--graphic-muted);
         border-radius: 50%;
         transform: translateY(-58%);
         pointer-events: none;
@@ -906,7 +2078,7 @@
         top: 25px;
         width: 7px;
         height: 1.6px;
-        background: var(--text-muted);
+        background: var(--graphic-muted);
         transform: rotate(45deg);
         transform-origin: left center;
         pointer-events: none;
@@ -965,6 +2137,7 @@
         --wide-sticky-header-height: 44px;
         --frozen-rank-width: 52px;
         --frozen-player-width: 216px;
+        --pinned-width: calc(var(--frozen-rank-width) + var(--frozen-player-width));
         position: relative;
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius-sm);
@@ -1061,15 +2234,54 @@
         opacity: 1;
     }
 
+    /* The group row and the column row have set heights: the sticky header sums the two, and a
+       height taken from that sum would feed back into it. */
+    .table-wrapper.grouped {
+        --wide-sticky-header-height: 62px;
+    }
+
+    /* A group's name sits over its first column, so a phone shows it before any sideways scroll. */
+    .grouped .group-row th {
+        height: 22px;
+        box-shadow: none;
+        border-bottom: 0;
+        color: var(--text-muted);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-align: left;
+    }
+
+    .grouped .group-row th.group {
+        position: relative;
+        padding-bottom: 4px;
+        vertical-align: bottom;
+    }
+
+    /* A rule under each group's name spans the columns it covers. */
+    .grouped .group-row th.group::after {
+        content: '';
+        position: absolute;
+        right: 7px;
+        bottom: 2px;
+        left: 7px;
+        height: 2px;
+        border-radius: 1px;
+        background: var(--border);
+    }
+
+    .grouped .header-row th {
+        height: 40px;
+    }
+
     .leaderboard-cell--rank,
-    .table-header-scroll :is(.header-row, .column-filter-row) th:nth-child(1) {
+    .table-header-scroll :is(.group-row, .header-row, .column-filter-row) th:nth-child(1) {
         position: sticky;
         left: 0;
         z-index: 1;
         background: var(--bg);
     }
 
-    .table-header-scroll :is(.header-row, .column-filter-row) th:nth-child(1) {
+    .table-header-scroll :is(.group-row, .header-row, .column-filter-row) th:nth-child(1) {
         z-index: 22;
         background: color-mix(in srgb, var(--bg-elevated) 86%, var(--bg));
     }
@@ -1082,11 +2294,11 @@
         text-align: center;
         font-family: var(--font-mono);
         font-size: 13px;
-        font-weight: 700;
+        font-weight: var(--figure-weight);
     }
 
     .leaderboard-cell--player,
-    .table-header-scroll :is(.header-row, .column-filter-row) th:nth-child(2) {
+    .table-header-scroll :is(.group-row, .header-row, .column-filter-row) th:nth-child(2) {
         position: sticky;
         left: var(--frozen-rank-width);
         z-index: 1;
@@ -1095,7 +2307,7 @@
         box-shadow: 1px 0 0 var(--border-subtle);
     }
 
-    .table-header-scroll :is(.header-row, .column-filter-row) th:nth-child(2) {
+    .table-header-scroll :is(.group-row, .header-row, .column-filter-row) th:nth-child(2) {
         z-index: 21;
         background: color-mix(in srgb, var(--bg-elevated) 86%, var(--bg));
     }
@@ -1119,7 +2331,7 @@
     }
 
     .leaderboard-cell--dpm {
-        font-weight: 700;
+        font-weight: var(--figure-weight-strong);
     }
 
     th.num {
@@ -1129,6 +2341,60 @@
     .leaderboard-cell--team {
         min-width: 86px;
         color: var(--text-secondary);
+    }
+
+    .player-cell {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: -4px;
+    }
+
+    /* Under each DPM, a small offense/defense split: offense orange, defense blue. */
+    .dpm-figure,
+    .dpm-split {
+        display: block;
+    }
+
+    .leaderboard-cell--dpm {
+        min-width: 68px;
+    }
+
+    .dpm-split :global(.od-bar) {
+        width: 54px;
+        height: 7px;
+        margin: 3px 0 0 auto;
+    }
+
+    .dpm-split :global(.od-bar-half) {
+        height: 5px;
+        gap: 1px;
+    }
+
+    .dpm-split :global(.od-bar-zero) {
+        height: 7px;
+    }
+
+    /* The season sparkline: drawn, so centred and unsorted. */
+    th.drawn {
+        text-align: center;
+    }
+
+    .leaderboard-cell--drawn {
+        text-align: center;
+    }
+
+    .leaderboard-cell--trend :global(.sparkline) {
+        margin: 0 auto;
+    }
+
+    .trend-pending {
+        display: block;
+        width: 84px;
+        height: 2px;
+        margin: 0 auto;
+        border-radius: 1px;
+        background: var(--border-subtle);
     }
 
     .player-link,
@@ -1148,6 +2414,20 @@
         color: var(--text-muted);
         font-size: 11px;
         font-weight: 700;
+    }
+
+    .player-text {
+        display: grid;
+        line-height: 1.25;
+    }
+
+    .player-text small {
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* The team under the name, shown only where the Team column is not. */
+    .player-team-inline {
+        display: none;
     }
 
     .player-link:hover,
@@ -1237,7 +2517,7 @@
         border-radius: 50%;
         display: inline-grid;
         place-items: center;
-        border: 1px solid var(--text-muted);
+        border: 1px solid var(--graphic-muted);
         color: var(--text-secondary);
         font-size: 11px;
         font-family: var(--font-mono);
@@ -1294,6 +2574,7 @@
         color: var(--accent);
         font-family: var(--font-mono);
         font-size: 16px;
+        font-weight: var(--figure-weight-strong);
     }
 
     .position-tabs {
@@ -1350,7 +2631,7 @@
     .position-rank {
         color: var(--text-secondary);
         font-family: var(--font-mono);
-        font-weight: 850;
+        font-weight: var(--figure-weight-strong);
     }
 
     .mini-headshot {
@@ -1417,6 +2698,7 @@
         color: var(--accent);
         font-family: var(--font-mono);
         font-size: 14px;
+        font-weight: var(--figure-weight-strong);
     }
 
     .insight-note {
@@ -1438,14 +2720,14 @@
         }
     }
 
+    /* Two selects a row, then the search on its own. */
     @media (max-width: 920px) {
-        .leaderboard-controls {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+        .leaderboard-controls .control-field {
+            flex: 1 1 calc(50% - 5px);
         }
 
-        .control-field--search,
-        .btn {
-            grid-column: span 2;
+        .leaderboard-controls .control-field--search {
+            flex-basis: 100%;
         }
 
         .insight-rail {
@@ -1474,12 +2756,28 @@
             pointer-events: auto;
         }
 
-        th,
-        .leaderboard-cell--rank,
-        .leaderboard-cell--player {
+        th {
             position: static;
             left: auto;
             box-shadow: none;
+        }
+
+        /* The rank and the name stay put while the rest of the row scrolls sideways under them,
+           and so do their header cells, which here are the table's own. */
+        .table-sizing-head :is(.group-row, .header-row, .column-filter-row) th:nth-child(1),
+        .table-sizing-head :is(.group-row, .header-row, .column-filter-row) th:nth-child(2) {
+            position: sticky;
+            z-index: 2;
+            background: color-mix(in srgb, var(--bg-elevated) 86%, var(--bg));
+        }
+
+        .table-sizing-head :is(.group-row, .header-row, .column-filter-row) th:nth-child(1) {
+            left: 0;
+        }
+
+        .table-sizing-head :is(.group-row, .header-row, .column-filter-row) th:nth-child(2) {
+            left: var(--frozen-rank-width);
+            box-shadow: 1px 0 0 var(--border-subtle);
         }
 
         table {
@@ -1487,7 +2785,8 @@
             min-width: 100%;
         }
 
-        .btn {
+        .btn,
+        .tool-action--csv {
             display: none;
         }
     }
@@ -1498,13 +2797,20 @@
             padding: 0 12px 24px;
         }
 
-        .leaderboard-controls {
-            grid-template-columns: 1fr;
+        .leaderboard-page.picking {
+            padding-bottom: 170px;
         }
 
-        .control-field--search,
-        .btn {
-            grid-column: auto;
+        .pick-tray {
+            bottom: 10px;
+        }
+
+        .pick-actions {
+            margin-left: 0;
+        }
+
+        .pick-action {
+            padding: 0 10px;
         }
 
         td {
@@ -1522,6 +2828,89 @@
 
         .distribution-stats {
             grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* A phone shows each player's DPM, offense and defense beside the name before any sideways
+       scroll: the team moves under the name, and the rank and name columns narrow. */
+    @media (max-width: 640px) {
+        .table-wrapper {
+            --frozen-rank-width: 32px;
+            --frozen-player-width: 160px;
+        }
+
+        th.team,
+        .leaderboard-cell--team {
+            display: none;
+        }
+
+        .player-team-inline {
+            display: inline;
+        }
+
+        td,
+        th {
+            padding-inline: 7px;
+        }
+
+        th.rank,
+        .leaderboard-cell--rank {
+            width: var(--frozen-rank-width);
+            min-width: var(--frozen-rank-width);
+            max-width: var(--frozen-rank-width);
+            padding-inline: 2px;
+        }
+
+        .leaderboard-cell--player {
+            min-width: var(--frozen-player-width);
+            max-width: var(--frozen-player-width);
+        }
+
+        .player-cell,
+        .player-link,
+        .player-text {
+            min-width: 0;
+        }
+
+        .player-text > span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .leaderboard-cell--dpm {
+            min-width: 56px;
+        }
+
+        .dpm-split :global(.od-bar) {
+            width: 42px;
+        }
+    }
+
+    /* A phone: season and team side by side, the search, then Filters and the watchlist with the
+       actions as icons on one line; the column tabs scroll sideways. */
+    @media (max-width: 640px) {
+        .tool-label {
+            display: none;
+        }
+
+        .tool-action {
+            padding: 0 11px;
+        }
+
+        .view-bar {
+            margin-right: -12px;
+            padding-right: 12px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .view-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .filters-ranges {
+            gap: 8px 10px;
         }
     }
 </style>

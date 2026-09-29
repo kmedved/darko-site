@@ -18,10 +18,10 @@
 //      last later migration that re-creates or drops it, and every function a later
 //      migration drops is gone.
 //   4. Nothing depends on a table nba_darko's publisher replaces with a plain DROP TABLE
-//      (REPLACED_TABLES), for each of them the replay contains: pg_depend lists no normal
-//      ('n') dependent of the table, of its row type or of its row type's array type, and a
-//      plain DROP TABLE of it succeeds (rolled back). A view, foreign key, rule, policy,
-//      row-type function or BEGIN ATOMIC function on one fails this check, naming it.
+//      (REPLACED_TABLES; all eight are stubbed, and a missing stub fails): pg_depend lists no
+//      normal ('n') dependent of the table, of its row type or of its row type's array type,
+//      and a plain DROP TABLE of it succeeds (rolled back). A view, foreign key, rule,
+//      policy, row-type function or BEGIN ATOMIC function on one fails this check, naming it.
 //   5. EXECUTE on every function 20260929_001 defines that still exists: anon, authenticated
 //      and service_role yes, PUBLIC no.
 //   6. Idempotence: re-applying 20260929_001 on its own succeeds and leaves all of its
@@ -58,9 +58,9 @@ const REASSERT = '20260929_001_reassert_function_ownership.sql';
 const R = REASSERT.slice(0, 12);
 const sqlOf = (name) => MIGRATIONS.find((m) => m.name === name).sql;
 
-// What Supabase or the nba_darko publisher provides and no migration creates. Columns are
-// only those the migrations reference. Each stub is needed: leaving any one out makes an
-// early migration fail with "relation ... does not exist".
+// What Supabase or the nba_darko publisher provides and no migration creates. TABLE_STUBS
+// has only the columns the migrations reference, and each is needed: leaving any one out
+// makes an early migration fail with "relation ... does not exist".
 const ROLES = ['anon', 'authenticated', 'service_role'].map((r) => `create role ${r} nologin;`);
 const TABLE_STUBS = [
     `create table public.players (
@@ -81,6 +81,54 @@ const TABLE_STUBS = [
         tm_id integer, position text, dpm double precision, o_dpm double precision,
         d_dpm double precision);`,
     'create table public.lineup_ratings ();'
+];
+// The six other tables the publisher rebuilds and swaps in on every publish. No migration
+// reads them; they are here so check 4 covers every replaced table, and so a migration that
+// makes something depend on one is caught there, by name. Columns and types are exactly the
+// builders' output on nba_darko's codex/wowy-import-20260928-v1 (pipeline_scripts/publish/
+// website.py, website_comps.py, website_daily.py); the indexes are its TABLE_INDEXES, so a
+// foreign key to one of their unique keys can be created and then reported.
+const REBUILT_TABLE_STUBS = [
+    `create table public.season_calendar (
+        season integer, first_game date, earliest_team_finale date, regular_season_end date,
+        last_game date);
+    create unique index idx_season_calendar_season on public.season_calendar (season);`,
+    `create table public.rating_frames (
+        frame_date date, season integer, rank smallint, nba_id bigint, player_name text,
+        tm_id integer, team_name text, dpm real, o_dpm real, d_dpm real, games smallint);
+    create unique index idx_rating_frames_frame on public.rating_frames (frame_date, rank);
+    create index idx_rating_frames_season on public.rating_frames (season);`,
+    `create table public.player_comps (
+        nba_id bigint, season integer, as_of date, age double precision, dpm double precision,
+        rank smallint, comp_id bigint, comp_name text, comp_season integer,
+        comp_age double precision, comp_dpm double precision, comp_o_dpm double precision,
+        comp_d_dpm double precision, similarity double precision, weight double precision,
+        dpm_next_1 double precision, dpm_next_2 double precision, dpm_next_3 double precision,
+        dpm_next_4 double precision, dpm_next_5 double precision);
+    create unique index idx_player_comps_player on public.player_comps (nba_id, rank);
+    create index idx_player_comps_comp on public.player_comps (comp_id);`,
+    `create table public.player_seasons (
+        nba_id bigint, season integer, player_name text, date date, tm_id bigint,
+        age double precision, dpm double precision, o_dpm double precision,
+        d_dpm double precision, games integer, minutes double precision, playoff_games integer,
+        age_rank integer, age_count integer);
+    create unique index idx_player_seasons_player on public.player_seasons (nba_id, season);
+    create index idx_player_seasons_season on public.player_seasons (season, age_rank);`,
+    `create table public.game_updates (
+        nba_id bigint, player_name text, date date, season integer, player_game integer,
+        game_type integer, tm_id bigint, opp_id bigint, minutes double precision,
+        dpm_before double precision, o_before double precision, d_before double precision,
+        dpm_after double precision, o_after double precision, d_after double precision,
+        dpm_update double precision, o_update double precision, d_update double precision,
+        abs_update double precision);
+    create unique index idx_game_updates_player on public.game_updates (nba_id, date);
+    create index idx_game_updates_date on public.game_updates (date);`,
+    `create table public.rating_moves (
+        period text, start_date date, end_date date, nba_id bigint, player_name text,
+        tm_id bigint, games integer, dpm_from double precision, o_from double precision,
+        dpm_to double precision, o_to double precision, delta double precision,
+        o_delta double precision);
+    create unique index idx_rating_moves_period on public.rating_moves (period, nba_id);`
 ];
 
 // The tables nba_darko's publisher (pipeline_scripts/publish/website.py) replaces on every
@@ -245,7 +293,12 @@ async function checkReplacedTableDependents(db) {
         );
     }
     const absent = REPLACED_TABLES.filter((t) => !present.includes(t));
-    if (absent.length) console.log(`  (not in the replay, so not checked: ${absent.join(', ')})`);
+    check(
+        absent.length === 0,
+        absent.length
+            ? `not in the replay, so not checked: ${absent.join(', ')}`
+            : `all ${REPLACED_TABLES.length} replaced tables are in the replay and checked`
+    );
 }
 
 async function checkDefinitions(db) {
@@ -292,7 +345,7 @@ const db = new PGlite();
 await db.waitReady;
 const [{ v }] = await rows(db, 'select version() as v');
 console.log(`${v.split(',')[0]}; ${MIGRATIONS.length} migrations from ${MIGRATIONS_DIR}`);
-for (const sql of [...ROLES, ...TABLE_STUBS]) await db.exec(sql);
+for (const sql of [...ROLES, ...TABLE_STUBS, ...REBUILT_TABLE_STUBS]) await db.exec(sql);
 
 console.log('\n1. Replay in filename order');
 for (const m of MIGRATIONS) {

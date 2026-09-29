@@ -1,6 +1,7 @@
 import { loadComparePageData } from '$lib/server/comparePage.js';
 import { buildComparePlayer, getComparePlayerColors } from '$lib/utils/compareUtils.js';
 import { getFullPlayerHistory, MAX_FULL_HISTORY_ROWS } from '$lib/server/supabase.js';
+import { getPlayerSeasons } from '$lib/server/daily.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -15,6 +16,7 @@ export async function load({ url }) {
                 maxRows: MAX_FULL_HISTORY_ROWS
             }),
         buildComparePlayer,
-        getComparePlayerColors
+        getComparePlayerColors,
+        loadSeasons: getPlayerSeasons
     });
 }

@@ -2,12 +2,13 @@
 	import '../app.css';
 	import '../shiny-view.css';
 	import { browser } from '$app/environment';
-	import { beforeNavigate, goto, preloadData } from '$app/navigation';
+	import { afterNavigate, beforeNavigate, goto, preloadData } from '$app/navigation';
 	import { navigating, page } from '$app/stores';
 	import { onMount, setContext } from 'svelte';
 	import TimeMachine from '$lib/components/TimeMachine.svelte';
 	import AskDarko from '$lib/components/AskDarko.svelte';
 	import { newFeatureCount } from '$lib/utils/whatsNew.js';
+	import { dailyListed } from '$lib/utils/daily.js';
 	import { loadOptionalFont } from '$lib/fonts.js';
 	import { setTimeMachineCollapsed, syncTimeMachineFold, timeMachine } from '$lib/timeMachineState.svelte.js';
 	import {
@@ -31,22 +32,24 @@
 	const THEME_KEY = 'darko-theme';
 	const THEMES = ['black', 'dark', 'light', 'white'];
 	const THEME_ICONS = ['⚫', '🌙', '☀️', '⚪'];
+	// Players (with Career Trajectories, DARKO's signature view), teams and the stats pages, then
+	// the two labs; the specialist views sit under More.
 	const PRIMARY_NAV_ITEMS = [
 		{ href: '/daily', label: 'The Daily', match: (path) => path === '/daily' },
 		{ href: '/', label: 'Active Leaderboard', match: (path) => path === '/' },
-		{ href: '/wowy', label: 'WOWY RAPM', match: (path) => path.startsWith('/wowy') },
+		{ href: '/trajectories', label: 'Career Trajectories', match: (path) => path === '/trajectories' },
+		{ href: '/teams', label: 'Teams', match: (path) => path === '/teams' || path.startsWith('/team/') },
 		{ href: '/standings', label: 'Standings', match: (path) => path.startsWith('/standings') },
-		{ href: '/trajectories', label: 'Trajectories', match: (path) => path === '/trajectories' },
-		{ href: '/longevity', label: 'Longevity', match: (path) => path.startsWith('/longevity') },
+		{ href: '/wowy', label: 'WOWY RAPM', match: (path) => path.startsWith('/wowy') },
 		{ href: '/lineups', label: 'Lineups', match: (path) => path === '/lineups' },
-		{ href: '/scatterplot', label: 'Scatterplot', match: (path) => path === '/scatterplot' }
+		{ href: '/lab', label: 'Roster Lab', match: (path) => path === '/lab' },
+		{ href: '/projections', label: 'Fantasy Lab', match: (path) => path === '/projections' }
 	];
 	const MORE_NAV_ITEMS = [
-		{ href: '/teams', label: 'Teams', match: (path) => path === '/teams' },
 		{ href: '/rewind', label: 'Rewind', match: (path) => path === '/rewind' },
-		{ href: '/lab', label: 'Roster Lab', match: (path) => path === '/lab' },
+		{ href: '/longevity', label: 'Longevity', match: (path) => path.startsWith('/longevity') },
+		{ href: '/scatterplot', label: 'Scatterplot', match: (path) => path === '/scatterplot' },
 		{ href: '/compare', label: 'Compare', match: (path) => path === '/compare' },
-		{ href: '/projections', label: 'Fantasy Lab', match: (path) => path === '/projections' },
 		{ href: '/rate', label: 'Rate a Player', match: (path) => path === '/rate' },
 		{ href: '/about', label: 'About', match: (path) => path.startsWith('/about') }
 	];
@@ -130,6 +133,31 @@
 	function closeMobileMenu() {
 		mobileMenuOpen = false;
 	}
+
+	// More and Display are <details> menus, which nothing closes when the page changes under them:
+	// a new page, a link inside, a click elsewhere and Escape all close them.
+	let moreMenu = $state(null);
+	let displayMenu = $state(null);
+
+	function closeDesktopMenus(except = null) {
+		for (const menu of [moreMenu, displayMenu]) {
+			if (menu && menu !== except && menu.open) menu.open = false;
+		}
+	}
+
+	function handleWindowClick(event) {
+		const inside = [moreMenu, displayMenu].find((menu) => menu?.contains(event.target)) ?? null;
+		closeDesktopMenus(inside && !event.target.closest('a') ? inside : null);
+	}
+
+	function handleWindowKeydown(event) {
+		const open = event.key === 'Escape' ? [moreMenu, displayMenu].find((menu) => menu?.open) : null;
+		if (!open) return;
+		open.open = false;
+		open.querySelector('summary')?.focus();
+	}
+
+	afterNavigate(() => closeDesktopMenus());
 
 	// The Time Machine date comes from ?asof= and sticks to every in-app navigation until the
 	// reader returns to today (which clears timeMachine.date before navigating).
@@ -345,13 +373,20 @@
 	// What's new shows in the menus only while a feature launched in the last 30 days. Pages can
 	// come from the edge cache, so the browser's clock recounts once the page is up.
 	let whatsNewCount = $state(newFeatureCount());
+	// The Daily is off the menus between seasons (utils/daily.js), decided the same way.
+	let dailyOn = $state(dailyListed());
 	onMount(() => {
 		whatsNewCount = newFeatureCount();
+		dailyOn = dailyListed();
 	});
+	const primaryNavItems = $derived(dailyOn ? PRIMARY_NAV_ITEMS : PRIMARY_NAV_ITEMS.filter((item) => item.href !== '/daily'));
+	const menuNavItems = $derived([...primaryNavItems, ...MORE_NAV_ITEMS]);
 	const moreMenuActive = $derived(
 		MORE_NAV_ITEMS.some((item) => isNavItemActive(item, $page.url.pathname)) || $page.url.pathname === '/new'
 	);
 </script>
+
+<svelte:window onclick={handleWindowClick} onkeydown={handleWindowKeydown} />
 
 <nav class="site-nav">
     <div class="container">
@@ -375,10 +410,10 @@
         </a>
 		<span class="mobile-current-page">{currentPageLabel}</span>
         <div class="links desktop-links">
-			{#each PRIMARY_NAV_ITEMS as item (item.href)}
+			{#each primaryNavItems as item (item.href)}
 				<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
 			{/each}
-			<details class="nav-more" class:active={moreMenuActive}>
+			<details class="nav-more" class:active={moreMenuActive} bind:this={moreMenu}>
 				<summary>More</summary>
 				<div class="nav-more-menu">
 					{#if whatsNewCount > 0}
@@ -393,7 +428,7 @@
 			</details>
         </div>
 		<div class="desktop-controls">
-			<details class="display-menu">
+			<details class="display-menu" bind:this={displayMenu}>
 				<summary>Display</summary>
 				<div class="display-menu-panel">
 					<div class="display-control">
@@ -453,6 +488,8 @@
 		<button
 			type="button"
 			class="ask-nav-toggle"
+			aria-label="Ask DARKO"
+			title="Ask DARKO"
 			aria-haspopup="dialog"
 			aria-keyshortcuts="Meta+K Control+K /"
 			onclick={() => (askOpen = true)}
@@ -507,7 +544,7 @@
 				What's new <span class="nav-new-count">{whatsNewCount}</span>
 			</a>
 		{/if}
-		{#each ALL_NAV_ITEMS as item (item.href)}
+		{#each menuNavItems as item (item.href)}
 			<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)} onclick={closeMobileMenu}>{item.label}</a>
 		{/each}
 	</div>
@@ -645,6 +682,21 @@
 		border-color: #cccccc;
 		color: #333333;
 		font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	}
+
+	/* Short of a wide window, Ask DARKO and the Time Machine show just their icons, which leaves
+	   the page links their room; a rewound Time Machine keeps its date on show. */
+	@media (max-width: 1440px) {
+		.ask-nav-toggle,
+		.tm-nav-toggle:not(.rewound) {
+			padding: 0 7px;
+		}
+
+		.ask-nav-label,
+		.ask-nav-kbd,
+		.tm-nav-toggle:not(.rewound) .tm-nav-label {
+			display: none;
+		}
 	}
 
 	@media (max-width: 720px) {
@@ -929,7 +981,7 @@
 		border-radius: 999px;
 		font-family: var(--font-mono);
 		font-size: 11px;
-		font-weight: 700;
+		font-weight: var(--figure-weight-strong);
 		line-height: 16px;
 		text-align: center;
 		color: var(--bg);

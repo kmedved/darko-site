@@ -1033,7 +1033,7 @@
         bottom: 12px;
         width: 11px;
         height: 11px;
-        border: 2px solid var(--text-muted);
+        border: 2px solid var(--graphic-muted);
         border-radius: 50%;
         pointer-events: none;
     }
@@ -1046,7 +1046,7 @@
         width: 7px;
         height: 2px;
         border-radius: 999px;
-        background: var(--text-muted);
+        background: var(--graphic-muted);
         transform: rotate(45deg);
         pointer-events: none;
     }
@@ -1232,7 +1232,7 @@
     }
 
     td.tint-cell {
-        font-weight: 700;
+        font-weight: var(--figure-weight-strong);
     }
 
     th.num button {
@@ -1318,7 +1318,7 @@
         color: var(--text);
         cursor: pointer;
         font-family: var(--font-mono);
-        font-weight: 800;
+        font-weight: var(--figure-weight-strong);
     }
 
     .pagination-controls button:hover:not(:disabled),
@@ -1398,8 +1398,11 @@
 
     .donut-chart strong {
         color: var(--text);
-        font-family: var(--font-mono);
-        font-size: 28px;
+        font-family: var(--font-display);
+        font-size: 30px;
+        font-weight: 800;
+        font-stretch: 110%;
+        font-variant-numeric: tabular-nums;
         line-height: 1;
     }
 
@@ -1439,6 +1442,7 @@
         color: var(--text);
         font-family: var(--font-mono);
         font-size: 12px;
+        font-weight: var(--figure-weight-strong);
         text-align: right;
     }
 
@@ -1464,7 +1468,7 @@
     .leader-rank {
         color: var(--text-secondary);
         font-family: var(--font-mono);
-        font-weight: 900;
+        font-weight: var(--figure-weight-strong);
         text-align: right;
     }
 
@@ -1492,6 +1496,7 @@
         color: var(--accent);
         font-family: var(--font-mono);
         font-size: 14px;
+        font-weight: var(--figure-weight-strong);
         text-align: right;
     }
 
@@ -1518,8 +1523,11 @@
 
     .snapshot-layout strong {
         color: var(--accent);
-        font-family: var(--font-mono);
-        font-size: 28px;
+        font-family: var(--font-display);
+        font-size: 30px;
+        font-weight: 800;
+        font-stretch: 110%;
+        font-variant-numeric: tabular-nums;
         line-height: 1;
     }
 

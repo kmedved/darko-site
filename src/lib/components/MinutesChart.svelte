@@ -401,7 +401,7 @@
 	}
 
 	.mc-zero {
-		stroke: var(--text-muted);
+		stroke: var(--graphic-muted);
 		stroke-width: 1;
 	}
 
@@ -547,7 +547,7 @@
 		top: -2px;
 		bottom: -2px;
 		width: 1px;
-		background: var(--text-muted);
+		background: var(--graphic-muted);
 	}
 
 	.mc-row-mean {
