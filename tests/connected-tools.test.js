@@ -424,7 +424,7 @@ test('the rail\'s podium cards: by position and by year in the league, the archi
 	assert.match(podium, /@media \(prefers-reduced-motion: reduce\) \{[^}]*\.podium-block,[^}]*animation: none;/);
 });
 
-test('the podium cards count regulars: 20+ MPG and half the most games anyone has played', async () => {
+test('the podium cards count regulars: 18+ MPG and half the most games anyone has played', async () => {
 	const { podiumRule } = await import('../src/lib/utils/leaderboardViews.js');
 	const board = [
 		{ player_name: 'Dylan Harper', x_minutes: 24.6, season_games: 70, career_game_num: 103 },
@@ -432,13 +432,14 @@ test('the podium cards count regulars: 20+ MPG and half the most games anyone ha
 		{ player_name: 'Oso Ighodaro', x_minutes: 17.0, season_games: 82, career_game_num: 171 },
 		{ player_name: 'Cormac Ryan', x_minutes: 37.8, season_games: 11, career_game_num: 25 },
 		{ player_name: 'Tyrese Haliburton', x_minutes: 24.1, season_games: 0, career_game_num: 524 },
-		{ player_name: 'Javon Small', x_minutes: 20.1, season_games: 41, career_game_num: 60 }
+		{ player_name: 'Javon Small', x_minutes: 20.1, season_games: 41, career_game_num: 60 },
+		{ player_name: 'Ausar Thompson', x_minutes: 18.5, season_games: 73, career_game_num: 267 }
 	];
 	const rule = podiumRule(board);
 	// Once a season is over (82 games), 41; minutes from the table's MPG.
 	assert.equal(rule.minGames, 41);
-	assert.deepEqual(board.filter(rule.qualifies).map((player) => player.player_name), ['Dylan Harper', 'Javon Small']);
-	assert.equal(rule.note, 'Regulars: 20+ MPG and 41+ games this season');
+	assert.deepEqual(board.filter(rule.qualifies).map((player) => player.player_name), ['Dylan Harper', 'Javon Small', 'Ausar Thompson']);
+	assert.equal(rule.note, 'Regulars: 18+ MPG and 41+ games this season');
 	// Ten games into a season, half is five; 83 (a mid-season trade) still asks 41.
 	assert.equal(podiumRule([{ season_games: 10 }, { season_games: 3 }]).minGames, 5);
 	assert.equal(podiumRule([{ season_games: 83 }]).minGames, 41);
@@ -451,9 +452,10 @@ test('the podium cards count regulars: 20+ MPG and half the most games anyone ha
 		'Dylan Harper',
 		'Cormac Ryan',
 		'Tyrese Haliburton',
-		'Javon Small'
+		'Javon Small',
+		'Ausar Thompson'
 	]);
-	assert.equal(past.note, "Regulars: 20+ MPG and 20+ games in DARKO's data");
+	assert.equal(past.note, "Regulars: 18+ MPG and 20+ games in DARKO's data");
 
 	// Today's board carries this season's games from the season table; the others don't.
 	const server = await read('src/routes/+page.server.js');

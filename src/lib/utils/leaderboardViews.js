@@ -41,11 +41,11 @@ export function isRotationPlayer(player) {
     return (toNumber(player?.x_minutes) ?? 0) >= ROTATION_MINUTES;
 }
 
-// The rail's podium cards count regulars: 20 or more minutes a game (the table's MPG), and at
+// The rail's podium cards count regulars: 18 or more minutes a game (the table's MPG), and at
 // least half as many games this season as anyone has played (41 once a season is over). A board
 // without this season's games (a past season's opening day, a Time Machine date) counts 20
 // games in DARKO's data instead, which include games a player sat out.
-export const PODIUM_MINUTES = 20;
+export const PODIUM_MINUTES = 18;
 const PODIUM_FALLBACK_GAMES = 20;
 
 export function podiumRule(players) {
