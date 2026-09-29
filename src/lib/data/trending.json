@@ -1,0 +1,30 @@
+{
+  "date": "2026-09-28",
+  "players": [
+    {
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "First 76ers Media Day and free-agency reflections"
+    },
+    {
+      "nba_id": 1631105,
+      "name": "Jalen Duren",
+      "reason": "Misses Pistons Media Day amid contract standoff"
+    },
+    {
+      "nba_id": 202695,
+      "name": "Kawhi Leonard",
+      "reason": "Raptors return and comments on NBA investigation"
+    },
+    {
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "First Heat Media Day and title ambitions"
+    },
+    {
+      "nba_id": 201939,
+      "name": "Stephen Curry",
+      "reason": "Healthy knee update and Warriors contract extension"
+    }
+  ]
+}
