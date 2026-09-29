@@ -34,6 +34,32 @@ production at this repository's definitions as of that migration. It is a point-
 reassertion: later migrations redefine or drop some of those functions, so re-running 001
 must be followed by re-running, in filename order, every later migration that touches them.
 
+**Nothing may depend on a table the publisher replaces.** Every publish replaces
+`player_ratings` (on a full rebuild), `lineup_ratings`, `season_calendar`, `rating_frames`,
+`player_comps`, `player_seasons`, `game_updates` and `rating_moves` with a plain
+`DROP TABLE`, without `CASCADE`. If any other database object depends on one of them, that
+drop fails, the whole publication rolls back, and every later publish fails the same way
+until the dependent is removed. These create such a dependency:
+
+- a view or materialized view that reads the table;
+- a foreign key in another table that references it;
+- a rule, a policy on another table whose expression reads it, or a constraint trigger on
+  another table declared `FROM` it;
+- a function or column whose type is the table's row type or an array of it, such as
+  `returns setof public.player_ratings` or an argument of type `public.player_ratings`;
+- a function or procedure with a SQL-standard `BEGIN ATOMIC` body that reads the table.
+
+Safe: a string-bodied (`as $function$ ... $function$`) `language sql` or `language plpgsql`
+function that returns `jsonb`, `setof record`, or `table(...)` with explicit column types.
+Postgres records no dependency from a string body on the tables it names, so the drop goes
+through and the function reads the new table on its next call. Every function in
+`supabase/migrations/` follows this pattern. Anything attached to one of those tables itself
+(an index, trigger, policy, grant or comment added by a migration) is dropped with the old
+table at the next replacement and not recreated: indexes belong in `TABLE_INDEXES` in the
+publisher, and the swap re-applies only row-level security, the `allow_public_read` policy
+and `SELECT` for `anon` and `authenticated`. `npm run migrations:replay` fails, naming the
+dependent, if a migration creates one on a replaced table that the replay contains.
+
 ---
 
 ## Tables

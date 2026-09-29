@@ -74,6 +74,7 @@
 - Version policy is **Policy B**: only shipped/runtime behavior changes bump `package.json`'s version.
 
 - App is read-only for analytics tables (`player_ratings`, `players`, `season_sim`, `win_distribution`). The Elo voting feature (`elo_ratings`, `elo_votes` tables) is the exception — it performs writes via `/api/rate/vote`.
+- Every Postgres function is a migration in `supabase/migrations/`; the publisher never defines one. **Never make a database object depend on a table the publisher replaces** (`player_ratings`, `lineup_ratings`, `season_calendar`, `rating_frames`, `player_comps`, `player_seasons`, `game_updates`, `rating_moves`). Each publish drops them with a plain `DROP TABLE`, so a view, a foreign key, a rule, a policy or constraint trigger on another table that reads one, a function or column of its row type or an array of it (`returns setof public.player_ratings`), or a `BEGIN ATOMIC` function that reads one makes every later publish fail and roll back. Write string-bodied (`as $function$ ... $function$`) `language sql` or `plpgsql` functions that return `jsonb`, `setof record` or `table(...)` with explicit columns. An index, trigger, policy or grant a migration adds to one of those tables is lost at its next replacement. Run `npm run migrations:replay` before applying a migration; it fails, naming it, on such a dependent of `player_ratings` or `lineup_ratings` (the tables it contains). Details: `SUPABASE_SCHEMA.md` (Ownership) and `DEPLOY.md`.
 
 ## MCP Servers
 You have access to:

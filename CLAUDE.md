@@ -3,7 +3,7 @@
 This file is intentionally minimal. See the dedicated references:
 
 - [`AGENTS.md`](AGENTS.md) for agent-facing implementation rules and conventions.
-- [`SUPABASE_SCHEMA.md`](SUPABASE_SCHEMA.md) for Supabase table schemas, DB→frontend column mappings, the nba_darko publisher (`pipeline_scripts/publish/website.py`, formerly `1_historic_darko/push_website.py`), and data pipeline debugging.
+- [`SUPABASE_SCHEMA.md`](SUPABASE_SCHEMA.md) for Supabase table schemas, DB→frontend column mappings, the nba_darko publisher (`pipeline_scripts/publish/website.py`, formerly `1_historic_darko/push_website.py`), what migrations must not do to the tables it replaces, and data pipeline debugging.
 
 ## Commands
 

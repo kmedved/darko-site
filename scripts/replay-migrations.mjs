@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Replay every migration in supabase/migrations/ on a fresh embedded Postgres (PGlite,
-// Postgres 17.5) and check the functions this repository owns. Reads the migration files
-// from the working tree; touches no database but the in-memory one it creates.
+// Postgres 17.5) and check the functions this repository owns and the tables the nba_darko
+// publisher replaces. Reads the migration files from the working tree; touches no database
+// but the in-memory one it creates.
 //
 //   npm run migrations:replay
 //
@@ -15,13 +16,18 @@
 //   3. After the full replay, each of those functions is present or absent according to the
 //      last later migration that re-creates or drops it, and every function a later
 //      migration drops is gone.
-//   4. EXECUTE on every function 20260929_001 defines that still exists: anon, authenticated
+//   4. Nothing depends on a table nba_darko's publisher replaces with a plain DROP TABLE
+//      (REPLACED_TABLES), for each of them the replay contains: pg_depend lists no normal
+//      ('n') dependent of the table, of its row type or of its row type's array type, and a
+//      plain DROP TABLE of it succeeds (rolled back). A view, foreign key, rule, policy,
+//      row-type function or BEGIN ATOMIC function on one fails this check, naming it.
+//   5. EXECUTE on every function 20260929_001 defines that still exists: anon, authenticated
 //      and service_role yes, PUBLIC no.
-//   5. Idempotence: re-applying 20260929_001 on its own succeeds and leaves all of its
+//   6. Idempotence: re-applying 20260929_001 on its own succeeds and leaves all of its
 //      functions with the same EXECUTE rule (a function a later migration dropped must not
 //      come back executable by PUBLIC); re-applying the later migrations that touch those
 //      functions restores a function catalog identical to the post-replay one.
-//   6. get_wowy_leaderboard_seasons() lists opening-snapshot seasons before activation and
+//   7. get_wowy_leaderboard_seasons() lists opening-snapshot seasons before activation and
 //      season-average seasons once the operation's marker row exists, including as anon.
 //
 // PGLITE_PKG overrides the module (for example an alias of a newer PGlite on Postgres 18).
@@ -71,6 +77,31 @@ const TABLE_STUBS = [
         d_dpm double precision);`,
     'create table public.lineup_ratings ();'
 ];
+
+// The tables nba_darko's publisher (pipeline_scripts/publish/website.py) replaces on every
+// publish with a plain DROP TABLE, without CASCADE (player_ratings on a full rebuild). An
+// object that depends on one makes that drop fail and every publish roll back.
+const REPLACED_TABLES = [
+    'player_ratings',
+    'lineup_ratings',
+    'season_calendar',
+    'rating_frames',
+    'player_comps',
+    'player_seasons',
+    'game_updates',
+    'rating_moves'
+];
+// The A.1 pre-flight query of nba_darko's function-ownership plan, extended to the row
+// type's array type: a function taking public.player_ratings[] blocks the drop too.
+const DEPENDENTS_SQL = `
+    select distinct c.relname, pg_describe_object(d.classid, d.objid, d.objsubid) as dependent
+    from pg_class c
+    join pg_type t on t.oid = c.reltype
+    join pg_depend d on d.deptype = 'n'
+     and ((d.refclassid = 'pg_class'::regclass and d.refobjid = c.oid)
+       or (d.refclassid = 'pg_type'::regclass and d.refobjid in (c.reltype, t.typarray)))
+    where c.relnamespace = 'public'::regnamespace and c.relname = any($1)
+    order by 1, 2`;
 
 // ---------------------------------------------------------------------------------------
 // What 20260929_001 defines, and what later migrations do to those names.
@@ -139,6 +170,36 @@ async function functionRows(db) {
          order by p.proname, signature`,
         [TRACKED]
     );
+}
+
+async function checkReplacedTableDependents(db) {
+    const present = (
+        await rows(
+            db,
+            `select relname from pg_class
+             where relnamespace = 'public'::regnamespace and relkind in ('r', 'p')
+               and relname = any($1) order by 1`,
+            [REPLACED_TABLES]
+        )
+    ).map((r) => r.relname);
+    const dependents = await rows(db, DEPENDENTS_SQL, [present]);
+    for (const table of present) {
+        const mine = dependents.filter((d) => d.relname === table).map((d) => d.dependent);
+        // The publisher's own statement, inside a transaction that is rolled back.
+        const dropErr = await execOrRollback(db, `begin; drop table public.${table}; rollback;`);
+        const problems = [
+            mine.length && `depended on by ${mine.join('; ')}`,
+            dropErr && `plain DROP TABLE fails: ${fmtErr(dropErr)}`
+        ].filter(Boolean);
+        check(
+            problems.length === 0,
+            problems.length
+                ? `${table}: ${problems.join(' | ')}`
+                : `${table}: no dependents in pg_depend; a plain DROP TABLE succeeds (rolled back)`
+        );
+    }
+    const absent = REPLACED_TABLES.filter((t) => !present.includes(t));
+    if (absent.length) console.log(`  (not in the replay, so not checked: ${absent.join(', ')})`);
 }
 
 async function checkDefinitions(db) {
@@ -234,10 +295,13 @@ for (const { signature, fn } of LATER_DROPS) {
 const present = REASSERTED.filter((d) => afterReplay.some((x) => x.proname === d.fn));
 console.log(`  ${present.length} of the ${REASSERTED.length} reasserted functions exist`);
 
-console.log('\n4. EXECUTE after the full replay (anon, authenticated, service_role yes; PUBLIC no)');
+console.log('\n4. Nothing depends on a table the publisher replaces with a plain DROP TABLE');
+await checkReplacedTableDependents(db);
+
+console.log('\n5. EXECUTE after the full replay (anon, authenticated, service_role yes; PUBLIC no)');
 await checkGrants(db);
 
-console.log('\n5. Idempotence');
+console.log('\n6. Idempotence');
 const before = JSON.stringify(afterReplay);
 let e = await execOrRollback(db, sqlOf(REASSERT));
 check(!e, `${R} applied again on its own${e ? `: ${fmtErr(e)}` : ''}`);
@@ -252,7 +316,7 @@ check(
     `function catalog (signature, language, body, ACL, owner) identical to the post-replay state after re-applying ${[R, ...LATER_TOUCHING.map((m) => m.name.slice(0, 12))].join(' + ')}`
 );
 
-console.log('\n6. Activation-aware get_wowy_leaderboard_seasons()');
+console.log('\n7. Activation-aware get_wowy_leaderboard_seasons()');
 await db.exec(`
     insert into public.wowy_season_opening_snapshots
         (season, nba_id, team_code, team_name, opening_date, game_id, wowy_rapm, wowy_orapm,

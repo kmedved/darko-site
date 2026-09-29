@@ -57,7 +57,9 @@ already carry the skill percentiles.
   `supabase/migrations/`. `nba_darko`'s publisher never creates or replaces one: it swaps
   tables in with a plain `DROP TABLE`, which does not remove string-bodied SQL functions,
   and asks PostgREST to reload its schema cache. Add a new function as a site migration;
-  a publish will not remove it.
+  a publish will not remove it. Keep it string-bodied and returning `jsonb`, `setof record` or
+  `table(...)`: a view, row-type function or `BEGIN ATOMIC` body over a published table would
+  make every publish fail (`SUPABASE_SCHEMA.md`, Ownership).
 - Until the fix in nba_darko's publisher (`pipeline_scripts/publish/website.py`, formerly
   `1_historic_darko/push_website.py`), every publish left `players.draft_year` and `draft_slot`
   empty (a float-text-to-integer cast nulled all 3,704) and gave 403 of 530 active players no
