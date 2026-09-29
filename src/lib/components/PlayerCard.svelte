@@ -133,10 +133,10 @@
             <span class="label">Minutes (trend)</span>
             <span class="value">{formatMinutes(player.tr_minutes)}</span>
         </div>
-        <!-- Games played since 1996-97 from the season table, as profiles count them; the rows'
-             career_game_num counts model rows, not games. -->
+        <!-- Games played since 1996-97 from the season table, as profiles count them (the page's
+             note says so); the rows' career_game_num counts model rows, not games. -->
         <div class="stat-row">
-            <span class="label">Games</span>
+            <span class="label">Regular-season games</span>
             <span class="value">{player.games_regular == null ? '—' : Number(player.games_regular).toLocaleString('en-US')}</span>
         </div>
         <div class="stat-row">

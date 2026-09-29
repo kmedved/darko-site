@@ -157,7 +157,7 @@
 	}
 
 	/* Every card keeps its headshot in its corner (the shared tiles drop theirs under 230px); only
-	   a card too narrow for it and the text loses the picture. */
+	   a card too narrow for it and the text loses the picture (see the container rules below). */
 	.leader-photo {
 		position: absolute;
 		right: 0;
@@ -188,9 +188,16 @@
 		}
 	}
 
+	/* Too narrow for both (the four smaller cards up to about 1270px): the headshot goes, and the name
+	   and the margin take its room. After the lead card's rule, which it must beat. */
 	@container (max-width: 175px) {
 		.leader-photo {
 			display: none;
+		}
+
+		.leader-card .leader-player,
+		.leader-card .leader-margin {
+			max-width: none;
 		}
 	}
 
@@ -202,6 +209,11 @@
 	:global(:root[data-view='shiny']) .leader-card::before,
 	:global(:root[data-view='shiny']) .leader-margin {
 		display: none;
+	}
+
+	/* Nor a headshot (the Shiny tiles hide theirs), so the name keeps no room for one. */
+	:global(:root[data-view='shiny']) .leader-card .leader-player {
+		max-width: none;
 	}
 
 	:global(:root[data-view='shiny']) .leader-strip {

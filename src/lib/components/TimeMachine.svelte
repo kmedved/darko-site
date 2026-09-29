@@ -17,6 +17,7 @@
 		withAsOf
 	} from '$lib/utils/timeMachine.js';
 	import { latestSeason, monthTicks, snapDate, stepDate, stripScale } from '$lib/utils/timeStrip.js';
+	import { markDateChange } from '$lib/utils/urlSync.js';
 
 	const KEY_COMMIT_DELAY_MS = 320;
 	const PRELOAD_DWELL_MS = 160;
@@ -140,7 +141,10 @@
 		preview = null;
 		if ((date ?? null) === (timeMachine.date ?? null)) return;
 		timeMachine.date = date ?? null;
-		void goto(relativeHref(withAsOf($page.url, date ?? null)), { noScroll: true, keepFocus: true });
+		// A page with a change not yet in its URL keeps it on the new date (utils/urlSync.js).
+		const target = withAsOf($page.url, date ?? null);
+		const landed = markDateChange(target);
+		void goto(relativeHref(target), { noScroll: true, keepFocus: true }).finally(landed);
 	}
 
 	function pointerDate(event) {

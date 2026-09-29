@@ -17,7 +17,9 @@ import { columnGroupCells, COLUMN_SETS, leaderboardTableColumns } from '../src/l
 import { AGE_GROUPS, POSITION_GROUPS } from '../src/lib/utils/leaderboardViews.js';
 import { seasonBoardHref, seasonRows } from '../src/lib/utils/playerSeasons.js';
 import { lastPlayedDate } from '../src/lib/utils/seismograph.js';
-import { isIncomingNavigation, keepsPendingState, pathAndSearch } from '../src/lib/utils/urlSync.js';
+import { isIncomingNavigation, keepsPendingState, markDateChange, pathAndSearch } from '../src/lib/utils/urlSync.js';
+import { leaderCard, leadMargin } from '../src/lib/utils/leaderCards.js';
+import { formatPercent } from '../src/lib/utils/csvPresets.js';
 import { readScatterState, scatterSearch } from '../src/lib/utils/scatterplotState.js';
 import { HEAD_TO_HEAD_ROWS, headToHeadRows, snapshotNote } from '../src/lib/utils/headToHead.js';
 
@@ -200,7 +202,10 @@ test('head to head: leads read from the printed values, gaps in the stat’s uni
 		{ games_regular: 1346, games_playoffs: 220, career_game_num: 1777 },
 		{ games_regular: 984, games_playoffs: 91 }
 	);
-	assert.deepEqual(games.map((entry) => `${entry.label}:${entry.left}:${entry.right}`), ['Games:1,346:984', 'Playoff games:220:91']);
+	assert.deepEqual(games.map((entry) => `${entry.label}:${entry.left}:${entry.right}`), [
+		'Regular-season games:1,346:984',
+		'Playoff games:220:91'
+	]);
 	assert.ok(!HEAD_TO_HEAD_ROWS.some((entry) => entry.key === 'career_game_num'));
 
 	// A player whose latest ratings are over a year old is dated; anyone current isn't.
@@ -210,14 +215,44 @@ test('head to head: leads read from the printed values, gaps in the stat’s uni
 	assert.equal(snapshotNote({}, now), null);
 });
 
-test('a filter change still to be written survives a navigation that stays on the board', () => {
-	const at = (href) => ({ url: new URL(href, 'https://www.darko.app') });
-	// The Time Machine's address, built from the URL before the change: the change stands.
-	assert.equal(keepsPendingState({ writePending: true, to: at('/?asof=2025-01-01'), pathname: '/' }), true);
-	// Nothing waiting, leaving the board, or the page's own write: nothing to keep.
-	assert.equal(keepsPendingState({ writePending: false, to: at('/?asof=2025-01-01'), pathname: '/' }), false);
-	assert.equal(keepsPendingState({ writePending: true, to: at('/player/2544'), pathname: '/' }), false);
-	assert.equal(keepsPendingState({ writePending: true, to: at('/?team=DEN'), pathname: '/', ownHref: '/?team=DEN' }), false);
+test('a filter change still to be written survives a Time Machine date change, and nothing else', () => {
+	const url = (href) => new URL(href, 'https://www.darko.app');
+	const keeps = (type, href, writePending = true) =>
+		keepsPendingState({ writePending, type, to: { url: url(href) }, pathname: '/' });
+
+	// Inside the write's 300ms: the Time Machine's address, built from the URL before the change,
+	// lacks it, so the change stands.
+	const landed = markDateChange(url('/?pos=guards&dpm_min=2&asof=2025-01-01'));
+	assert.equal(keeps('goto', '/?pos=guards&dpm_min=2&asof=2025-01-01'), true);
+	// Nothing waiting: nothing to keep. Back/Forward to the same address is history, not the Time Machine.
+	assert.equal(keeps('goto', '/?pos=guards&dpm_min=2&asof=2025-01-01', false), false);
+	assert.equal(keeps('popstate', '/?pos=guards&dpm_min=2&asof=2025-01-01'), false);
+	// Active Leaderboard (a reset), Back/Forward, Ask DARKO and links elsewhere bring their own question.
+	assert.equal(keeps('link', '/'), false);
+	assert.equal(keeps('popstate', '/?pos=guards&dpm_min=2'), false);
+	assert.equal(keeps('goto', '/?pos=bigs&age_max=25&sort=d_dpm'), false);
+	assert.equal(keeps('link', '/player/2544'), false);
+	landed();
+	// Once it has landed, a link to the same address is just a link.
+	assert.equal(keeps('link', '/?pos=guards&dpm_min=2&asof=2025-01-01'), false);
+	assert.equal(keeps('goto', '/?pos=guards&dpm_min=2&asof=2025-01-01'), false);
+
+	// A second date change started before the first lands stays marked when the first one lands.
+	const first = markDateChange(url('/?asof=2024-01-01'));
+	const second = markDateChange(url('/?asof=2023-01-01'));
+	first();
+	assert.equal(keeps('goto', '/?asof=2023-01-01'), true);
+	second();
+	assert.equal(keeps('goto', '/?asof=2023-01-01'), false);
+});
+
+test('the Time Machine marks its date changes, and the board asks with the navigation type', async () => {
+	const [machine, board] = await Promise.all([read('src/lib/components/TimeMachine.svelte'), read('src/routes/+page.svelte')]);
+	assert.match(
+		machine,
+		/const target = withAsOf\(\$page\.url, date \?\? null\);\s*const landed = markDateChange\(target\);\s*void goto\(relativeHref\(target\), \{ noScroll: true, keepFocus: true \}\)\.finally\(landed\);/
+	);
+	assert.match(board, /beforeNavigate\(\(\{ type, to \}\) => \{[^}]*keepLocalQuestion = keepsPendingState\(\{ writePending, type, to, pathname: '\/' \}\);/);
 });
 
 test('the pages behind the fixes: freshness from games, picks that stay honest, Modern-only sharing', async () => {
@@ -234,7 +269,10 @@ test('the pages behind the fixes: freshness from games, picks that stay honest, 
 	]);
 	// "Ratings through" is the last game in the published updates, not a forecast row's date.
 	assert.match(daily, /\.from\('game_updates'\)\.select\('date'\)\.order\('date', \{ ascending: false \}\)\.limit\(1\)/);
-	assert.match(server, /\[snapshot, ratingsThrough\] = await Promise\.all\(\[getActivePlayers\(\), getLatestGameDate\(\)\.catch\(\(\) => null\)\]\)/);
+	assert.match(
+		server,
+		/\[snapshot, ratingsThrough, seasonGames\] = await Promise\.all\(\[\s*getActivePlayers\(\),\s*getLatestGameDate\(\)\.catch\(\(\) => null\),/
+	);
 
 	assert.match(team, /Ratings through \{formatAsOfDate\(ratingsThrough, \{ short: true \}\)\}/);
 	assert.match(player, /const lastPlayed = \$derived\(lastPlayedDate\(historyRows\)\);/);
@@ -278,16 +316,165 @@ test('the leaderboard toolbar: one row, Filters in a panel, column sets as tabs,
 	assert.ok(board.indexOf('class="leaderboard-value-note"') > board.indexOf('class="leaderboard-pagination"'));
 
 	// Leader cards: the lead one widest, each in its team's colour, with its margin over the next.
-	assert.match(board, /margin: leader && next \? leadMargin\(leader\.value - next\.value, next\.player, metric\) : null/);
+	assert.match(board, /leaderCard\(teamScopedPlayers, 'Top 3PT%', 'x_fg3_pct', formatPercent\)/);
+	assert.doesNotMatch(board, /function (buildLeaderCard|leadMargin)/);
 	assert.match(cards, /style:--team-color=\{teamColor\(card\.player\?\.team_name\) \?\? 'var\(--accent\)'\}/);
 	assert.match(cards, /grid-template-columns: minmax\(300px, 1\.45fr\) repeat\(4, minmax\(0, 1fr\)\);/);
 	assert.match(cards, /:global\(:root\[data-view='shiny'\]\) \.leader-card::before,\s*:global\(:root\[data-view='shiny'\]\) \.leader-margin \{\s*display: none;/);
+	// A card too narrow for its headshot drops it, and the text takes the room it kept.
+	assert.match(
+		cards,
+		/@container \(max-width: 175px\) \{\s*\.leader-photo \{\s*display: none;\s*\}\s*\.leader-card \.leader-player,\s*\.leader-card \.leader-margin \{\s*max-width: none;/
+	);
+	// ...and it comes after the lead card's reserved width, which has the same specificity.
+	assert.ok(cards.indexOf('@container (max-width: 175px)') > cards.indexOf('.leader-card--lead .leader-margin {'));
+	// The Shiny tiles hide every headshot, so their names keep no room for one.
+	assert.match(cards, /:global\(:root\[data-view='shiny'\]\) \.leader-card \.leader-player \{\s*max-width: none;/);
+});
+
+test('a leader card reads its lead from the figures as printed, as Compare does', () => {
+	const player = (name, stats) => ({ player_name: name, ...stats });
+	// +6.9 against +6.8 is a lead of 0.1, though the raw gap is 0.02.
+	const dpm = leaderCard([player('Nikola Jokic', { dpm: 6.86 }), player('Victor Wembanyama', { dpm: 6.84 })], 'Top DPM', 'dpm');
+	assert.deepEqual([dpm.displayValue, dpm.margin], ['+6.9', '0.1 ahead of Wembanyama']);
+	// 37.44% and 37.36% both print as 37.4%: level, not 0.1 pp ahead.
+	const threes = leaderCard(
+		[player('Jamal Murray', { x_fg3_pct: 0.3736 }), player('Cameron Johnson', { x_fg3_pct: 0.3744 })],
+		'Top 3PT%',
+		'x_fg3_pct',
+		formatPercent
+	);
+	assert.deepEqual([threes.player.player_name, threes.displayValue, threes.margin], ['Cameron Johnson', '37.4%', 'Level with Murray']);
+	assert.equal(leadMargin('41.2%', '39.8%', player('Stephen Curry'), 'x_fg3_pct'), '1.4 pp ahead of Curry');
+	assert.equal(leadMargin('+3.1', '+1.9', player('Shai Gilgeous-Alexander'), 'o_dpm'), '1.2 ahead of Gilgeous-Alexander');
+	// One player, or none with the stat: no margin to give.
+	assert.equal(leaderCard([player('Nikola Jokic', { dpm: 6.86 })], 'Top DPM', 'dpm').margin, null);
+	assert.deepEqual(leaderCard([player('Nikola Jokic', {})], 'Top DPM', 'dpm'), {
+		title: 'Top DPM',
+		metric: 'dpm',
+		player: null,
+		value: null,
+		displayValue: '\u2014',
+		margin: null
+	});
+});
+
+test('Compare says what its figures are for any number of players', async () => {
+	const [page, table, card] = await Promise.all([
+		read('src/routes/compare/+page.svelte'),
+		read('src/lib/components/HeadToHead.svelte'),
+		read('src/lib/components/PlayerCard.svelte')
+	]);
+	// The note sits with the players, shown for one to four of them, not only in the two-player table.
+	assert.match(
+		page,
+		/\{#if selectedPlayers\.length > 0\}[\s\S]*?<p class="compare-note">\s*Each player's latest available DARKO projections\. Games are counted from 1996-97, when\s*DARKO's data begins\.\s*<\/p>\s*\{\/if\}/
+	);
+	assert.match(table, /<p class="h2h-caption">Shooting gaps are in percentage points \(pp\)\.<\/p>/);
+	assert.match(card, /<span class="label">Regular-season games<\/span>/);
+	assert.doesNotMatch(card, /<span class="label">Games<\/span>/);
 });
 
 test('every team has an accent colour, and a player without a team has none', async () => {
-	const { teamColor } = await import('../src/lib/utils/teamColors.js');
+	const { contrastRatio, teamColor, teamInk } = await import('../src/lib/utils/teamColors.js');
 	const { NBA_TEAMS } = await import('../src/lib/utils/teamAbbreviations.js');
-	for (const team of NBA_TEAMS) assert.match(teamColor(team.name) ?? '', /^#[0-9a-f]{6}$/, team.name);
+	for (const team of NBA_TEAMS) {
+		assert.match(teamColor(team.name) ?? '', /^#[0-9a-f]{6}$/, team.name);
+		// Text set on the colour (the podium's blocks) reads at WCAG's 4.5:1 or better.
+		assert.ok(contrastRatio(teamColor(team.name), teamInk(team.name)) >= 4.5, team.name);
+	}
+	assert.equal(teamInk('Denver Nuggets'), '#0a0b0d');
+	assert.equal(teamInk('Los Angeles Lakers'), '#ffffff');
 	assert.equal(teamColor(null), null);
+	assert.equal(teamInk(null), null);
 	assert.equal(teamColor('Seattle SuperSonics'), null);
+});
+
+test('the rail\'s podium cards: by position and by year in the league, the archived list in Shiny', async () => {
+	const [board, podium, shiny] = await Promise.all([
+		read('src/routes/+page.svelte'),
+		read('src/lib/components/LeaderPodium.svelte'),
+		read('src/shiny-view.css')
+	]);
+	// One card, twice: a podium in the Modern view and the archived list in Shiny.
+	assert.match(
+		board,
+		/<div class="modern-only">\s*<LeaderPodium\s*players=\{card\.players\}\s*href=\{\(player\) => datedHref\(`\/player\/\$\{player\.nba_id\}`\)\}\s*photo=\{playerHeadshotUrl\}\s*\/>\s*<\/div>\s*<div class="position-list shiny-only">/
+	);
+	assert.match(board, /title: 'Top DPM by Position',[\s\S]*?tabs: positionTabs,[\s\S]*?players: topPositionPlayers/);
+	assert.match(board, /title: 'Top DPM by Experience',[\s\S]*?tabs: EXPERIENCE_GROUPS,[\s\S]*?players: topExperiencePlayers/);
+	assert.match(board, /topFiveByDpm\(teamScopedPlayers\.filter\(\(player\) => leagueYear\(player\) === experienceYear\)\)/);
+	// Guards, forwards and centers, opening on guards; the leader cards have the whole board.
+	assert.match(board, /let positionView = \$state\('guards'\);/);
+	assert.doesNotMatch(board, /\{ key: 'all', label: 'All' \}/);
+	// Regulars only (podiumRule), with the note the rule writes.
+	assert.match(board, /\.filter\(podium\.qualifies\)/);
+	assert.match(board, /<p class="insight-note">\{podium\.note\}<\/p>/);
+	assert.doesNotMatch(board, /Minimum 20 games played/);
+	// Three cards a row under the table, two below 1100px with the last across both.
+	assert.match(board, /@media \(max-width: 1839px\) \{[\s\S]*?\.insight-rail \{\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+	assert.match(board, /@media \(max-width: 1099px\) \{\s*\.insight-rail \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);\s*\}\s*\.insight-rail > :last-child \{\s*grid-column: 1 \/ -1;/);
+	assert.match(shiny, /\.insight-rail \{\s*position: static;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+	// The list reads 1-2-3 while the winner stands in the middle; a new five raises it again.
+	assert.match(podium, /\{#key lineup\}/);
+	assert.match(podium, /\.podium-place--1 \{\s*grid-column: 2;/);
+	assert.match(podium, /\.podium-place--2 \{\s*grid-column: 1;/);
+	assert.match(podium, /\.podium-place--3 \{\s*grid-column: 3;/);
+	assert.match(podium, /style:--ink=\{teamInk\(player\.team_name\) \?\? '#ffffff'\}/);
+	assert.match(podium, /@media \(prefers-reduced-motion: reduce\) \{[^}]*\.podium-block,[^}]*animation: none;/);
+});
+
+test('the podium cards count regulars: 18+ MPG and half the most games anyone has played', async () => {
+	const { podiumRule } = await import('../src/lib/utils/leaderboardViews.js');
+	const board = [
+		{ player_name: 'Dylan Harper', x_minutes: 24.6, season_games: 70, career_game_num: 103 },
+		{ player_name: 'Kasparas Jakucionis', x_minutes: 15.1, season_games: 53, career_game_num: 83 },
+		{ player_name: 'Oso Ighodaro', x_minutes: 17.0, season_games: 82, career_game_num: 171 },
+		{ player_name: 'Cormac Ryan', x_minutes: 37.8, season_games: 11, career_game_num: 25 },
+		{ player_name: 'Tyrese Haliburton', x_minutes: 24.1, season_games: 0, career_game_num: 524 },
+		{ player_name: 'Javon Small', x_minutes: 20.1, season_games: 41, career_game_num: 60 },
+		{ player_name: 'Ausar Thompson', x_minutes: 18.5, season_games: 73, career_game_num: 267 }
+	];
+	const rule = podiumRule(board);
+	// Once a season is over (82 games), 41; minutes from the table's MPG.
+	assert.equal(rule.minGames, 41);
+	assert.deepEqual(board.filter(rule.qualifies).map((player) => player.player_name), ['Dylan Harper', 'Javon Small', 'Ausar Thompson']);
+	assert.equal(rule.note, 'Regulars: 18+ MPG and 41+ games this season');
+	// Ten games into a season, half is five; 83 (a mid-season trade) still asks 41.
+	assert.equal(podiumRule([{ season_games: 10 }, { season_games: 3 }]).minGames, 5);
+	assert.equal(podiumRule([{ season_games: 83 }]).minGames, 41);
+	assert.equal(podiumRule([{ season_games: 1 }]).minGames, 1);
+
+	// Without this season's games (a Time Machine date), 20 games in DARKO's data.
+	const past = podiumRule(board.map(({ season_games, ...player }) => player));
+	assert.equal(past.minGames, null);
+	assert.deepEqual(board.map(({ season_games, ...player }) => player).filter(past.qualifies).map((player) => player.player_name), [
+		'Dylan Harper',
+		'Cormac Ryan',
+		'Tyrese Haliburton',
+		'Javon Small',
+		'Ausar Thompson'
+	]);
+	assert.equal(past.note, "Regulars: 18+ MPG and 20+ games in DARKO's data");
+
+	// Today's board carries this season's games from the season table; the others don't.
+	const server = await read('src/routes/+page.server.js');
+	assert.match(server, /seasons\.length > 0 \? getSeasonGames\(Math\.max\(\.\.\.seasons\)\)\.catch\(\(\) => null\) : null/);
+	assert.match(server, /\.\.\.\(seasonGames \? \{ season_games: seasonGames\.get\(Number\(player\.nba_id\)\) \?\? 0 \} : \{\}\)/);
+});
+
+test('a player\'s year in the league counts from the first season DARKO lists', async () => {
+	const { EXPERIENCE_GROUPS, isRotationPlayer, leagueYear, ROTATION_MINUTES } = await import('../src/lib/utils/leaderboardViews.js');
+	// The rotation line Ask DARKO answers with, on projected minutes (the table's MPG).
+	assert.equal(ROTATION_MINUTES, 12);
+	assert.equal(isRotationPlayer({ x_minutes: 1.6 }), false);
+	assert.equal(isRotationPlayer({ x_minutes: 12 }), true);
+	assert.equal(isRotationPlayer({ x_minutes: '14.3' }), true);
+	assert.equal(isRotationPlayer({}), false);
+	assert.deepEqual(EXPERIENCE_GROUPS.map((group) => `${group.label}:${group.year}`), ['Rookies:1', 'Sophomores:2', '3rd Year:3']);
+	assert.equal(leagueYear({ season: 2026, rookie_season: 2026 }), 1);
+	assert.equal(leagueYear({ season: 2026, rookie_season: 2025 }), 2);
+	assert.equal(leagueYear({ season: '2026', rookie_season: '2024' }), 3);
+	assert.equal(leagueYear({ season: 2026 }), null);
+	assert.equal(leagueYear({ rookie_season: 2024 }), null);
 });

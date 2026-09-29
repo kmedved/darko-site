@@ -33,6 +33,56 @@ export function matchesPosition(player, group) {
     return true;
 }
 
+// A rotation player's projected minutes a game (the table's MPG), for Ask DARKO's answers and the
+// rail's podium cards, so a player who barely plays stays off both.
+export const ROTATION_MINUTES = 12;
+
+export function isRotationPlayer(player) {
+    return (toNumber(player?.x_minutes) ?? 0) >= ROTATION_MINUTES;
+}
+
+// The rail's podium cards count regulars: 18 or more minutes a game (the table's MPG), and at
+// least half as many games this season as anyone has played (41 once a season is over). A board
+// without this season's games (a past season's opening day, a Time Machine date) counts 20
+// games in DARKO's data instead, which include games a player sat out.
+export const PODIUM_MINUTES = 18;
+const PODIUM_FALLBACK_GAMES = 20;
+
+export function podiumRule(players) {
+    const games = (players ?? []).map((player) => toNumber(player?.season_games)).filter((n) => n !== null);
+    // Half, rounded down: a player traded mid-season can play 83 games, and the bar stays 41.
+    const minGames = games.length > 0 ? Math.max(1, Math.floor(Math.max(...games) / 2)) : null;
+    const playedEnough =
+        minGames === null
+            ? (player) => (toNumber(player?.career_game_num) ?? 0) >= PODIUM_FALLBACK_GAMES
+            : (player) => (toNumber(player?.season_games) ?? 0) >= minGames;
+    return {
+        minGames,
+        qualifies: (player) => (toNumber(player?.x_minutes) ?? 0) >= PODIUM_MINUTES && playedEnough(player),
+        note:
+            minGames === null
+                ? `Regulars: ${PODIUM_MINUTES}+ MPG and ${PODIUM_FALLBACK_GAMES}+ games in DARKO's data`
+                : `Regulars: ${PODIUM_MINUTES}+ MPG and ${minGames}+ games this season`
+    };
+}
+
+// The rail's young players, by their year in the league on the board's season.
+export const EXPERIENCE_GROUPS = Object.freeze([
+    { key: 'rookies', label: 'Rookies', year: 1 },
+    { key: 'sophomores', label: 'Sophomores', year: 2 },
+    { key: 'third', label: '3rd Year', year: 3 }
+]);
+
+/**
+ * A player's year in the league on their row's season (1 for a rookie), from the first season
+ * DARKO lists for them; null when either is unknown.
+ */
+export function leagueYear(player) {
+    const first = toNumber(player?.rookie_season);
+    const season = toNumber(player?.season);
+    return first === null || season === null ? null : season - first + 1;
+}
+
 /** Ages are fractional (31.2); a player without one is only in "All ages". */
 export function matchesAgeGroup(player, group) {
     if (group === 'all') return true;

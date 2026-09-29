@@ -12,6 +12,7 @@ import { NBA_TEAMS } from './teamAbbreviations.js';
 import { formatAsOfDate, HISTORY_START, parseAsOfDate, seasonLabelFromEndYear } from './timeMachine.js';
 import { formatSigned } from './seismograph.js';
 import { dailyListed } from './daily.js';
+import { isRotationPlayer } from './leaderboardViews.js';
 
 export const ASK_EXAMPLES = Object.freeze([
 	'best defenders under 25',
@@ -27,8 +28,6 @@ export const ASK_EXAMPLES = Object.freeze([
 	'comps for Wembanyama'
 ]);
 
-// Rotation players only, unless the question names a team.
-const ROTATION_MINUTES = 12;
 const MAX_ROWS = 25;
 
 export function normalizeAskText(value) {
@@ -277,7 +276,8 @@ export function parseLeaderboardQuestion(normalized, raw = normalized) {
 export function runLeaderboardQuestion(filter, players, { season = null } = {}) {
 	const sort = filter.sort;
 	let rows = (players ?? []).filter((row) =>
-		filter.team ? row.team_name === filter.team.name : (toNumber(row.x_minutes) ?? 0) >= ROTATION_MINUTES
+		// Rotation players only, unless the question names a team.
+		filter.team ? row.team_name === filter.team.name : isRotationPlayer(row)
 	);
 	if (filter.position) {
 		const categories = POSITION_GROUPS[filter.position].categories;

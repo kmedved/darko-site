@@ -60,6 +60,12 @@ export function formatFixed(value, decimals = 1) {
     return n.toFixed(decimals);
 }
 
+/** The number a printed figure shows ("+6.8" 6.8, "33.9%" 33.9, "$82.8M" 82.8), or null for a dash. */
+export function printedNumber(text) {
+    const n = Number.parseFloat(String(text).replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(n) ? n : null;
+}
+
 /**
  * Dollars in millions for tables, exports and chart axes. The sign goes before the dollar sign
  * (-$1.9M, not $-1.9M), and a value that rounds to zero carries none.
@@ -219,7 +225,10 @@ export const compareCsvColumns = [
     { header: 'Pos', accessor: 'position', format: formatOrDash },
     { header: 'Age', accessor: 'age', format: formatNullable },
     { header: 'Min (trend)', accessor: 'tr_minutes', format: formatMinutes },
-    { header: 'Career Games', accessor: 'career_game_num', format: formatNullable },
+    // Games played, as the page shows them (comparePage.js), not career_game_num's model rows.
+    { header: 'Regular-season games (since 1996-97)', accessor: 'games_regular', format: formatNullable },
+    { header: 'Playoff games (since 1996-97)', accessor: 'games_playoffs', format: formatNullable },
+    { header: 'Ratings as of', accessor: 'date', format: formatOrDash },
     { header: 'DPM', accessor: 'dpm', format: formatSignedMetric },
     { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
     { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },
@@ -297,7 +306,7 @@ export const longevityCsvColumns = [
     { header: 'Team', accessor: 'team_name', format: formatOrDash },
     { header: 'Pos', accessor: 'position', format: formatOrDash },
     { header: 'Rookie Season', accessor: 'rookie_season', format: (v) => formatNullable(v) },
-    { header: 'Career Games', accessor: 'career_games', format: (v) => formatNullable(v) },
+    { header: 'Regular-Season Games', accessor: 'career_games', format: (v) => formatNullable(v) },
     { header: 'Age', accessor: 'age', format: (v) => formatFixed(v, 1) },
     { header: 'Est. Retirement Age', accessor: 'est_retirement_age', format: (v) => formatFixed(v, 1) },
     { header: 'Years Remaining', accessor: 'years_remaining', format: (v) => formatFixed(v, 1) },
