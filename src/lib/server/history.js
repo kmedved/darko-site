@@ -5,7 +5,8 @@ import { env } from '$env/dynamic/private';
 import { getPlayersAsOf, supabase } from './supabase.js';
 
 /**
- * DARKO's history tables, published by nba_darko's push_website.py:
+ * DARKO's history tables, published by nba_darko's pipeline_scripts/publish/website.py
+ * (formerly 1_historic_darko/push_website.py):
  * - season_calendar: first game, last regular-season game and last game of every season;
  * - rating_frames: the weekly top 20 by DPM in every regular season since 1996-97.
  *

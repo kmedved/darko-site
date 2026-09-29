@@ -1,9 +1,10 @@
 /**
- * Comps & futures. nba_darko's push_website.py publishes `player_comps`: for every current
- * player, the 25 closest player-seasons since 1996-97 at the same age, each comp's DPM then
- * and its season-end DPM in each of the next five seasons (10+ games). The page lists the
- * closest ten and draws the range all 25 took, weighted by similarity. A website
- * presentation, not a DARKO model output.
+ * Comps & futures. nba_darko's pipeline_scripts/publish/website.py (formerly
+ * 1_historic_darko/push_website.py) publishes `player_comps`: for every current player, the
+ * 25 closest player-seasons since 1996-97 at the same age, each comp's DPM then and its
+ * season-end DPM in each of the next five seasons (10+ games). The page lists the closest
+ * ten and draws the range all 25 took, weighted by similarity. A website presentation, not a
+ * DARKO model output.
  */
 
 import { seasonOfRow } from './seismograph.js';
