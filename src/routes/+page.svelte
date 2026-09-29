@@ -18,7 +18,10 @@
     } from '$lib/utils/leaderboardColumns.js';
     import {
         AGE_GROUPS,
+        EXPERIENCE_GROUPS,
         filterLeaderboardRows,
+        isRotationPlayer,
+        leagueYear,
         matchesPosition,
         POSITION_GROUPS,
         trendSeason
@@ -59,6 +62,7 @@
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Sparkline from '$lib/components/Sparkline.svelte';
     import LeaderCards from '$lib/components/LeaderCards.svelte';
+    import LeaderPodium from '$lib/components/LeaderPodium.svelte';
     import WatchStar from '$lib/components/WatchStar.svelte';
     import { getContext, onMount } from 'svelte';
     import { prefersReducedMotion } from 'svelte/motion';
@@ -79,7 +83,8 @@
     // Sparkline values by board ("season:date"), then by player: { [key]: { [nba_id]: [dpm...] } }.
     let trendsByBoard = $state({});
     let leaderboardPage = $state(1);
-    let positionView = $state('all');
+    let positionView = $state('guards');
+    let experienceView = $state('rookies');
     let distributionMetric = $state('dpm');
     // The Modern view's column set, stat ranges ({ dpm: { min, max } }) and picked players.
     let columnSet = $state('all');
@@ -122,8 +127,8 @@
     const activeSortColumn = $derived(sortConfigs[sortColumn] ? sortColumn : 'dpm');
     const watchSet = $derived(new Set($watchlist));
     const textSortColumns = new Set(['_rank', 'player_name', 'team_name', 'position']);
+    // By position only: the leader cards already give the whole board's leaders.
     const positionTabs = [
-        { key: 'all', label: 'All' },
         { key: 'guards', label: 'Guards' },
         { key: 'forwards', label: 'Forwards' },
         { key: 'centers', label: 'Centers' }
@@ -345,14 +350,24 @@
             : new Set(filteredPlayers.map((player) => Number(player?.nba_id)))
     );
 
-    const topPositionPlayers = $derived.by(() =>
-        teamScopedPlayers
-            .filter((player) => matchesPosition(player, positionView))
+    // The rail's podium cards: the five best by DPM at a position and in a year in the league
+    // (rookies, sophomores, third year), among rotation players with enough games to count.
+    function topFiveByDpm(rows) {
+        return rows
             .filter((player) => hasMinimumGames(player, TOP_POSITION_MIN_GAMES))
+            .filter(isRotationPlayer)
             .filter((player) => Number.isFinite(toNumber(player?.dpm)))
             .slice()
             .sort((a, b) => toNumber(b.dpm) - toNumber(a.dpm))
-            .slice(0, 5)
+            .slice(0, 5);
+    }
+
+    const topPositionPlayers = $derived(
+        topFiveByDpm(teamScopedPlayers.filter((player) => matchesPosition(player, positionView)))
+    );
+    const experienceYear = $derived(EXPERIENCE_GROUPS.find((group) => group.key === experienceView)?.year ?? 1);
+    const topExperiencePlayers = $derived(
+        topFiveByDpm(teamScopedPlayers.filter((player) => leagueYear(player) === experienceYear))
     );
 
     // With the Time Machine set, the export carries Now and Since after DDPM, like the table.
@@ -1273,52 +1288,83 @@
                         <p class="shiny-plot-caption">@kmedved | www.darko.app | @anpatt7</p>
                     </section>
 
-                    <section class="insight-card" data-shiny-surface="panel">
-                        <div class="insight-card-header">
-                            <h2>Top DPM by Position</h2>
-                            <span class="insight-info" title="Minimum 20 games played">i</span>
-                        </div>
-                        <div class="position-tabs" role="group" aria-label="Position filter">
-                            {#each positionTabs as tab (tab.key)}
-                                <button type="button" class:active={positionView === tab.key} onclick={() => (positionView = tab.key)}>
-                                    {tab.label}
-                                </button>
-                            {/each}
-                        </div>
-                        <div class="position-list">
-                            <div class="position-table-head" aria-hidden="true">
-                                <span>#</span>
-                                <span>Player</span>
-                                <span>Pos</span>
-                                <span>DPM</span>
+                    <!-- The podium cards: the five best by DPM for each tab, on a podium in the teams'
+                         colours, and in the archived list in the Shiny view. -->
+                    {#snippet podiumCard(card)}
+                        <section class="insight-card" data-shiny-surface="panel">
+                            <div class="insight-card-header">
+                                <h2>{card.title}</h2>
+                                <!-- career_game_num: the player's games in DARKO's data, not games played. -->
+                                <span class="insight-info" title={card.info}>i</span>
                             </div>
-                            {#if topPositionPlayers.length === 0}
+                            <div class="position-tabs" role="group" aria-label={card.label}>
+                                {#each card.tabs as tab (tab.key)}
+                                    <button type="button" class:active={card.view === tab.key} onclick={() => card.select(tab.key)}>
+                                        {tab.label}
+                                    </button>
+                                {/each}
+                            </div>
+                            {#if card.players.length === 0}
                                 <div class="empty-mini">No matching players.</div>
                             {:else}
-                                {#each topPositionPlayers as player, index (player.nba_id)}
-                                    <a class="position-player" href={datedHref(`/player/${player.nba_id}`)}>
-                                        <span class="position-rank">{index + 1}</span>
-                                        <span class="mini-headshot">
-                                            {#if playerHeadshotUrl(player)}
-                                                <img src={playerHeadshotUrl(player)} alt="" loading="lazy" onerror={hideBrokenImage} />
-                                            {/if}
-                                        </span>
-                                        <span class="position-player-main">
-                                            <span class="position-player-label">
-                                                <span class="position-player-name">{player.player_name}</span>
-                                                {#if player.position}<small class="position-player-position">{player.position}</small>{/if}
+                                <div class="modern-only">
+                                    <LeaderPodium
+                                        players={card.players}
+                                        href={(player) => datedHref(`/player/${player.nba_id}`)}
+                                        photo={playerHeadshotUrl}
+                                    />
+                                </div>
+                                <div class="position-list shiny-only">
+                                    <div class="position-table-head" aria-hidden="true">
+                                        <span>#</span>
+                                        <span>Player</span>
+                                        <span>Pos</span>
+                                        <span>DPM</span>
+                                    </div>
+                                    {#each card.players as player, index (player.nba_id)}
+                                        <a class="position-player" href={datedHref(`/player/${player.nba_id}`)}>
+                                            <span class="position-rank">{index + 1}</span>
+                                            <span class="mini-headshot">
+                                                {#if playerHeadshotUrl(player)}
+                                                    <img src={playerHeadshotUrl(player)} alt="" loading="lazy" onerror={hideBrokenImage} />
+                                                {/if}
                                             </span>
-                                            <span class="position-bar">
-                                                <span style={`width: ${barWidth(player.dpm, topPositionPlayers)}%`}></span>
+                                            <span class="position-player-main">
+                                                <span class="position-player-label">
+                                                    <span class="position-player-name">{player.player_name}</span>
+                                                    {#if player.position}<small class="position-player-position">{player.position}</small>{/if}
+                                                </span>
+                                                <span class="position-bar">
+                                                    <span style={`width: ${barWidth(player.dpm, card.players)}%`}></span>
+                                                </span>
                                             </span>
-                                        </span>
-                                        <strong style={getMetricHeatVariables('dpm', player.dpm, leaderboardHeatScales)}>{formatSignedMetric(player.dpm)}</strong>
-                                    </a>
-                                {/each}
+                                            <strong style={getMetricHeatVariables('dpm', player.dpm, leaderboardHeatScales)}>{formatSignedMetric(player.dpm)}</strong>
+                                        </a>
+                                    {/each}
+                                </div>
                             {/if}
-                        </div>
-                        <p class="insight-note">Minimum 20 games played</p>
-                    </section>
+                            <p class="insight-note">Rotation players: 12+ MPG and 20+ games</p>
+                        </section>
+                    {/snippet}
+
+                    {@render podiumCard({
+                        title: 'Top DPM by Position',
+                        label: 'Position filter',
+                        info: "Rotation players: 12 or more MPG and 20 or more games in DARKO's data",
+                        tabs: positionTabs,
+                        view: positionView,
+                        select: (key) => (positionView = key),
+                        players: topPositionPlayers
+                    })}
+                    {@render podiumCard({
+                        title: 'Top DPM by Experience',
+                        label: 'Experience filter',
+                        info: "Players in their first, second or third season, counted from the first season DARKO lists for each. Rotation players: 12 or more MPG and 20 or more games in DARKO's data.",
+                        tabs: EXPERIENCE_GROUPS,
+                        view: experienceView,
+                        select: (key) => (experienceView = key),
+                        players: topExperiencePlayers
+                    })}
                 </aside>
             </div>
         {/if}
@@ -2447,11 +2493,11 @@
         font-size: 13px;
     }
 
+    /* Beside the table on the widest screens. Three cards stand taller than a screen, so the rail
+       scrolls with the page rather than sticking, which would hide the last card's foot. */
     .insight-rail {
         display: grid;
         gap: 14px;
-        position: sticky;
-        top: calc(var(--nav-sticky-offset) + 18px);
     }
 
     .insight-card {
@@ -2556,7 +2602,7 @@
 
     .position-tabs {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 4px;
         border: 1px solid var(--border);
         background: var(--bg-surface);
@@ -2685,15 +2731,25 @@
     }
 
     /* The insight cards move under the table until the screen is wide enough for both (about
-       1840px), so the table keeps its full width and every column. */
+       1840px), so the table keeps its full width and every column: three a row, then two with the
+       last across both once a third of the width is too narrow for a podium. */
     @media (max-width: 1839px) {
         .leaderboard-workspace {
             grid-template-columns: 1fr;
         }
 
         .insight-rail {
-            position: static;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 1099px) {
+        .insight-rail {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .insight-rail > :last-child {
+            grid-column: 1 / -1;
         }
     }
 

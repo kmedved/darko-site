@@ -61,6 +61,8 @@ const PLAYER_VIEW_FIELDS = Object.freeze({
         'position',
         'age',
         'season',
+        // The first season, for the rail's rookies, sophomores and third-year players.
+        'rookie_season',
         'career_game_num',
         'dpm',
         'o_dpm',

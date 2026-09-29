@@ -373,9 +373,67 @@ test('Compare says what its figures are for any number of players', async () => 
 });
 
 test('every team has an accent colour, and a player without a team has none', async () => {
-	const { teamColor } = await import('../src/lib/utils/teamColors.js');
+	const { contrastRatio, teamColor, teamInk } = await import('../src/lib/utils/teamColors.js');
 	const { NBA_TEAMS } = await import('../src/lib/utils/teamAbbreviations.js');
-	for (const team of NBA_TEAMS) assert.match(teamColor(team.name) ?? '', /^#[0-9a-f]{6}$/, team.name);
+	for (const team of NBA_TEAMS) {
+		assert.match(teamColor(team.name) ?? '', /^#[0-9a-f]{6}$/, team.name);
+		// Text set on the colour (the podium's blocks) reads at WCAG's 4.5:1 or better.
+		assert.ok(contrastRatio(teamColor(team.name), teamInk(team.name)) >= 4.5, team.name);
+	}
+	assert.equal(teamInk('Denver Nuggets'), '#0a0b0d');
+	assert.equal(teamInk('Los Angeles Lakers'), '#ffffff');
 	assert.equal(teamColor(null), null);
+	assert.equal(teamInk(null), null);
 	assert.equal(teamColor('Seattle SuperSonics'), null);
+});
+
+test('the rail\'s podium cards: by position and by year in the league, the archived list in Shiny', async () => {
+	const [board, podium, shiny] = await Promise.all([
+		read('src/routes/+page.svelte'),
+		read('src/lib/components/LeaderPodium.svelte'),
+		read('src/shiny-view.css')
+	]);
+	// One card, twice: a podium in the Modern view and the archived list in Shiny.
+	assert.match(
+		board,
+		/<div class="modern-only">\s*<LeaderPodium\s*players=\{card\.players\}\s*href=\{\(player\) => datedHref\(`\/player\/\$\{player\.nba_id\}`\)\}\s*photo=\{playerHeadshotUrl\}\s*\/>\s*<\/div>\s*<div class="position-list shiny-only">/
+	);
+	assert.match(board, /title: 'Top DPM by Position',[\s\S]*?tabs: positionTabs,[\s\S]*?players: topPositionPlayers/);
+	assert.match(board, /title: 'Top DPM by Experience',[\s\S]*?tabs: EXPERIENCE_GROUPS,[\s\S]*?players: topExperiencePlayers/);
+	assert.match(board, /topFiveByDpm\(teamScopedPlayers\.filter\(\(player\) => leagueYear\(player\) === experienceYear\)\)/);
+	// Guards, forwards and centers, opening on guards; the leader cards have the whole board.
+	assert.match(board, /let positionView = \$state\('guards'\);/);
+	assert.doesNotMatch(board, /\{ key: 'all', label: 'All' \}/);
+	// Rotation players only: 20 games in DARKO's data (career_game_num, not games played) and 12
+	// MPG, so a rookie who has barely played (1.8 minutes a game) stays off the podium.
+	assert.match(board, /\.filter\(\(player\) => hasMinimumGames\(player, TOP_POSITION_MIN_GAMES\)\)\s*\.filter\(isRotationPlayer\)/);
+	assert.match(board, /<p class="insight-note">Rotation players: 12\+ MPG and 20\+ games<\/p>/);
+	assert.doesNotMatch(board, /Minimum 20 games played/);
+	// Three cards a row under the table, two below 1100px with the last across both.
+	assert.match(board, /@media \(max-width: 1839px\) \{[\s\S]*?\.insight-rail \{\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+	assert.match(board, /@media \(max-width: 1099px\) \{\s*\.insight-rail \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);\s*\}\s*\.insight-rail > :last-child \{\s*grid-column: 1 \/ -1;/);
+	assert.match(shiny, /\.insight-rail \{\s*position: static;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+	// The list reads 1-2-3 while the winner stands in the middle; a new five raises it again.
+	assert.match(podium, /\{#key lineup\}/);
+	assert.match(podium, /\.podium-place--1 \{\s*grid-column: 2;/);
+	assert.match(podium, /\.podium-place--2 \{\s*grid-column: 1;/);
+	assert.match(podium, /\.podium-place--3 \{\s*grid-column: 3;/);
+	assert.match(podium, /style:--ink=\{teamInk\(player\.team_name\) \?\? '#ffffff'\}/);
+	assert.match(podium, /@media \(prefers-reduced-motion: reduce\) \{[^}]*\.podium-block,[^}]*animation: none;/);
+});
+
+test('a player\'s year in the league counts from the first season DARKO lists', async () => {
+	const { EXPERIENCE_GROUPS, isRotationPlayer, leagueYear, ROTATION_MINUTES } = await import('../src/lib/utils/leaderboardViews.js');
+	// The rotation line Ask DARKO answers with, on projected minutes (the table's MPG).
+	assert.equal(ROTATION_MINUTES, 12);
+	assert.equal(isRotationPlayer({ x_minutes: 1.6 }), false);
+	assert.equal(isRotationPlayer({ x_minutes: 12 }), true);
+	assert.equal(isRotationPlayer({ x_minutes: '14.3' }), true);
+	assert.equal(isRotationPlayer({}), false);
+	assert.deepEqual(EXPERIENCE_GROUPS.map((group) => `${group.label}:${group.year}`), ['Rookies:1', 'Sophomores:2', '3rd Year:3']);
+	assert.equal(leagueYear({ season: 2026, rookie_season: 2026 }), 1);
+	assert.equal(leagueYear({ season: 2026, rookie_season: 2025 }), 2);
+	assert.equal(leagueYear({ season: '2026', rookie_season: '2024' }), 3);
+	assert.equal(leagueYear({ season: 2026 }), null);
+	assert.equal(leagueYear({ rookie_season: 2024 }), null);
 });
