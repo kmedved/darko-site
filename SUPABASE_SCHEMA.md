@@ -59,7 +59,7 @@ through and the function reads the new table on its next call. Every function in
 table at the next replacement and not recreated: indexes belong in `TABLE_INDEXES` in the
 publisher, and the swap re-applies only row-level security, the `allow_public_read` policy
 and `SELECT` for `anon` and `authenticated`. `npm run migrations:replay` fails, naming the
-dependent, if a migration creates one on a replaced table that the replay contains.
+dependent, if a migration creates one on any of these eight tables.
 
 ---
 
