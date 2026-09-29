@@ -79,9 +79,9 @@ Core fact table. One row per player per game-date.
 - **Site reads:** every column reaches the server, because `get_active_player_ratings` and
   `get_season_start_player_ratings` return whole rows (`pr.*`). The direct selects and filters
   in `src/lib/server/supabase.js` (`RATING_COLUMNS`, `TRAJECTORY_RATING_COLUMNS`,
-  `PLAYER_PROFILE_RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS` and literal selects) name 70 of the
-  76: all but `game_value`, `wins_pg`, `warp`, `sal_poolshare`, `sal_vetfloor` and `sal_market`,
-  which no page uses.
+  `PLAYER_PROFILE_RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS` and literal selects) name 71 of the
+  76: all but `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`, which no
+  page uses.
 
 Built by `build_supabase_tables()` in `pipeline_scripts/publish/website.py`, which left-joins six
 source files on `(nba_id, date)`, each filtered to the base table's keys before it is collected:
@@ -617,7 +617,7 @@ Elo voting remains the only write path. `supabase/migrations/20260617_001_restor
 
 ### RATING_COLUMNS
 
-Comma-joined string of 69 of the 76 `player_ratings` columns, selected by the per-player history reads (`getPlayerHistory()`, and `getFullPlayerHistory()` by default). It leaves out `opp_id` (the player-profile history selects it through `PLAYER_PROFILE_RATING_COLUMNS`) and six salary columns no page displays: `game_value`, `wins_pg`, `warp`, `sal_poolshare`, `sal_vetfloor` and `sal_market`. If you add a column to the DB, add it here (or to the narrower lists) or those reads won't fetch it; the whole-row RPCs return it regardless.
+Comma-joined string of 70 of the 76 `player_ratings` columns, selected by the per-player history reads (`getPlayerHistory()`, and `getFullPlayerHistory()` by default). It leaves out `opp_id` (the player-profile history selects it through `PLAYER_PROFILE_RATING_COLUMNS`) and five salary columns no page displays: `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`. If you add a column to the DB, add it here (or to the narrower lists) or those reads won't fetch it; the whole-row RPCs return it regardless.
 
 ### Core data functions
 
