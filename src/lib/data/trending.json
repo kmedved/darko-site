@@ -1,30 +1,30 @@
 {
-  "date": "2026-09-28",
+  "date": "2026-09-29",
   "players": [
     {
       "nba_id": 2544,
       "name": "LeBron James",
-      "reason": "First 76ers Media Day and free-agency reflections"
+      "reason": "Sixers arrival and revelation he considered joining Knicks"
     },
     {
       "nba_id": 1631105,
       "name": "Jalen Duren",
-      "reason": "Misses Pistons Media Day amid contract standoff"
+      "reason": "Pistons camp absence amid contract standoff"
     },
     {
-      "nba_id": 202695,
-      "name": "Kawhi Leonard",
-      "reason": "Raptors return and comments on NBA investigation"
+      "nba_id": 203999,
+      "name": "Nikola Jokic",
+      "reason": "Plans to sign Nuggets extension next summer"
     },
     {
-      "nba_id": 203507,
-      "name": "Giannis Antetokounmpo",
-      "reason": "First Heat Media Day and title ambitions"
+      "nba_id": 1629029,
+      "name": "Luka Doncic",
+      "reason": "Takes Lakers leadership role after LeBron departure"
     },
     {
-      "nba_id": 201939,
-      "name": "Stephen Curry",
-      "reason": "Healthy knee update and Warriors contract extension"
+      "nba_id": 204001,
+      "name": "Kristaps Porzingis",
+      "reason": "Out indefinitely to open camp with health issue"
     }
   ]
 }
