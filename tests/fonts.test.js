@@ -25,6 +25,20 @@ test('the number font is self-hosted and preloaded; optional fonts load on deman
 	}
 	assert.match(css, /font-family: 'DM Mono';[\s\S]*?font-display: swap;/);
 
+	// Archivo, the display font, the same way: Latin preloaded, Latin Extended when a name needs it.
+	assert.ok(
+		html.includes('<link rel="preload" href="/fonts/archivo/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>'),
+		'app.html preloads Archivo'
+	);
+	const display = [...css.matchAll(/url\('\/fonts\/archivo\/([^']+)'\)/g)].map((m) => m[1]);
+	assert.deepEqual(display, ['archivo-latin.woff2', 'archivo-latin-ext.woff2']);
+	for (const file of [...display, 'OFL.txt']) {
+		await fs.access(path.resolve(process.cwd(), 'static/fonts/archivo', file));
+	}
+	assert.match(css, /--font-display: 'Archivo', var\(--font-sans\);/);
+	// DM Mono has 400 and 500 only, so nothing may ask the browser to fake a bolder one.
+	assert.match(css, /font-synthesis-weight: none;/);
+
 	// The before-paint copy in app.html must match src/lib/fonts.js.
 	for (const [key, family] of Object.entries(OPTIONAL_FONT_FAMILIES)) {
 		assert.ok(html.includes(`${key}: '${family}'`), `app.html should load ${key} as ${family}`);

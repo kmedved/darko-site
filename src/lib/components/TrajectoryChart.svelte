@@ -160,7 +160,25 @@
 		const layout = getChartLayout(width);
 		const { isMobile } = layout;
 		const chartTheme = getChartTheme(displayMode.view, { isMobile });
-		const margin = chartTheme.margin ?? layout.margin;
+
+		// The legend wraps into centered rows that fit the chart; each extra row moves the plot down.
+		const legendRowHeight = chartTheme.legendTextSize + 6;
+		const legendRows = [];
+		for (const p of players) {
+			const itemWidth = p.player_name.length * 7 + 40;
+			const row = legendRows[legendRows.length - 1];
+			if (row && row.width + itemWidth - 10 <= width - 20) {
+				row.items.push({ player: p, x: row.width });
+				row.width += itemWidth;
+			} else {
+				legendRows.push({ items: [{ player: p, x: 0 }], width: itemWidth });
+			}
+		}
+		const baseMargin = chartTheme.margin ?? layout.margin;
+		const margin = {
+			...baseMargin,
+			top: baseMargin.top + Math.max(legendRows.length - 1, 0) * legendRowHeight
+		};
 		const w = width - margin.left - margin.right;
 		const h = HEIGHT - margin.top - margin.bottom;
 
@@ -355,52 +373,44 @@
 			.style('fill', 'var(--text)')
 			.text(title);
 
-		// Legend
-		const legendG = svg
-			.append('g')
-			.attr('transform', `translate(${width / 2}, ${chartTheme.legendY})`);
-
-		let legendX = 0;
-		const legendItems = [];
-		// Measure text widths for centering
-		players.forEach((p) => {
-			legendItems.push({ player: p, x: legendX });
-			legendX += p.player_name.length * 7 + 40;
-		});
-		const totalLegendWidth = legendX - 10;
-		const legendOffset = -totalLegendWidth / 2;
-
-		players.forEach((p, i) => {
-			const item = legendItems[i];
-			const lg = legendG
+		// Legend, a row at a time, each centered on the estimated widths of its names.
+		legendRows.forEach((row, rowIndex) => {
+			const legendG = svg
 				.append('g')
-				.attr('transform', `translate(${legendOffset + item.x}, 0)`);
+				.attr('transform', `translate(${width / 2}, ${chartTheme.legendY + rowIndex * legendRowHeight})`);
+			const legendOffset = -(row.width - 10) / 2;
 
-			// Color line
-			lg.append('line')
-				.attr('x1', 0)
-				.attr('x2', 18)
-				.attr('y1', 0)
-				.attr('y2', 0)
-				.attr('stroke', p.color)
-				.attr('stroke-width', chartTheme.legendLineWidth)
-				.attr('stroke-linecap', 'round');
+			for (const { player: p, x: itemX } of row.items) {
+				const lg = legendG
+					.append('g')
+					.attr('transform', `translate(${legendOffset + itemX}, 0)`);
 
-			// Dot on line
-			lg.append('circle')
-				.attr('cx', 9)
-				.attr('cy', 0)
-				.attr('r', chartTheme.legendDotRadius)
-				.attr('fill', p.color);
+				// Color line
+				lg.append('line')
+					.attr('x1', 0)
+					.attr('x2', 18)
+					.attr('y1', 0)
+					.attr('y2', 0)
+					.attr('stroke', p.color)
+					.attr('stroke-width', chartTheme.legendLineWidth)
+					.attr('stroke-linecap', 'round');
 
-			// Name
-			lg.append('text')
-				.attr('x', 24)
-				.attr('y', 0)
-				.attr('dy', '0.35em')
-				.attr('font-size', chartTheme.legendTextSize)
-				.style('fill', 'var(--text-secondary, var(--text-muted))')
-				.text(p.player_name);
+				// Dot on line
+				lg.append('circle')
+					.attr('cx', 9)
+					.attr('cy', 0)
+					.attr('r', chartTheme.legendDotRadius)
+					.attr('fill', p.color);
+
+				// Name
+				lg.append('text')
+					.attr('x', 24)
+					.attr('y', 0)
+					.attr('dy', '0.35em')
+					.attr('font-size', chartTheme.legendTextSize)
+					.style('fill', 'var(--text-secondary, var(--text-muted))')
+					.text(p.player_name);
+			}
 		});
 	}
 

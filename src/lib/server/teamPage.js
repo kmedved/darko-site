@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
+import { getLatestGameDate } from '$lib/server/daily.js';
 import { getTeamPageData } from '$lib/server/supabase.js';
 import { knownTeamName } from '$lib/utils/teamRouteUtils.js';
 
@@ -32,11 +33,17 @@ export async function getTeamPagePayload({
     normalizeTeamParam
 }) {
     const teamName = resolveTeamPageName(rawTeamParam, normalizeTeamParam);
-    const teamData = await getTeamPageData(teamName);
+    // The rating says how fresh it is (the last game in the published updates); a date that can't
+    // be read leaves the label off rather than failing the page.
+    const [teamData, ratingsThrough] = await Promise.all([
+        getTeamPageData(teamName),
+        getLatestGameDate().catch(() => null)
+    ]);
 
     return {
         teamName,
-        ...teamData
+        ...teamData,
+        ratingsThrough
     };
 }
 

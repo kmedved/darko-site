@@ -59,7 +59,7 @@ through and the function reads the new table on its next call. Every function in
 table at the next replacement and not recreated: indexes belong in `TABLE_INDEXES` in the
 publisher, and the swap re-applies only row-level security, the `allow_public_read` policy
 and `SELECT` for `anon` and `authenticated`. `npm run migrations:replay` fails, naming the
-dependent, if a migration creates one on a replaced table that the replay contains.
+dependent, if a migration creates one on any of these eight tables.
 
 ---
 
@@ -79,9 +79,9 @@ Core fact table. One row per player per game-date.
 - **Site reads:** every column reaches the server, because `get_active_player_ratings` and
   `get_season_start_player_ratings` return whole rows (`pr.*`). The direct selects and filters
   in `src/lib/server/supabase.js` (`RATING_COLUMNS`, `TRAJECTORY_RATING_COLUMNS`,
-  `PLAYER_PROFILE_RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS` and literal selects) name 70 of the
-  76: all but `game_value`, `wins_pg`, `warp`, `sal_poolshare`, `sal_vetfloor` and `sal_market`,
-  which no page uses.
+  `PLAYER_PROFILE_RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS` and literal selects) name 71 of the
+  76: all but `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`, which no
+  page uses.
 
 Built by `build_supabase_tables()` in `pipeline_scripts/publish/website.py`, which left-joins six
 source files on `(nba_id, date)`, each filtered to the base table's keys before it is collected:
@@ -376,11 +376,21 @@ Dimension table. One row per player.
 Season simulation results. One row per team.
 
 - **Rows:** 30
-- **Update strategy:** TRUNCATE + reload every run
-- **Source:** `calculated_data/season_sim.csv`
+- **Update strategy:** reloaded on every publish: inside the swap, `TRUNCATE` and `INSERT` from
+  its staging table, so the table keeps its definition, grants and policies. Before staging, the
+  publish checks that every bundle column exists in the live table with the same type or a
+  lossless widening (`smallint` to `integer` to `bigint`, `real` to `double precision`) and
+  refuses otherwise, so a new column needs a migration first. Only on a database without the
+  table does the publish create it from the bundle's types, with the read policy and grants.
+- **Indexes:** none from the publisher
+- **Source:** `calculated_data/season_sim.csv`, written by the season-simulation stage
+  (`34_season_simulation_work/season_sim/`), read with `pl.read_csv` and published as it is. The
+  types below are the bundle's, as Polars reads that file.
 - **RLS:** Enabled by `supabase/migrations/20260529_001_lock_public_read_tables.sql`; `anon` and `authenticated` keep `SELECT` only for standings/team pages.
+- **Site reads:** all forty (`select('*')`, filtered on `conference` and ordered by `Rk` for
+  standings, filtered on `team_name` for team pages)
 
-| # | Column | Postgres type | Notes |
+| # | Column | Type (bundle) | Notes |
 |---|---|---|---|
 | 1 | conference | text | "East" or "West" |
 | 2 | Rk | bigint | Rank within conference |
@@ -419,23 +429,34 @@ Season simulation results. One row per team.
 | 35 | Pick2% | double precision | P(2nd overall pick) |
 | 36 | Pick3% | double precision | P(3rd overall pick) |
 | 37 | ExpPick | double precision | Expected draft pick position |
+| 38 | Rem SOS | double precision | Remaining strength of schedule: mean opponent SRS, adjusted for home court (higher is harder) |
+| 39 | Rem H | bigint | Remaining home games |
+| 40 | Rem A | bigint | Remaining away games |
 
 ---
 
 ### win_distribution
 
-Win probability distribution. One row per team per win count.
+Win probability distribution. One row per team per simulated win total.
 
-- **Rows:** ~525 (30 teams × ~17–18 win buckets)
-- **Update strategy:** TRUNCATE + reload every run
-- **Source:** `calculated_data/win_distribution.parq`
+- **Rows:** up to ~525 during a season (30 teams × ~17–18 win totals); 30 once every game is played
+- **Update strategy:** reloaded on every publish: inside the swap, `TRUNCATE` and `INSERT` from
+  its staging table, so the table keeps its definition, grants and policies. Before staging, the
+  publish checks that every bundle column exists in the live table with the same type or a
+  lossless widening (`smallint` to `integer` to `bigint`, `real` to `double precision`) and
+  refuses otherwise, so a new column needs a migration first. Only on a database without the
+  table does the publish create it from the bundle's types, with the read policy and grants.
+- **Indexes:** none from the publisher
+- **Source:** `calculated_data/win_distribution.parq`, written by the season-simulation stage and
+  published as it is; the types below are the bundle's, as Polars reads that file.
 - **RLS:** Enabled by `supabase/migrations/20260529_001_lock_public_read_tables.sql`; `anon` and `authenticated` keep `SELECT` only for team win-distribution charts.
+- **Site reads:** all five (`select('*')`, filtered on `team_name`, ordered by `wins`)
 
-| # | Column | Postgres type | Notes |
+| # | Column | Type (bundle) | Notes |
 |---|---|---|---|
-| 1 | tm_id | integer | Team NBA ID |
-| 2 | wins | bigint | Win count |
-| 3 | count | integer | Simulation count for this bucket |
+| 1 | tm_id | bigint | Team NBA ID |
+| 2 | wins | bigint | Win total |
+| 3 | count | integer | Simulations ending with this many wins |
 | 4 | prob | double precision | Probability of finishing with this many wins |
 | 5 | team_name | text | Team abbreviation |
 
@@ -443,32 +464,66 @@ Win probability distribution. One row per team per win count.
 
 ### lineup_ratings
 
-Five-man lineup ratings used by the `/lineups` page. One row per lineup variant.
+Two- to five-man lineup ratings used by the `/lineups` page and team pages. One row per lineup,
+team and variant.
 
-- **Rows:** varies by upload
-- **Update strategy:** rebuilt and swapped in on every publish (`--no-full-reload lineup_ratings` refills the existing table instead)
-- **RLS:** Enabled by `supabase/migrations/20260616_001_lock_public_fact_tables.sql`; `anon` and `authenticated` keep `SELECT` only for the `/lineups` page.
-- **Frontend note:** `/lineups` reads `team_name` when present and falls back to `"Team pending"` while that column is rolling out.
-- **Variant note:** `variant='pi'` stays PI; `variant='raw'` and `variant='npi'` are both normalized into the NPI bucket on the frontend during the upload transition.
+- **Rows:** 145,194 in the current lineup files (72,597 per variant)
+- **Update strategy:** rebuilt and swapped in on every publish (`--no-full-reload lineup_ratings`
+  refills the existing table instead)
+- **Indexes** (`TABLE_INDEXES`): `(variant, lineup_size)`, `(min_season_poss DESC)`, `(tm_id)`
+- **Source:** `build_lineup_ratings()` in `pipeline_scripts/publish/website.py`. It stacks every
+  column of `external_share/lineup_elo_pi_2pass.parq` and `lineup_elo_npi_2pass.parq` (falling
+  back to the files without `_2pass`), renames `Player 1` … `Player 5` to `player_1` …
+  `player_5`, adds `computed_on`, and on `raw` rows fills the three `total_*` columns from the
+  `*_elo_rating` ones. No pipeline stage rebuilds those files; the current ones were written on
+  2026-03-26. The types below are the builder's output from them.
+- **RLS:** Enabled by `supabase/migrations/20260616_001_lock_public_fact_tables.sql` and
+  re-applied by every swap; `anon` and `authenticated` keep `SELECT` only.
+- **Variant note:** the NPI file's rows carry `variant = 'raw'`. The site queries `pi`, `raw` and
+  `npi` and puts `raw` and `npi` in its NPI bucket; team names come from `tm_id`.
+- **Site reads:** 22 of the 34 columns: `LINEUP_RATING_COLUMNS` in `src/lib/server/supabase.js`
+  (`variant`, `lineup_size`, `min_season_poss`, the three `total_*` ratings, the three
+  `*_synergy` columns, `tm_id`, `player_1` … `player_5` and `player_1_id` … `player_5_id`), plus
+  `group_key` (sort order) and `computed_on`; not `off_elo_rating`, `def_elo_rating`,
+  `net_elo_rating`, the four `*_total_poss` and `*_season_poss` columns, the three `*_prior`
+  columns, `expansion_mode` or `net_rating_model`
 
 | # | Column | Postgres type | Notes |
 |---|---|---|---|
-| 1 | variant | text | Variant label (`pi`, `raw`, `npi`) |
-| 2 | min_season_poss | real | Minimum possession sample used for the lineup |
-| 3 | total_net_rating | real | Total net rating shown as Net +/- |
-| 4 | total_off_rating | real | Total offensive rating shown as Off +/- |
-| 5 | total_def_rating | real | Total defensive rating shown as Def +/- |
-| 6 | team_name | text | Optional team label; may be absent during rollout |
-| 7 | player_1 | text | First player display name |
-| 8 | player_2 | text | Second player display name |
-| 9 | player_3 | text | Third player display name |
-| 10 | player_4 | text | Fourth player display name |
-| 11 | player_5 | text | Fifth player display name |
-| 12 | player_1_id | bigint | First player NBA ID |
-| 13 | player_2_id | bigint | Second player NBA ID |
-| 14 | player_3_id | bigint | Third player NBA ID |
-| 15 | player_4_id | bigint | Fourth player NBA ID |
-| 16 | player_5_id | bigint | Fifth player NBA ID |
+| 1 | off_elo_rating | double precision | The lineup model's offensive rating; the builder copies it into `total_off_rating` on `raw` rows |
+| 2 | off_total_poss | double precision | The model's effective sample behind the offensive rating |
+| 3 | off_season_poss | double precision | The lineup's offensive possessions this season |
+| 4 | player_1_id | bigint | First player NBA ID |
+| 5 | player_2_id | bigint | Second player NBA ID |
+| 6 | player_1 | text | First player display name |
+| 7 | player_2 | text | Second player display name |
+| 8 | def_elo_rating | double precision | The lineup model's defensive rating; copied into `total_def_rating` on `raw` rows |
+| 9 | def_total_poss | double precision | The model's effective sample behind the defensive rating |
+| 10 | def_season_poss | double precision | The lineup's defensive possessions this season |
+| 11 | net_elo_rating | double precision | The lineup model's net rating; copied into `total_net_rating` on `raw` rows |
+| 12 | min_season_poss | double precision | The smaller of `off_season_poss` and `def_season_poss`; the site filters on it |
+| 13 | tm_id | bigint | Team NBA ID |
+| 14 | off_synergy | double precision | Offensive rating beyond the players' prior (null on `raw` rows) |
+| 15 | def_synergy | double precision | Defensive rating beyond the players' prior (null on `raw` rows) |
+| 16 | net_synergy | double precision | `off_synergy + def_synergy` (null on `raw` rows) |
+| 17 | off_prior | double precision | Offensive prior from the players (null on `raw` rows) |
+| 18 | def_prior | double precision | Defensive prior from the players (null on `raw` rows) |
+| 19 | net_prior | double precision | `off_prior + def_prior` (null on `raw` rows) |
+| 20 | total_off_rating | double precision | Offensive rating shown as Off +/-: prior plus synergy on `pi` rows, `off_elo_rating` on `raw` rows |
+| 21 | total_def_rating | double precision | Defensive rating shown as Def +/-: prior plus synergy on `pi` rows, `def_elo_rating` on `raw` rows |
+| 22 | total_net_rating | double precision | Net rating shown as Net +/-: prior plus synergy on `pi` rows, `net_elo_rating` on `raw` rows |
+| 23 | group_key | text | Player IDs joined with `|`; a tie-breaker in the site's page order |
+| 24 | lineup_size | bigint | Players in the lineup, 2 to 5 |
+| 25 | variant | text | `pi` (prior-informed) or `raw` (the NPI file's rows) |
+| 26 | expansion_mode | text | `2pass` or `cross`: how the model expanded lineup groups |
+| 27 | net_rating_model | text | The net-rating method (`heuristic_2pass` or `joint_cross`) |
+| 28 | player_3 | text | Third player display name (null below three players) |
+| 29 | player_3_id | bigint | Third player NBA ID (null below three players) |
+| 30 | player_4 | text | Fourth player display name (null below four players) |
+| 31 | player_4_id | bigint | Fourth player NBA ID (null below four players) |
+| 32 | player_5 | text | Fifth player display name (null below five players) |
+| 33 | player_5_id | bigint | Fifth player NBA ID (null below five players) |
+| 34 | computed_on | date | The day the newer lineup file was written; the files carry no dates |
 
 ---
 
@@ -574,7 +629,7 @@ Elo voting remains the only write path. `supabase/migrations/20260617_001_restor
 
 ### RATING_COLUMNS
 
-Comma-joined string of 69 of the 76 `player_ratings` columns, selected by the per-player history reads (`getPlayerHistory()`, and `getFullPlayerHistory()` by default). It leaves out `opp_id` (the player-profile history selects it through `PLAYER_PROFILE_RATING_COLUMNS`) and six salary columns no page displays: `game_value`, `wins_pg`, `warp`, `sal_poolshare`, `sal_vetfloor` and `sal_market`. If you add a column to the DB, add it here (or to the narrower lists) or those reads won't fetch it; the whole-row RPCs return it regardless.
+Comma-joined string of 70 of the 76 `player_ratings` columns, selected by the per-player history reads (`getPlayerHistory()`, and `getFullPlayerHistory()` by default). It leaves out `opp_id` (the player-profile history selects it through `PLAYER_PROFILE_RATING_COLUMNS`) and five salary columns no page displays: `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`. If you add a column to the DB, add it here (or to the narrower lists) or those reads won't fetch it; the whole-row RPCs return it regardless.
 
 ### Core data functions
 

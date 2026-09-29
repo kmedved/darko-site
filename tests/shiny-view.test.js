@@ -196,8 +196,8 @@ test('Shiny leaderboard filters and trajectories reuse the existing page DOM', a
     ]);
 
     assert.match(leaderboard, /class="column-filter-row table-sizing-row"/);
-	assert.match(leaderboard, /\.table-header-scroll :is\(\.header-row, \.column-filter-row\) th:nth-child\(1\)/);
-	assert.match(leaderboard, /\.table-header-scroll :is\(\.header-row, \.column-filter-row\) th:nth-child\(2\)/);
+	assert.match(leaderboard, /\.table-header-scroll :is\(\.group-row, \.header-row, \.column-filter-row\) th:nth-child\(1\)/);
+	assert.match(leaderboard, /\.table-header-scroll :is\(\.group-row, \.header-row, \.column-filter-row\) th:nth-child\(2\)/);
 	assert.match(leaderboard, /getMetricHeatVariables\(column\.key, value, leaderboardHeatScales\)/);
 	assert.match(leaderboard, /buildPresetHeatScales\(players, 'talent'\)/);
 	assert.doesNotMatch(leaderboard, /buildPresetHeatScales\((?:sortedPlayers|filteredPlayers|teamScopedPlayers),/);

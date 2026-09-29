@@ -2,8 +2,9 @@
 	/**
 	 * The page heading every route shares: an optional eyebrow, the title, an optional lede, then
 	 * anything the page adds (a note, a date line), with optional actions on the right. `logo`
-	 * puts a decorative team logo beside the title. Styles live in app.css (.page-header); the
-	 * Shiny view restyles it through its data-shiny hooks.
+	 * puts a decorative team logo beside the title; `aside` is a headline figure on the right (a
+	 * team's rating). Styles live in app.css (.page-header); the Shiny view restyles it through
+	 * its data-shiny hooks.
 	 */
 	let {
 		eyebrow = '',
@@ -12,6 +13,7 @@
 		lede = '',
 		logo = '',
 		actions,
+		aside,
 		children,
 		class: className = ''
 	} = $props();
@@ -36,5 +38,8 @@
 	</div>
 	{#if actions}
 		<div class="page-header-actions">{@render actions()}</div>
+	{/if}
+	{#if aside}
+		<div class="page-header-aside">{@render aside()}</div>
 	{/if}
 </header>

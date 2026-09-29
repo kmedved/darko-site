@@ -4,8 +4,16 @@
  * the current players whose ten closest comps include one of this player's seasons.
  */
 
-import { seasonLabelFromEndYear } from './timeMachine.js';
+import { AS_OF_PARAM, seasonLabelFromEndYear } from './timeMachine.js';
 import { teamAbbrFromId } from './teamAbbreviations.js';
+
+/**
+ * The leaderboard on a season's own recorded day, so the player shows the rating the table
+ * lists, even for the season still being played; null without a date.
+ */
+export function seasonBoardHref(row) {
+	return row?.date ? `/?${AS_OF_PARAM}=${row.date}` : null;
+}
 
 function toNumber(value) {
 	const n = typeof value === 'number' ? value : Number.parseFloat(value);
@@ -26,9 +34,12 @@ export function seasonRows(seasons, { asOf = null, inProgress = null } = {}) {
 			const offense = toNumber(row.o_dpm);
 			const defense = toNumber(row.d_dpm) ?? (dpm !== null && offense !== null ? dpm - offense : null);
 			const age = toNumber(row.age);
+			const date = String(row.date ?? '').slice(0, 10);
 			return {
 				season: Number(row.season),
 				label: seasonLabelFromEndYear(row.season),
+				// The season's last game day, which opens the leaderboard as it stood then.
+				date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
 				team: teamAbbrFromId(row.tm_id) || '—',
 				age: age === null ? null : Math.floor(age),
 				games,

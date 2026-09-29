@@ -14,6 +14,7 @@
     league={data.league}
     sim={data.sim}
     winDist={data.winDist}
+    ratingsThrough={data.ratingsThrough}
     lineups={data.lineups}
     backHref="/"
     backLabel="← Back to leaderboard"

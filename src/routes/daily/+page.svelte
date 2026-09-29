@@ -5,6 +5,7 @@
 	import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
 	import OffenseDefenseGlyph from '$lib/components/OffenseDefenseGlyph.svelte';
 	import OffenseDefenseSplit from '$lib/components/OffenseDefenseSplit.svelte';
+	import LeadTrendChart from '$lib/components/LeadTrendChart.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Sparkline from '$lib/components/Sparkline.svelte';
 	import WatchStar from '$lib/components/WatchStar.svelte';
@@ -15,6 +16,7 @@
 		WINDOWS,
 		ageRecordText,
 		chooseWindow,
+		datedSeriesFrom,
 		editionPhase,
 		headline,
 		lastName,
@@ -32,7 +34,6 @@
 
 	const WINDOW_KEY = 'darko-daily-window';
 	let requested = $state('7');
-	let leadWidth = $state(0);
 	let fetchedCards = $state(null);
 
 	onMount(() => {
@@ -64,7 +65,7 @@
 	const phase = $derived(ready ? editionPhase(data.updates['7']) : 'offseason');
 	const leader = $derived(data.board?.[0] ?? null);
 	const seasonText = $derived(data.season ? seasonLabel(data.season) : '');
-	const leadSeries = $derived(leader && ready ? seriesFrom(data.series[leader.id], data.seasonStart) : []);
+	const leadSeries = $derived(leader && ready ? datedSeriesFrom(data.series[leader.id], data.seasonStart) : []);
 
 	const watching = $derived($watchlist.length > 0);
 	const cards = $derived(watching ? (fetchedCards ?? []) : (data.suggested ?? []));
@@ -157,7 +158,7 @@
 {/snippet}
 
 <div class="container daily-page" data-shiny-page>
-	<PageHeader {eyebrow} {title}>
+	<PageHeader {eyebrow} {title} class="page-header--editorial">
 		{#if latest}
 			{#if ledeText}<p class="page-lede">{ledeText}</p>{/if}
 		{:else}
@@ -195,16 +196,11 @@
 							<span class="lead-value">{formatSigned(leader.dpm, 1)}</span>
 						</div>
 						{#if leadSeries.length > 1}
-							<div class="lead-chart" bind:clientWidth={leadWidth}>
-								{#if leadWidth > 0}
-									<Sparkline
-										values={leadSeries}
-										width={leadWidth}
-										height={64}
-										color="var(--accent)"
-										label="{leader.name}'s DPM through {seasonText}"
-									/>
-								{/if}
+							<div class="lead-chart">
+								<LeadTrendChart
+									points={leadSeries}
+									label="{leader.name}'s DPM through {seasonText}, game by game"
+								/>
 								<p class="lead-caption">{leader.name}'s DPM through {seasonText}, game by game</p>
 							</div>
 						{/if}
@@ -507,9 +503,12 @@
 
 	.lead-name h3 {
 		margin: 2px 0 6px;
-		font-size: 22px;
+		font-family: var(--font-display);
+		font-size: clamp(22px, 2.2vw, 28px);
 		font-weight: 800;
-		letter-spacing: -0.02em;
+		font-stretch: 112%;
+		letter-spacing: -0.015em;
+		line-height: 1.1;
 	}
 
 	.lead-name h3 a {
@@ -517,15 +516,18 @@
 	}
 
 	.lead-value {
-		font-family: var(--font-mono);
-		font-size: 40px;
-		font-weight: 700;
-		line-height: 1;
+		font-family: var(--font-display);
+		font-size: clamp(40px, 4vw, 52px);
+		font-weight: 800;
+		font-stretch: 112%;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: -0.02em;
+		line-height: 0.95;
 		color: var(--text);
 	}
 
 	.lead-chart {
-		margin-top: 12px;
+		margin-top: 14px;
 	}
 
 	.lead-caption {
@@ -581,7 +583,7 @@
 	.board-value {
 		font-family: var(--font-mono);
 		font-size: 13px;
-		font-weight: 700;
+		font-weight: var(--figure-weight-strong);
 		text-align: right;
 	}
 
@@ -683,7 +685,7 @@
 	.delta {
 		font-family: var(--font-mono);
 		font-size: 13px;
-		font-weight: 700;
+		font-weight: var(--figure-weight-strong);
 		text-align: right;
 		white-space: nowrap;
 	}
@@ -724,14 +726,18 @@
 	}
 
 	.record-rank {
-		font-family: var(--font-mono);
-		font-size: 18px;
+		font-family: var(--font-display);
+		font-size: 19px;
 		font-weight: 800;
+		font-stretch: 112%;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.record-rank small {
+		font-family: var(--font-mono);
 		font-size: 11px;
-		font-weight: 600;
+		font-weight: var(--figure-weight);
+		font-stretch: 100%;
 		color: var(--text-muted);
 	}
 
@@ -790,9 +796,11 @@
 	}
 
 	.watch-value {
-		font-family: var(--font-mono);
+		font-family: var(--font-display);
 		font-size: 28px;
-		font-weight: 700;
+		font-weight: 800;
+		font-stretch: 112%;
+		font-variant-numeric: tabular-nums;
 		line-height: 1.1;
 	}
 

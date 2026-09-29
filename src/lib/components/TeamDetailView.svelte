@@ -30,10 +30,12 @@
         teamPlayerSortConfig
     } from '$lib/utils/leaderboardColumns.js';
     import MetricTooltip from '$lib/components/MetricTooltip.svelte';
+    import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
+    import OffenseDefenseSplit from '$lib/components/OffenseDefenseSplit.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
-    import StatTile from '$lib/components/StatTile.svelte';
     import { NBA_TEAMS, teamAbbr, teamId as teamIdFromName } from '$lib/utils/teamAbbreviations.js';
     import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
+    import { formatAsOfDate } from '$lib/utils/timeMachine.js';
 
     let {
         teamName = '',
@@ -43,7 +45,9 @@
         league = [],
         sim = null,
         winDist = [],
-        lineups = { top: [], worst: [] }
+        lineups = { top: [], worst: [] },
+        // The last game the ratings take in (daily.js getLatestGameDate).
+        ratingsThrough = null
     } = $props();
 
     let sortColumn = $state('player_name');
@@ -150,6 +154,31 @@
         if (!Number.isFinite(n)) return '—';
         return `${n >= 0 ? '+' : ''}${formatFixed(n, 2)}`;
     }
+
+    // One line of season facts under the name: the result once the season is over, and the
+    // simulation's odds while it runs.
+    const seasonFacts = $derived.by(() => {
+        if (!sim) return [];
+        if (simFinished) {
+            const seed = finalSeed(sim);
+            return [
+                `Final ${sim.Current}`,
+                seed ? `${ordinal(seed)} seed` : null,
+                seasonResult(sim),
+                `SRS ${formatSignedSrs(sim.SRS)}`
+            ].filter(Boolean);
+        }
+        return [
+            `Record ${sim.Current}`,
+            `Projected ${formatFixed(sim.W)}-${formatFixed(sim.L)}`,
+            `Playoffs ${formatFixed(sim.Playoffs)}%`,
+            `Win conference ${formatFixed(sim['Win Conf'])}%`,
+            `Win Finals ${formatFixed(sim['Win Finals'])}%`,
+            `Lottery ${formatFixed(sim['Lottery%'])}%`,
+            `Expected pick ${formatFixed(sim.ExpPick)}`,
+            `SRS ${formatSignedSrs(sim.SRS)}`
+        ];
+    });
 
     const teamPlayerColumns = TEAM_PLAYER_COLUMNS;
 
@@ -323,18 +352,24 @@
 <div class="container team-detail-page" data-shiny-page>
     <a class="back-link" href={backHref}>{backLabel}</a>
 
+    <!-- How good the team is and why come first: the rating, then where it comes from, then the
+         roster in detail. -->
     <PageHeader
         title={teamName || 'Team'}
+        eyebrow={sim ? `${sim.conference}ern Conference` : ''}
         logo={teamId ? `https://cdn.nba.com/logos/nba/${teamId}/global/L/logo.svg` : ''}
-        lede={sim
-            ? simFinished
-                ? `${sim.conference}ern Conference · Final: ${sim.Current}${finalSeed(sim) ? ` · ${ordinal(finalSeed(sim))} seed` : ''} · ${seasonResult(sim)}`
-                : `${sim.conference}ern Conference · Current: ${sim.Current} · Projected: ${formatFixed(sim.W)}-${formatFixed(sim.L)}`
-            : knownTeam
-                ? 'Current ratings for all current-season players on the team.'
-                : 'Team not found.'}
+        lede={sim ? '' : knownTeam ? 'Current ratings for all current-season players on the team.' : 'Team not found.'}
+        class="page-header--editorial team-header"
     >
-        {#snippet actions()}
+        {#if seasonFacts.length > 0}
+            <p class="team-facts">
+                {#each seasonFacts as fact (fact)}<span>{fact}</span>{/each}
+            </p>
+        {/if}
+        <div class="team-header-actions">
+            {#if abbr && teamPlayers.length > 0}
+                <a class="btn" href="/lab?a={abbr}">Rebuild in the Roster Lab</a>
+            {/if}
             <button
                 class="btn"
                 type="button"
@@ -343,43 +378,44 @@
             >
                 Download CSV
             </button>
+        </div>
+        {#snippet aside()}
+            {#if ratingSummary}
+                <div class="team-score">
+                    <p class="team-score-label">
+                        DARKO rating · #{ratingSummary.rank} of {ratingSummary.teams}
+                        <MetricTooltip
+                            text="Each player's DPM weighted by DARKO's projected minutes and scaled to 240 team minutes: points per 100 possessions against an average team. The Roster Lab rates teams the same way."
+                            label="About DARKO rating"
+                        ><span class="info-dot" aria-hidden="true">i</span></MetricTooltip>
+                    </p>
+                    <span class="team-score-value">{formatSigned(ratingSummary.rating, 1)}</span>
+                    <div class="team-score-split">
+                        <OffenseDefenseBar offense={ratingSummary.offense} defense={ratingSummary.defense} max={6} />
+                        <OffenseDefenseSplit offense={ratingSummary.offense} defense={ratingSummary.defense} labels />
+                    </div>
+                    <p class="team-score-note">
+                        Worth about {Math.round(ratingSummary.wins)} wins over 82 games
+                        <MetricTooltip
+                            text="The Roster Lab's rule of thumb, not a DARKO output: 41 wins plus 2.7 for each point above the league's average team."
+                            label="About the wins"
+                        ><span class="info-dot" aria-hidden="true">i</span></MetricTooltip>
+                    </p>
+                    {#if ratingsThrough}
+                        <p class="team-score-date">Ratings through {formatAsOfDate(ratingsThrough, { short: true })}</p>
+                    {/if}
+                </div>
+            {/if}
         {/snippet}
     </PageHeader>
 
-    {#if ratingSummary}
-        <section class="stat-strip" aria-label="DARKO team rating">
-            <StatTile
-                label="DARKO rating"
-                value={formatSigned(ratingSummary.rating, 1)}
-                detail={`#${ratingSummary.rank} of ${ratingSummary.teams}`}
-                hint="Each player's DPM weighted by DARKO's projected minutes and scaled to 240 team minutes: points per 100 possessions against an average team. The Roster Lab rates teams the same way."
-            />
-            <StatTile label="Offense" value={formatSigned(ratingSummary.offense, 1)} />
-            <StatTile label="Defense" value={formatSigned(ratingSummary.defense, 1)} />
-            <StatTile
-                label="Worth"
-                value={`${Math.round(ratingSummary.wins)} wins`}
-                detail="over 82 games"
-                hint="The Roster Lab's rule of thumb, not a DARKO output: 41 wins plus 2.7 for each point above the league's average team."
-            />
-        </section>
-    {/if}
-
-    {#if sim && simFinished}
-        <section class="stat-strip" aria-label="Season result">
-            <StatTile label="Record" value={sim.Current} />
-            <StatTile label="Seed" value={finalSeed(sim) ?? '—'} />
-            <StatTile label="Result" value={seasonResult(sim)} />
-            <StatTile label="SRS" value={formatSignedSrs(sim.SRS)} />
-        </section>
-    {:else if sim}
-        <section class="stat-strip" aria-label="Season simulation">
-            <StatTile label="Playoff%" value={`${formatFixed(sim.Playoffs)}%`} />
-            <StatTile label="Win Conf" value={`${formatFixed(sim['Win Conf'])}%`} />
-            <StatTile label="Win Finals" value={`${formatFixed(sim['Win Finals'])}%`} />
-            <StatTile label="SRS" value={formatSignedSrs(sim.SRS)} />
-            <StatTile label="Lottery%" value={`${formatFixed(sim['Lottery%'])}%`} />
-            <StatTile label="E[Pick]" value={formatFixed(sim.ExpPick)} hint="Expected draft pick" />
+    {#if contributions.length > 0}
+        <section class="dna dna-section" id="team-dna" aria-labelledby="dna-contrib-title" data-shiny-surface="plot">
+            <h2 class="section-title" id="dna-contrib-title">Where the rating comes from</h2>
+            <RatingBreakdown rows={contributions} {teamName} />
+            {#if abbr}
+                <a class="dna-link" href="/lab?a={abbr}">Rebuild this roster in the Roster Lab →</a>
+            {/if}
         </section>
     {/if}
 
@@ -446,18 +482,8 @@
     {/if}
 
 
-    {#if contributions.length > 0 || payroll.rows.length > 0}
-        <div class="dna" id="team-dna">
-            {#if contributions.length > 0}
-                <section class="dna-section" aria-labelledby="dna-contrib-title" data-shiny-surface="plot">
-                    <h2 class="section-title" id="dna-contrib-title">Where the rating comes from</h2>
-                    <RatingBreakdown rows={contributions} {teamName} />
-                    {#if abbr}
-                        <a class="dna-link" href="/lab?a={abbr}">Rebuild this roster in the Roster Lab →</a>
-                    {/if}
-                </section>
-            {/if}
-
+    {#if core.length > 0 || payroll.rows.length > 0}
+        <div class="dna-after">
             <div class="dna-pair">
                 {#if core.length > 0}
                     <section class="dna-section" aria-labelledby="dna-core-title" data-shiny-surface="panel">
@@ -605,6 +631,134 @@
         color: var(--accent);
     }
 
+    /* The header: the season's facts and the actions under the name, the rating on the right. */
+    .team-facts {
+        display: flex;
+        flex-wrap: wrap;
+        row-gap: 2px;
+        margin-top: 8px;
+        color: var(--text-secondary);
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .team-facts span:not(:last-child)::after {
+        content: '·';
+        margin: 0 8px;
+        color: var(--text-muted);
+    }
+
+    .team-header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    .team-score {
+        display: grid;
+        justify-items: end;
+        gap: 6px;
+        text-align: right;
+    }
+
+    .team-score-label,
+    .team-score-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+    }
+
+    .team-score-label {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .team-score-value {
+        font-family: var(--font-display);
+        font-size: clamp(52px, 5vw, 64px);
+        font-weight: 800;
+        font-stretch: 116%;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+        line-height: 0.9;
+        color: var(--text);
+    }
+
+    .team-score-split {
+        display: grid;
+        justify-items: end;
+        gap: 6px;
+        font-size: 13px;
+    }
+
+    .team-score-split :global(.od-bar) {
+        width: 180px;
+    }
+
+    .team-score-note {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .team-score-date {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+
+    /* Too narrow for the rating beside the name: it moves under it, the number then the split. */
+    @media (max-width: 1000px) {
+        :global(.team-header .page-header-aside) {
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .team-score {
+            grid-template-columns: auto minmax(0, 1fr);
+            grid-template-areas:
+                'label label'
+                'value split'
+                'note note';
+            align-items: center;
+            justify-items: start;
+            column-gap: 18px;
+            text-align: left;
+        }
+
+        .team-score-label {
+            grid-area: label;
+        }
+
+        .team-score-value {
+            grid-area: value;
+        }
+
+        .team-score-split {
+            grid-area: split;
+            justify-items: start;
+        }
+
+        .team-score-note {
+            grid-area: note;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .team-score-value {
+            font-size: 44px;
+            font-stretch: 108%;
+        }
+
+        .team-header-actions .btn {
+            flex: 1 1 auto;
+        }
+    }
+
     .section-title {
         font-size: 16px;
         font-weight: 600;
@@ -733,7 +887,7 @@
     }
 
     td.tint-cell {
-        font-weight: 700;
+        font-weight: var(--figure-weight-strong);
     }
 
     th.num {
@@ -751,11 +905,16 @@
         opacity: 1;
     }
 
-    /* Team DNA: the rating chart gets the full width; core outlook and payroll share a row. */
+    /* Team DNA: the rating chart gets the full width, over the roster; core outlook and payroll
+       share a row under it. */
     .dna {
         margin-bottom: 32px;
         /* Ask DARKO links to #team-dna; the heading clears the sticky nav. */
         scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
+    }
+
+    .dna-after {
+        margin-bottom: 32px;
     }
 
     .dna-section {
@@ -935,7 +1094,7 @@
         display: block;
         padding: 3px 6px;
         border-radius: 3px;
-        font-weight: 600;
+        font-weight: var(--figure-weight-strong);
     }
 
     .dna-legend .pay-key {

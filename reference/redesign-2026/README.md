@@ -13,8 +13,8 @@ Reference only. Nothing in this folder is built, tested or deployed by the site.
 
 | Feature | Prototype source | Port target |
 |---|---|---|
-| The Daily: headline, movers, single-game shocks, age records, watchlist | `src/10-today.js` | Live at `/daily` (`utils/daily.js`), from nba_darko's `rating_moves`, `game_updates` and `player_seasons` tables |
-| Rewind: global date scrubber and weekly top-15 race since 1996-97 | `src/03-floor.js`, `src/16-rewind.js` | `/rewind` and the Time Machine strip, on the `rating_frames` table |
+| The Daily: headline, movers, single-game shocks, age records, watchlist | `src/10-today.js` | Live at `/daily` (`utils/daily.js`), from nba_darko's `rating_moves`, `game_updates` and `player_seasons` tables. Between seasons it is off the menus, What's new and Ask DARKO, and back on the morning of October 22, two days into the season (`DAILY_RETURNS`) |
+| Rewind: global date scrubber and weekly top-15 race since 1996-97 | `src/03-floor.js`, `src/16-rewind.js` | `/rewind` and the Time Machine strip, on the `rating_frames` table; the strip gives the latest season its own stretch, scrubbed by the day (`utils/timeStrip.js`) |
 | Seismograph: every game's DPM update, split offense/defense | `drawSeismo` in `src/12-player.js` | Live on player pages, with opponents from `player_ratings.opp_id` |
 | Comps & Futures: historical matches and a five-year fan chart | `comps.py`, `drawFan` in `src/12-player.js` | Live on player pages: `CompsFutures.svelte`, `utils/comps.js`, from nba_darko's `player_comps` table |
 | Roster Lab: two-team trades, minutes, rating, wins, matchup odds | `src/14-lab.js` | `/lab`, today's rosters or any Time Machine date |
@@ -29,13 +29,27 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
 `src/02-ui.js` (O/X split bar, sparkline, skill fingerprint glyph, tooltip) and
 `src/04-charts.js` (time-series chart with crosshair).
 
+## Also ported from the prototype's pages
+
+| Prototype page | What the site has |
+|---|---|
+| Teams (`src/13-teams.js`) | `/teams`: offense against defense for all 30 teams and the power order (`TeamQuadrant.svelte`, `utils/teamsOverview.js`) |
+| Player (`src/12-player.js`) | Season by season, Echoes today, the projected box score, Contract & longevity, the rank-for-age line over Comps & futures, "#N of M" by the DPM, height, weight and career games, a Roster Lab link, a jump menu over the sections, and the ten skills as a set in the percentile chart (`utils/playerSeasons.js`, `utils/boxScore.js`, `utils/playerProfile.js`, `utils/playerSkills.js`). The page opens like the prototype's `p-head`: photo, name, facts and actions, with the rating on the right, then the jump menu; each chart's controls sit over it. The Shiny view keeps its sidebar (`src/shiny-view.css`) |
+| Team (`src/13-teams.js`, `t-head`) | Team pages open on the rating (rank, offense and defense, wins) and a line of season facts, then "Where the rating comes from", then the roster table (`TeamDetailView.svelte`, the `aside` of `PageHeader.svelte`) |
+| The Daily (`src/10-today.js`) | The featured chart has a value scale, month labels and the latest value and date, on production's game dates with no offseason interpolation (`LeadTrendChart.svelte`, `datedSeriesFrom` in `utils/daily.js`) |
+| Players (`src/11-players.js`) | In the leaderboard: position, age and watchlist filters, each player's position and age under the name, a star on every row, the O/X split under each DPM, optional season sparklines (`/api/history/trends`, remembered per browser) and, with the Time Machine set, Now and Since columns (`utils/leaderboardViews.js`). A new stat moves the Distribution's dots to their new places in a wave instead of redrawing them (`DotDistribution.svelte`) |
+
+Not ported: the Seismograph's comparison line (the prototype's `vs`, another player's DPM in
+grey), since the Compare page covers two players; and the Players page's season-end mode for
+past seasons, since the Time Machine shows the board on any date.
+
 ## Agreed port order
 
 1. Fantasy Lab into `/projections` (done).
 2. Design foundations (offense/defense tokens for every theme, wide numerals, O/X split,
    sparkline, fingerprint glyph) and the Seismograph on player pages (done: tokens, O/X
-   split and split bar; the sparkline waits for the features that use it, and the
-   fingerprint glyph is dropped).
+   split and split bar, and the sparkline in The Daily and the leaderboard; the fingerprint
+   glyph is dropped).
 3. Ask DARKO (done).
 4. Team DNA additions, then Roster Lab (both done).
 5. Pipeline-backed features: Rewind and the site-wide date (done, as the Time Machine),
@@ -43,8 +57,8 @@ Shared pieces: `src/01-data.js` (as-of lookups, movers, skill percentiles, team 
 
 DARKOdle, Card Studio, the Fantasy Lab's draft board and the skill fingerprint glyph are
 dropped: `src/17-darkodle.js`, `src/18-card.js`, the draft board in `src/15-fantasy.js` and
-`glyph()` in `src/02-ui.js` stay as reference only. The player page's percentile bars
-already carry the skill percentiles.
+`glyph()` in `src/02-ui.js` stay as reference only. The glyph's ten skills are in the player
+page's percentile chart instead (its Skills set, `utils/playerSkills.js`).
 
 ## Porting notes
 
@@ -66,7 +80,9 @@ already carry the skill percentiles.
   `current_team` (the offseason placeholder rows have none), so Rate a Player showed everyone as
   "Undrafted" and most teams as "?". Draft pick 0 is a territorial pick.
 - The Jul 26 offseason rows in `player_ratings` have no team (`tm_id = -999`), so the Roster
-  Lab starts from each team's late-season rotation.
+  Lab starts from each team's late-season rotation, and a player's team is the team of their
+  last game. The same rows publish WARP at about a tenth of the season's (Jokic 1.7 against
+  15.8 at the season's end), so the player page shows WARP only while a season is on.
 - Season-end rows in the prototype count playoff games in games and minutes.
 - Comps, Roster Lab team ratings and fantasy values are prototype calculations, not DARKO
   outputs. nba_darko builds comps with the prototype's method (`pipeline_scripts/publish/
@@ -92,6 +108,19 @@ added to `src/app.css`.
 
 Maple stayed in the prototype: on the site, the Time Machine and its as-of marks use each
 theme's accent (`--time: var(--accent)` in `src/app.css`).
+
+## Type and supporting text
+
+- Archivo, the prototype's display face, is self-hosted in `static/fonts/archivo` for page
+  titles, player and team names and headline numbers (`--font-display`), expanded on a desktop
+  and at normal width on a phone. Body text keeps the reader's chosen font; the Shiny view uses
+  Helvetica throughout.
+- Figures stay in DM Mono, which has 400 and 500 only: ordinary figures use `--figure-weight`
+  (400) and emphasis and totals `--figure-weight-strong` (500), and `font-synthesis-weight: none`
+  stops the browser faking a bolder one. The Shiny view sets both to 700 for its Helvetica.
+- `--text-muted` is at least 4.5:1 on every surface of every theme, raised panels included
+  (`tests/readability.test.js` checks each one); lines, dots and icons use `--graphic-muted`,
+  the earlier, quieter gray.
 
 ## Rebuilding and viewing
 

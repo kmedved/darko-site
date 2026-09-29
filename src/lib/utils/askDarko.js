@@ -11,6 +11,7 @@ import { getPositionCategory } from './positionCategories.js';
 import { NBA_TEAMS } from './teamAbbreviations.js';
 import { formatAsOfDate, HISTORY_START, parseAsOfDate, seasonLabelFromEndYear } from './timeMachine.js';
 import { formatSigned } from './seismograph.js';
+import { dailyListed } from './daily.js';
 
 export const ASK_EXAMPLES = Object.freeze([
 	'best defenders under 25',
@@ -365,7 +366,7 @@ export const ASK_PAGES = Object.freeze([
 	{ re: /^(wowy|wowy rapm|rapm)$/, label: 'WOWY RAPM', href: '/wowy' },
 	{ re: /^(standings|playoff odds|odds|sims?|simulations?)$/, label: 'Standings', href: '/standings' },
 	{ re: /^(teams?|team ratings|power (order|rankings?)|offense (vs|against) defense)$/, label: 'Teams', href: '/teams' },
-	{ re: /^(trajectories|trajectory|careers?|career arcs?)$/, label: 'Trajectories', href: '/trajectories' },
+	{ re: /^(trajectories|trajectory|careers?|career arcs?)$/, label: 'Career Trajectories', href: '/trajectories' },
 	{ re: /^(longevity|retirement|career length)$/, label: 'Longevity', href: '/longevity' },
 	{ re: /^(lineups?|five-man|5-man)$/, label: 'Lineups', href: '/lineups' },
 	{ re: /^(scatter|scatterplot|scatter plot)$/, label: 'Scatterplot', href: '/scatterplot' },
@@ -377,6 +378,11 @@ export const ASK_PAGES = Object.freeze([
 	{ re: /^(about|faq|help|methodology)$/, label: 'About', href: '/about' },
 	{ re: /^(what'?s new|new|features|tour|changelog)$/, label: "What's new", href: '/new' }
 ]);
+
+/** The pages Ask DARKO offers at `now`: all of them, less The Daily between seasons. */
+export function askPages(now = new Date()) {
+	return dailyListed(now) ? ASK_PAGES : ASK_PAGES.filter((entry) => entry.href !== '/daily');
+}
 
 /** Opens Ask DARKO from anywhere on a page with `query` typed in; AskDarko.svelte listens. */
 export function openAskDarko(query = '') {
@@ -539,7 +545,7 @@ export function interpretAsk(raw, { players = null, pool = [], calendar = [], se
 	}
 
 	const page = normalized.replace(/^(?:go to|open|show(?: me)?|take me to) (?:the )?/, '');
-	for (const entry of ASK_PAGES) if (entry.re.test(page)) result.pages.push({ label: entry.label, href: entry.href });
+	for (const entry of askPages()) if (entry.re.test(page)) result.pages.push({ label: entry.label, href: entry.href });
 	const team = findTeam(normalized, raw);
 	if (team) result.teams.push(team);
 	result.players = matchPlayers(raw, pool, { limit: 6 });

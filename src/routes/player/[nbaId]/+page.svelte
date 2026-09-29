@@ -21,6 +21,7 @@
 		formatGameDate,
 		formatSigned,
 		getSeismographSeasons,
+		lastPlayedDate,
 		seasonLabel
 	} from '$lib/utils/seismograph.js';
 	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
@@ -31,6 +32,14 @@
 	import { seasonRows } from '$lib/utils/playerSeasons.js';
 	import { projectedBoxScore } from '$lib/utils/boxScore.js';
 	import { seasonOfRow } from '$lib/utils/seismograph.js';
+	import {
+		careerGames,
+		compsSummary,
+		contractTiles,
+		formatHeight,
+		profileSections
+	} from '$lib/utils/playerProfile.js';
+	import { percentileAmong, SKILL_LABELS, SKILL_METRICS, withSkillRates } from '$lib/utils/playerSkills.js';
 
 	let { data } = $props();
 
@@ -53,26 +62,54 @@
 		{ value: 'sal_market_fixed', label: 'Fair Salary' }
 	];
 
-	const PERCENTILE_OPTIONS = [
-		{ value: 'dpm', label: 'DPM' },
-		{ value: 'o_dpm', label: 'O-DPM' },
-		{ value: 'd_dpm', label: 'D-DPM' },
-		{ value: 'on_off_dpm', label: 'On/Off DPM' },
-		{ value: 'bayes_rapm_total', label: 'RAPM' },
-		{ value: 'x_pts_100', label: 'Pts per 100' },
-		{ value: 'x_ast_100', label: 'Ast per 100' },
-		{ value: 'x_fg_pct', label: 'FG%' },
-		{ value: 'x_fg3_pct', label: '3P%' },
-		{ value: 'x_ft_pct', label: 'FT%' },
-		{ value: 'tr_fg3_pct', label: '3P% (trend)' },
-		{ value: 'tr_ft_pct', label: 'FT% (trend)' }
+	// The ratings, the redesign's ten skills (SKILL_METRICS), and the rest of the shooting.
+	const PERCENTILE_GROUPS = [
+		{
+			label: 'Ratings',
+			options: [
+				{ value: 'dpm', label: 'DPM' },
+				{ value: 'o_dpm', label: 'O-DPM' },
+				{ value: 'd_dpm', label: 'D-DPM' },
+				{ value: 'on_off_dpm', label: 'On/Off DPM' },
+				{ value: 'bayes_rapm_total', label: 'RAPM' }
+			]
+		},
+		{
+			label: 'Skills',
+			options: [
+				{ value: 'x_pts_100', label: 'Scoring' },
+				{ value: 'ts_pct', label: 'Efficiency (TS%)' },
+				{ value: 'x_ft_pct', label: 'Touch (FT%)' },
+				{ value: 'x_fg3a_100', label: '3PT volume' },
+				{ value: 'x_ast_100', label: 'Playmaking' },
+				{ value: 'tov_pct', label: 'Ball security' },
+				{ value: 'x_orb_100', label: 'Off. boards' },
+				{ value: 'x_drb_100', label: 'Def. boards' },
+				{ value: 'x_blk_100', label: 'Rim protection' },
+				{ value: 'x_stl_100', label: 'Steals' }
+			]
+		},
+		{
+			label: 'Shooting',
+			options: [
+				{ value: 'x_fg_pct', label: 'FG%' },
+				{ value: 'x_fg3_pct', label: '3P%' },
+				{ value: 'tr_fg3_pct', label: '3P% (trend)' },
+				{ value: 'tr_ft_pct', label: 'FT% (trend)' }
+			]
+		}
 	];
+	// Worth against style: the five ratings (the default), or the ten skills.
+	const PERCENTILE_PRESETS = {
+		ratings: PERCENTILE_GROUPS[0].options.map((option) => option.value),
+		skills: [...SKILL_METRICS]
+	};
 
 	let allActivePlayers = $state([]);
 	let percentilesLoading = $state(true);
 	let percentileNotice = $state(null);
 	let talentType = $state('dpm');
-	let selectedPercentileMetrics = $state(['dpm', 'o_dpm', 'd_dpm', 'x_pts_100', 'x_fg3_pct']);
+	let selectedPercentileMetrics = $state([...PERCENTILE_PRESETS.ratings]);
 	let imgFailed = $state(false);
 	let pickedSeason = $state(null);
 	let showGameLog = $state(false);
@@ -86,12 +123,15 @@
 
 	// With the Time Machine set, the sidebar rating and the Seismograph follow that date.
 	const asOfDate = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
-	// Season by season: in the Time Machine only seasons over by its date; in season, the current
-	// one (a next-game row with a real team) is marked "so far".
+	// Season by season: in the Time Machine only seasons over by its date; in season, a current
+	// player's current season (a next-game row with a real team) is marked "so far". A retired
+	// player's last row also has a real team, which alone would mark their final season.
 	const inProgressSeason = $derived.by(() => {
 		const latest = historyRows.at(-1);
-		return latest && Number(latest.tm_id) > 0 && !asOfDate ? Number(latest.season) : null;
+		return latest && Number(latest.tm_id) > 0 && !asOfDate && isCurrentPlayer ? Number(latest.season) : null;
 	});
+	// The player's last game played (not the next game's forecast row).
+	const lastPlayed = $derived(lastPlayedDate(historyRows));
 	const seasonsTable = $derived(seasonRows(data.seasons, { asOf: asOfDate, inProgress: inProgressSeason }));
 	const echoes = $derived(data.echoes ?? []);
 	const asOfRow = $derived.by(() => {
@@ -153,24 +193,42 @@
 
 	// Only current players have a projection worth showing: a retired player's last row still
 	// carries the projections from his final season.
+	const isCurrentPlayer = $derived(Boolean(playerInfo) && Number(playerInfo.active_roster) === 1);
 	const boxScore = $derived(
-		playerInfo && !asOfDate && Number(playerInfo.active_roster) === 1 ? projectedBoxScore(playerInfo) : null
+		playerInfo && !asOfDate && isCurrentPlayer ? projectedBoxScore(playerInfo) : null
 	);
 
-	const percentiles = $derived.by(() => {
-		if (!playerInfo || allActivePlayers.length === 0) return [];
+	// Today's rank on the board, and the team to open in the Roster Lab (current players only).
+	const rankLabel = $derived(
+		data.dpmRank && !asOfDate ? `#${data.dpmRank.rank} of ${data.dpmRank.of}` : null
+	);
+	const labTeam = $derived(isCurrentPlayer && !asOfDate ? teamAbbr(playerInfo.team_name) : null);
 
-		const position = playerInfo.position;
-		const positionPlayers = position
-			? allActivePlayers.filter((player) => player.position === position)
-			: allActivePlayers;
+	// Contract & longevity: today's figures, so current players only and not in the Time Machine.
+	// Between seasons (no season in progress) the placeholder row's WARP is left out.
+	const contract = $derived(
+		isCurrentPlayer && !asOfDate ? contractTiles(playerInfo, { inSeason: inProgressSeason !== null }) : []
+	);
+	// How the latest season ranks for its age, and the closest comp, over Comps & futures.
+	const compsLine = $derived(asOfDate ? null : compsSummary(seasonsTable, comps));
+
+	// The player's row with the two skill rates (true shooting, turnovers per play) added.
+	const skillInfo = $derived(withSkillRates(playerInfo));
+
+	const percentiles = $derived.by(() => {
+		if (!skillInfo || allActivePlayers.length === 0) return [];
+
+		const position = skillInfo.position;
+		const positionPlayers = (
+			position ? allActivePlayers.filter((player) => player.position === position) : allActivePlayers
+		).map(withSkillRates);
 
 		if (positionPlayers.length === 0) return [];
 
 		// A metric with no value for this player (or anyone) is left out, not drawn at the 0th
-		// percentile.
+		// percentile. For turnovers, fewer is better.
 		return selectedPercentileMetrics.map((metric) => {
-			const playerValue = Number.parseFloat(playerInfo[metric]);
+			const playerValue = Number.parseFloat(skillInfo[metric]);
 			if (Number.isNaN(playerValue)) return null;
 
 			const values = positionPlayers
@@ -179,11 +237,7 @@
 
 			if (values.length === 0) return null;
 
-			const below = values.filter((value) => value < playerValue).length;
-			return {
-				metric,
-				value: Math.round((below / values.length) * 100)
-			};
+			return { metric, value: percentileAmong(playerValue, values, metric) };
 		}).filter(Boolean);
 	});
 
@@ -279,10 +333,22 @@
 		};
 	});
 
-	const playerDetailText = $derived.by(() => {
+	// Two lines under the name: who the player is (age, size, country), then the career (draft,
+	// rookie season, games).
+	const playerBioText = $derived.by(() => {
 		if (!playerInfo) return '';
 		const parts = [];
 		if (playerInfo.age) parts.push('Age ' + Math.floor(playerInfo.age));
+		const height = formatHeight(playerInfo.height);
+		if (height) parts.push(height);
+		if (Number(playerInfo.weight) > 0) parts.push(Math.round(playerInfo.weight) + ' lb');
+		if (playerInfo.country) parts.push(playerInfo.country);
+		return parts.join(' · ');
+	});
+
+	const playerDetailText = $derived.by(() => {
+		if (!playerInfo) return '';
+		const parts = [];
 		if (playerInfo.draft_year) {
 			let d = '';
 			if (playerInfo.draft_slot) d += 'Pick #' + Math.round(playerInfo.draft_slot) + ', ';
@@ -290,6 +356,11 @@
 			parts.push(d);
 		}
 		if (playerInfo.rookie_season) parts.push('Rookie ' + playerInfo.rookie_season);
+		// The season table starts in 1996-97, so an earlier debut's games count from there.
+		const games = careerGames(data.seasons);
+		const since = Number(playerInfo.rookie_season) < 1997 ? ' since 1996-97' : '';
+		if (games.regular > 0) parts.push(`${games.regular.toLocaleString('en-US')} games${since}`);
+		if (games.playoffs > 0) parts.push(`${games.playoffs.toLocaleString('en-US')} playoff games`);
 		return parts.join(' · ');
 	});
 
@@ -297,6 +368,75 @@
 		longevityPlayer !== null &&
 		longevityPlayer.p1 !== null
 	);
+	// The roster-odds chart projects from today, so it sits with the contract figures and, like
+	// them, only for current players outside the Time Machine.
+	const showLongevity = $derived(hasLongevityData && isCurrentPlayer && !asOfDate);
+	const showContract = $derived(contract.length > 0 || showLongevity);
+
+	// The jump menu lists the sections this player's page shows, in page order.
+	const sections = $derived(
+		profileSections({
+			seismograph: Boolean(seismograph),
+			comps: comps.length > 0 && !asOfDate,
+			echoes: echoes.length > 0 && !asOfDate,
+			career: Boolean(playerInfo),
+			contract: showContract,
+			seasons: seasonsTable.length > 0,
+			percentiles: allActivePlayers.length > 0,
+			'box-score': Boolean(boxScore)
+		})
+	);
+
+	// The jump menu marks the section in view, and names the player once the header has gone by.
+	let jumpNav = $state(null);
+	let activeSection = $state(null);
+	let jumpStuck = $state(false);
+
+	$effect(() => {
+		if (!jumpNav) return;
+		const ids = sections.map((section) => section.id);
+		let frame = 0;
+		const update = () => {
+			frame = 0;
+			if (!jumpNav) return;
+			const bar = jumpNav.getBoundingClientRect();
+			let current = null;
+			for (const id of ids) {
+				const top = document.getElementById(id)?.getBoundingClientRect().top;
+				if (top !== undefined && top <= bar.bottom + 24) current = id;
+			}
+			// At the foot of the page the last section is the one being read, however short.
+			const root = document.documentElement;
+			if (current && window.innerHeight + window.scrollY >= root.scrollHeight - 2) current = ids.at(-1);
+			activeSection = current;
+			// Stuck once the bar sits at its sticky offset; resting under the header it is lower,
+			// and in the Shiny view (not sticky) the offset is "auto", so never.
+			const stickyTop = Number.parseFloat(getComputedStyle(jumpNav).top);
+			jumpStuck = Number.isFinite(stickyTop) && Math.abs(bar.top - stickyTop) < 1;
+		};
+		const schedule = () => {
+			if (!frame) frame = requestAnimationFrame(update);
+		};
+		schedule();
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', schedule);
+		return () => {
+			cancelAnimationFrame(frame);
+			window.removeEventListener('scroll', schedule);
+			window.removeEventListener('resize', schedule);
+		};
+	});
+
+	// On a phone the links scroll sideways; the marked one is brought into view.
+	$effect(() => {
+		if (!jumpNav || !activeSection || jumpNav.scrollWidth <= jumpNav.clientWidth) return;
+		const link = jumpNav.querySelector(`a[href="#${activeSection}"]`);
+		if (!link) return;
+		const hidden =
+			link.offsetLeft < jumpNav.scrollLeft ||
+			link.offsetLeft + link.offsetWidth > jumpNav.scrollLeft + jumpNav.clientWidth;
+		if (hidden) jumpNav.scrollTo({ left: link.offsetLeft - 16, behavior: 'smooth' });
+	});
 
 	function handleSelectPlayer(player) {
 		goto(`/player/${player.nba_id}`);
@@ -318,16 +458,65 @@
 	<title>{playerInfo?.player_name || 'Player'} Profile — DARKO DPM</title>
 </svelte:head>
 
+{#snippet talentTrendControl(id)}
+	<div class="sidebar-section talent-trend-control">
+		<label class="sidebar-label" for={id}>Talent Trend</label>
+		<select {id} class="sidebar-select" bind:value={talentType}>
+			{#each TALENT_OPTIONS as opt (opt.value)}
+				<option value={opt.value}>{opt.label}</option>
+			{/each}
+		</select>
+	</div>
+{/snippet}
+
+{#snippet percentilePresets()}
+	<div class="percentile-presets" role="group" aria-label="Percentile sets">
+		{#each Object.entries(PERCENTILE_PRESETS) as [name, metrics] (name)}
+			{@const active = metrics.length === selectedPercentileMetrics.length && metrics.every((metric) => selectedPercentileMetrics.includes(metric))}
+			<button
+				type="button"
+				class:active
+				aria-pressed={active}
+				onclick={() => (selectedPercentileMetrics = [...metrics])}
+			>
+				{name === 'skills' ? 'Skills' : 'Ratings'}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet percentileCheckboxes()}
+	<div class="percentile-checkboxes">
+		{#each PERCENTILE_GROUPS as group (group.label)}
+			<div class="percentile-group-options">
+				<p class="percentile-group">{group.label}</p>
+				{#each group.options as opt (opt.value)}
+					<label class="checkbox-label">
+						<input
+							type="checkbox"
+							checked={selectedPercentileMetrics.includes(opt.value)}
+							onchange={() => togglePercentileMetric(opt.value)}
+						/>
+						{opt.label}
+					</label>
+				{/each}
+			</div>
+		{/each}
+	</div>
+{/snippet}
+
+<!-- One tree for both views. The Modern view puts the player in a full-width header, with each
+     chart's controls beside the chart; the Shiny view keeps its sidebar, controls and all. -->
 <div class="container player-profile-page" data-shiny-page>
 	<div class="profile-layout" data-shiny-layout="sidebar">
-		<aside class="profile-sidebar" data-shiny-surface="well">
-			<div class="sidebar-section">
+		<div class="profile-sidebar" data-shiny-surface="well">
+			<div class="sidebar-section profile-search">
 				<p class="sidebar-label">Player</p>
 				<AllPlayerSearch onSelect={handleSelectPlayer} exclude={[]} />
 			</div>
 
 			{#if playerInfo}
-				<div class="sidebar-player-info">
+				<header class="profile-header">
 					<div class="profile-headshot">
 						{#if nbaId && !imgFailed}
 							<img
@@ -344,67 +533,83 @@
 							</div>
 						{/if}
 					</div>
-					<div class="player-title">
-						<h1>{playerInfo.player_name}</h1>
-						{#if nbaId}<WatchStar nbaId={nbaId} name={playerInfo.player_name} />{/if}
+					<div class="profile-id">
+						<div class="player-title">
+							<h1>{playerInfo.player_name}</h1>
+							{#if nbaId}<WatchStar nbaId={nbaId} name={playerInfo.player_name} />{/if}
+						</div>
+						<p class="player-meta">
+							{[playerInfo.team_name, playerInfo.position || '?'].filter(Boolean).join(' · ')}
+						</p>
+						{#if playerBioText}<p class="player-detail">{playerBioText}</p>{/if}
+						{#if playerDetailText}<p class="player-detail">{playerDetailText}</p>{/if}
 					</div>
-					<p class="player-meta">
-						{[playerInfo.team_name, playerInfo.position || '?'].filter(Boolean).join(' · ')}
-					</p>
-					<p class="player-detail">{playerDetailText}</p>
 					{#if asOfDate && !playerRating}
-						<p class="sidebar-rating sidebar-rating-note">
+						<p class="profile-score profile-score-note">
 							No DARKO rating yet on {formatAsOfDate(asOfDate)}.
 						</p>
 					{/if}
 					{#if playerRating}
-						<div class="sidebar-rating">
-							<p class="sidebar-rating-head">
-								<span class="sidebar-label">
-									DPM{#if asOfDate && asOfRow}<span class="sidebar-asof">{' · '}{formatAsOfDate(asOfRow.date.slice(0, 10), { short: true })}</span>{/if}
-								</span>
-								<span class="sidebar-rating-value">{formatSigned(playerRating.dpm, 1)}</span>
+						<div class="profile-score">
+							<p class="profile-score-label">
+								DPM{#if asOfDate && asOfRow}<span class="profile-asof">{' · '}{formatAsOfDate(asOfRow.date.slice(0, 10), { short: true })}</span>{:else if rankLabel}<span class="profile-rank">{' · '}{rankLabel}</span>{/if}
 							</p>
-							<OffenseDefenseBar offense={playerRating.offense} defense={playerRating.defense} />
-							<OffenseDefenseSplit
-								offense={playerRating.offense}
-								defense={playerRating.defense}
-								labels
-							/>
+							<span class="profile-score-value">{formatSigned(playerRating.dpm, 1)}</span>
+							<div class="profile-score-split">
+								<OffenseDefenseBar offense={playerRating.offense} defense={playerRating.defense} />
+								<OffenseDefenseSplit
+									offense={playerRating.offense}
+									defense={playerRating.defense}
+									labels
+								/>
+								{#if !asOfDate && lastPlayed}
+									<span class="profile-score-date">Last played {formatAsOfDate(lastPlayed, { short: true })}</span>
+								{/if}
+							</div>
 						</div>
 					{/if}
-				</div>
-				<a href="/compare?ids={nbaId}" class="btn compare-link">Compare this player</a>
+					<div class="profile-actions">
+						<a href="/compare?ids={nbaId}" class="btn compare-link">Compare this player</a>
+						{#if labTeam}
+							<a href="/lab?a={labTeam}" class="btn compare-link">Open {labTeam} in the Roster Lab</a>
+						{/if}
+					</div>
+				</header>
 			{/if}
 
-			<div class="sidebar-section">
-				<label class="sidebar-label" for="talent-trend-select">Talent Trend</label>
-				<select id="talent-trend-select" class="sidebar-select" bind:value={talentType}>
-					{#each TALENT_OPTIONS as opt (opt.value)}
-						<option value={opt.value}>{opt.label}</option>
-					{/each}
-				</select>
-			</div>
-
-			<div class="sidebar-section">
-				<p class="sidebar-label">Talent Percentiles</p>
-				<div class="percentile-checkboxes">
-					{#each PERCENTILE_OPTIONS as opt (opt.value)}
-						<label class="checkbox-label">
-							<input
-								type="checkbox"
-								checked={selectedPercentileMetrics.includes(opt.value)}
-								onchange={() => togglePercentileMetric(opt.value)}
-							/>
-							{opt.label}
-						</label>
-					{/each}
+			<!-- The Shiny view's sidebar controls; the Modern view shows each over its chart. -->
+			<div class="sidebar-controls">
+				{@render talentTrendControl('talent-trend-select-sidebar')}
+				<div class="sidebar-section">
+					<p class="sidebar-label">Talent Percentiles</p>
+					{@render percentilePresets()}
+					{@render percentileCheckboxes()}
 				</div>
 			</div>
-		</aside>
+		</div>
 
 		<div class="profile-content">
 			{#if playerInfo}
+				{#if sections.length > 1}
+					<nav
+						class="profile-jump"
+						class:stuck={jumpStuck}
+						bind:this={jumpNav}
+						aria-label="Sections of {playerInfo.player_name}'s page"
+					>
+						<span class="profile-jump-name" aria-hidden="true">{playerInfo.player_name}</span>
+						{#each sections as section (section.id)}
+							<a
+								href="#{section.id}"
+								class:active={activeSection === section.id}
+								aria-current={activeSection === section.id ? 'location' : undefined}
+							>
+								{section.label}
+							</a>
+						{/each}
+					</nav>
+				{/if}
+
 				{#if seismograph}
 					<section
 						class="chart-panel seismograph-panel"
@@ -560,6 +765,16 @@
 									The ten most similar player-seasons since 1996-97 at the same age, and what
 									happened to them next.
 								</p>
+								{#if compsLine}
+									<p class="comps-summary">
+										<strong>{compsLine.dpm} at age {compsLine.age}</strong> in {compsLine.season}{compsLine.inProgress ? ' so far' : ''}
+										ranks <strong>{compsLine.rank} of {compsLine.count}</strong> age-{compsLine.age} seasons since 1996-97.
+										{#if compsLine.closest}
+											Closest match:
+											<a href="/player/{compsLine.closest.id}">{compsLine.closest.name}</a>, {compsLine.closest.season}.
+										{/if}
+									</p>
+								{/if}
 							</div>
 						</header>
 						<CompsFutures {comps} history={historyRows} playerName={playerInfo.player_name} />
@@ -588,27 +803,59 @@
 					</section>
 				{/if}
 
-				<div class="charts-row" data-shiny-layout="split">
-					<div class="chart-panel chart-half" data-shiny-surface="plot">
-						<TalentTrendChart
-							rows={historyRows}
-							{talentType}
-							playerName={playerInfo.player_name}
-						/>
-						{#if historyMeta.truncated}
-							<p class="history-note">
-								Showing the first {historyMeta.maxRows} rows of career history.
-							</p>
-						{/if}
+				<div class="chart-panel" id="career" data-shiny-surface="plot">
+					<div class="panel-controls">
+						{@render talentTrendControl('talent-trend-select')}
 					</div>
-					{#if hasLongevityData}
-						<div class="chart-panel chart-half" data-shiny-surface="plot">
-							<h3 class="chart-panel-title">{playerInfo.player_name}</h3>
-							<p class="chart-panel-subtitle">Career Length Projections</p>
-							<LongevityCareerLengthChart player={longevityPlayer} />
-						</div>
+					<TalentTrendChart
+						rows={historyRows}
+						{talentType}
+						playerName={playerInfo.player_name}
+					/>
+					{#if historyMeta.truncated}
+						<p class="history-note">
+							Showing the first {historyMeta.maxRows} rows of career history.
+						</p>
 					{/if}
 				</div>
+
+				{#if showContract}
+					<section
+						class="chart-panel comps-panel"
+						id="contract"
+						data-shiny-surface="panel"
+						aria-labelledby="contract-title"
+					>
+						<header class="seismograph-header">
+							<div>
+								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Value</p>
+								<h2 id="contract-title">Contract &amp; longevity</h2>
+								<p class="seismograph-lede">
+									DARKO's fair salary from projected wins against {playerInfo.player_name}'s salary,
+									and the odds of still being on an NBA roster in each coming season.
+								</p>
+							</div>
+						</header>
+						<div class="contract-body" class:contract-body--tiles-only={!showLongevity}>
+							{#if contract.length > 0}
+								<dl class="contract-tiles">
+									{#each contract as tile (tile.key)}
+										<div class="contract-tile">
+											<dt>{tile.label}</dt>
+											<dd class="contract-value contract-value--{tile.tone ?? 'plain'}">{tile.value}</dd>
+											<dd class="contract-note">{tile.note}</dd>
+										</div>
+									{/each}
+								</dl>
+							{/if}
+							{#if showLongevity}
+								<div class="contract-chart">
+									<LongevityCareerLengthChart player={longevityPlayer} />
+								</div>
+							{/if}
+						</div>
+					</section>
+				{/if}
 
 				{#if seasonsTable.length > 0}
 					<section
@@ -637,14 +884,23 @@
 						<p class="percentile-notice">{percentileNotice}</p>
 					</div>
 				{:else if allActivePlayers.length > 0}
-					<div class="chart-panel" data-shiny-surface="plot">
+					<div class="chart-panel" id="percentiles" data-shiny-surface="plot">
+						<div class="panel-controls">
+							<p class="sidebar-label">Talent Percentiles</p>
+							{@render percentilePresets()}
+							<details class="percentile-picker">
+								<summary>Choose metrics ({selectedPercentileMetrics.length})</summary>
+								{@render percentileCheckboxes()}
+							</details>
+						</div>
 						<TalentPercentilesChart
 							playerName={playerInfo.player_name}
 							position={playerInfo.position}
 							date={currentDate}
 							{percentiles}
 							selectedMetrics={selectedPercentileMetrics}
-							rawValues={playerInfo}
+							rawValues={skillInfo}
+							labels={SKILL_LABELS}
 						/>
 						{#if percentileRapmFrom}
 							<p class="percentile-notice">RAPM is from {formatAsOfDate(percentileRapmFrom)}, the latest published.</p>
@@ -678,82 +934,184 @@
 </div>
 
 <style>
+	/* Search, then the player's header, then the sections, each the page's full width. The Shiny
+	   view lays the same tree out as its sidebar (src/shiny-view.css). */
 	.profile-layout {
-		display: grid;
-		grid-template-columns: 280px 1fr;
-		gap: 24px;
-		padding: 32px 0 64px;
-		align-items: start;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		padding: 20px 0 64px;
 	}
 
 	.profile-sidebar {
 		display: flex;
 		flex-direction: column;
-		gap: 20px;
-		position: sticky;
-		top: calc(var(--nav-sticky-offset) + 24px);
+		gap: 12px;
 	}
 
-	.sidebar-player-info {
-		padding: 16px;
-		background: var(--bg-surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
+	.profile-search {
+		align-self: flex-end;
+		width: min(100%, 360px);
+	}
+
+	/* The sidebar's own label and controls are for the Shiny view. */
+	.profile-search .sidebar-label,
+	.sidebar-controls {
+		display: none;
+	}
+
+	/* The photo, who the player is, the rating on the right, and the actions under the name. */
+	.profile-header {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		grid-template-areas:
+			'photo id score'
+			'photo actions score';
+		align-items: center;
+		gap: 10px 28px;
+		padding-bottom: 20px;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.profile-headshot {
+		grid-area: photo;
+	}
+
+	.profile-headshot .headshot-img {
+		display: block;
+		width: 164px;
+		height: 120px;
+		object-fit: cover;
+		object-position: top;
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+	}
+
+	.profile-headshot .headshot-placeholder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 120px;
+		height: 120px;
+		border-radius: 50%;
+		background: var(--bg-elevated);
+		color: var(--text-muted);
+		font-size: 36px;
+		font-weight: 700;
+	}
+
+	.profile-id {
+		grid-area: id;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		min-width: 0;
+		align-self: end;
 	}
 
 	.player-title {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
+		gap: 10px;
 	}
 
-	.sidebar-player-info h1 {
-		font-size: 20px;
-		font-weight: 700;
+	.player-title h1 {
+		min-width: 0;
+		font-family: var(--font-display);
+		font-size: clamp(32px, 3.2vw, 44px);
+		font-weight: 800;
+		font-stretch: 116%;
+		letter-spacing: -0.015em;
+		line-height: 1.05;
 		color: var(--text);
+		text-wrap: balance;
 	}
 
-	.profile-headshot {
-		display: flex;
-		justify-content: center;
-		margin-bottom: 12px;
-	}
-
-	.profile-headshot .headshot-img {
-		width: 130px;
-		height: 95px;
-		object-fit: cover;
-		border-radius: 6px;
-	}
-
-	.profile-headshot .headshot-placeholder {
-		width: 90px;
-		height: 90px;
-		border-radius: 50%;
-		background: var(--bg-elevated);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 28px;
-		font-weight: 700;
-		color: var(--text-muted);
-	}
-
-	.compare-link {
-		width: 100%;
-	}
-
+	/* Team and position read as the line over the name. */
 	.player-meta {
-		font-size: 13px;
-		color: var(--text-secondary);
-		margin-top: 4px;
+		order: -1;
+		color: var(--text-muted);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
 	}
 
 	.player-detail {
-		font-size: 12px;
+		font-size: 13px;
+		color: var(--text-secondary);
+	}
+
+	.profile-actions {
+		grid-area: actions;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		align-self: start;
+	}
+
+	.profile-score {
+		grid-area: score;
+		display: grid;
+		justify-items: end;
+		gap: 6px;
+		text-align: right;
+	}
+
+	.profile-score-label {
 		color: var(--text-muted);
-		margin-top: 2px;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.profile-score-value {
+		font-family: var(--font-display);
+		font-size: clamp(52px, 5vw, 64px);
+		font-weight: 800;
+		font-stretch: 116%;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: -0.02em;
+		line-height: 0.9;
+		color: var(--text);
+	}
+
+	.profile-score-split {
+		display: grid;
+		justify-items: end;
+		gap: 6px;
+		font-size: 13px;
+	}
+
+	.profile-score-split :global(.od-bar) {
+		width: 180px;
+	}
+
+	.profile-score-date {
+		color: var(--text-muted);
+		font-size: 12px;
+	}
+
+	.profile-score-note {
+		color: var(--time-text);
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	/* With the Time Machine set, the date the rating is from, in its colour. */
+	.profile-asof {
+		color: var(--time-text);
+		text-transform: none;
+		letter-spacing: 0;
+	}
+
+	/* Today's rank on the board, beside the DPM label. */
+	.profile-rank {
+		color: var(--text-secondary);
+		font-variant-numeric: tabular-nums;
+		text-transform: none;
+		letter-spacing: 0;
 	}
 
 	.sidebar-section {
@@ -787,10 +1145,81 @@
 		border-color: var(--accent);
 	}
 
-	.percentile-checkboxes {
+	/* Over a chart, the controls that change it. */
+	.panel-controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px 14px;
+		margin-bottom: 8px;
+	}
+
+	.panel-controls .talent-trend-control {
+		flex-direction: row;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.panel-controls .talent-trend-control .sidebar-select {
+		width: auto;
+		min-width: 160px;
+		padding: 6px 10px;
+	}
+
+	/* Ratings or the ten skills in one click; the boxes fine-tune either. */
+	.percentile-presets {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		margin: 2px 0 10px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		overflow: hidden;
+	}
+
+	.panel-controls .percentile-presets {
+		min-width: 190px;
+		margin: 0;
+	}
+
+	.percentile-presets button {
+		padding: 6px 8px;
+		border: 0;
+		background: var(--bg-surface);
+		color: var(--text-secondary);
+		font-family: var(--font-sans);
+		font-size: 12px;
+		font-weight: 650;
+		cursor: pointer;
+	}
+
+	.percentile-presets button + button {
+		border-left: 1px solid var(--border);
+	}
+
+	.percentile-presets button.active {
+		background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
+		color: var(--text);
+	}
+
+	.percentile-presets button:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: -2px;
+	}
+
+	.percentile-checkboxes,
+	.percentile-group-options {
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
+	}
+
+	.percentile-group {
+		margin-top: 6px;
+		color: var(--text-muted);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
 	}
 
 	.checkbox-label {
@@ -806,43 +1235,237 @@
 		accent-color: var(--accent);
 	}
 
+	/* Every metric, by group, one click away and out of the way until wanted. */
+	.percentile-picker[open] {
+		flex-basis: 100%;
+	}
+
+	.percentile-picker summary {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 30px;
+		padding: 0 10px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		color: var(--text-secondary);
+		font-size: 12px;
+		font-weight: 650;
+		list-style: none;
+		cursor: pointer;
+	}
+
+	.percentile-picker summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.percentile-picker summary::after {
+		content: '▾';
+		font-size: 10px;
+	}
+
+	.percentile-picker[open] summary::after {
+		content: '▴';
+	}
+
+	.percentile-picker summary:hover,
+	.percentile-picker summary:focus-visible {
+		border-color: var(--accent);
+		color: var(--text);
+	}
+
+	.percentile-picker .percentile-checkboxes {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+		gap: 4px 24px;
+		margin-top: 10px;
+		padding: 4px 14px 12px;
+		border: 1px solid var(--border-subtle);
+		border-radius: var(--radius-sm);
+	}
+
 	.profile-content {
 		display: flex;
 		flex-direction: column;
-		gap: 24px;
+		gap: 20px;
 		min-width: 0;
-	}
-
-	.charts-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 16px;
 	}
 
 	.chart-panel {
 		background: var(--bg-surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: 16px;
+		padding: 18px 20px;
+		/* The jump menu's links land with the heading clear of the sticky nav. */
+		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + var(--section-clearance, 16px));
 	}
 
-	.chart-half {
-		min-width: 0;
+	/* The jump menu: one quiet row of links to the sections this player's page shows. It stays
+	   under the site's bar as the page scrolls, marks the section in view and, once the header
+	   has gone by, names the player. Section headings land clear of both. */
+	.player-profile-page {
+		--section-clearance: 60px;
 	}
 
-	.chart-panel-title {
-		font-size: 16px;
-		font-weight: 700;
+	.profile-jump {
+		position: sticky;
+		top: var(--nav-sticky-offset, 64px);
+		z-index: 20;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 2px;
+		margin: -8px 0 -4px -10px;
+		padding: 4px 0;
+		background: var(--bg);
+	}
+
+	.profile-jump.stuck {
+		box-shadow: 0 1px 0 var(--border);
+	}
+
+	.profile-jump-name {
+		display: none;
+	}
+
+	.profile-jump.stuck .profile-jump-name {
+		display: inline-block;
+		max-width: 15rem;
+		margin-right: 6px;
+		padding: 5px 12px 5px 10px;
+		border-right: 1px solid var(--border);
+		overflow: hidden;
 		color: var(--text);
-		text-align: center;
-		margin-bottom: 2px;
+		font-family: var(--font-display);
+		font-size: 14px;
+		font-weight: 800;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
-	.chart-panel-subtitle {
-		font-size: 13px;
+	.profile-jump a {
+		padding: 6px 10px;
+		border-radius: var(--radius-sm);
 		color: var(--text-secondary);
-		text-align: center;
-		margin-bottom: 8px;
+		font-size: 13px;
+		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	.profile-jump a:hover,
+	.profile-jump a:focus-visible {
+		background: var(--bg-hover);
+		color: var(--text);
+	}
+
+	.profile-jump a.active {
+		background: var(--bg-hover);
+		color: var(--text);
+		box-shadow: inset 0 -2px 0 var(--accent);
+	}
+
+	/* The Shiny view keeps its sidebar layout, with the links where they sit. */
+	:global(:root[data-view='shiny']) .player-profile-page {
+		--section-clearance: 16px;
+	}
+
+	:global(:root[data-view='shiny']) .profile-jump {
+		position: static;
+	}
+
+	:global(:root[data-view='shiny']) .profile-jump.stuck {
+		box-shadow: none;
+	}
+
+	:global(:root[data-view='shiny']) .profile-jump.stuck .profile-jump-name {
+		display: none;
+	}
+
+	.comps-summary {
+		margin-top: 8px;
+		color: var(--text-secondary);
+		font-size: 13px;
+		line-height: 1.5;
+	}
+
+	.comps-summary strong {
+		color: var(--text);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.comps-summary a {
+		color: var(--accent);
+		font-weight: 650;
+	}
+
+	.comps-summary a:hover {
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	/* Contract & longevity: the figures beside the roster-odds chart. */
+	.contract-body {
+		display: grid;
+		grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+		gap: 24px;
+		align-items: start;
+	}
+
+	.contract-body--tiles-only {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.contract-tiles {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px;
+	}
+
+	.contract-body--tiles-only .contract-tiles {
+		grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+	}
+
+	.contract-tile {
+		display: grid;
+		gap: 2px;
+		padding: 10px 12px;
+		border: 1px solid var(--border-subtle);
+		border-radius: var(--radius-sm);
+		background: var(--bg);
+	}
+
+	.contract-tile dt {
+		color: var(--text-secondary);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.contract-value {
+		color: var(--text);
+		font-family: var(--font-display);
+		font-size: 21px;
+		font-weight: 750;
+		font-stretch: 106%;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.contract-value--up {
+		color: var(--positive, var(--text));
+	}
+
+	.contract-value--down {
+		color: var(--negative, var(--text));
+	}
+
+	.contract-note {
+		color: var(--text-muted);
+		font-size: 12px;
+	}
+
+	.contract-chart {
+		min-width: 0;
 	}
 
 	.percentile-notice {
@@ -856,49 +1479,13 @@
 		font-size: 12px;
 	}
 
-	.sidebar-rating {
-		display: grid;
-		gap: 8px;
-		margin-top: 14px;
-		padding-top: 12px;
-		border-top: 1px solid var(--border-subtle);
-		font-size: 12px;
-	}
-
-	.sidebar-rating-note {
-		color: var(--time-text);
-		font-weight: 600;
-	}
-
-	.sidebar-asof {
-		color: var(--time-text);
-		text-transform: none;
-		letter-spacing: 0;
-	}
-
-	.sidebar-rating-head {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-	}
-
-	.sidebar-rating-value {
-		font-family: var(--font-mono);
-		font-size: 28px;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-		line-height: 1;
-		color: var(--text);
-		font-variant-numeric: tabular-nums;
-	}
-
 	.comps-panel {
 		display: flex;
 		flex-direction: column;
 		gap: 14px;
 		min-width: 0;
 		/* Ask DARKO links to #comps; the heading clears the sticky nav. */
-		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
+		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + var(--section-clearance, 16px));
 	}
 
 	.seismograph-panel {
@@ -907,7 +1494,7 @@
 		gap: 14px;
 		min-width: 0;
 		/* What's new links to #seismograph; the heading clears the sticky nav. */
-		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + 16px);
+		scroll-margin-top: calc(var(--nav-sticky-offset, 64px) + var(--section-clearance, 16px));
 	}
 
 	.seismograph-header {
@@ -926,8 +1513,8 @@
 	}
 
 	.seismograph-header h2 {
-		font-size: 16px;
-		font-weight: 700;
+		font-size: 17px;
+		font-weight: 750;
 		letter-spacing: -0.01em;
 		color: var(--text);
 	}
@@ -985,9 +1572,10 @@
 	}
 
 	.seismograph-callout-value {
-		font-family: var(--font-mono);
-		font-size: 20px;
-		font-weight: 600;
+		font-family: var(--font-display);
+		font-size: 21px;
+		font-weight: 750;
+		font-stretch: 106%;
 		line-height: 1.2;
 		color: var(--text);
 		font-variant-numeric: tabular-nums;
@@ -1044,7 +1632,7 @@
 		border-top: 1px solid var(--border-subtle);
 	}
 
-	@media (max-width: 1180px) {
+	@media (max-width: 900px) {
 		.seismograph-body {
 			grid-template-columns: 1fr;
 		}
@@ -1058,20 +1646,57 @@
 			padding-bottom: 0;
 			border-bottom: 0;
 		}
+
+		.contract-body {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.contract-tiles {
+			grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+		}
+
+		/* The rating moves under the name: the number, then its offense and defense beside it. */
+		.profile-header {
+			grid-template-columns: auto minmax(0, 1fr);
+			grid-template-areas:
+				'photo id'
+				'photo actions'
+				'score score';
+		}
+
+		.profile-score {
+			grid-template-columns: auto minmax(0, 1fr);
+			grid-template-areas:
+				'label label'
+				'value split';
+			align-items: center;
+			justify-items: start;
+			column-gap: 18px;
+			text-align: left;
+		}
+
+		.profile-score-label {
+			grid-area: label;
+		}
+
+		.profile-score-value {
+			grid-area: value;
+		}
+
+		.profile-score-split {
+			grid-area: split;
+			justify-items: start;
+		}
 	}
 
 	@media (max-width: 768px) {
 		.profile-layout {
-			grid-template-columns: 1fr;
-			padding: 20px 0 48px;
+			padding: 16px 0 48px;
 		}
 
-		.profile-sidebar {
-			position: static;
-		}
-
-		.charts-row {
-			grid-template-columns: 1fr;
+		.profile-search {
+			align-self: stretch;
+			width: auto;
 		}
 
 		.seismograph-header {
@@ -1085,6 +1710,57 @@
 		}
 
 		.seismograph-log-table .log-team {
+			display: none;
+		}
+
+		.profile-header {
+			grid-template-areas:
+				'photo id'
+				'score score'
+				'actions actions';
+			gap: 12px 14px;
+		}
+
+		.profile-headshot .headshot-img {
+			width: 92px;
+			height: 67px;
+		}
+
+		.profile-headshot .headshot-placeholder {
+			width: 64px;
+			height: 64px;
+			font-size: 22px;
+		}
+
+		.player-title h1 {
+			font-size: 28px;
+			font-stretch: 104%;
+		}
+
+		.profile-score-value {
+			font-size: 44px;
+			font-stretch: 108%;
+		}
+
+		.profile-actions .btn {
+			flex: 1 1 auto;
+		}
+
+		/* One row of section links that scrolls sideways rather than three rows of them. */
+		.profile-jump {
+			flex-wrap: nowrap;
+			margin-right: -16px;
+			padding-right: 16px;
+			overflow-x: auto;
+			scrollbar-width: none;
+		}
+
+		.profile-jump::-webkit-scrollbar {
+			display: none;
+		}
+
+		/* No room for the name beside the links; the site's bar names the page. */
+		.profile-jump.stuck .profile-jump-name {
 			display: none;
 		}
 	}

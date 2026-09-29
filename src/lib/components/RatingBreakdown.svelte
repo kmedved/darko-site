@@ -625,7 +625,7 @@
 
 	.rb-grid.rb-zero,
 	.wf-grid.wf-zero {
-		background: var(--text-muted);
+		background: var(--graphic-muted);
 	}
 
 	.rb-bar {
@@ -664,13 +664,13 @@
 
 	.rb-value--total,
 	.wf-value {
-		font-weight: 600;
+		font-weight: var(--figure-weight-strong);
 		color: var(--text);
 	}
 
 	.rb-row--total .rb-value {
 		font-size: 13px;
-		font-weight: 800;
+		font-weight: var(--figure-weight-strong);
 		color: var(--text);
 	}
 
@@ -754,7 +754,7 @@
 		position: absolute;
 		top: -18px;
 		height: 25px;
-		border-left: 1px dashed var(--text-muted);
+		border-left: 1px dashed var(--graphic-muted);
 	}
 
 	.wf-peak {
@@ -770,7 +770,7 @@
 		transform: translateX(-50%);
 		font-family: var(--font-mono);
 		font-size: 11px;
-		font-weight: 600;
+		font-weight: var(--figure-weight-strong);
 		color: var(--text-secondary);
 		white-space: nowrap;
 	}
