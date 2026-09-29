@@ -1,13 +1,20 @@
 -- Reassert every public function that nba_darko's publisher used to CREATE OR REPLACE on
 -- each publish, from this repository's own latest definitions. The publisher no longer
 -- defines functions (nba_darko docs/migration/supabase-function-ownership-and-wowy-import.md,
--- Part A). Idempotent: re-run at any time to put production at these definitions.
+-- Part A).
+--
+-- This is a point-in-time reassertion: it puts production at these definitions as they stood
+-- when it was written. Later migrations redefine or drop some of these functions, so a
+-- re-run of this file on its own would roll them back and re-create any that were dropped.
+-- Re-running it must therefore be followed by re-running, in filename order, every later
+-- migration that touches these functions; `npm run migrations:replay` checks that this
+-- sequence restores an identical function catalog.
+--
 -- Each definition is followed by the grants its source migration gave it: revoke all from
 -- PUBLIC, execute to anon, authenticated and service_role. CREATE OR REPLACE keeps an
 -- existing function's grants, but a function that a later migration dropped comes back with
--- PostgreSQL's default PUBLIC EXECUTE; restating the grants means a lone re-run of this file
--- never widens privileges. Such a re-run does re-create the dropped function, so re-apply
--- the migration that dropped it afterwards.
+-- PostgreSQL's default PUBLIC EXECUTE; restating the grants means even a lone re-run of this
+-- file never widens privileges.
 --
 -- Source migration of each definition:
 --   normalize_wowy_filter_position: 20260711_001_add_wowy_leaderboard_bio_filters.sql
