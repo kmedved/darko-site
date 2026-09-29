@@ -269,7 +269,10 @@ test('the pages behind the fixes: freshness from games, picks that stay honest, 
 	]);
 	// "Ratings through" is the last game in the published updates, not a forecast row's date.
 	assert.match(daily, /\.from\('game_updates'\)\.select\('date'\)\.order\('date', \{ ascending: false \}\)\.limit\(1\)/);
-	assert.match(server, /\[snapshot, ratingsThrough\] = await Promise\.all\(\[getActivePlayers\(\), getLatestGameDate\(\)\.catch\(\(\) => null\)\]\)/);
+	assert.match(
+		server,
+		/\[snapshot, ratingsThrough, seasonGames\] = await Promise\.all\(\[\s*getActivePlayers\(\),\s*getLatestGameDate\(\)\.catch\(\(\) => null\),/
+	);
 
 	assert.match(team, /Ratings through \{formatAsOfDate\(ratingsThrough, \{ short: true \}\)\}/);
 	assert.match(player, /const lastPlayed = \$derived\(lastPlayedDate\(historyRows\)\);/);
@@ -404,10 +407,9 @@ test('the rail\'s podium cards: by position and by year in the league, the archi
 	// Guards, forwards and centers, opening on guards; the leader cards have the whole board.
 	assert.match(board, /let positionView = \$state\('guards'\);/);
 	assert.doesNotMatch(board, /\{ key: 'all', label: 'All' \}/);
-	// Rotation players only: 20 games in DARKO's data (career_game_num, not games played) and 12
-	// MPG, so a rookie who has barely played (1.8 minutes a game) stays off the podium.
-	assert.match(board, /\.filter\(\(player\) => hasMinimumGames\(player, TOP_POSITION_MIN_GAMES\)\)\s*\.filter\(isRotationPlayer\)/);
-	assert.match(board, /<p class="insight-note">Rotation players: 12\+ MPG and 20\+ games<\/p>/);
+	// Regulars only (podiumRule), with the note the rule writes.
+	assert.match(board, /\.filter\(podium\.qualifies\)/);
+	assert.match(board, /<p class="insight-note">\{podium\.note\}<\/p>/);
 	assert.doesNotMatch(board, /Minimum 20 games played/);
 	// Three cards a row under the table, two below 1100px with the last across both.
 	assert.match(board, /@media \(max-width: 1839px\) \{[\s\S]*?\.insight-rail \{\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
@@ -420,6 +422,43 @@ test('the rail\'s podium cards: by position and by year in the league, the archi
 	assert.match(podium, /\.podium-place--3 \{\s*grid-column: 3;/);
 	assert.match(podium, /style:--ink=\{teamInk\(player\.team_name\) \?\? '#ffffff'\}/);
 	assert.match(podium, /@media \(prefers-reduced-motion: reduce\) \{[^}]*\.podium-block,[^}]*animation: none;/);
+});
+
+test('the podium cards count regulars: 20+ MPG and half the most games anyone has played', async () => {
+	const { podiumRule } = await import('../src/lib/utils/leaderboardViews.js');
+	const board = [
+		{ player_name: 'Dylan Harper', x_minutes: 24.6, season_games: 70, career_game_num: 103 },
+		{ player_name: 'Kasparas Jakucionis', x_minutes: 15.1, season_games: 53, career_game_num: 83 },
+		{ player_name: 'Oso Ighodaro', x_minutes: 17.0, season_games: 82, career_game_num: 171 },
+		{ player_name: 'Cormac Ryan', x_minutes: 37.8, season_games: 11, career_game_num: 25 },
+		{ player_name: 'Tyrese Haliburton', x_minutes: 24.1, season_games: 0, career_game_num: 524 },
+		{ player_name: 'Javon Small', x_minutes: 20.1, season_games: 41, career_game_num: 60 }
+	];
+	const rule = podiumRule(board);
+	// Once a season is over (82 games), 41; minutes from the table's MPG.
+	assert.equal(rule.minGames, 41);
+	assert.deepEqual(board.filter(rule.qualifies).map((player) => player.player_name), ['Dylan Harper', 'Javon Small']);
+	assert.equal(rule.note, 'Regulars: 20+ MPG and 41+ games this season');
+	// Ten games into a season, half is five; 83 (a mid-season trade) still asks 41.
+	assert.equal(podiumRule([{ season_games: 10 }, { season_games: 3 }]).minGames, 5);
+	assert.equal(podiumRule([{ season_games: 83 }]).minGames, 41);
+	assert.equal(podiumRule([{ season_games: 1 }]).minGames, 1);
+
+	// Without this season's games (a Time Machine date), 20 games in DARKO's data.
+	const past = podiumRule(board.map(({ season_games, ...player }) => player));
+	assert.equal(past.minGames, null);
+	assert.deepEqual(board.map(({ season_games, ...player }) => player).filter(past.qualifies).map((player) => player.player_name), [
+		'Dylan Harper',
+		'Cormac Ryan',
+		'Tyrese Haliburton',
+		'Javon Small'
+	]);
+	assert.equal(past.note, "Regulars: 20+ MPG and 20+ games in DARKO's data");
+
+	// Today's board carries this season's games from the season table; the others don't.
+	const server = await read('src/routes/+page.server.js');
+	assert.match(server, /seasons\.length > 0 \? getSeasonGames\(Math\.max\(\.\.\.seasons\)\)\.catch\(\(\) => null\) : null/);
+	assert.match(server, /\.\.\.\(seasonGames \? \{ season_games: seasonGames\.get\(Number\(player\.nba_id\)\) \?\? 0 \} : \{\}\)/);
 });
 
 test('a player\'s year in the league counts from the first season DARKO lists', async () => {

@@ -20,8 +20,8 @@
         AGE_GROUPS,
         EXPERIENCE_GROUPS,
         filterLeaderboardRows,
-        isRotationPlayer,
         leagueYear,
+        podiumRule,
         matchesPosition,
         POSITION_GROUPS,
         trendSeason
@@ -103,7 +103,6 @@
     const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
     const isShinyView = $derived(displayMode.view === 'shiny');
 
-    const TOP_POSITION_MIN_GAMES = 20;
     const LEADERBOARD_PAGE_SIZE = 50;
     const TRENDS_STORAGE_KEY = 'darko-leaderboard-trends';
     const MAX_PICKS = 4;
@@ -351,11 +350,12 @@
     );
 
     // The rail's podium cards: the five best by DPM at a position and in a year in the league
-    // (rookies, sophomores, third year), among rotation players with enough games to count.
+    // (rookies, sophomores, third year), among the board's regulars (podiumRule).
+    const podium = $derived(podiumRule(players));
+
     function topFiveByDpm(rows) {
         return rows
-            .filter((player) => hasMinimumGames(player, TOP_POSITION_MIN_GAMES))
-            .filter(isRotationPlayer)
+            .filter(podium.qualifies)
             .filter((player) => Number.isFinite(toNumber(player?.dpm)))
             .slice()
             .sort((a, b) => toNumber(b.dpm) - toNumber(a.dpm))
@@ -725,11 +725,6 @@
         const topTenValue = topValues.reduce((sum, value) => sum + value, 0) / topValues.length;
 
         return { meanValue, medianValue, topTenValue, players: values.length };
-    }
-
-    function hasMinimumGames(player, minGames) {
-        const games = toNumber(player?.career_game_num);
-        return games !== null && games >= minGames;
     }
 
     function barWidth(value, rows) {
@@ -1294,7 +1289,6 @@
                         <section class="insight-card" data-shiny-surface="panel">
                             <div class="insight-card-header">
                                 <h2>{card.title}</h2>
-                                <!-- career_game_num: the player's games in DARKO's data, not games played. -->
                                 <span class="insight-info" title={card.info}>i</span>
                             </div>
                             <div class="position-tabs" role="group" aria-label={card.label}>
@@ -1343,14 +1337,14 @@
                                     {/each}
                                 </div>
                             {/if}
-                            <p class="insight-note">Rotation players: 12+ MPG and 20+ games</p>
+                            <p class="insight-note">{podium.note}</p>
                         </section>
                     {/snippet}
 
                     {@render podiumCard({
                         title: 'Top DPM by Position',
                         label: 'Position filter',
-                        info: "Rotation players: 12 or more MPG and 20 or more games in DARKO's data",
+                        info: podium.note,
                         tabs: positionTabs,
                         view: positionView,
                         select: (key) => (positionView = key),
@@ -1359,7 +1353,7 @@
                     {@render podiumCard({
                         title: 'Top DPM by Experience',
                         label: 'Experience filter',
-                        info: "Players in their first, second or third season, counted from the first season DARKO lists for each. Rotation players: 12 or more MPG and 20 or more games in DARKO's data.",
+                        info: `Players in their first, second or third season, counted from the first season DARKO lists for each. ${podium.note}.`,
                         tabs: EXPERIENCE_GROUPS,
                         view: experienceView,
                         select: (key) => (experienceView = key),

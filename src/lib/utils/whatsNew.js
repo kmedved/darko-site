@@ -12,6 +12,14 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'rail-podiums',
+		title: 'Podiums for positions and young players',
+		launched: '2026-09-29T12:29:27Z',
+		text: "Beside the leaderboard, the best guards, forwards and centers stand on a podium in their teams' colours, and so do the best rookies, sophomores and third-year players. Both count regulars: 20 or more minutes a game and at least half the season's games.",
+		cta: 'Open the leaderboard',
+		href: '/'
+	},
+	{
 		key: 'leaderboard-look',
 		kind: 'design',
 		title: 'A calmer leaderboard',

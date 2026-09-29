@@ -205,6 +205,28 @@ export async function getCareerGames(nbaIds) {
     });
 }
 
+/**
+ * Regular-season games each player has played in `season` (the season table), a Map by nba_id;
+ * null until the table is published.
+ */
+export async function getSeasonGames(season) {
+    const wanted = Number(season);
+    const local = await readLocalTable('player_seasons');
+    const byId = (rows) => new Map(rows.map((row) => [Number(row.nba_id), Number(row.games) || 0]));
+    if (local) return byId(local.filter((row) => Number(row.season) === wanted));
+    return missingAsNull(async () =>
+        byId(
+            await readPages(() =>
+                supabase
+                    .from('player_seasons')
+                    .select('nba_id, games')
+                    .eq('season', wanted)
+                    .order('nba_id', { ascending: true })
+            )
+        )
+    );
+}
+
 /** A player's seasons since 1996-97, each at its last game day, oldest first. */
 export async function getPlayerSeasons(nbaId) {
     const local = await readLocalTable('player_seasons');
