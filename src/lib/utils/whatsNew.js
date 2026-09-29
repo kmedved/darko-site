@@ -12,6 +12,14 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'about-page',
+		title: 'The About page, rebuilt',
+		launched: '2026-09-29T21:33:47Z',
+		text: "What DARKO is and what DPM means, shown with live data: today's league on one line, what a player is worth to a team, a season game by game, how long DARKO remembers each stat and where it starts each rookie.",
+		cta: 'Read about DARKO',
+		href: '/about'
+	},
+	{
 		key: 'rail-podiums',
 		title: 'Podiums for positions and young players',
 		launched: '2026-09-29T12:29:27Z',
