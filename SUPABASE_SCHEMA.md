@@ -655,7 +655,7 @@ The longevity page uses aliased field names. The mapping happens in `getLongevit
 |---|---|---|
 | x_retirement_age_cal (fallback: x_retirement_age) | est_retirement_age | `firstFiniteNumber()` picks first non-null |
 | projected_years_remaining_cal (fallback: projected_years_remaining) | years_remaining | `firstFiniteNumber()` picks first non-null |
-| career_game_num | career_games | Direct rename |
+| none (`player_seasons.games`) | career_games | Regular-season games: the sum of `player_seasons.games` over the player's seasons (since 1996-97), read by `getCareerGames()` in `src/lib/server/daily.js` and summed by `careerGames()` in `src/lib/utils/playerProfile.js`; `/api/longevity` passes `getCareerGames` in as `loadGames`. `0` for a player with no `player_seasons` row; `null` when `getLongevityRows()` is called without `loadGames`, when `player_seasons` is not published, or when the read fails. Not `career_game_num`, which counts model rows, not games |
 | s1–s15 | p1–p15 | `normalizeProbability()` converts [0,1] → percentage |
 
 **Important:** `getPlayersIndex()` does NOT pass through survivorship or projection columns. It hardcodes a specific field list (DPM, position, shooting trends, minutes). If you need survivorship data on a page that uses `getPlayersIndex()`, you must either add the fields explicitly or use `getActivePlayers()` directly.
