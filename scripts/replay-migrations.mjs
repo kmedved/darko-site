@@ -358,7 +358,7 @@ for (const m of LATER_TOUCHING) {
 const differences = catalogDifferences(afterReplay, await functionRows(db));
 check(
     differences.length === 0,
-    `after re-applying ${[R, ...LATER_TOUCHING.map((m) => m.name.slice(0, 12))].join(' + ')}, the ${afterReplay.length} functions 20260929_001 defines or later migrations drop match the post-replay catalog in: ${CATALOG_FIELDS.map(([, , label]) => label).join(', ')}`
+    `after re-applying ${[R, ...LATER_TOUCHING.map((m) => m.name.slice(0, 12))].join(' + ')}, the functions 20260929_001 defines or later migrations drop are the same ${afterReplay.length} as after the replay, identical in: ${CATALOG_FIELDS.map(([, , label]) => label).join(', ')}`
 );
 for (const d of differences) console.log(`    differs: ${d}`);
 
