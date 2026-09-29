@@ -130,8 +130,8 @@
 		const latest = historyRows.at(-1);
 		return latest && Number(latest.tm_id) > 0 && !asOfDate && isCurrentPlayer ? Number(latest.season) : null;
 	});
-	// The last game the rating takes in, which a forecast row for the next game is not.
-	const ratedThrough = $derived(lastPlayedDate(historyRows));
+	// The player's last game played (not the next game's forecast row).
+	const lastPlayed = $derived(lastPlayedDate(historyRows));
 	const seasonsTable = $derived(seasonRows(data.seasons, { asOf: asOfDate, inProgress: inProgressSeason }));
 	const echoes = $derived(data.echoes ?? []);
 	const asOfRow = $derived.by(() => {
@@ -562,8 +562,8 @@
 									defense={playerRating.defense}
 									labels
 								/>
-								{#if !asOfDate && ratedThrough}
-									<span class="profile-score-date">Rated through {formatAsOfDate(ratedThrough, { short: true })}</span>
+								{#if !asOfDate && lastPlayed}
+									<span class="profile-score-date">Last played {formatAsOfDate(lastPlayed, { short: true })}</span>
 								{/if}
 							</div>
 						</div>

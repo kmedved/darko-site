@@ -56,8 +56,9 @@ function ratingOf(row) {
 }
 
 /**
- * The day of the player's last game played, the latest their rating takes in; null before any.
- * Rows after it are the forecast for a game not yet played or the offseason's.
+ * The day of the player's last game played, or null before any; rows after it are the forecast
+ * for a game not yet played, or the offseason's. It says nothing of whether the rating shown
+ * takes that game in: a player's final row is the rating going into their last game.
  */
 export function lastPlayedDate(rows) {
     for (let index = (rows?.length ?? 0) - 1; index >= 0; index -= 1) {

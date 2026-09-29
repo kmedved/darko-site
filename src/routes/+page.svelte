@@ -32,7 +32,7 @@
         readLeaderboardState,
         sameLeaderboardState
     } from '$lib/utils/leaderboardState.js';
-    import { isIncomingNavigation, pathAndSearch } from '$lib/utils/urlSync.js';
+    import { isIncomingNavigation, keepsPendingState, pathAndSearch } from '$lib/utils/urlSync.js';
     import { startWatchlist, watchlist } from '$lib/utils/watchlist.js';
     import { dailyListed } from '$lib/utils/daily.js';
     import { filterPlayers } from '$lib/utils/playerTableFilters.js';
@@ -57,7 +57,7 @@
     import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Sparkline from '$lib/components/Sparkline.svelte';
-    import StatTile from '$lib/components/StatTile.svelte';
+    import LeaderCards from '$lib/components/LeaderCards.svelte';
     import WatchStar from '$lib/components/WatchStar.svelte';
     import { getContext, onMount } from 'svelte';
     import { prefersReducedMotion } from 'svelte/motion';
@@ -83,7 +83,8 @@
     // The Modern view's column set, stat ranges ({ dpm: { min, max } }) and picked players.
     let columnSet = $state('all');
     let ranges = $state({});
-    let rangesOpen = $state(false);
+    let filtersOpen = $state(false);
+    let filtersAnchor = $state(null);
     let picking = $state(false);
     let picked = $state([]);
     let linkCopied = $state(false);
@@ -231,29 +232,44 @@
     let urlSyncTimer = 0;
     // The address this page last wrote, so its own navigation isn't read back as an incoming one.
     let ownHref = null;
+    // A change not yet written to the URL, and whether a navigation that started meanwhile should
+    // leave it standing (see beforeNavigate).
+    let writePending = false;
+    let keepLocalQuestion = false;
 
     // In place rather than as a new history entry, so Back still leaves the board.
     $effect(() => {
         const current = $page.url;
         const next = leaderboardSearchParams(urlState, current.searchParams).toString();
-        if (next === current.searchParams.toString()) return;
+        if (next === current.searchParams.toString()) {
+            writePending = false;
+            return;
+        }
         const href = `${current.pathname}${next ? `?${next}` : ''}`;
+        writePending = true;
         urlSyncTimer = setTimeout(() => {
+            writePending = false;
             ownHref = href;
             goto(href, { replaceState: true, keepFocus: true, noScroll: true });
         }, 300);
         return () => clearTimeout(urlSyncTimer);
     });
 
-    // Any other navigation drops a write still waiting: it was worked out from the address before,
-    // and would undo the navigation. Once there, the page writes again if it needs to.
+    // Any other navigation drops a write still waiting, which was worked out from the address
+    // before and would undo it. One that stays on the board (the Time Machine, the season menu)
+    // was built from the URL before the change, so the change stands over what it brings, and
+    // the page writes it onto the new address.
     beforeNavigate(({ to }) => {
-        if (!to?.url || pathAndSearch(to.url) !== ownHref) clearTimeout(urlSyncTimer);
+        if (to?.url && pathAndSearch(to.url) === ownHref) return;
+        clearTimeout(urlSyncTimer);
+        keepLocalQuestion = keepsPendingState({ writePending, to, pathname: '/', ownHref });
+        writePending = false;
     });
 
     // A link, Back/Forward, Ask DARKO or the Time Machine arriving here brings its own question.
     afterNavigate(({ type, to }) => {
-        if (isIncomingNavigation({ type, to, pathname: '/', ownHref })) applyUrlState(to.url.searchParams);
+        if (keepLocalQuestion) keepLocalQuestion = false;
+        else if (isIncomingNavigation({ type, to, pathname: '/', ownHref })) applyUrlState(to.url.searchParams);
         ownHref = null;
     });
 
@@ -302,11 +318,11 @@
     );
 
     const leaderCards = $derived.by(() => [
-        buildLeaderCard(teamScopedPlayers, 'Best DPM', 'dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Best Offensive DPM', 'o_dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Best Defensive DPM', 'd_dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Best 3PT Shooter', 'x_fg3_pct', formatPercent),
-        buildLeaderCard(teamScopedPlayers, 'Best FT Shooter', 'x_ft_pct', formatPercent)
+        buildLeaderCard(teamScopedPlayers, 'Top DPM', 'dpm'),
+        buildLeaderCard(teamScopedPlayers, 'Top offense', 'o_dpm'),
+        buildLeaderCard(teamScopedPlayers, 'Top defense', 'd_dpm'),
+        buildLeaderCard(teamScopedPlayers, 'Top 3PT%', 'x_fg3_pct', formatPercent),
+        buildLeaderCard(teamScopedPlayers, 'Top FT%', 'x_ft_pct', formatPercent)
     ]);
 
     const selectedDistributionMetric = $derived(
@@ -510,6 +526,29 @@
         leaderboardPage = 1;
     }
 
+    // The Filters button counts what its panel holds: position, age group and each stat range.
+    const filterCount = $derived(
+        (positionFilter !== 'all' ? 1 : 0) + (ageFilter !== 'all' ? 1 : 0) + rangeCount
+    );
+
+    function clearPanelFilters() {
+        positionFilter = 'all';
+        ageFilter = 'all';
+        ranges = {};
+        leaderboardPage = 1;
+    }
+
+    // The panel closes on a press outside it or on Escape, which hands focus back to its button.
+    function closeFiltersFromOutside(event) {
+        if (filtersOpen && filtersAnchor && !filtersAnchor.contains(event.target)) filtersOpen = false;
+    }
+
+    function closeFiltersOnEscape(event) {
+        if (!filtersOpen || event.key !== 'Escape') return;
+        filtersOpen = false;
+        filtersAnchor?.querySelector('button')?.focus();
+    }
+
     function clearFilters() {
         teamFilter = 'all';
         positionFilter = 'all';
@@ -618,27 +657,28 @@
         });
     }
 
-    function metricLeader(rows, metric) {
-        return rows.reduce((best, player) => {
-            const value = toNumber(player?.[metric]);
-            if (value === null) return best;
-            if (!best || value > best.value) {
-                return { player, value };
-            }
-            return best;
-        }, null);
-    }
-
+    // The leader in `metric`, and how far ahead of the next player: "1.2 ahead of Gilgeous-Alexander".
     function buildLeaderCard(rows, title, metric, formatter = formatSignedMetric) {
-        const leader = metricLeader(rows, metric);
-        const value = leader?.value ?? null;
+        const [leader, next] = rows
+            .map((player) => ({ player, value: toNumber(player?.[metric]) }))
+            .filter((entry) => entry.value !== null)
+            .sort((a, b) => b.value - a.value);
         return {
             title,
             metric,
             player: leader?.player ?? null,
-            value,
-            displayValue: formatter(value)
+            value: leader?.value ?? null,
+            displayValue: formatter(leader?.value ?? null),
+            margin: leader && next ? leadMargin(leader.value - next.value, next.player, metric) : null
         };
+    }
+
+    // Shooting leads are in percentage points; a lead too small to print is level.
+    function leadMargin(gap, player, metric) {
+        const name = String(player?.player_name ?? '').split(' ').slice(1).join(' ') || player?.player_name;
+        const amount = metric.endsWith('_pct') ? (gap * 100).toFixed(1) : gap.toFixed(1);
+        if (Number(amount) === 0) return `Level with ${name}`;
+        return `${amount}${metric.endsWith('_pct') ? ' pp' : ''} ahead of ${name}`;
     }
 
     function playerHeadshotUrl(player) {
@@ -712,6 +752,8 @@
     <title>DARKO DPM — NBA Player Projections</title>
 </svelte:head>
 
+<svelte:window onpointerdown={closeFiltersFromOutside} onkeydown={closeFiltersOnEscape} />
+
 <div class="leaderboard-page" class:picking={picking && !isShinyView} data-shiny-page>
     <div class="container leaderboard-container">
         <PageHeader id="leaderboard-title" title="DPM Leaderboard">
@@ -729,31 +771,23 @@
             {/if}
         </PageHeader>
 
-        <section class="stat-strip" aria-label="Leaderboard leaders">
-            {#each leaderCards as card (card.title)}
-                <StatTile label={card.title} value={card.displayValue} photo={playerHeadshotUrl(card.player)}>
-                    {#if card.player}
-                        <a class="leader-player" href={datedHref(`/player/${card.player.nba_id}`)}>
-                            {#if teamLogoUrl(card.player)}
-                                <img src={teamLogoUrl(card.player)} alt="" loading="lazy" onerror={hideBrokenImage} />
-                            {/if}
-                            <span>
-                                {card.player.player_name}
-                                <small>{teamAbbr(card.player.team_name)}</small>
-                            </span>
-                        </a>
-                    {:else}
-                        <span class="leader-player leader-player--empty">No player</span>
-                    {/if}
-                </StatTile>
-            {/each}
-        </section>
+        <LeaderCards
+            cards={leaderCards}
+            href={(player) => datedHref(`/player/${player.nba_id}`)}
+            photo={playerHeadshotUrl}
+            logo={teamLogoUrl}
+        />
 
         {#if players.length === 0}
             <div class="empty-state">No players are available for {activeSeasonLabel.toLowerCase()}.</div>
         {:else}
             <div class="leaderboard-workspace">
                 <section class="leaderboard-table-panel" aria-label={`${activeSeasonLabel} player leaderboard`}>
+                    <!-- One row: which board (season, team), who (search, Filters, the watchlist), and
+                         quiet actions at the end. Position, age and the stat ranges live in the Filters
+                         panel; the column sets and the season line sit on the table, as tabs. The Shiny
+                         view keeps its archived row: position and age menus, the trend toggle, the CSV
+                         button. -->
                     <div class="leaderboard-controls" data-shiny-surface="well">
                         <div class="control-field control-field--season">
                             <select
@@ -789,7 +823,37 @@
                             </select>
                         </div>
 
-                        {@render secondaryFilters('')}
+                        <div class="control-field shiny-only">
+                            <select
+                                id="position-filter"
+                                value={positionFilter}
+                                onchange={(event) => {
+                                    positionFilter = event.currentTarget.value;
+                                    leaderboardPage = 1;
+                                }}
+                                aria-label="Position"
+                            >
+                                {#each POSITION_GROUPS as group (group.key)}
+                                    <option value={group.key}>{group.label}</option>
+                                {/each}
+                            </select>
+                        </div>
+
+                        <div class="control-field shiny-only">
+                            <select
+                                id="age-filter"
+                                value={ageFilter}
+                                onchange={(event) => {
+                                    ageFilter = event.currentTarget.value;
+                                    leaderboardPage = 1;
+                                }}
+                                aria-label="Age"
+                            >
+                                {#each AGE_GROUPS as group (group.key)}
+                                    <option value={group.key}>{group.label}</option>
+                                {/each}
+                            </select>
+                        </div>
 
                         <div class="control-field control-field--search">
                             <div class="search-control">
@@ -808,6 +872,91 @@
                         </div>
 
                         <div class="control-toggles">
+                            <div class="filters-anchor modern-only" bind:this={filtersAnchor}>
+                                <button
+                                    type="button"
+                                    class="toggle-chip"
+                                    class:active={filtersOpen || filterCount > 0}
+                                    aria-expanded={filtersOpen}
+                                    aria-controls="leaderboard-filters"
+                                    onclick={() => (filtersOpen = !filtersOpen)}
+                                >
+                                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                        <path d="M2 4h12M4.5 8h7M7 12h2" />
+                                    </svg>
+                                    Filters
+                                    {#if filterCount > 0}<span class="toggle-count">{filterCount}</span>{/if}
+                                </button>
+                                {#if filtersOpen && !isShinyView}
+                                    <div class="filters-panel" id="leaderboard-filters" role="dialog" aria-label="Filters">
+                                        <div class="filters-head">
+                                            <strong>Filters</strong>
+                                            {#if filterCount > 0}
+                                                <button type="button" class="filter-clear" onclick={clearPanelFilters}>Clear</button>
+                                            {/if}
+                                        </div>
+                                        <p class="filters-label" id="filters-position">Position</p>
+                                        <div class="segmented" role="group" aria-labelledby="filters-position">
+                                            {#each POSITION_GROUPS as group (group.key)}
+                                                <button
+                                                    type="button"
+                                                    class:active={positionFilter === group.key}
+                                                    aria-pressed={positionFilter === group.key}
+                                                    onclick={() => {
+                                                        positionFilter = group.key;
+                                                        leaderboardPage = 1;
+                                                    }}
+                                                >
+                                                    {group.key === 'all' ? 'All' : group.label}
+                                                </button>
+                                            {/each}
+                                        </div>
+                                        <p class="filters-label" id="filters-age">Age</p>
+                                        <div class="segmented" role="group" aria-labelledby="filters-age">
+                                            {#each AGE_GROUPS as group (group.key)}
+                                                <button
+                                                    type="button"
+                                                    class:active={ageFilter === group.key}
+                                                    aria-pressed={ageFilter === group.key}
+                                                    onclick={() => {
+                                                        ageFilter = group.key;
+                                                        leaderboardPage = 1;
+                                                    }}
+                                                >
+                                                    {group.key === 'all' ? 'All' : group.key === '30+' ? '30+' : group.label}
+                                                </button>
+                                            {/each}
+                                        </div>
+                                        <p class="filters-label">Ranges</p>
+                                        <div class="filters-ranges">
+                                            {#each RANGE_FILTERS as filter (filter.key)}
+                                                <div class="range-field">
+                                                    <span class="range-label">{filter.label}</span>
+                                                    <input
+                                                        type="number"
+                                                        inputmode="decimal"
+                                                        step={filter.step}
+                                                        placeholder="Min"
+                                                        value={ranges[filter.key]?.min ?? ''}
+                                                        oninput={(event) => setRange(filter.key, 'min', event.currentTarget.value)}
+                                                        aria-label={`${filter.label} at least`}
+                                                    />
+                                                    <span class="range-dash" aria-hidden="true">–</span>
+                                                    <input
+                                                        type="number"
+                                                        inputmode="decimal"
+                                                        step={filter.step}
+                                                        placeholder="Max"
+                                                        value={ranges[filter.key]?.max ?? ''}
+                                                        oninput={(event) => setRange(filter.key, 'max', event.currentTarget.value)}
+                                                        aria-label={`${filter.label} at most`}
+                                                    />
+                                                </div>
+                                            {/each}
+                                        </div>
+                                    </div>
+                                {/if}
+                            </div>
                             <button
                                 type="button"
                                 class="toggle-chip"
@@ -827,7 +976,7 @@
                             </button>
                             <button
                                 type="button"
-                                class="toggle-chip"
+                                class="toggle-chip shiny-only"
                                 class:active={showTrends}
                                 aria-pressed={showTrends}
                                 title="A small line of each player's DPM through the season"
@@ -838,90 +987,60 @@
                                 </svg>
                                 Season trend
                             </button>
+                        </div>
+
+                        <div class="control-actions">
                             <button
                                 type="button"
-                                class="toggle-chip modern-only"
-                                class:active={rangesOpen || rangeCount > 0}
-                                aria-expanded={rangesOpen}
-                                aria-controls="leaderboard-ranges"
-                                title="Minimum and maximum age, minutes, DPM, offense and defense"
-                                onclick={() => (rangesOpen = !rangesOpen)}
-                            >
-                                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-                                    <path d="M2 4h12M4.5 8h7M7 12h2" />
-                                </svg>
-                                More filters
-                                {#if rangeCount > 0}<span class="toggle-count">{rangeCount}</span>{/if}
-                            </button>
-                            <button
-                                type="button"
-                                class="toggle-chip modern-only"
+                                class="tool-action modern-only"
                                 class:active={picking}
                                 aria-pressed={picking}
+                                aria-label="Compare players"
                                 title="Tick up to four players to open in Compare, Career Trajectories or the Scatterplot"
                                 onclick={() => (picking ? stopPicking() : (picking = true))}
                             >
-                                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
                                     <path d="M2.5 2.5h11v11h-11zM5 8l2 2 4-4.5" />
                                 </svg>
-                                Pick to compare
+                                <span class="tool-label">Compare</span>
                             </button>
                             <!-- Modern only: the link carries the Modern view's question, not the Shiny
                                  view's column filters. -->
                             <button
                                 type="button"
-                                class="toggle-chip modern-only"
+                                class="tool-action modern-only"
+                                aria-label="Copy a link to this view"
                                 title="Copy a link to the board with these filters, this sort and these columns"
                                 onclick={copyViewLink}
                             >
-                                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
                                     <path d="M6.5 9.5l3-3M7 4.5l1.3-1.3a2.6 2.6 0 0 1 3.7 3.7L10.7 8.2M9 11.5l-1.3 1.3a2.6 2.6 0 0 1-3.7-3.7L5.3 7.8" />
                                 </svg>
-                                <span aria-live="polite">{linkCopied ? 'Link copied' : 'Copy link'}</span>
+                                <span class="tool-label" aria-live="polite">{linkCopied ? 'Copied' : 'Share'}</span>
+                            </button>
+                            <button
+                                type="button"
+                                class="tool-action tool-action--csv modern-only"
+                                aria-label="Download CSV"
+                                title="Download the board as CSV"
+                                onclick={exportPlayersCsv}
+                                disabled={sortedPlayers.length === 0}
+                            >
+                                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+                                    <path d="M8 2.5v8M4.5 7.5L8 11l3.5-3.5M3 13.5h10" />
+                                </svg>
+                                <span class="tool-label">CSV</span>
+                            </button>
+                            <button
+                                class="btn shiny-only"
+                                type="button"
+                                onclick={exportPlayersCsv}
+                                disabled={sortedPlayers.length === 0}
+                            >
+                                Download CSV
                             </button>
                         </div>
-
-                        <button
-                            class="btn"
-                            type="button"
-                            onclick={exportPlayersCsv}
-                            disabled={sortedPlayers.length === 0}
-                        >
-                            Download CSV
-                        </button>
                     </div>
-
-                    {#if rangesOpen && !isShinyView}
-                        <div class="range-filters" id="leaderboard-ranges" role="group" aria-label="More filters">
-                            <div class="range-secondary">
-                                {@render secondaryFilters('-more')}
-                            </div>
-                            {#each RANGE_FILTERS as filter (filter.key)}
-                                <div class="range-filter">
-                                    <span class="range-label">{filter.label}</span>
-                                    <input
-                                        type="number"
-                                        inputmode="decimal"
-                                        step={filter.step}
-                                        placeholder="Min"
-                                        value={ranges[filter.key]?.min ?? ''}
-                                        oninput={(event) => setRange(filter.key, 'min', event.currentTarget.value)}
-                                        aria-label={`${filter.label} at least`}
-                                    />
-                                    <span class="range-dash" aria-hidden="true">to</span>
-                                    <input
-                                        type="number"
-                                        inputmode="decimal"
-                                        step={filter.step}
-                                        placeholder="Max"
-                                        value={ranges[filter.key]?.max ?? ''}
-                                        oninput={(event) => setRange(filter.key, 'max', event.currentTarget.value)}
-                                        aria-label={`${filter.label} at most`}
-                                    />
-                                </div>
-                            {/each}
-                        </div>
-                    {/if}
 
                     {#if chips.length > 0}
                         <div class="active-filters modern-only" role="group" aria-label="Filters in force">
@@ -940,12 +1059,34 @@
                         </div>
                     {/if}
 
-                    {#if showsValueColumn}
-                        <p class="leaderboard-value-note">
-                            <strong>$ Value</strong> is DARKO's fair-salary estimate.
-                            <a href="/about/fair-salary">See how it is calculated →</a>
-                        </p>
-                    {/if}
+                    <!-- The table's own bar: its column sets as tabs, and the season line. -->
+                    <div class="view-bar modern-only">
+                        <div class="column-tabs" role="group" aria-label="Columns">
+                            {#each COLUMN_SETS as set (set.key)}
+                                <button
+                                    type="button"
+                                    class:active={columnSet === set.key}
+                                    aria-pressed={columnSet === set.key}
+                                    onclick={() => (columnSet = set.key)}
+                                >
+                                    {set.label}
+                                </button>
+                            {/each}
+                        </div>
+                        <button
+                            type="button"
+                            class="trend-toggle"
+                            class:active={showTrends}
+                            aria-pressed={showTrends}
+                            title="A small line of each player's DPM through the season"
+                            onclick={() => setShowTrends(!showTrends)}
+                        >
+                            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                <path d="M1.5 11.5l3.5-4 3 2.5 5.5-6.5" />
+                            </svg>
+                            Season trend
+                        </button>
+                    </div>
 
                     <div
                         class="table-wrapper table-shell"
@@ -1094,6 +1235,12 @@
                             </button>
                         </nav>
                     {/if}
+                    {#if showsValueColumn}
+                        <p class="leaderboard-value-note">
+                            <strong>$ Value</strong> is DARKO's fair-salary estimate.
+                            <a href="/about/fair-salary">See how it is calculated →</a>
+                        </p>
+                    {/if}
                 </section>
 
                 <aside class="insight-rail" aria-label="Leaderboard insights">
@@ -1238,55 +1385,6 @@
     {/if}
 </div>
 
-<!-- Position, age and the column set: in the row of controls, and on a phone inside More filters
-     instead (`suffix` keeps the two copies' ids apart). -->
-{#snippet secondaryFilters(suffix)}
-    <div class="control-field control-field--secondary">
-        <select
-            id={`position-filter${suffix}`}
-            value={positionFilter}
-            onchange={(event) => {
-                positionFilter = event.currentTarget.value;
-                leaderboardPage = 1;
-            }}
-            aria-label="Position"
-        >
-            {#each POSITION_GROUPS as group (group.key)}
-                <option value={group.key}>{group.label}</option>
-            {/each}
-        </select>
-    </div>
-
-    <div class="control-field control-field--secondary">
-        <select
-            id={`age-filter${suffix}`}
-            value={ageFilter}
-            onchange={(event) => {
-                ageFilter = event.currentTarget.value;
-                leaderboardPage = 1;
-            }}
-            aria-label="Age"
-        >
-            {#each AGE_GROUPS as group (group.key)}
-                <option value={group.key}>{group.label}</option>
-            {/each}
-        </select>
-    </div>
-
-    <div class="control-field control-field--columns control-field--secondary modern-only">
-        <select
-            id={`column-set${suffix}`}
-            value={columnSet}
-            onchange={(event) => (columnSet = event.currentTarget.value)}
-            aria-label="Columns"
-        >
-            {#each COLUMN_SETS as set (set.key)}
-                <option value={set.key}>{set.label}</option>
-            {/each}
-        </select>
-    </div>
-{/snippet}
-
 <!-- The headers screen readers use. They carry the columns' classes, so a column hidden on a phone
      (Team) leaves this row too and the headers still match the cells. -->
 {#snippet standardSemanticHeaderRow()}
@@ -1380,43 +1478,6 @@
         padding-bottom: 28px;
     }
 
-    .leader-player {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 6px;
-        color: var(--text);
-        min-width: 0;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .leader-player:hover {
-        color: var(--accent);
-    }
-
-    .leader-player img {
-        width: 22px;
-        height: 22px;
-        object-fit: contain;
-        flex: 0 0 auto;
-    }
-
-    .leader-player span {
-        display: grid;
-        min-width: 0;
-    }
-
-    .leader-player small {
-        color: var(--text-muted);
-        font-size: 11px;
-        font-weight: 600;
-    }
-
-    .leader-player--empty {
-        color: var(--text-muted);
-    }
-
     .leaderboard-workspace {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
@@ -1454,45 +1515,106 @@
 
     .control-toggles {
         display: flex;
-        flex-wrap: wrap;
         gap: 8px;
     }
 
-    .leaderboard-controls .control-field--columns {
-        flex-basis: 140px;
-    }
-
-    /* The column sets, stat ranges, chips and picking are the Modern view's; the Shiny view keeps
-       the archived app's table and its per-column filters. */
+    /* The column sets, the Filters panel, the chips, picking and sharing are the Modern view's;
+       the Shiny view keeps the archived app's row, table and per-column filters. */
     :global(:root[data-view='shiny']) .modern-only {
         display: none;
     }
 
-    .range-filters {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px 22px;
-        margin: -4px 0 14px;
-        padding: 12px 14px;
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-sm);
-        background: var(--bg-surface);
-    }
-
-    .range-filter {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    /* Position, age and columns join More filters only on a phone (see the 640px rules). */
-    .range-secondary {
+    :global(:root:not([data-view='shiny'])) .shiny-only {
         display: none;
     }
 
+    /* Filters: a panel under its button, over the table, until a press outside or Escape. */
+    .filters-anchor {
+        position: relative;
+    }
+
+    .filters-panel {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        z-index: 45;
+        width: 400px;
+        max-width: calc(100vw - 24px);
+        padding: 14px 16px 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--bg-elevated);
+        box-shadow: 0 18px 44px color-mix(in srgb, var(--text) 16%, transparent);
+    }
+
+    .filters-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        color: var(--text);
+        font-size: 14px;
+    }
+
+    .filters-label {
+        margin: 12px 0 6px;
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    /* One choice among a few: joined buttons, the chosen one filled. */
+    .segmented {
+        display: flex;
+        padding: 3px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg);
+    }
+
+    .segmented button {
+        flex: 1 1 auto;
+        height: 30px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: calc(var(--radius-sm) - 2px);
+        background: none;
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 650;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .segmented button:hover {
+        color: var(--text);
+    }
+
+    .segmented button.active {
+        background: var(--bg-surface);
+        color: var(--text);
+        box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 18%, transparent);
+    }
+
+    .filters-ranges {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 14px;
+    }
+
+    .range-field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
     .range-label {
-        min-width: 32px;
+        flex: none;
+        width: 32px;
         color: var(--text);
         font-size: 12px;
         font-weight: 750;
@@ -1503,9 +1625,11 @@
         font-size: 12px;
     }
 
-    .range-filter input {
-        width: 68px;
-        height: 34px;
+    .range-field input {
+        flex: 1 1 0;
+        width: 100%;
+        min-width: 0;
+        height: 32px;
         padding: 0 8px;
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
@@ -1516,10 +1640,129 @@
         font-variant-numeric: tabular-nums;
     }
 
-    .range-filter input:focus {
+    .range-field input:focus {
         outline: none;
         border-color: var(--accent);
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+
+    /* The row's actions, quiet: text and an icon, no box until hovered. */
+    .control-actions {
+        display: flex;
+        gap: 2px;
+        margin-left: auto;
+    }
+
+    .tool-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 42px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: var(--radius-sm);
+        background: none;
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .tool-action:hover:not(:disabled) {
+        background: var(--bg-hover);
+        color: var(--text);
+    }
+
+    .tool-action:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+    }
+
+    .tool-action.active {
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        color: var(--text);
+    }
+
+    .tool-action:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .tool-action svg path,
+    .trend-toggle svg path {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+    }
+
+    /* The table's bar: its column sets as tabs, the season line at the end. */
+    .view-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 0 10px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .column-tabs {
+        display: flex;
+        gap: 2px;
+    }
+
+    .column-tabs button {
+        height: 38px;
+        padding: 0 12px;
+        border: 0;
+        background: none;
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+        box-shadow: inset 0 -2px 0 transparent;
+    }
+
+    .column-tabs button:hover {
+        color: var(--text);
+    }
+
+    .column-tabs button.active {
+        color: var(--text);
+        box-shadow: inset 0 -2px 0 var(--accent);
+    }
+
+    .trend-toggle {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        gap: 6px;
+        height: 30px;
+        padding: 0 11px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: none;
+        color: var(--text-secondary);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .trend-toggle:hover {
+        color: var(--text);
+    }
+
+    .trend-toggle.active {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+        color: var(--text);
     }
 
     .active-filters {
@@ -2542,7 +2785,8 @@
             min-width: 100%;
         }
 
-        .btn {
+        .btn,
+        .tool-action--csv {
             display: none;
         }
     }
@@ -2551,19 +2795,6 @@
     @media (max-width: 768px) {
         .leaderboard-container {
             padding: 0 12px 24px;
-        }
-
-        .control-toggles {
-            flex: 1 1 100%;
-        }
-
-        .toggle-chip {
-            flex: 1 1 auto;
-            justify-content: center;
-        }
-
-        .range-filters {
-            gap: 10px 16px;
         }
 
         .leaderboard-page.picking {
@@ -2656,41 +2887,30 @@
         }
     }
 
-    /* A phone keeps the board's first rows in view: season, team and search stay in the row of
-       controls, position, age and columns move into More filters, and the toggles share one line
-       that scrolls sideways. The Shiny view, without More filters, keeps its controls in place. */
+    /* A phone: season and team side by side, the search, then Filters and the watchlist with the
+       actions as icons on one line; the column tabs scroll sideways. */
     @media (max-width: 640px) {
-        :global(:root:not([data-view='shiny'])) .leaderboard-controls .control-field--secondary {
+        .tool-label {
             display: none;
         }
 
-        .range-secondary {
-            display: grid;
-            flex-basis: 100%;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
+        .tool-action {
+            padding: 0 11px;
         }
 
-        .range-secondary .control-field--columns {
-            grid-column: 1 / -1;
-        }
-
-        /* The right edge fades, so toggles past it read as more to scroll to. */
-        .control-toggles {
-            flex-wrap: nowrap;
+        .view-bar {
             margin-right: -12px;
             padding-right: 12px;
             overflow-x: auto;
             scrollbar-width: none;
-            mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
         }
 
-        .control-toggles::-webkit-scrollbar {
+        .view-bar::-webkit-scrollbar {
             display: none;
         }
 
-        .toggle-chip {
-            flex: 0 0 auto;
+        .filters-ranges {
+            gap: 8px 10px;
         }
     }
 </style>

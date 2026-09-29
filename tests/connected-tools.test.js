@@ -17,9 +17,9 @@ import { columnGroupCells, COLUMN_SETS, leaderboardTableColumns } from '../src/l
 import { AGE_GROUPS, POSITION_GROUPS } from '../src/lib/utils/leaderboardViews.js';
 import { seasonBoardHref, seasonRows } from '../src/lib/utils/playerSeasons.js';
 import { lastPlayedDate } from '../src/lib/utils/seismograph.js';
-import { isIncomingNavigation, pathAndSearch } from '../src/lib/utils/urlSync.js';
+import { isIncomingNavigation, keepsPendingState, pathAndSearch } from '../src/lib/utils/urlSync.js';
 import { readScatterState, scatterSearch } from '../src/lib/utils/scatterplotState.js';
-import { headToHeadRows } from '../src/lib/utils/headToHead.js';
+import { HEAD_TO_HEAD_ROWS, headToHeadRows, snapshotNote } from '../src/lib/utils/headToHead.js';
 
 const read = (file) => fs.readFile(path.resolve(process.cwd(), file), 'utf8');
 const OPTIONS = {
@@ -129,6 +129,13 @@ test('freshness: a player is rated through their last game played, and each seas
 	assert.equal(lastPlayedDate(rows), '2026-06-03');
 	assert.equal(lastPlayedDate([...rows, { date: '2026-07-26', tm_id: -999, seconds_played: 0 }]), '2026-06-03');
 	assert.equal(lastPlayedDate([{ date: '2025-10-22', tm_id: 1, seconds_played: 0, future_game: 1 }]), null);
+	// A retired player's history ends on their final game: the day they last played, though the
+	// rating on that row is the one going into it (the page says "Last played", not "Rated through").
+	const kobe = [
+		{ date: '2016-04-11', tm_id: 1610612747, seconds_played: 1800, future_game: 0 },
+		{ date: '2016-04-13', tm_id: 1610612747, seconds_played: 2520, future_game: 0 }
+	];
+	assert.equal(lastPlayedDate(kobe), '2016-04-13');
 
 	// Every season, the one still being played included, opens the board on its own recorded day.
 	const seasons = seasonRows([{ season: 2016, date: '2016-04-13', tm_id: 1610612747, games: 66, dpm: -1.87, o_dpm: -0.8 }], {
@@ -187,6 +194,30 @@ test('head to head: leads read from the printed values, gaps in the stat’s uni
 	assert.equal(row('x_minutes').lead, null);
 	assert.equal(row('x_pts_100').lead, null);
 	assert.equal(row('box_dpm'), undefined, 'a stat neither player has is left out');
+
+	// Games are games played (regular season, playoffs), never the model's row count.
+	const games = headToHeadRows(
+		{ games_regular: 1346, games_playoffs: 220, career_game_num: 1777 },
+		{ games_regular: 984, games_playoffs: 91 }
+	);
+	assert.deepEqual(games.map((entry) => `${entry.label}:${entry.left}:${entry.right}`), ['Games:1,346:984', 'Playoff games:220:91']);
+	assert.ok(!HEAD_TO_HEAD_ROWS.some((entry) => entry.key === 'career_game_num'));
+
+	// A player whose latest ratings are over a year old is dated; anyone current isn't.
+	const now = new Date('2026-09-29T12:00:00Z');
+	assert.equal(snapshotNote({ date: '2016-04-13' }, now), 'Ratings as of Apr 13, 2016');
+	assert.equal(snapshotNote({ date: '2026-07-26' }, now), null);
+	assert.equal(snapshotNote({}, now), null);
+});
+
+test('a filter change still to be written survives a navigation that stays on the board', () => {
+	const at = (href) => ({ url: new URL(href, 'https://www.darko.app') });
+	// The Time Machine's address, built from the URL before the change: the change stands.
+	assert.equal(keepsPendingState({ writePending: true, to: at('/?asof=2025-01-01'), pathname: '/' }), true);
+	// Nothing waiting, leaving the board, or the page's own write: nothing to keep.
+	assert.equal(keepsPendingState({ writePending: false, to: at('/?asof=2025-01-01'), pathname: '/' }), false);
+	assert.equal(keepsPendingState({ writePending: true, to: at('/player/2544'), pathname: '/' }), false);
+	assert.equal(keepsPendingState({ writePending: true, to: at('/?team=DEN'), pathname: '/', ownHref: '/?team=DEN' }), false);
 });
 
 test('the pages behind the fixes: freshness from games, picks that stay honest, Modern-only sharing', async () => {
@@ -203,18 +234,23 @@ test('the pages behind the fixes: freshness from games, picks that stay honest, 
 	]);
 	// "Ratings through" is the last game in the published updates, not a forecast row's date.
 	assert.match(daily, /\.from\('game_updates'\)\.select\('date'\)\.order\('date', \{ ascending: false \}\)\.limit\(1\)/);
-	assert.match(server, /\[snapshot, ratingsThrough\] = await Promise\.all\(\[getActivePlayers\(\), getLatestGameDate\(\)\]\)/);
-	assert.match(teamLoader, /Promise\.all\(\[getTeamPageData\(teamName\), getLatestGameDate\(\)\]\)/);
+	assert.match(server, /\[snapshot, ratingsThrough\] = await Promise\.all\(\[getActivePlayers\(\), getLatestGameDate\(\)\.catch\(\(\) => null\)\]\)/);
+
 	assert.match(team, /Ratings through \{formatAsOfDate\(ratingsThrough, \{ short: true \}\)\}/);
-	assert.match(player, /const ratedThrough = \$derived\(lastPlayedDate\(historyRows\)\);/);
+	assert.match(player, /const lastPlayed = \$derived\(lastPlayedDate\(historyRows\)\);/);
+	assert.match(player, /Last played \{formatAsOfDate\(lastPlayed, \{ short: true \}\)\}/);
+	assert.doesNotMatch(player, /Rated through/);
+	// A date that can't be read leaves the label off rather than failing the page.
+	assert.match(server, /getLatestGameDate\(\)\.catch\(\(\) => null\)/);
+	assert.match(teamLoader, /getLatestGameDate\(\)\.catch\(\(\) => null\)/);
 	// "So far" is for a current player's season, not a retired player's last.
 	assert.match(player, /!asOfDate && isCurrentPlayer \? Number\(latest\.season\) : null/);
 	assert.match(seasons, /href=\{seasonBoardHref\(row\)\}/);
 	// The name joins the section bar only once the bar has reached its sticky offset.
 	assert.match(player, /jumpStuck = Number\.isFinite\(stickyTop\) && Math\.abs\(bar\.top - stickyTop\) < 1;/);
 
-	// Copy link, like the ranges and column sets, is the Modern view's.
-	assert.match(board, /class="toggle-chip modern-only"\s*title="Copy a link/);
+	// Share (copy link), like the Filters panel and the column tabs, is the Modern view's.
+	assert.match(board, /class="tool-action modern-only"\s*aria-label="Copy a link to this view"/);
 	// From a past board the Scatterplot is off, with the reason in view.
 	assert.match(board, /\{#if pastBoard\}\s*<button type="button" class="pick-action" disabled aria-describedby="pick-past-note">Scatterplot<\/button>/);
 	assert.match(board, /\{#if showsValueColumn\}\s*<p class="leaderboard-value-note">/);
@@ -223,4 +259,35 @@ test('the pages behind the fixes: freshness from games, picks that stay honest, 
 	assert.match(scatter, /highlight=\{highlightedPlayers\.map\(\(player\) => Number\(player\.nba_id\)\)\}/);
 	assert.match(scatter, /\{#if highlightIds\.length > 0\}/);
 	assert.match(chart, /picks\.length > 0 && !isHighlighted\(d\) \? 0\.22/);
+});
+
+test('the leaderboard toolbar: one row, Filters in a panel, column sets as tabs, Shiny as archived', async () => {
+	const [board, cards] = await Promise.all([read('src/routes/+page.svelte'), read('src/lib/components/LeaderCards.svelte')]);
+	// Position, age and the ranges live in a panel that closes on a press outside or Escape.
+	assert.match(board, /<div class="filters-panel" id="leaderboard-filters" role="dialog" aria-label="Filters">/);
+	assert.match(board, /<svelte:window onpointerdown=\{closeFiltersFromOutside\} onkeydown=\{closeFiltersOnEscape\} \/>/);
+	assert.match(board, /const filterCount = \$derived\(\s*\(positionFilter !== 'all' \? 1 : 0\) \+ \(ageFilter !== 'all' \? 1 : 0\) \+ rangeCount\s*\);/);
+	// The column sets are tabs on the table, with the season line beside them.
+	assert.match(board, /<div class="view-bar modern-only">\s*<div class="column-tabs" role="group" aria-label="Columns">/);
+	// The Shiny view keeps its position and age menus, trend toggle and CSV button.
+	assert.equal((board.match(/class="control-field shiny-only"/g) ?? []).length, 2);
+	assert.match(board, /class="toggle-chip shiny-only"/);
+	assert.match(board, /class="btn shiny-only"/);
+	assert.match(board, /:global\(:root:not\(\[data-view='shiny'\]\)\) \.shiny-only \{\s*display: none;/);
+	// The $ Value note is the table's footnote now.
+	assert.ok(board.indexOf('class="leaderboard-value-note"') > board.indexOf('class="leaderboard-pagination"'));
+
+	// Leader cards: the lead one widest, each in its team's colour, with its margin over the next.
+	assert.match(board, /margin: leader && next \? leadMargin\(leader\.value - next\.value, next\.player, metric\) : null/);
+	assert.match(cards, /style:--team-color=\{teamColor\(card\.player\?\.team_name\) \?\? 'var\(--accent\)'\}/);
+	assert.match(cards, /grid-template-columns: minmax\(300px, 1\.45fr\) repeat\(4, minmax\(0, 1fr\)\);/);
+	assert.match(cards, /:global\(:root\[data-view='shiny'\]\) \.leader-card::before,\s*:global\(:root\[data-view='shiny'\]\) \.leader-margin \{\s*display: none;/);
+});
+
+test('every team has an accent colour, and a player without a team has none', async () => {
+	const { teamColor } = await import('../src/lib/utils/teamColors.js');
+	const { NBA_TEAMS } = await import('../src/lib/utils/teamAbbreviations.js');
+	for (const team of NBA_TEAMS) assert.match(teamColor(team.name) ?? '', /^#[0-9a-f]{6}$/, team.name);
+	assert.equal(teamColor(null), null);
+	assert.equal(teamColor('Seattle SuperSonics'), null);
 });

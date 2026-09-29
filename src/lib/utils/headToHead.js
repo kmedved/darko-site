@@ -6,6 +6,7 @@
  */
 
 import { formatFixed, formatMillions, formatPercent, formatSignedMetric } from './csvPresets.js';
+import { formatAsOfDate } from './timeMachine.js';
 
 // Formats print with a plain minus and a tenth's precision, which printedNumber reads back.
 
@@ -23,7 +24,9 @@ export const HEAD_TO_HEAD_ROWS = Object.freeze([
 	{ key: 'x_ast_100', label: 'Assists per 100', format: 'fixed' },
 	{ key: 'x_minutes', label: 'Projected MPG', format: 'fixed' },
 	{ key: 'age', label: 'Age', format: 'age' },
-	{ key: 'career_game_num', label: 'Career games', format: 'count' }
+	// Games played since 1996-97, as profiles count them (comparePage.js from player_seasons).
+	{ key: 'games_regular', label: 'Games', format: 'count' },
+	{ key: 'games_playoffs', label: 'Playoff games', format: 'count' }
 ]);
 
 function number(value) {
@@ -38,7 +41,7 @@ export function displayValue(value, format) {
 	if (format === 'percent') return formatPercent(value);
 	if (format === 'money') return formatMillions(value);
 	if (format === 'age') return String(Math.floor(value));
-	if (format === 'count') return formatFixed(value, 0);
+	if (format === 'count') return Math.round(value).toLocaleString('en-US');
 	return formatFixed(value, 1);
 }
 
@@ -71,4 +74,17 @@ export function headToHeadRows(left, right) {
 			edge: lead === null ? null : gap(Math.abs(a - b), row.format)
 		};
 	}).filter((row) => row.left !== '—' || row.right !== '—');
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * For a player whose latest ratings are more than a year old (a retired player), the date they
+ * stand at, since Compare shows each player's latest available ratings; null for anyone current.
+ */
+export function snapshotNote(player, now = new Date()) {
+	const date = typeof player?.date === 'string' ? player.date.slice(0, 10) : '';
+	const time = Date.parse(`${date}T00:00:00Z`);
+	if (!Number.isFinite(time) || now.getTime() - time < 365 * DAY_MS) return null;
+	return `Ratings as of ${formatAsOfDate(date, { short: true })}`;
 }

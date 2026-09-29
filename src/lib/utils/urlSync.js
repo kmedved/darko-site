@@ -17,3 +17,14 @@ export function isIncomingNavigation({ type, to, pathname, ownHref = null }) {
 	if (!to?.url || type === 'enter' || to.url.pathname !== pathname) return false;
 	return pathAndSearch(to.url) !== ownHref;
 }
+
+/**
+ * Whether a navigation starting while the page still has a change to write should leave that
+ * change standing: one that stays on the page, and isn't the page's own write. Its address was
+ * built from the URL before the change (the Time Machine and the season menu build theirs from
+ * the current URL), so reading it back would undo what the reader just did.
+ */
+export function keepsPendingState({ writePending, to, pathname, ownHref = null }) {
+	if (!writePending || !to?.url || to.url.pathname !== pathname) return false;
+	return pathAndSearch(to.url) !== ownHref;
+}

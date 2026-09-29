@@ -47,8 +47,9 @@ export async function load({ url, setHeaders }) {
         const requestedSeason = parseSeasonEndYear(url.searchParams.get('season'));
         selectedSeason = seasons.includes(requestedSeason) ? requestedSeason : null;
         if (selectedSeason === null) {
-            // Today's board says how fresh it is: the last game its ratings take in.
-            [snapshot, ratingsThrough] = await Promise.all([getActivePlayers(), getLatestGameDate()]);
+            // Today's board says how fresh it is: the last game in the published updates. A date that
+            // can't be read leaves the label off rather than failing the board.
+            [snapshot, ratingsThrough] = await Promise.all([getActivePlayers(), getLatestGameDate().catch(() => null)]);
         } else {
             snapshot = await getSeasonStartPlayers(selectedSeason);
         }

@@ -1,7 +1,7 @@
 <script>
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { goto } from '$app/navigation';
-	import PlayerSearch from '$lib/components/PlayerSearch.svelte';
+	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import PlayerCard from '$lib/components/PlayerCard.svelte';
 	import HeadToHead from '$lib/components/HeadToHead.svelte';
 	import { exportCsvRows, compareCsvColumns } from '$lib/utils/csvPresets.js';
@@ -134,7 +134,8 @@
 	</PageHeader>
 
 	<div class="compare-search-panel" data-shiny-surface="well">
-		<PlayerSearch onSelect={addPlayer} exclude={excludeIds} />
+		<!-- Anyone DARKO has rated, current or retired, as profiles and links allow. -->
+		<AllPlayerSearch onSelect={addPlayer} exclude={excludeIds} />
 		{#if selectedPlayers.length > 0}
 			<!-- The players, each removable here, above the tables and cards however long they run. -->
 			<ul class="compare-chips" aria-label="Players compared">

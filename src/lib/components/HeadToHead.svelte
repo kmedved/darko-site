@@ -1,7 +1,7 @@
 <script>
 	// Two players a stat to a row (headToHeadRows in utils/headToHead.js): the stat's name down the
 	// middle and each player's value on their side, the leader marked where more is better.
-	import { headToHeadRows } from '$lib/utils/headToHead.js';
+	import { headToHeadRows, snapshotNote } from '$lib/utils/headToHead.js';
 
 	let { players = [], colors = [] } = $props();
 
@@ -16,10 +16,12 @@
 				<tr>
 					<th scope="col" class="h2h-player" style:--player-color={colors[0]}>
 						<span class="h2h-dot" aria-hidden="true"></span>{players[0].player_name}
+						{#if snapshotNote(players[0])}<small class="h2h-asof">{snapshotNote(players[0])}</small>{/if}
 					</th>
 					<th scope="col" class="h2h-stat"><span class="sr-only">Stat</span></th>
 					<th scope="col" class="h2h-player h2h-player--right" style:--player-color={colors[1]}>
 						{players[1].player_name}<span class="h2h-dot" aria-hidden="true"></span>
+						{#if snapshotNote(players[1])}<small class="h2h-asof">{snapshotNote(players[1])}</small>{/if}
 					</th>
 				</tr>
 			</thead>
@@ -42,8 +44,8 @@
 			</tbody>
 		</table>
 		<p class="h2h-caption">
-			Ratings, shooting, scoring, assists and minutes are DARKO's current projections. Shooting gaps
-			are in percentage points (pp).
+			Each player's latest available DARKO projections; games are since 1996-97. Shooting gaps are in
+			percentage points (pp).
 		</p>
 	</div>
 {/if}
@@ -98,6 +100,14 @@
 
 	.h2h-player--right .h2h-dot {
 		margin: 0 0 1px 8px;
+	}
+
+	.h2h-asof {
+		display: block;
+		color: var(--text-muted);
+		font-family: var(--font-sans);
+		font-size: 11px;
+		font-weight: 600;
 	}
 
 	.h2h-stat {

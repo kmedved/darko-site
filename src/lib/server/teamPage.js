@@ -33,8 +33,12 @@ export async function getTeamPagePayload({
     normalizeTeamParam
 }) {
     const teamName = resolveTeamPageName(rawTeamParam, normalizeTeamParam);
-    // The rating says how fresh it is: the last game its players' ratings take in.
-    const [teamData, ratingsThrough] = await Promise.all([getTeamPageData(teamName), getLatestGameDate()]);
+    // The rating says how fresh it is (the last game in the published updates); a date that can't
+    // be read leaves the label off rather than failing the page.
+    const [teamData, ratingsThrough] = await Promise.all([
+        getTeamPageData(teamName),
+        getLatestGameDate().catch(() => null)
+    ]);
 
     return {
         teamName,

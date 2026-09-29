@@ -102,6 +102,12 @@
 			.filter(Boolean)
 	);
 	const missingHighlights = $derived(highlightIds.length - highlightedPlayers.length);
+	// Picks on the chart's roster without a value for one of the axes, which can't be plotted.
+	const unplotted = $derived(
+		highlightedPlayers.filter(
+			(player) => !Number.isFinite(Number.parseFloat(player[xMetric])) || !Number.isFinite(Number.parseFloat(player[yMetric]))
+		)
+	);
 
 	// Highlighted players stay on the chart whatever the minutes minimum.
 	const filteredPlayers = $derived.by(() => {
@@ -197,6 +203,11 @@
 							{player.player_name}<span aria-hidden="true">×</span>
 						</button>
 					{/each}
+					{#if unplotted.length > 0}
+						<span class="scatter-highlights-missing">
+							Not plotted, without these stats: {unplotted.map((player) => player.player_name).join(', ')}.
+						</span>
+					{/if}
 					{#if missingHighlights > 0}
 						<span class="scatter-highlights-missing">
 							{missingHighlights === 1 ? 'One pick isn’t' : `${missingHighlights} picks aren’t`} on this chart, which
