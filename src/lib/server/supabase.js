@@ -62,7 +62,9 @@ const CACHE_MS = {
     lineupRatings: 3_600_000,
     lineupSizeCounts: 3_600_000,
     latestRapmSnapshot: 3_600_000,
-    eloLeaderboard: 30_000
+    eloLeaderboard: 30_000,
+    rookieStarts: 3_600_000,
+    seasonRows: 600_000
 };
 
 export const WOWY_ALL_TIME_PAGE_SIZE = 100;
@@ -1767,6 +1769,86 @@ export async function getPlayerCurrent(nbaId) {
 
         const playersMap = await getPlayersMapByIds([nbaId]);
         return mergeWithPlayerDim(data[0], playersMap.get(nbaId));
+    });
+}
+
+/**
+ * Where DARKO started each player of a draft class (the About page): the rating going into his
+ * first game, which comes from his age, draft slot and height before he has played. The class is
+ * everyone drafted in `draftYear` with a game since, and the undrafted players whose first
+ * season followed it (draft slot null).
+ */
+export async function getRookieStarts(draftYear) {
+    const year = Number(draftYear);
+    if (!Number.isInteger(year) || year < 1996 || year > 2100) return [];
+    return runCached(cacheKey('rookieStarts', year), CACHE_MS.rookieStarts, async () => {
+        const columns = 'nba_id, player_name, draft_slot, draft_year, height, rookie_season';
+        const [drafted, undrafted] = await Promise.all([
+            supabase.from('players').select(columns).eq('draft_year', year),
+            supabase.from('players').select(columns).is('draft_year', null).eq('rookie_season', year + 1)
+        ]);
+        if (drafted.error) throw drafted.error;
+        if (undrafted.error) throw undrafted.error;
+        const players = [...(drafted.data ?? []), ...(undrafted.data ?? [])].filter(
+            (player) => Number.isInteger(player?.nba_id) && player.nba_id > 0
+        );
+        if (players.length === 0) return [];
+        const firstRows = new Map();
+        for (let start = 0; start < players.length; start += 150) {
+            const { data, error } = await supabase
+                .from('player_ratings')
+                .select('nba_id, date, dpm, o_dpm, d_dpm, age')
+                .eq('career_game_num', 1)
+                .in('nba_id', players.slice(start, start + 150).map((player) => player.nba_id));
+            if (error) throw error;
+            for (const row of data ?? []) firstRows.set(row.nba_id, row);
+        }
+        return players
+            .filter((player) => firstRows.has(player.nba_id))
+            .map((player) => {
+                const first = firstRows.get(player.nba_id);
+                return {
+                    nba_id: player.nba_id,
+                    player_name: player.player_name,
+                    draft_slot: Number.isInteger(player.draft_slot) ? player.draft_slot : null,
+                    height: player.height ?? null,
+                    age: first.age ?? null,
+                    date: first.date ?? null,
+                    dpm: first.dpm ?? null,
+                    o_dpm: first.o_dpm ?? null,
+                    d_dpm: first.d_dpm ?? null
+                };
+            })
+            .sort((a, b) => (a.draft_slot ?? 99) - (b.draft_slot ?? 99) || String(a.player_name).localeCompare(String(b.player_name)));
+    });
+}
+
+const SEASON_ROW_COLUMNS = 'nba_id, date, season, team_name, tm_id, opp_id, dpm, o_dpm, d_dpm, seconds_played, future_game';
+
+/**
+ * One season of a player's rows, oldest first, with what the Seismograph needs (the About
+ * page's "Watch DARKO learn"): a season's worth instead of a whole career.
+ */
+export async function getPlayerSeasonRows(nbaId, season) {
+    const id = Number(nbaId);
+    const year = Number(season);
+    if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(year)) return [];
+    return runCached(cacheKey('seasonRows', `${id}:${year}`), CACHE_MS.seasonRows, async () => {
+        const read = (columns) =>
+            supabase
+                .from('player_ratings')
+                .select(columns)
+                .eq('nba_id', id)
+                .eq('season', year)
+                .order('date', { ascending: true })
+                .limit(400);
+        let { data, error } = await read(SEASON_ROW_COLUMNS);
+        // As player profiles do (getFullPlayerProfileHistory): a table without opp_id yet.
+        if (error?.code === UNDEFINED_COLUMN) {
+            ({ data, error } = await read(SEASON_ROW_COLUMNS.replace(', opp_id', '')));
+        }
+        if (error) throw error;
+        return data ?? [];
     });
 }
 
