@@ -25,7 +25,7 @@
         { key: 'player_name', label: 'Player', align: 'left' },
         { key: 'team_name', label: 'Team', align: 'left' },
         { key: 'rookie_season', label: 'Rookie Season', align: 'right' },
-        { key: 'career_games', label: 'Career Games', align: 'right' },
+        { key: 'career_games', label: 'Regular-Season Games', align: 'right' },
         { key: 'age', label: 'Age', align: 'right' },
         { key: 'est_retirement_age', label: 'Est. Retirement Age', align: 'right' },
         { key: 'years_remaining', label: 'Years Remaining', align: 'right' },
@@ -317,7 +317,7 @@
             {
                 label: 'Career Games (Proj.)',
                 value: formatWholeNumber(projectedCareerGames(player)),
-                detail: 'Projected Total'
+                detail: 'Regular season, projected'
             }
         ];
     }

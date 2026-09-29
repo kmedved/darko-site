@@ -1,5 +1,6 @@
 import { isMissingTable, readLocalTable } from './history.js';
 import { supabase } from './supabase.js';
+import { careerGamesById } from '../utils/playerProfile.js';
 
 /**
  * The Daily's tables, published by nba_darko's pipeline_scripts/publish/website.py (formerly
@@ -171,6 +172,59 @@ export async function getSeasonLeaders(season, { minGames = 20, limit = 8 } = {}
         if (error) throw error;
         return data ?? [];
     });
+}
+
+/**
+ * Games played since 1996-97, regular season and playoffs, for each of `nbaIds` (careerGames, as
+ * profiles and Compare count them): a Map by nba_id, without the players who have no seasons yet;
+ * null until the season table is published.
+ */
+export async function getCareerGames(nbaIds) {
+    const ids = [...new Set((nbaIds ?? []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+    const local = await readLocalTable('player_seasons');
+    if (local) {
+        const wanted = new Set(ids);
+        return careerGamesById(local.filter((row) => wanted.has(Number(row.nba_id))));
+    }
+    return missingAsNull(async () => {
+        const chunks = [];
+        for (let start = 0; start < ids.length; start += 150) chunks.push(ids.slice(start, start + 150));
+        const pages = await Promise.all(
+            chunks.map((chunk) =>
+                readPages(() =>
+                    supabase
+                        .from('player_seasons')
+                        .select('nba_id, season, games, playoff_games')
+                        .in('nba_id', chunk)
+                        .order('nba_id', { ascending: true })
+                        .order('season', { ascending: true })
+                )
+            )
+        );
+        return careerGamesById(pages.flat());
+    });
+}
+
+/**
+ * Regular-season games each player has played in `season` (the season table), a Map by nba_id;
+ * null until the table is published.
+ */
+export async function getSeasonGames(season) {
+    const wanted = Number(season);
+    const local = await readLocalTable('player_seasons');
+    const byId = (rows) => new Map(rows.map((row) => [Number(row.nba_id), Number(row.games) || 0]));
+    if (local) return byId(local.filter((row) => Number(row.season) === wanted));
+    return missingAsNull(async () =>
+        byId(
+            await readPages(() =>
+                supabase
+                    .from('player_seasons')
+                    .select('nba_id, games')
+                    .eq('season', wanted)
+                    .order('nba_id', { ascending: true })
+            )
+        )
+    );
 }
 
 /** A player's seasons since 1996-97, each at its last game day, oldest first. */

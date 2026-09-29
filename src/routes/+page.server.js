@@ -4,7 +4,7 @@ import {
     getSeasonStartPlayers
 } from '$lib/server/supabase.js';
 import { AS_OF_EDGE_CACHE, getPlayersOnDate } from '$lib/server/history.js';
-import { getLatestGameDate } from '$lib/server/daily.js';
+import { getLatestGameDate, getSeasonGames } from '$lib/server/daily.js';
 import { projectPlayers } from '$lib/server/playerViews.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 import { AS_OF_PARAM, parseAsOfDate } from '$lib/utils/timeMachine.js';
@@ -31,6 +31,7 @@ export async function load({ url, setHeaders }) {
     let asOf = null;
     let selectedSeason = null;
     let ratingsThrough = null;
+    let seasonGames = null;
     if (asOfDate) {
         // Today's board too, for each player's rating now and the change since the date.
         const [allSeasons, result, current] = await Promise.all([
@@ -49,7 +50,13 @@ export async function load({ url, setHeaders }) {
         if (selectedSeason === null) {
             // Today's board says how fresh it is: the last game in the published updates. A date that
             // can't be read leaves the label off rather than failing the board.
-            [snapshot, ratingsThrough] = await Promise.all([getActivePlayers(), getLatestGameDate().catch(() => null)]);
+            // This season's games played, for the rail's podium cards (null leaves them on the
+            // games in DARKO's data, as on the other boards).
+            [snapshot, ratingsThrough, seasonGames] = await Promise.all([
+                getActivePlayers(),
+                getLatestGameDate().catch(() => null),
+                seasons.length > 0 ? getSeasonGames(Math.max(...seasons)).catch(() => null) : null
+            ]);
         } else {
             snapshot = await getSeasonStartPlayers(selectedSeason);
         }
@@ -61,7 +68,8 @@ export async function load({ url, setHeaders }) {
         // Column by column: every player repeats the same ~22 field names.
         players: packRows(players.map((player, index) => ({
             ...player,
-            _rank: index + 1
+            _rank: index + 1,
+            ...(seasonGames ? { season_games: seasonGames.get(Number(player.nba_id)) ?? 0 } : {})
         }))),
         seasons,
         selectedSeason,

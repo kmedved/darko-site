@@ -1636,9 +1636,14 @@ export async function getPlayersIndex() {
 
 export async function getLongevityRows(options = {}) {
     const activeOnly = options.activeOnly !== false;
+    // Games played come from the season table (daily.js getCareerGames, which the route passes in):
+    // player_ratings' career_game_num counts model rows, not games.
+    const loadGames = options.loadGames ?? null;
     const key = cacheKey('longevityRows', activeOnly ? 'active' : 'all');
     return runCached(key, CACHE_MS.longevityRows, async () => {
         const rows = activeOnly ? await getActivePlayers() : await getPlayersIndex();
+        // Unknown when the table can't be read; zero for a player without a game in it yet.
+        const games = loadGames ? await loadGames(rows.map((row) => row.nba_id)).catch(() => null) : null;
         const longevityRows = [];
 
         for (const row of rows) {
@@ -1658,7 +1663,7 @@ export async function getLongevityRows(options = {}) {
                 tm_id: row.tm_id ?? null,
                 position: normalizePosition(row.position ?? row.x_position ?? null),
                 rookie_season: row.rookie_season ?? null,
-                career_games: row.career_game_num ?? null,
+                career_games: games ? (games.get(Number(row.nba_id))?.regular ?? 0) : null,
                 age: row.age ?? null,
                 est_retirement_age: estRetirementAge,
                 years_remaining: yearsRemaining,

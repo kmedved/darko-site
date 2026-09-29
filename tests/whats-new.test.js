@@ -80,6 +80,11 @@ test('items stay for 30 days from launch, newest first', () => {
     assert.equal(keys(currentNews(redesign))[0], 'leaderboard-look');
     assert.equal(newFeatureCount(redesign), 18);
 
+    // Then the rail's podiums for positions and young players.
+    const podiums = new Date('2026-09-29T13:00:00Z');
+    assert.equal(keys(currentNews(podiums))[0], 'rail-podiums');
+    assert.equal(newFeatureCount(podiums), 19);
+
     // The Daily is off the site between seasons and counts as new from its return.
     assert.equal(WHATS_NEW.find((item) => item.key === 'daily').launched, DAILY_RETURNS);
     assert.ok(!keys(currentNews(late)).includes('daily'));
@@ -88,6 +93,7 @@ test('items stay for 30 days from launch, newest first', () => {
     // A month on, the first night's launches have left and the later ones remain.
     assert.deepEqual(keys(currentNews(new Date('2026-10-27T12:00:00Z'))), [
         'daily',
+        'rail-podiums',
         'leaderboard-look',
         'leaderboard-views',
         'head-to-head',

@@ -5,7 +5,7 @@
  * two figures that print the same are a tie.
  */
 
-import { formatFixed, formatMillions, formatPercent, formatSignedMetric } from './csvPresets.js';
+import { formatFixed, formatMillions, formatPercent, formatSignedMetric, printedNumber } from './csvPresets.js';
 import { formatAsOfDate } from './timeMachine.js';
 
 // Formats print with a plain minus and a tenth's precision, which printedNumber reads back.
@@ -25,7 +25,7 @@ export const HEAD_TO_HEAD_ROWS = Object.freeze([
 	{ key: 'x_minutes', label: 'Projected MPG', format: 'fixed' },
 	{ key: 'age', label: 'Age', format: 'age' },
 	// Games played since 1996-97, as profiles count them (comparePage.js from player_seasons).
-	{ key: 'games_regular', label: 'Games', format: 'count' },
+	{ key: 'games_regular', label: 'Regular-season games', format: 'count' },
 	{ key: 'games_playoffs', label: 'Playoff games', format: 'count' }
 ]);
 
@@ -43,12 +43,6 @@ export function displayValue(value, format) {
 	if (format === 'age') return String(Math.floor(value));
 	if (format === 'count') return Math.round(value).toLocaleString('en-US');
 	return formatFixed(value, 1);
-}
-
-/** The number a printed value shows ("+6.8" 6.8, "33.9%" 33.9, "$82.8M" 82.8), or null for "—". */
-function printedNumber(text) {
-	const n = Number.parseFloat(String(text).replace(/[^0-9.-]/g, ''));
-	return Number.isFinite(n) ? n : null;
 }
 
 /** The gap between two printed values, in the stat's own units: percentage points (pp), millions. */

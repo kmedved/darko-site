@@ -18,7 +18,10 @@
     } from '$lib/utils/leaderboardColumns.js';
     import {
         AGE_GROUPS,
+        EXPERIENCE_GROUPS,
         filterLeaderboardRows,
+        leagueYear,
+        podiumRule,
         matchesPosition,
         POSITION_GROUPS,
         trendSeason
@@ -33,6 +36,7 @@
         sameLeaderboardState
     } from '$lib/utils/leaderboardState.js';
     import { isIncomingNavigation, keepsPendingState, pathAndSearch } from '$lib/utils/urlSync.js';
+    import { leaderCard } from '$lib/utils/leaderCards.js';
     import { startWatchlist, watchlist } from '$lib/utils/watchlist.js';
     import { dailyListed } from '$lib/utils/daily.js';
     import { filterPlayers } from '$lib/utils/playerTableFilters.js';
@@ -58,6 +62,7 @@
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Sparkline from '$lib/components/Sparkline.svelte';
     import LeaderCards from '$lib/components/LeaderCards.svelte';
+    import LeaderPodium from '$lib/components/LeaderPodium.svelte';
     import WatchStar from '$lib/components/WatchStar.svelte';
     import { getContext, onMount } from 'svelte';
     import { prefersReducedMotion } from 'svelte/motion';
@@ -78,7 +83,8 @@
     // Sparkline values by board ("season:date"), then by player: { [key]: { [nba_id]: [dpm...] } }.
     let trendsByBoard = $state({});
     let leaderboardPage = $state(1);
-    let positionView = $state('all');
+    let positionView = $state('guards');
+    let experienceView = $state('rookies');
     let distributionMetric = $state('dpm');
     // The Modern view's column set, stat ranges ({ dpm: { min, max } }) and picked players.
     let columnSet = $state('all');
@@ -97,7 +103,6 @@
     const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
     const isShinyView = $derived(displayMode.view === 'shiny');
 
-    const TOP_POSITION_MIN_GAMES = 20;
     const LEADERBOARD_PAGE_SIZE = 50;
     const TRENDS_STORAGE_KEY = 'darko-leaderboard-trends';
     const MAX_PICKS = 4;
@@ -121,8 +126,8 @@
     const activeSortColumn = $derived(sortConfigs[sortColumn] ? sortColumn : 'dpm');
     const watchSet = $derived(new Set($watchlist));
     const textSortColumns = new Set(['_rank', 'player_name', 'team_name', 'position']);
+    // By position only: the leader cards already give the whole board's leaders.
     const positionTabs = [
-        { key: 'all', label: 'All' },
         { key: 'guards', label: 'Guards' },
         { key: 'forwards', label: 'Forwards' },
         { key: 'centers', label: 'Centers' }
@@ -256,13 +261,13 @@
     });
 
     // Any other navigation drops a write still waiting, which was worked out from the address
-    // before and would undo it. One that stays on the board (the Time Machine, the season menu)
-    // was built from the URL before the change, so the change stands over what it brings, and
-    // the page writes it onto the new address.
-    beforeNavigate(({ to }) => {
+    // before and would undo it. A Time Machine date change on the board was built from the URL
+    // before the change, so the change stands over what it brings and the page writes it onto the
+    // new date; a link (Active Leaderboard), Back/Forward or Ask DARKO brings its own question.
+    beforeNavigate(({ type, to }) => {
         if (to?.url && pathAndSearch(to.url) === ownHref) return;
         clearTimeout(urlSyncTimer);
-        keepLocalQuestion = keepsPendingState({ writePending, to, pathname: '/', ownHref });
+        keepLocalQuestion = keepsPendingState({ writePending, type, to, pathname: '/' });
         writePending = false;
     });
 
@@ -318,11 +323,11 @@
     );
 
     const leaderCards = $derived.by(() => [
-        buildLeaderCard(teamScopedPlayers, 'Top DPM', 'dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Top offense', 'o_dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Top defense', 'd_dpm'),
-        buildLeaderCard(teamScopedPlayers, 'Top 3PT%', 'x_fg3_pct', formatPercent),
-        buildLeaderCard(teamScopedPlayers, 'Top FT%', 'x_ft_pct', formatPercent)
+        leaderCard(teamScopedPlayers, 'Top DPM', 'dpm'),
+        leaderCard(teamScopedPlayers, 'Top offense', 'o_dpm'),
+        leaderCard(teamScopedPlayers, 'Top defense', 'd_dpm'),
+        leaderCard(teamScopedPlayers, 'Top 3PT%', 'x_fg3_pct', formatPercent),
+        leaderCard(teamScopedPlayers, 'Top FT%', 'x_ft_pct', formatPercent)
     ]);
 
     const selectedDistributionMetric = $derived(
@@ -344,14 +349,25 @@
             : new Set(filteredPlayers.map((player) => Number(player?.nba_id)))
     );
 
-    const topPositionPlayers = $derived.by(() =>
-        teamScopedPlayers
-            .filter((player) => matchesPosition(player, positionView))
-            .filter((player) => hasMinimumGames(player, TOP_POSITION_MIN_GAMES))
+    // The rail's podium cards: the five best by DPM at a position and in a year in the league
+    // (rookies, sophomores, third year), among the board's regulars (podiumRule).
+    const podium = $derived(podiumRule(players));
+
+    function topFiveByDpm(rows) {
+        return rows
+            .filter(podium.qualifies)
             .filter((player) => Number.isFinite(toNumber(player?.dpm)))
             .slice()
             .sort((a, b) => toNumber(b.dpm) - toNumber(a.dpm))
-            .slice(0, 5)
+            .slice(0, 5);
+    }
+
+    const topPositionPlayers = $derived(
+        topFiveByDpm(teamScopedPlayers.filter((player) => matchesPosition(player, positionView)))
+    );
+    const experienceYear = $derived(EXPERIENCE_GROUPS.find((group) => group.key === experienceView)?.year ?? 1);
+    const topExperiencePlayers = $derived(
+        topFiveByDpm(teamScopedPlayers.filter((player) => leagueYear(player) === experienceYear))
     );
 
     // With the Time Machine set, the export carries Now and Since after DDPM, like the table.
@@ -657,30 +673,6 @@
         });
     }
 
-    // The leader in `metric`, and how far ahead of the next player: "1.2 ahead of Gilgeous-Alexander".
-    function buildLeaderCard(rows, title, metric, formatter = formatSignedMetric) {
-        const [leader, next] = rows
-            .map((player) => ({ player, value: toNumber(player?.[metric]) }))
-            .filter((entry) => entry.value !== null)
-            .sort((a, b) => b.value - a.value);
-        return {
-            title,
-            metric,
-            player: leader?.player ?? null,
-            value: leader?.value ?? null,
-            displayValue: formatter(leader?.value ?? null),
-            margin: leader && next ? leadMargin(leader.value - next.value, next.player, metric) : null
-        };
-    }
-
-    // Shooting leads are in percentage points; a lead too small to print is level.
-    function leadMargin(gap, player, metric) {
-        const name = String(player?.player_name ?? '').split(' ').slice(1).join(' ') || player?.player_name;
-        const amount = metric.endsWith('_pct') ? (gap * 100).toFixed(1) : gap.toFixed(1);
-        if (Number(amount) === 0) return `Level with ${name}`;
-        return `${amount}${metric.endsWith('_pct') ? ' pp' : ''} ahead of ${name}`;
-    }
-
     function playerHeadshotUrl(player) {
         return player?.nba_id ? `/api/img/headshot/${player.nba_id}` : null;
     }
@@ -733,11 +725,6 @@
         const topTenValue = topValues.reduce((sum, value) => sum + value, 0) / topValues.length;
 
         return { meanValue, medianValue, topTenValue, players: values.length };
-    }
-
-    function hasMinimumGames(player, minGames) {
-        const games = toNumber(player?.career_game_num);
-        return games !== null && games >= minGames;
     }
 
     function barWidth(value, rows) {
@@ -1296,52 +1283,82 @@
                         <p class="shiny-plot-caption">@kmedved | www.darko.app | @anpatt7</p>
                     </section>
 
-                    <section class="insight-card" data-shiny-surface="panel">
-                        <div class="insight-card-header">
-                            <h2>Top DPM by Position</h2>
-                            <span class="insight-info" title="Minimum 20 games played">i</span>
-                        </div>
-                        <div class="position-tabs" role="group" aria-label="Position filter">
-                            {#each positionTabs as tab (tab.key)}
-                                <button type="button" class:active={positionView === tab.key} onclick={() => (positionView = tab.key)}>
-                                    {tab.label}
-                                </button>
-                            {/each}
-                        </div>
-                        <div class="position-list">
-                            <div class="position-table-head" aria-hidden="true">
-                                <span>#</span>
-                                <span>Player</span>
-                                <span>Pos</span>
-                                <span>DPM</span>
+                    <!-- The podium cards: the five best by DPM for each tab, on a podium in the teams'
+                         colours, and in the archived list in the Shiny view. -->
+                    {#snippet podiumCard(card)}
+                        <section class="insight-card" data-shiny-surface="panel">
+                            <div class="insight-card-header">
+                                <h2>{card.title}</h2>
+                                <span class="insight-info" title={card.info}>i</span>
                             </div>
-                            {#if topPositionPlayers.length === 0}
+                            <div class="position-tabs" role="group" aria-label={card.label}>
+                                {#each card.tabs as tab (tab.key)}
+                                    <button type="button" class:active={card.view === tab.key} onclick={() => card.select(tab.key)}>
+                                        {tab.label}
+                                    </button>
+                                {/each}
+                            </div>
+                            {#if card.players.length === 0}
                                 <div class="empty-mini">No matching players.</div>
                             {:else}
-                                {#each topPositionPlayers as player, index (player.nba_id)}
-                                    <a class="position-player" href={datedHref(`/player/${player.nba_id}`)}>
-                                        <span class="position-rank">{index + 1}</span>
-                                        <span class="mini-headshot">
-                                            {#if playerHeadshotUrl(player)}
-                                                <img src={playerHeadshotUrl(player)} alt="" loading="lazy" onerror={hideBrokenImage} />
-                                            {/if}
-                                        </span>
-                                        <span class="position-player-main">
-                                            <span class="position-player-label">
-                                                <span class="position-player-name">{player.player_name}</span>
-                                                {#if player.position}<small class="position-player-position">{player.position}</small>{/if}
+                                <div class="modern-only">
+                                    <LeaderPodium
+                                        players={card.players}
+                                        href={(player) => datedHref(`/player/${player.nba_id}`)}
+                                        photo={playerHeadshotUrl}
+                                    />
+                                </div>
+                                <div class="position-list shiny-only">
+                                    <div class="position-table-head" aria-hidden="true">
+                                        <span>#</span>
+                                        <span>Player</span>
+                                        <span>Pos</span>
+                                        <span>DPM</span>
+                                    </div>
+                                    {#each card.players as player, index (player.nba_id)}
+                                        <a class="position-player" href={datedHref(`/player/${player.nba_id}`)}>
+                                            <span class="position-rank">{index + 1}</span>
+                                            <span class="mini-headshot">
+                                                {#if playerHeadshotUrl(player)}
+                                                    <img src={playerHeadshotUrl(player)} alt="" loading="lazy" onerror={hideBrokenImage} />
+                                                {/if}
                                             </span>
-                                            <span class="position-bar">
-                                                <span style={`width: ${barWidth(player.dpm, topPositionPlayers)}%`}></span>
+                                            <span class="position-player-main">
+                                                <span class="position-player-label">
+                                                    <span class="position-player-name">{player.player_name}</span>
+                                                    {#if player.position}<small class="position-player-position">{player.position}</small>{/if}
+                                                </span>
+                                                <span class="position-bar">
+                                                    <span style={`width: ${barWidth(player.dpm, card.players)}%`}></span>
+                                                </span>
                                             </span>
-                                        </span>
-                                        <strong style={getMetricHeatVariables('dpm', player.dpm, leaderboardHeatScales)}>{formatSignedMetric(player.dpm)}</strong>
-                                    </a>
-                                {/each}
+                                            <strong style={getMetricHeatVariables('dpm', player.dpm, leaderboardHeatScales)}>{formatSignedMetric(player.dpm)}</strong>
+                                        </a>
+                                    {/each}
+                                </div>
                             {/if}
-                        </div>
-                        <p class="insight-note">Minimum 20 games played</p>
-                    </section>
+                            <p class="insight-note">{podium.note}</p>
+                        </section>
+                    {/snippet}
+
+                    {@render podiumCard({
+                        title: 'Top DPM by Position',
+                        label: 'Position filter',
+                        info: podium.note,
+                        tabs: positionTabs,
+                        view: positionView,
+                        select: (key) => (positionView = key),
+                        players: topPositionPlayers
+                    })}
+                    {@render podiumCard({
+                        title: 'Top DPM by Experience',
+                        label: 'Experience filter',
+                        info: `Players in their first, second or third season, counted from the first season DARKO lists for each. ${podium.note}.`,
+                        tabs: EXPERIENCE_GROUPS,
+                        view: experienceView,
+                        select: (key) => (experienceView = key),
+                        players: topExperiencePlayers
+                    })}
                 </aside>
             </div>
         {/if}
@@ -2470,11 +2487,11 @@
         font-size: 13px;
     }
 
+    /* Beside the table on the widest screens. Three cards stand taller than a screen, so the rail
+       scrolls with the page rather than sticking, which would hide the last card's foot. */
     .insight-rail {
         display: grid;
         gap: 14px;
-        position: sticky;
-        top: calc(var(--nav-sticky-offset) + 18px);
     }
 
     .insight-card {
@@ -2579,7 +2596,7 @@
 
     .position-tabs {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 4px;
         border: 1px solid var(--border);
         background: var(--bg-surface);
@@ -2708,15 +2725,25 @@
     }
 
     /* The insight cards move under the table until the screen is wide enough for both (about
-       1840px), so the table keeps its full width and every column. */
+       1840px), so the table keeps its full width and every column: three a row, then two with the
+       last across both once a third of the width is too narrow for a podium. */
     @media (max-width: 1839px) {
         .leaderboard-workspace {
             grid-template-columns: 1fr;
         }
 
         .insight-rail {
-            position: static;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 1099px) {
+        .insight-rail {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .insight-rail > :last-child {
+            grid-column: 1 / -1;
         }
     }
 

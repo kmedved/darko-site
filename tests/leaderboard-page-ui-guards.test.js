@@ -8,24 +8,14 @@ const LEADERBOARD_PAGE_SERVER = 'src/routes/+page.server.js';
 const LAYOUT_FILE = 'src/routes/+layout.svelte';
 const APP_CSS_FILE = 'src/app.css';
 
-test('position rail enforces the displayed minimum games rule', async () => {
+test('the rail\'s podium cards enforce the rule their note states', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), LEADERBOARD_PAGE), 'utf8');
 
-    assert.match(
-        contents,
-        /const\s+TOP_POSITION_MIN_GAMES\s*=\s*20;/,
-        'leaderboard page should keep the top-position minimum games threshold explicit'
-    );
-    assert.match(
-        contents,
-        /\.filter\(\(player\)\s*=>\s*hasMinimumGames\(player,\s*TOP_POSITION_MIN_GAMES\)\)/,
-        'top-position rows should filter out players below the displayed minimum-games rule'
-    );
-    assert.match(
-        contents,
-        /career_game_num/,
-        'the minimum-games check should use the active row career game count supplied by player_ratings'
-    );
+    // One rule (utils/leaderboardViews.js podiumRule) for the whole board, filtering the cards and
+    // writing their note, so the note always says what the cards count.
+    assert.match(contents, /const podium = \$derived\(podiumRule\(players\)\);/);
+    assert.match(contents, /\.filter\(podium\.qualifies\)/);
+    assert.match(contents, /<p class="insight-note">\{podium\.note\}<\/p>/);
 });
 
 test('leaderboard treats database season as ending year for display labels', async () => {
