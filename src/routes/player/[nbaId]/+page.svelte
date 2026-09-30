@@ -29,7 +29,7 @@
 	import { normalizeComps } from '$lib/utils/comps.js';
 	import { AS_OF_PARAM, formatAsOfDate, parseAsOfDate } from '$lib/utils/timeMachine.js';
 	import { isRapmMetric, staleRapmDate } from '$lib/utils/latestRapm.js';
-	import { seasonRows } from '$lib/utils/playerSeasons.js';
+	import { seasonRows, seasonUnderWay } from '$lib/utils/playerSeasons.js';
 	import { projectedBoxScore } from '$lib/utils/boxScore.js';
 	import { seasonOfRow } from '$lib/utils/seismograph.js';
 	import {
@@ -45,11 +45,11 @@
 
 	const TALENT_OPTIONS = [
 		{ value: 'dpm', label: 'DPM' },
-		{ value: 'o_dpm', label: 'O-DPM' },
-		{ value: 'd_dpm', label: 'D-DPM' },
+		{ value: 'o_dpm', label: 'Offense' },
+		{ value: 'd_dpm', label: 'Defense' },
 		{ value: 'box_dpm', label: 'Box DPM' },
-		{ value: 'box_odpm', label: 'Box O-DPM' },
-		{ value: 'box_ddpm', label: 'Box D-DPM' },
+		{ value: 'box_odpm', label: 'Box offense' },
+		{ value: 'box_ddpm', label: 'Box defense' },
 		{ value: 'on_off_dpm', label: 'On/Off DPM' },
 		{ value: 'bayes_rapm_total', label: 'RAPM' },
 		{ value: 'x_pts_100', label: 'Pts per 100' },
@@ -68,8 +68,8 @@
 			label: 'Ratings',
 			options: [
 				{ value: 'dpm', label: 'DPM' },
-				{ value: 'o_dpm', label: 'O-DPM' },
-				{ value: 'd_dpm', label: 'D-DPM' },
+				{ value: 'o_dpm', label: 'Offense' },
+				{ value: 'd_dpm', label: 'Defense' },
 				{ value: 'on_off_dpm', label: 'On/Off DPM' },
 				{ value: 'bayes_rapm_total', label: 'RAPM' }
 			]
@@ -124,11 +124,11 @@
 	// With the Time Machine set, the sidebar rating and the Seismograph follow that date.
 	const asOfDate = $derived(parseAsOfDate($page.url.searchParams.get(AS_OF_PARAM)));
 	// Season by season: in the Time Machine only seasons over by its date; in season, a current
-	// player's current season (a next-game row with a real team) is marked "so far". A retired
-	// player's last row also has a real team, which alone would mark their final season.
+	// player's current season (a recent next-game row with a real team) is marked "so far". A
+	// retired player's last row also has a real team, which alone would mark their final season.
 	const inProgressSeason = $derived.by(() => {
 		const latest = historyRows.at(-1);
-		return latest && Number(latest.tm_id) > 0 && !asOfDate && isCurrentPlayer ? Number(latest.season) : null;
+		return seasonUnderWay(latest) && !asOfDate && isCurrentPlayer ? Number(latest.season) : null;
 	});
 	// The player's last game played (not the next game's forecast row).
 	const lastPlayed = $derived(lastPlayedDate(historyRows));
@@ -868,7 +868,7 @@
 							<div>
 								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Career</p>
 								<h2 id="seasons-title">Season by season</h2>
-								<p class="seismograph-lede">DPM at the last game day of each season since 1996-97.</p>
+								<p class="seismograph-lede">DPM going into each season's last game, since 1996-97.</p>
 							</div>
 						</header>
 						<SeasonBySeason rows={seasonsTable} playerName={playerInfo.player_name} />
@@ -920,8 +920,13 @@
 								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Projections</p>
 								<h2 id="box-score-title">Projected box score</h2>
 								<p class="seismograph-lede">
-									DARKO's per-100 projections, and per game at {boxScore.minutes.toFixed(1)} projected minutes
-									and a pace of {boxScore.pace?.toFixed(1) ?? '—'}.
+									{#if boxScore.projected}
+										DARKO's per-100 projections, and per game at {boxScore.minutes.toFixed(1)} projected minutes
+										and a pace of {boxScore.pace?.toFixed(1) ?? '—'}.
+									{:else}
+										DARKO's per-100 projections. It projects no minutes for {playerInfo.player_name} right now,
+										so there is no per-game line.
+									{/if}
 								</p>
 							</div>
 						</header>
@@ -1222,10 +1227,13 @@
 		text-transform: uppercase;
 	}
 
+	/* 25px to tap in the same room: the padding reaches into the 6px gap between rows. */
 	.checkbox-label {
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		padding-block: 3px;
+		margin-block: -3px;
 		font-size: 13px;
 		color: var(--text-secondary);
 		cursor: pointer;

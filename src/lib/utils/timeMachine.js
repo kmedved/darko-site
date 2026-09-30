@@ -34,13 +34,16 @@ export function isTimeMachineFolded(choice, { rewound = false, pathname = '' } =
 	return !rewound && pathname !== '/rewind';
 }
 
-/** A real calendar date as YYYY-MM-DD, or null. */
-export function parseAsOfDate(value) {
+/**
+ * A real calendar date as YYYY-MM-DD from November 1996 to today (UTC), or null. A later date
+ * isn't a snapshot DARKO has, so it reads as today rather than "as of" a day to come.
+ */
+export function parseAsOfDate(value, today = new Date().toISOString().slice(0, 10)) {
 	if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return null;
 	const date = value.trim();
 	const parsed = new Date(`${date}T00:00:00Z`);
 	if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) return null;
-	return date >= HISTORY_START ? date : null;
+	return date >= HISTORY_START && date <= today ? date : null;
 }
 
 export function addDays(date, days) {

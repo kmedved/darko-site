@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '$env/dynamic/private';
@@ -7,7 +6,7 @@ import {
     getRandomPair,
     recordVote
 } from '$lib/server/supabase.js';
-import { isAllowedVoteOrigin } from '$lib/server/eloSecurity.js';
+import { getVoteRateLimitSubject, isAllowedVoteOrigin } from '$lib/server/eloSecurity.js';
 
 const RATE_LIMIT_ROUTE = 'rate_vote';
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -49,26 +48,10 @@ function parseVoteLimit() {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_RATE_LIMIT_PER_MINUTE;
 }
 
-function getClientAddress(headers) {
-    const forwardedFor = headers.get('x-forwarded-for') || '';
-    const forwardedAddress = forwardedFor.split(',')[0]?.trim();
-    return (
-        headers.get('cf-connecting-ip') ||
-        headers.get('x-real-ip') ||
-        forwardedAddress ||
-        'unknown'
-    );
-}
-
+// Keyed on the Vercel-set client address only; headers the client controls cannot open a fresh bucket.
 function getRateLimitSubjectHash(headers, serviceRoleKey) {
     const salt = env.ELO_VOTE_RATE_LIMIT_SALT || serviceRoleKey;
-    const address = getClientAddress(headers);
-    const userAgent = headers.get('user-agent') || '';
-    return createHmac('sha256', salt)
-        .update(address)
-        .update('\n')
-        .update(userAgent)
-        .digest('hex');
+    return getVoteRateLimitSubject(headers, salt);
 }
 
 function getRateLimitWindowStartIso(now = Date.now()) {

@@ -27,13 +27,19 @@
 		};
 	});
 
-	// Labels beside each dot, best-rated first, in the first of four spots that is clear.
+	// Labels beside each dot, best-rated first, in the first of eight spots that is clear. A dot
+	// in a cluster with no clear spot goes unlabelled rather than overlapping; hovering or focusing
+	// it still names the team.
 	const points = $derived.by(() => {
 		if (!scales) return [];
 		const { x, y } = scales;
 		const boxes = rows.map((row) => ({ x0: x(row.offense) - 6, x1: x(row.offense) + 6, y0: y(row.defense) - 6, y1: y(row.defense) + 6 }));
 		const clear = (box) =>
-			box.x0 > M.left && box.x1 < width - M.right && boxes.every((other) => box.x0 >= other.x1 || box.x1 <= other.x0 || box.y0 >= other.y1 || box.y1 <= other.y0);
+			box.x0 > M.left &&
+			box.x1 < width - M.right &&
+			box.y0 > M.top &&
+			box.y1 < height - M.bottom &&
+			boxes.every((other) => box.x0 >= other.x1 || box.x1 <= other.x0 || box.y0 >= other.y1 || box.y1 <= other.y0);
 		return [...rows]
 			.sort((a, b) => b.rating - a.rating)
 			.map((row) => {
@@ -43,11 +49,15 @@
 					{ lx: cx + 8, ly: cy + 4, anchor: 'start', box: { x0: cx + 7, x1: cx + 7 + LABEL_W, y0: cy - 6, y1: cy + 6 } },
 					{ lx: cx - 8, ly: cy + 4, anchor: 'end', box: { x0: cx - 8 - LABEL_W, x1: cx - 8, y0: cy - 6, y1: cy + 6 } },
 					{ lx: cx, ly: cy - 9, anchor: 'middle', box: { x0: cx - LABEL_W / 2, x1: cx + LABEL_W / 2, y0: cy - 9 - LABEL_H, y1: cy - 9 } },
-					{ lx: cx, ly: cy + 17, anchor: 'middle', box: { x0: cx - LABEL_W / 2, x1: cx + LABEL_W / 2, y0: cy + 7, y1: cy + 7 + LABEL_H } }
+					{ lx: cx, ly: cy + 17, anchor: 'middle', box: { x0: cx - LABEL_W / 2, x1: cx + LABEL_W / 2, y0: cy + 7, y1: cy + 7 + LABEL_H } },
+					{ lx: cx + 6, ly: cy - 6, anchor: 'start', box: { x0: cx + 5, x1: cx + 5 + LABEL_W, y0: cy - 6 - LABEL_H, y1: cy - 6 } },
+					{ lx: cx + 6, ly: cy + 15, anchor: 'start', box: { x0: cx + 5, x1: cx + 5 + LABEL_W, y0: cy + 4, y1: cy + 4 + LABEL_H } },
+					{ lx: cx - 6, ly: cy - 6, anchor: 'end', box: { x0: cx - 5 - LABEL_W, x1: cx - 5, y0: cy - 6 - LABEL_H, y1: cy - 6 } },
+					{ lx: cx - 6, ly: cy + 15, anchor: 'end', box: { x0: cx - 5 - LABEL_W, x1: cx - 5, y0: cy + 4, y1: cy + 4 + LABEL_H } }
 				];
-				const spot = spots.find((candidate) => clear(candidate.box)) ?? spots[0];
-				boxes.push(spot.box);
-				return { row, cx, cy, ...spot, champion: row.finish === 'Champion' };
+				const spot = spots.find((candidate) => clear(candidate.box));
+				if (spot) boxes.push(spot.box);
+				return { row, cx, cy, ...(spot ?? spots[0]), labelled: Boolean(spot), champion: row.finish === 'Champion' };
 			});
 	});
 
@@ -103,7 +113,9 @@
 				>
 					<circle class="hit" cx={point.cx} cy={point.cy} r="12" />
 					<circle class="dot" class:champion={point.champion} cx={point.cx} cy={point.cy} r={point.champion ? 6 : 4.5} />
-					<text class="label" x={point.lx} y={point.ly} text-anchor={point.anchor}>{point.row.abbr}</text>
+					{#if point.labelled}
+						<text class="label" x={point.lx} y={point.ly} text-anchor={point.anchor}>{point.row.abbr}</text>
+					{/if}
 				</a>
 			{/each}
 		</svg>

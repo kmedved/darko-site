@@ -1,6 +1,7 @@
 import { downloadCsv } from './csv.js';
 import { FANTASY_CATEGORIES } from './fantasyScoring.js';
 import { formatSeasonEndYearLabel } from './seasonUtils.js';
+import { ratingDate } from './frozenRatings.js';
 
 const DASH = '\u2014';
 
@@ -103,11 +104,11 @@ export function exportCsvRows({ rows = [], columns = [], filename }) {
 
 export const metricDisplayLabels = Object.freeze({
     dpm: 'DPM',
-    o_dpm: 'ODPM',
-    d_dpm: 'DDPM',
+    o_dpm: 'Offense',
+    d_dpm: 'Defense',
     box_dpm: 'Box DPM',
-    box_odpm: 'Box Off',
-    box_ddpm: 'Box Def',
+    box_odpm: 'Box offense',
+    box_ddpm: 'Box defense',
     on_off_dpm: 'On/Off DPM',
     on_off_odpm: 'On/Off Off',
     on_off_ddpm: 'On/Off Def',
@@ -228,7 +229,8 @@ export const compareCsvColumns = [
     // Games played, as the page shows them (comparePage.js), not career_game_num's model rows.
     { header: 'Regular-season games (since 1996-97)', accessor: 'games_regular', format: formatNullable },
     { header: 'Playoff games (since 1996-97)', accessor: 'games_playoffs', format: formatNullable },
-    { header: 'Ratings as of', accessor: 'date', format: formatOrDash },
+    // A frozen rating's own date, its last game day (frozenRatings.js), not its projections'.
+    { header: 'Ratings as of', accessor: ratingDate, format: formatOrDash },
     { header: 'DPM', accessor: 'dpm', format: formatSignedMetric },
     { header: 'ODPM', accessor: 'o_dpm', format: formatSignedMetric },
     { header: 'DDPM', accessor: 'd_dpm', format: formatSignedMetric },

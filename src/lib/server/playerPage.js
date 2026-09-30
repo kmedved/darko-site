@@ -8,13 +8,17 @@ const PLAYER_HISTORY_CACHE = {
     sie: 86400
 };
 
+/**
+ * A player's id from the URL: digits only, no leading zero. Anything else (abc, 0, -5, or a
+ * decimal that would load the same player at a second address) has no page.
+ */
 export function parsePlayerRouteId(nbaIdParam) {
-    const nbaId = Number.parseInt(String(nbaIdParam || ''), 10);
-    if (!Number.isInteger(nbaId) || nbaId <= 0) {
-        error(400, 'Invalid nba_id');
+    const raw = String(nbaIdParam ?? '');
+    if (!/^[1-9]\d{0,9}$/.test(raw)) {
+        error(404, 'Player not found');
     }
 
-    return nbaId;
+    return Number(raw);
 }
 
 // Four decimals keep every chart and table exact to display precision while trimming the

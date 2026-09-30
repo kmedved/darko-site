@@ -46,3 +46,19 @@ test('each Roster Lab side draws its edited roster on one shared Minutes scale',
     assert.match(chart, /<details class="mc-other mc-bench">/);
     assert.match(chart, /column\.bar\.bench \|\|\s*!column\.name \|\|/);
 });
+
+test('the team charts explain the five on the floor, and the roster opens player pages', async () => {
+    const breakdown = await read('src/lib/components/RatingBreakdown.svelte');
+    assert.match(breakdown, /times their share of DARKO's projected team minutes, times five for the five\s+players on the floor/);
+    // The Minutes view leaves the arithmetic to the note under its chart.
+    assert.doesNotMatch(breakdown, /bars together make/);
+    const chart = await read('src/lib/components/MinutesChart.svelte');
+    assert.match(chart, /Five players are on the floor, so the rating is five times that/);
+
+    const view = await read('src/lib/components/TeamDetailView.svelte');
+    assert.match(view, /<a href="\/player\/\{player\.nba_id\}">\{player\.player_name\}<\/a>/);
+    assert.doesNotMatch(view, /href="\/compare\?ids=\{player\.nba_id\}"/);
+    // Compare stays a labelled action: the four with the most projected minutes.
+    assert.match(view, /\.sort\(\(a, b\) => Number\(b\.x_minutes\) - Number\(a\.x_minutes\)\)\s*\.slice\(0, 4\)/);
+    assert.match(view, /<a class="btn" href=\{compareHref\}[^>]*>Compare the top four<\/a>/);
+});

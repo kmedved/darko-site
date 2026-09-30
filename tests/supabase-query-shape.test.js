@@ -75,7 +75,8 @@ test('player pages get draft year, pick, country and size without adding them to
 test('the leaderboard sparklines read one season of DPM for a page of players', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), SUPABASE_FILE), 'utf8');
     const trends = contents.slice(contents.indexOf('export async function getSeasonTrends'));
-    assert.match(trends, /\.select\('nba_id, date, dpm', options\)\s*\.in\('nba_id', wanted\)\s*\.eq\('season', seasonEndYear\)/);
+    // tm_id tells the offseason row, which the lines leave out (utils/frozenRatings.js).
+    assert.match(trends, /\.select\('nba_id, date, dpm, tm_id', options\)\s*\.in\('nba_id', wanted\)\s*\.eq\('season', seasonEndYear\)/);
     // The Time Machine stops the lines at its date.
     assert.match(trends, /if \(through\) query = query\.lte\('date', through\);/);
     assert.match(trends, /\.slice\(0, SEASON_TREND_MAX_IDS\)/);
@@ -131,9 +132,15 @@ test('player name search decorates only matched IDs', async () => {
     const block = contents.slice(start, end);
 
     assert.ok(start >= 0 && end > start, 'player search helper should be discoverable');
-    assert.match(block, /\.limit\(15\)/);
-    assert.match(block, /\.rpc\(\s*'get_latest_player_search_ratings'/);
-    assert.match(block, /p_ids: validPlayers\.map/);
+    // Every rated player's name, matched as every search matches (nameSearch.js), fifteen at most.
+    assert.match(block, /const index = await getPlayersIndex\(\);/);
+    assert.match(block, /searchByName\([\s\S]*?limit: 15/);
+    assert.doesNotMatch(block, /\.ilike\(/);
+    // A current player keeps the index's snapshot (today's, frozen at the last game, as the
+    // leaderboard shows it); only players without one fetch their latest row.
+    assert.match(block, /const pastIds = validPlayers\.filter\(\(player\) => player\.date == null\)/);
+    assert.match(block, /\.rpc\(\s*'get_latest_player_search_ratings',\s*\{ p_ids: pastIds \}/);
+    assert.match(block, /snapshotById\.has\(player\.nba_id\)\s*\? mergePlayerWithActiveSnapshot\(player, snapshotById\.get\(player\.nba_id\)\)\s*: player/);
     assert.doesNotMatch(block, /getActivePlayers\(/);
 });
 

@@ -57,7 +57,8 @@
 
 	function getX(row) {
 		if (timeScale === 'games') {
-			const n = Number.parseFloat(row.career_game_num);
+			// Games played, numbered by the page (routes/trajectories).
+			const n = Number.parseFloat(row._gameX);
 			return Number.isFinite(n) ? n : null;
 		}
 		if (timeScale === 'age') {

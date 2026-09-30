@@ -7,6 +7,7 @@
 
 import { formatFixed, formatMillions, formatPercent, formatSignedMetric, printedNumber } from './csvPresets.js';
 import { formatAsOfDate } from './timeMachine.js';
+import { ratingDate } from './frozenRatings.js';
 
 // Formats print with a plain minus and a tenth's precision, which printedNumber reads back.
 
@@ -22,7 +23,7 @@ export const HEAD_TO_HEAD_ROWS = Object.freeze([
 	{ key: 'sal_market_fixed', label: 'Fair salary', format: 'money', better: true },
 	{ key: 'x_pts_100', label: 'Points per 100', format: 'fixed' },
 	{ key: 'x_ast_100', label: 'Assists per 100', format: 'fixed' },
-	{ key: 'x_minutes', label: 'Projected MPG', format: 'fixed' },
+	{ key: 'x_minutes', label: 'Projected MPG', format: 'minutes' },
 	{ key: 'age', label: 'Age', format: 'age' },
 	// Games played since 1996-97, as profiles count them (comparePage.js from player_seasons).
 	{ key: 'games_regular', label: 'Regular-season games', format: 'count' },
@@ -42,6 +43,8 @@ export function displayValue(value, format) {
 	if (format === 'money') return formatMillions(value);
 	if (format === 'age') return String(Math.floor(value));
 	if (format === 'count') return Math.round(value).toLocaleString('en-US');
+	// No projected minutes (some are published below zero) reads as not projected.
+	if (format === 'minutes') return value > 0 ? formatFixed(value, 1) : '—';
 	return formatFixed(value, 1);
 }
 
@@ -77,7 +80,8 @@ const DAY_MS = 86_400_000;
  * stand at, since Compare shows each player's latest available ratings; null for anyone current.
  */
 export function snapshotNote(player, now = new Date()) {
-	const date = typeof player?.date === 'string' ? player.date.slice(0, 10) : '';
+	const stamp = ratingDate(player);
+	const date = typeof stamp === 'string' ? stamp.slice(0, 10) : '';
 	const time = Date.parse(`${date}T00:00:00Z`);
 	if (!Number.isFinite(time) || now.getTime() - time < 365 * DAY_MS) return null;
 	return `Ratings as of ${formatAsOfDate(date, { short: true })}`;
