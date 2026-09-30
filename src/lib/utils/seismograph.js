@@ -68,6 +68,19 @@ export function lastPlayedDate(rows) {
     return null;
 }
 
+/**
+ * Each row, oldest first, with `game_num`: the games the player has played through it (1 for
+ * their first since 1996-97), or null for a game they sat out, a forecast or an offseason row.
+ * player_ratings' own career_game_num counts every row, those included.
+ */
+export function withGameNumbers(rows) {
+    let played = 0;
+    return (rows ?? []).map((row) => ({
+        ...row,
+        game_num: !isOffseasonRow(row) && playedGame(row) ? (played += 1) : null
+    }));
+}
+
 /** Seasons (ending years) with at least one game played, newest first. */
 export function getSeismographSeasons(rows) {
     const seasons = new Set();

@@ -1,3 +1,5 @@
+import { matchName } from './nameSearch.js';
+
 const PROJECTION_COLUMNS = Array.from({ length: 15 }, (_, index) => `p${index + 1}`);
 
 export const LONGEVITY_COLUMNS = [
@@ -71,7 +73,9 @@ export function filterLongevityRows(rows = [], globalQuery = '', columnFilters =
         );
 
         if (normalizedGlobalQuery) {
-            const globalMatch = visibleColumns.some((value) => containsQuery(value, normalizedGlobalQuery));
+            const globalMatch =
+                matchName(normalizedGlobalQuery, row.player_name, { typos: false }) !== null ||
+                visibleColumns.some((value) => containsQuery(value, normalizedGlobalQuery));
             if (!globalMatch) return false;
         }
 

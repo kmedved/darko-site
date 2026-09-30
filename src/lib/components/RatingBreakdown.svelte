@@ -9,7 +9,6 @@
 		contributionSummary,
 		foldDeepBench,
 		formatTick,
-		minutesProfile,
 		niceTicks,
 		ratingWaterfall,
 		sortContributions
@@ -51,7 +50,6 @@
 	const sorted = $derived(sortContributions(folded, sortKey));
 	const waterfall = $derived(ratingWaterfall(folded, 'total'));
 	const stepScale = $derived(scaleFor(waterfall, 5));
-	const profile = $derived(minutesProfile(folded));
 
 	/** Percent positions over [low, high], with a little room at each end, and round ticks. */
 	function scaleFor({ low, high }, count) {
@@ -214,16 +212,16 @@
 
 <p class="rb-note">
 	{#if view === 'players'}
-		Each player's DPM times their share of DARKO's projected minutes, split into offense and defense
-		(points per 100 possessions; 0 is an average player). The columns add up to the team's numbers
-		at the bottom, and offense plus defense is net. {splitSentence()}
+		Each player's DPM times their share of DARKO's projected team minutes, times five for the five
+		players on the floor, split into offense and defense (points per 100 possessions; 0 is an average
+		player). The columns add up to the team's numbers at the bottom, and offense plus defense is net.
+		{splitSentence()}
 	{:else if view === 'buildup'}
 		The net column added up one player at a time: each bar starts where the one above ends, so the
 		last reaches the team's {formatSigned(waterfall.total, 2)}. {buildupSentence()}
 	{:else}
-		How good each player is against how much they play: DPM one way and share of DARKO's projected
-		minutes the other, so a bar's area is what the player adds and the bars together make the team's
-		{formatSigned(profile.rating, 2)}.
+		How good each player is against how much they play: DPM one way, share of DARKO's projected
+		minutes the other. The note under the chart adds them up.
 	{/if}
 </p>
 

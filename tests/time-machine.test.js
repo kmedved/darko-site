@@ -48,6 +48,10 @@ test('as-of dates must be real calendar dates inside DARKO history', () => {
     assert.equal(parseAsOfDate('1990-01-01'), null);
     assert.equal(parseAsOfDate('yesterday'), null);
     assert.equal(parseAsOfDate(null), null);
+    // Only back in time: a date after today reads as today, not as a snapshot to come.
+    assert.equal(parseAsOfDate('2030-01-01'), null);
+    assert.equal(parseAsOfDate('2026-09-29', '2026-09-29'), '2026-09-29');
+    assert.equal(parseAsOfDate('2026-09-30', '2026-09-29'), null);
 });
 
 test('the Time Machine rides along in the query string', () => {

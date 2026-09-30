@@ -24,16 +24,22 @@ function toNumber(value) {
 	return Number.isFinite(n) ? n : null;
 }
 
-/** The box score, or null without projected minutes and pace. */
+/**
+ * The box score, or null without projected minutes and pace. A player DARKO projects no minutes
+ * for (some are published below zero) keeps the per-100 rates, with no per-game line
+ * (`projected` false, `perGame` null) rather than a line of zeros.
+ */
 export function projectedBoxScore(player) {
 	const line = projectPerGame(player);
 	if (!line) return null;
+	const projected = line.minutes > 0;
 	return {
 		minutes: line.minutes,
+		projected,
 		pace: toNumber(player.x_pace),
 		rows: ROWS.map(({ label, keys, sub = false }) => {
 			const per100 = keys.reduce((total, key) => total + (toNumber(player[key]) ?? 0), 0);
-			return { label, sub, per100, perGame: (per100 * line.possessions) / 100 };
+			return { label, sub, per100, perGame: projected ? (per100 * line.possessions) / 100 : null };
 		}),
 		shooting: {
 			fg: toNumber(player.x_fg_pct),

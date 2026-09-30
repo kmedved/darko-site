@@ -49,7 +49,8 @@ export function teamRatingSummary(abbr, players, league) {
 
 /**
  * Each player's share of a roster's rating: DPM times their share of the roster's minutes (as
- * rateRoster() counts them), split into offense and defense. The totals add up to the rating.
+ * rateRoster() counts them) times five, for the five on the floor, split into offense and
+ * defense. The totals add up to the rating.
  * `roster` is [{ id, minutes }], so this works for the Roster Lab's edited rosters too.
  */
 export function rosterContributions(roster, playersById) {

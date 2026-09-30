@@ -16,12 +16,18 @@ export function normalizeTeamSlug(value = '') {
 
 /**
  * Team pages query by full team name, so /team/OKC or /team/oklahoma city thunder would find
- * nothing. Map an abbreviation or a differently-cased name to the canonical name; anything else
- * passes through unchanged.
+ * nothing. Map an abbreviation, a differently-cased or hyphenated name (new-york-knicks) or the
+ * nickname alone (knicks, trail blazers) to the canonical name; anything else passes through
+ * unchanged. A city alone (los angeles) names no team.
  */
 export function canonicalTeamName(teamName = '') {
-    const key = teamName.trim().toLowerCase();
-    const match = NBA_TEAMS.find((team) => team.abbr.toLowerCase() === key || team.name.toLowerCase() === key);
+    const key = teamName.trim().toLowerCase().replace(/[-_\s]+/g, ' ');
+    const match = key
+        ? NBA_TEAMS.find((team) => {
+              const name = team.name.toLowerCase();
+              return team.abbr.toLowerCase() === key || name === key || name.endsWith(` ${key}`);
+          })
+        : null;
     return match ? match.name : teamName;
 }
 

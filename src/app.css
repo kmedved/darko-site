@@ -682,7 +682,8 @@ a:hover { color: var(--accent-hover); }
     pointer-events: none;
 }
 
-/* A table with pinned columns sets --pinned-width, so the fade starts where the scrolling does. */
+/* A table with pinned columns sets --pinned-width (left) or --pinned-right-width, so the fade
+   starts where the scrolling does. */
 [data-overflow-left]::before {
     left: var(--pinned-width, 0px);
     background:
@@ -691,7 +692,7 @@ a:hover { color: var(--accent-hover); }
 }
 
 [data-overflow-right]::after {
-    right: 0;
+    right: var(--pinned-right-width, 0px);
     background:
         linear-gradient(to left, var(--border), transparent 8px),
         linear-gradient(to right, transparent, color-mix(in srgb, var(--bg-surface) 94%, transparent));
@@ -702,9 +703,11 @@ a:hover { color: var(--accent-hover); }
     color: var(--text-muted);
 }
 
-/* A table header's sort control: a real button so the keyboard can reach it. */
+/* A table header's sort control: a real button so the keyboard can reach it. Its target reaches
+   past the glyph to 24px, to the right and not over the label beside it. */
 .sort-button {
     appearance: none;
+    position: relative;
     display: inline-flex;
     align-items: center;
     margin: 0;
@@ -716,6 +719,12 @@ a:hover { color: var(--accent-hover); }
     font: inherit;
     line-height: inherit;
     cursor: pointer;
+}
+
+.sort-button::after {
+    content: '';
+    position: absolute;
+    inset: -4px -12px -4px 0;
 }
 
 .sort-button:focus-visible {

@@ -12,6 +12,7 @@
 	import { formatAsOfDate, relativeHref, seasonLabelFromEndYear } from '$lib/utils/timeMachine.js';
 	import { mergeSavedEdits, savedEditsByKey } from '$lib/utils/labStorage.js';
 	import { formatSigned } from '$lib/utils/seismograph.js';
+	import { searchByName } from '$lib/utils/nameSearch.js';
 	import {
 		SLIDER_MAX_MINUTES,
 		TEAM_MINUTES,
@@ -176,10 +177,12 @@
 		const query = normalize(queries[side]);
 		if (query.length < 2) return [];
 		const onRoster = new Set(rosterFor(sides[side]).map((row) => row.id));
-		return players
-			.filter((player) => !onRoster.has(player.nba_id) && normalize(player.player_name).includes(query))
-			.sort((x, y) => (Number(y.dpm) || 0) - (Number(x.dpm) || 0))
-			.slice(0, 8);
+		// Accents, word order, initials and typos forgiven (nameSearch.js), better players first.
+		return searchByName(
+			players.filter((player) => !onRoster.has(player.nba_id)),
+			queries[side],
+			{ rank: (player) => Number(player.dpm) || 0, limit: 8 }
+		);
 	}
 
 	const suggestionLists = $derived({ a: suggestions('a'), b: suggestions('b') });

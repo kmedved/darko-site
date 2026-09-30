@@ -14,6 +14,10 @@ import { asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
 import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilterOptions.js';
 import { leagueTeamRatings } from '$lib/utils/teamDna.js';
 import { fillLatestRapm } from '$lib/utils/latestRapm.js';
+import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '$lib/utils/frozenRatings.js';
+import { searchByName } from '$lib/utils/nameSearch.js';
+import { mergeWowyPages, namesMatching, wowySearchWord } from '$lib/utils/wowySearch.js';
+import { withGameNumbers } from '$lib/utils/seismograph.js';
 
 const { supabaseUrl, supabaseAnonKey } = resolveSupabaseConfig({
     url: PUBLIC_SUPABASE_URL,
@@ -56,7 +60,9 @@ const CACHE_MS = {
     lineupRatings: 3_600_000,
     lineupSizeCounts: 3_600_000,
     latestRapmSnapshot: 3_600_000,
-    eloLeaderboard: 30_000
+    eloLeaderboard: 30_000,
+    rookieStarts: 3_600_000,
+    seasonRows: 600_000
 };
 
 export const WOWY_ALL_TIME_PAGE_SIZE = 100;
@@ -221,6 +227,9 @@ const TRAJECTORY_RATING_COLUMNS = [
     'on_off_dpm',
     'age',
     'career_game_num',
+    // For game_num (getFullPlayerTrajectoryHistory): career_game_num counts rows, not games.
+    'seconds_played',
+    'future_game',
     'bayes_rapm_total',
     'x_minutes',
     'x_pace',
@@ -371,7 +380,7 @@ const POSITION_MAP = {
     'Guard': 'G', 'Forward': 'F', 'Center': 'C',
     'Guard-Forward': 'G-F', 'Forward-Guard': 'F-G',
     'Forward-Center': 'F-C', 'Center-Forward': 'C-F',
-    'SG': 'G', 'SF': 'F', 'PF': 'F'
+    'PG': 'G', 'SG': 'G', 'SF': 'F', 'PF': 'F'
 };
 
 const WOWY_FILTER_POSITION_MAP = {
@@ -762,10 +771,13 @@ async function loadAllActivePlayers() {
         return [];
     }
 
-    const unique = await getLatestCurrentSeasonRatingRows(latestSeason);
+    const latestRows = await getLatestCurrentSeasonRatingRows(latestSeason);
+    // Each player as of their own last game (utils/frozenRatings.js).
+    const lastGames = await lastGameDayRows(latestRows, latestSeason);
+    const unique = latestRows.map((row) => freezeRow(row, lastGames.get(row.nba_id)));
     const ids = unique.map((row) => row.nba_id);
     const playersMap = await getCurrentSeasonPlayerDimsByIds(latestSeason, ids);
-    const latestDate = unique.reduce(
+    const latestDate = latestRows.reduce(
         (latest, row) => (!latest || row?.date > latest ? row.date : latest),
         null
     );
@@ -935,6 +947,12 @@ function normalizeWowyAllTimePageOptions(options = {}) {
 
 async function getWowyAllTimePageForMode(ratingMode, options = {}) {
     const normalized = normalizeWowyAllTimePageOptions(options);
+    const page = await fetchWowyAllTimePage(ratingMode, normalized);
+    if (!normalized.search || page.totalCount > 0 || !page.activated) return page;
+    return (await wowyPageByNames(ratingMode, normalized)) ?? page;
+}
+
+async function fetchWowyAllTimePage(ratingMode, normalized) {
     const cachePrefix =
         ratingMode === 'adjusted' ? 'wowyAdjustedAllTimePlayers' : 'wowyAllTimePlayers';
     const key = cacheKey(cachePrefix, JSON.stringify(normalized));
@@ -980,6 +998,53 @@ async function getWowyAllTimePageForMode(ratingMode, options = {}) {
         cacheStore.delete(key);
     }
     return page;
+}
+
+/**
+ * A WOWY search that finds nothing as typed ("jokíc nik", "wembanyana") looks again by player,
+ * matched as every player search matches (utils/nameSearch.js): the WOWY players whose rows
+ * hold the query's longest word, else DARKO's players (1996-97 on), which also catch typos. The
+ * page is those players' seasons, in the order asked for; null when no player matches.
+ */
+async function wowyPageByNames(ratingMode, normalized) {
+    const names = await wowySearchNames(ratingMode, normalized);
+    if (names.length === 0) return null;
+    const pages = await Promise.all(
+        names.map((name) =>
+            fetchWowyAllTimePage(ratingMode, {
+                ...normalized,
+                search: name,
+                offset: 0,
+                limit: WOWY_ALL_TIME_PAGE_SIZE
+            })
+        )
+    );
+    const page = mergeWowyPages(pages, normalized);
+    return page.totalCount > 0 ? page : null;
+}
+
+/** The players a WOWY search names, by their names as stored, best first; five at most. */
+async function wowySearchNames(ratingMode, normalized) {
+    let names = [];
+    const word = wowySearchWord(normalized.search);
+    if (word) {
+        const page = await fetchWowyAllTimePage(ratingMode, {
+            ...normalized,
+            search: word,
+            offset: 0,
+            limit: WOWY_ALL_TIME_PAGE_SIZE
+        });
+        names = namesMatching(normalized.search, page.players);
+    }
+    if (names.length === 0) {
+        const index = await getPlayersIndex();
+        const rank = (player) => {
+            const dpm = Number.parseFloat(player?.dpm);
+            return Number.isFinite(dpm) ? 100 + dpm : 0;
+        };
+        names = searchByName(index, normalized.search, { rank, limit: 5 }).map((player) => player.player_name);
+    }
+    return [...new Set(names.filter(Boolean))].slice(0, 5);
 }
 
 /** Get one filtered, deterministically sorted all-time Average WOWY page. */
@@ -1146,7 +1211,7 @@ export async function getSeasonTrends(ids, season, { through = null } = {}) {
         (options) => {
             let query = supabase
                 .from('player_ratings')
-                .select('nba_id, date, dpm', options)
+                .select('nba_id, date, dpm, tm_id', options)
                 .in('nba_id', wanted)
                 .eq('season', seasonEndYear);
             if (through) query = query.lte('date', through);
@@ -1156,6 +1221,8 @@ export async function getSeasonTrends(ids, season, { through = null } = {}) {
     );
     const trends = {};
     for (const row of rows) {
+        // A season's line runs through its game days, not the offseason row after them.
+        if (isOffseasonRow(row)) continue;
         const dpm = Number.parseFloat(row.dpm);
         if (Number.isFinite(dpm)) (trends[row.nba_id] ??= []).push(Math.round(dpm * 100) / 100);
     }
@@ -1257,6 +1324,51 @@ function fetchAsOfWindow(season, anchorDate, calendarRow) {
 }
 
 /**
+ * The last game-day rows of the players whose latest row is an offseason row, by nba_id, for
+ * freezeRow (utils/frozenRatings.js): each player's last game day from the season table, then
+ * that day's ratings. Best effort: without them the offseason rows stay as they are.
+ */
+async function lastGameDayRows(rows, season) {
+    const ids = rows.filter(isOffseasonRow).map((row) => row.nba_id);
+    if (ids.length === 0) return new Map();
+    try {
+        const { data: seasons, error } = await supabase
+            .from('player_seasons')
+            .select('nba_id, date')
+            .eq('season', season)
+            .in('nba_id', ids);
+        if (error) throw error;
+        const idsByDate = new Map();
+        for (const row of seasons ?? []) {
+            const date = String(row.date ?? '').slice(0, 10);
+            if (!date) continue;
+            if (!idsByDate.has(date)) idsByDate.set(date, []);
+            idsByDate.get(date).push(row.nba_id);
+        }
+        const requests = [];
+        for (const [date, dateIds] of idsByDate) {
+            for (let start = 0; start < dateIds.length; start += PLAYERS_AS_OF_ID_CHUNK) {
+                requests.push({ date, ids: dateIds.slice(start, start + PLAYERS_AS_OF_ID_CHUNK) });
+            }
+        }
+        const chunks = await mapWithConcurrency(requests, PLAYERS_AS_OF_CONCURRENCY, async ({ date, ids: dateIds }) => {
+            const { data, error: rowsError } = await supabase
+                .from('player_ratings')
+                .select(['nba_id', 'date', ...FROZEN_RATING_FIELDS].join(', '))
+                .eq('date', date)
+                .in('nba_id', dateIds)
+                .gt('tm_id', 0);
+            if (rowsError) throw rowsError;
+            return data ?? [];
+        });
+        return new Map(chunks.flat().map((row) => [row.nba_id, row]));
+    } catch (error) {
+        console.error('last game-day ratings failed', error);
+        return new Map();
+    }
+}
+
+/**
  * Every player's latest rating on or before `asOf` (the Time Machine date), in the same shape
  * as getActivePlayers() for the fields the date-aware views read. A player needs a row (a game,
  * or a day on a roster) in the two weeks of play before the date; once any team's season has
@@ -1328,12 +1440,15 @@ export async function getPlayerHistory(nbaId, limit = 500) {
             .select(RATING_COLUMNS)
             .eq('nba_id', nbaId)
             .order('date', { ascending: false })
-            .limit(limit);
+            .limit(limit + 1);
 
         if (error) throw error;
         const playersMap = await getPlayersMapByIds([nbaId]);
         const playerDim = playersMap.get(nbaId);
-        return (data || []).slice().reverse().map((row) => mergeWithPlayerDim(row, playerDim));
+        // One row more than asked, so the newest (an offseason row) has the game day before it.
+        return freezeHistory((data || []).slice().reverse())
+            .slice(-limit)
+            .map((row) => mergeWithPlayerDim(row, playerDim));
     });
 }
 
@@ -1349,36 +1464,43 @@ export async function searchAllPlayers(searchTerm) {
 
     const key = cacheKey('searchPlayers', normalizedTerm);
     return runCached(key, CACHE_MS.searchPlayers, async () => {
-        // Only players DARKO rated (a season of ratings): the table also holds every player since
-        // the 1940s, and their pages don't exist.
-        const { data: players, error } = await supabase
-            .from('players')
-            .select(PLAYERS_DIM_COLUMNS)
-            .ilike('player_name', `%${normalizedTerm}%`)
-            .not('season', 'is', null)
-            .order('player_name', { ascending: true })
-            .limit(15);
-
-        if (error) throw error;
-
-        const validPlayers = (players || []).filter(
-            (player) => Number.isInteger(player?.nba_id) && player.nba_id > 0
+        // Only players DARKO rated (the index: a season of ratings), matched as every player search
+        // matches (nameSearch.js), so "alex sa" finds Alexandre Sarr: current players first, better
+        // ones first among them.
+        const index = await getPlayersIndex();
+        const validPlayers = searchByName(
+            index.filter((player) => Number.isInteger(player?.nba_id) && player.nba_id > 0),
+            normalizedTerm,
+            {
+                rank: (player) => {
+                    const dpm = Number.parseFloat(player?.dpm);
+                    return Number.isFinite(dpm) ? 100 + dpm : 0;
+                },
+                limit: 15
+            }
         );
         if (validPlayers.length === 0) return [];
 
-        const { data: snapshots, error: snapshotError } = await supabase.rpc(
-            'get_latest_player_search_ratings',
-            { p_ids: validPlayers.map((player) => player.nba_id) }
-        );
-        if (snapshotError) throw snapshotError;
-
+        // A current player already carries today's snapshot, as the leaderboard shows it (the
+        // index merges getActivePlayers, ratings frozen at each player's last game); only the
+        // others, without one, take their latest row.
+        const pastIds = validPlayers.filter((player) => player.date == null).map((player) => player.nba_id);
         const snapshotById = new Map();
-        for (const row of Array.isArray(snapshots) ? snapshots : []) {
-            snapshotById.set(row.nba_id, row);
+        if (pastIds.length > 0) {
+            const { data: snapshots, error: snapshotError } = await supabase.rpc(
+                'get_latest_player_search_ratings',
+                { p_ids: pastIds }
+            );
+            if (snapshotError) throw snapshotError;
+            for (const row of Array.isArray(snapshots) ? snapshots : []) {
+                snapshotById.set(row.nba_id, row);
+            }
         }
 
         return validPlayers.map((player) =>
-            mergePlayerWithActiveSnapshot(player, snapshotById.get(player.nba_id))
+            snapshotById.has(player.nba_id)
+                ? mergePlayerWithActiveSnapshot(player, snapshotById.get(player.nba_id))
+                : player
         );
     });
 }
@@ -1439,6 +1561,9 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
             truncated = (extraRows || []).length > 0;
         }
 
+        // An offseason row takes the ratings of the game day before it (utils/frozenRatings.js).
+        allData = freezeHistory(allData);
+
         if (!mergePlayerDim) {
             return { rows: allData, truncated, maxRows };
         }
@@ -1453,13 +1578,21 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
     });
 }
 
-/** Get the complete career projection used only by the Trajectories page. */
-export function getFullPlayerTrajectoryHistory(nbaId, options = {}) {
-    return getFullPlayerHistory(nbaId, {
+/**
+ * Get the complete career projection used only by the Trajectories page, each row with
+ * game_num: the games played through it (seismograph.js withGameNumbers), null on a day the
+ * player sat out, a forecast or an offseason row.
+ */
+export async function getFullPlayerTrajectoryHistory(nbaId, options = {}) {
+    const history = await getFullPlayerHistory(nbaId, {
         ...options,
         columns: TRAJECTORY_RATING_COLUMNS,
         cachePrefix: 'fullPlayerTrajectoryHistory'
     });
+    return {
+        ...history,
+        rows: withGameNumbers(history.rows).map(({ seconds_played, future_game, ...row }) => row)
+    };
 }
 
 const UNDEFINED_COLUMN = '42703';
@@ -1586,6 +1719,86 @@ export async function getWowyPublication() {
 
         if (error) throw error;
         return data || null;
+    });
+}
+
+/**
+ * Where DARKO started each player of a draft class (the About page): the rating going into his
+ * first game, which comes from his age, draft slot and height before he has played. The class is
+ * everyone drafted in `draftYear` with a game since, and the undrafted players whose first
+ * season followed it (draft slot null).
+ */
+export async function getRookieStarts(draftYear) {
+    const year = Number(draftYear);
+    if (!Number.isInteger(year) || year < 1996 || year > 2100) return [];
+    return runCached(cacheKey('rookieStarts', year), CACHE_MS.rookieStarts, async () => {
+        const columns = 'nba_id, player_name, draft_slot, draft_year, height, rookie_season';
+        const [drafted, undrafted] = await Promise.all([
+            supabase.from('players').select(columns).eq('draft_year', year),
+            supabase.from('players').select(columns).is('draft_year', null).eq('rookie_season', year + 1)
+        ]);
+        if (drafted.error) throw drafted.error;
+        if (undrafted.error) throw undrafted.error;
+        const players = [...(drafted.data ?? []), ...(undrafted.data ?? [])].filter(
+            (player) => Number.isInteger(player?.nba_id) && player.nba_id > 0
+        );
+        if (players.length === 0) return [];
+        const firstRows = new Map();
+        for (let start = 0; start < players.length; start += 150) {
+            const { data, error } = await supabase
+                .from('player_ratings')
+                .select('nba_id, date, dpm, o_dpm, d_dpm, age')
+                .eq('career_game_num', 1)
+                .in('nba_id', players.slice(start, start + 150).map((player) => player.nba_id));
+            if (error) throw error;
+            for (const row of data ?? []) firstRows.set(row.nba_id, row);
+        }
+        return players
+            .filter((player) => firstRows.has(player.nba_id))
+            .map((player) => {
+                const first = firstRows.get(player.nba_id);
+                return {
+                    nba_id: player.nba_id,
+                    player_name: player.player_name,
+                    draft_slot: Number.isInteger(player.draft_slot) ? player.draft_slot : null,
+                    height: player.height ?? null,
+                    age: first.age ?? null,
+                    date: first.date ?? null,
+                    dpm: first.dpm ?? null,
+                    o_dpm: first.o_dpm ?? null,
+                    d_dpm: first.d_dpm ?? null
+                };
+            })
+            .sort((a, b) => (a.draft_slot ?? 99) - (b.draft_slot ?? 99) || String(a.player_name).localeCompare(String(b.player_name)));
+    });
+}
+
+const SEASON_ROW_COLUMNS = 'nba_id, date, season, team_name, tm_id, opp_id, dpm, o_dpm, d_dpm, seconds_played, future_game';
+
+/**
+ * One season of a player's rows, oldest first, with what the Seismograph needs (the About
+ * page's "Watch DARKO learn"): a season's worth instead of a whole career.
+ */
+export async function getPlayerSeasonRows(nbaId, season) {
+    const id = Number(nbaId);
+    const year = Number(season);
+    if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(year)) return [];
+    return runCached(cacheKey('seasonRows', `${id}:${year}`), CACHE_MS.seasonRows, async () => {
+        const read = (columns) =>
+            supabase
+                .from('player_ratings')
+                .select(columns)
+                .eq('nba_id', id)
+                .eq('season', year)
+                .order('date', { ascending: true })
+                .limit(400);
+        let { data, error } = await read(SEASON_ROW_COLUMNS);
+        // As player profiles do (getFullPlayerProfileHistory): a table without opp_id yet.
+        if (error?.code === UNDEFINED_COLUMN) {
+            ({ data, error } = await read(SEASON_ROW_COLUMNS.replace(', opp_id', '')));
+        }
+        if (error) throw error;
+        return data ?? [];
     });
 }
 

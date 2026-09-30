@@ -236,7 +236,7 @@
 						text-anchor="end">{seasonLabel(now.season)} {formatSigned(now.dpm, 2)}</text
 					>
 
-					<text class="cf-axis" x={M.left - 8} y={HEIGHT - 12} text-anchor="end">In NBA</text>
+					<text class="cf-axis" x={M.left - 8} y={HEIGHT - 12} text-anchor="end">10+ games</text>
 					{#each fan as entry (entry.year)}
 						<text class="cf-axis cf-share" x={chart.x(chart.age0 + entry.year)} y={HEIGHT - 12} text-anchor="middle">{percent(entry.share)}</text>
 					{/each}
@@ -313,7 +313,7 @@
 								<span class="sr-only">
 									{compPath(comp)
 										.slice(1)
-										.map((point) => (point.dpm === null ? 'out of the league' : formatSigned(point.dpm, 1)))
+										.map((point) => (point.dpm === null ? 'under 10 games' : formatSigned(point.dpm, 1)))
 										.join(', ')}
 								</span>
 							</td>

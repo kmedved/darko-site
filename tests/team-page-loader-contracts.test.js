@@ -32,6 +32,15 @@ test('team pages accept abbreviations and any-case names', async () => {
     assert.equal(canonicalTeamName('oklahoma city thunder'), 'Oklahoma City Thunder');
     assert.equal(canonicalTeamName('Denver Nuggets'), 'Denver Nuggets');
     assert.equal(canonicalTeamName('Seattle SuperSonics'), 'Seattle SuperSonics');
+    // Slugs and nicknames: /team/knicks, /team/new-york-knicks, /standings/trail_blazers.
+    assert.equal(canonicalTeamName('knicks'), 'New York Knicks');
+    assert.equal(canonicalTeamName('new-york-knicks'), 'New York Knicks');
+    assert.equal(canonicalTeamName('trail blazers'), 'Portland Trail Blazers');
+    assert.equal(canonicalTeamName('Blazers'), 'Portland Trail Blazers');
+    assert.equal(canonicalTeamName('76ers'), 'Philadelphia 76ers');
+    // A city alone names no team.
+    assert.equal(knownTeamName('los-angeles'), null);
+    assert.equal(knownTeamName(''), null);
 
     // Anything that isn't one of the 30 teams has no page: a 404, not an empty page titled
     // with the slug.

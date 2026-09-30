@@ -22,7 +22,7 @@
 			<tr class:sub={row.sub}>
 				<th scope="row">{row.label}</th>
 				<td>{row.per100.toFixed(1)}</td>
-				<td class="per-game">{row.perGame.toFixed(1)}</td>
+				<td class="per-game">{row.perGame === null ? '—' : row.perGame.toFixed(1)}</td>
 			</tr>
 		{/each}
 		<tr>

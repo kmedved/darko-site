@@ -13,6 +13,7 @@ import { formatAsOfDate, HISTORY_START, parseAsOfDate, seasonLabelFromEndYear } 
 import { formatSigned } from './seismograph.js';
 import { dailyListed } from './daily.js';
 import { isRotationPlayer } from './leaderboardViews.js';
+import { searchByName } from './nameSearch.js';
 
 export const ASK_EXAMPLES = Object.freeze([
 	'best defenders under 25',
@@ -112,29 +113,19 @@ export function findTeam(query, raw = query) {
 // ---------------------------------------------------------------- players
 
 /**
- * Best name matches, strongest first: exact, then prefix, then a word prefix, then anywhere.
+ * Best name matches, strongest first, as every player search matches (nameSearch.js): exact, the
+ * name's start, every word in any order, initials, anywhere, and typos when nothing else matches.
  * Current players rank ahead of former ones, and better players ahead of worse at equal match.
  * `pool` rows are { id, name, current, dpm }.
  */
 export function matchPlayers(query, pool, { limit = 6, currentOnly = false } = {}) {
 	const q = normalizeAskText(query);
 	if (q.length < 2) return [];
-	const scored = [];
-	for (const player of pool ?? []) {
-		if (currentOnly && !player.current) continue;
-		const name = player.normalized ?? normalizeAskText(player.name);
-		let score;
-		if (name === q) score = 100;
-		else if (name.startsWith(q)) score = 80;
-		else if (name.split(' ').some((word) => word.startsWith(q))) score = 65;
-		else if (name.includes(q)) score = 40;
-		else continue;
-		scored.push({ player, score: score + (player.current ? 10 : 0) + (toNumber(player.dpm) ?? -2) * 0.6 });
-	}
-	return scored
-		.sort((a, b) => b.score - a.score)
-		.slice(0, limit)
-		.map((entry) => entry.player);
+	return searchByName(currentOnly ? (pool ?? []).filter((player) => player.current) : pool, query, {
+		name: (player) => player.name,
+		rank: (player) => (player.current ? 10 : 0) + (toNumber(player.dpm) ?? -2) * 0.6,
+		limit
+	});
 }
 
 /** The ask pool for active players: { id, name, normalized, current, dpm, row }. */
@@ -275,9 +266,10 @@ export function parseLeaderboardQuestion(normalized, raw = normalized) {
 /** Rows for a leaderboard question, with a title and the column it ranks by. */
 export function runLeaderboardQuestion(filter, players, { season = null } = {}) {
 	const sort = filter.sort;
-	let rows = (players ?? []).filter((row) =>
-		// Rotation players only, unless the question names a team.
-		filter.team ? row.team_name === filter.team.name : isRotationPlayer(row)
+	// Rotation players only, on a team or across the league, so a player with a few minutes a
+	// game doesn't top a team's list.
+	let rows = (players ?? []).filter(
+		(row) => isRotationPlayer(row) && (!filter.team || row.team_name === filter.team.name)
 	);
 	if (filter.position) {
 		const categories = POSITION_GROUPS[filter.position].categories;

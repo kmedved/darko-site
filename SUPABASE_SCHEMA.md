@@ -79,7 +79,8 @@ Core fact table. One row per player per game-date.
 - **Site reads:** every column reaches the server, because `get_active_player_ratings` and
   `get_season_start_player_ratings` return whole rows (`pr.*`). The direct selects and filters
   in `src/lib/server/supabase.js` (`RATING_COLUMNS`, `TRAJECTORY_RATING_COLUMNS`,
-  `PLAYER_PROFILE_RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS` and literal selects) name 71 of the
+  `PLAYER_PROFILE_RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS`, `SEASON_ROW_COLUMNS`,
+  `FROZEN_RATING_FIELDS` from `src/lib/utils/frozenRatings.js`, and literal selects) name 71 of the
   76: all but `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`, which no
   page uses.
 

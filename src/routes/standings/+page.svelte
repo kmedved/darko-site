@@ -134,6 +134,13 @@
         isSeasonComplete([...(data.eastStandings || []), ...(data.westStandings || [])])
     );
     const seasonLabel = $derived(seasonLabelFromEndYear(data.playedSeason));
+    // The # is the order of records, and since 2020-21 seeds 7 and 8 come out of the play-in, so a
+    // team can finish 7th and take the 8 seed (Orlando and Philadelphia, 2025-26).
+    const playInNote = $derived(
+        (data.playedSeason ?? 0) >= 2021
+            ? ' Seeds 7 and 8 are settled in the play-in among the teams that finished 7th to 10th, so they can differ from the order of records.'
+            : ''
+    );
     const nextSeasonLabel = $derived(data.playedSeason ? seasonLabelFromEndYear(data.playedSeason + 1) : '');
 
     const visibleStandingsColumns = $derived.by(() => {
@@ -601,7 +608,7 @@
                     </div>
                     <p class="standings-note">
                         {seasonComplete
-                            ? 'Final regular-season records, seeds and how each season ended.'
+                            ? `Final regular-season records, seeds and how each season ended.${playInNote}`
                             : 'Results based on 10,000 season simulations.'}
                     </p>
                 </section>

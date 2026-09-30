@@ -227,6 +227,62 @@ export async function getSeasonGames(season) {
     );
 }
 
+const TOTALS_MS = 6 * 3_600_000;
+let totalsMemo = null;
+
+/**
+ * What the season table covers, for the About page: the players, the seasons and the games
+ * played (regular season and playoffs) since 1996-97. Read a season at a time, in parallel, and
+ * kept for a few hours; null until the table is published.
+ */
+export async function getModelTotals(now = Date.now()) {
+    if (totalsMemo && now - totalsMemo.at < TOTALS_MS) return totalsMemo.value;
+    const local = await readLocalTable('player_seasons');
+    const totalsOf = (rows) => {
+        const players = new Set();
+        const seasons = new Set();
+        let games = 0;
+        let playoffGames = 0;
+        for (const row of rows ?? []) {
+            players.add(Number(row.nba_id));
+            seasons.add(Number(row.season));
+            games += Number(row.games) || 0;
+            playoffGames += Number(row.playoff_games) || 0;
+        }
+        if (!players.size) return null;
+        const ordered = [...seasons].sort((a, b) => a - b);
+        return {
+            players: players.size,
+            seasons: ordered.length,
+            firstSeason: ordered[0],
+            lastSeason: ordered.at(-1),
+            games,
+            playoffGames,
+            playerGames: games + playoffGames
+        };
+    };
+    const value = local
+        ? totalsOf(local)
+        : await missingAsNull(async () => {
+              const last = new Date(now).getUTCFullYear() + 1;
+              const seasons = Array.from({ length: last - 1996 }, (_, index) => 1997 + index);
+              const pages = await Promise.all(
+                  seasons.map((season) =>
+                      readPages(() =>
+                          supabase
+                              .from('player_seasons')
+                              .select('nba_id, season, games, playoff_games')
+                              .eq('season', season)
+                              .order('nba_id', { ascending: true })
+                      )
+                  )
+              );
+              return totalsOf(pages.flat());
+          });
+    if (value) totalsMemo = { at: now, value };
+    return value;
+}
+
 /** A player's seasons since 1996-97, each at its last game day, oldest first. */
 export async function getPlayerSeasons(nbaId) {
     const local = await readLocalTable('player_seasons');

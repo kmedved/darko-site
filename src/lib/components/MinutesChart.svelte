@@ -41,19 +41,24 @@
 	});
 	const plotW = $derived(Math.max(width - M.left - M.right, 1));
 	const plotH = $derived(height - M.top - M.bottom);
-	const columns = $derived.by(() => {
+	const layout = $derived.by(() => {
 		const bars = profile.bars.map((bar) => {
 			const x0 = M.left + bar.x0 * plotW;
 			const span = (bar.x1 - bar.x0) * plotW;
 			const gap = Math.min(2, span / 3);
 			return { bar, x0, span, x: x0 + gap / 2, w: Math.max(span - gap, 0.5), zero: y(0), end: y(bar.dpm) };
 		});
-		const names = placeNames(bars);
-		return bars.map((column) => {
-			const name = names.get(column.bar.id) ?? null;
-			return { ...column, name, fits: name !== null };
-		});
+		const { names, mean } = placeNames(bars);
+		return {
+			columns: bars.map((column) => {
+				const name = names.get(column.bar.id) ?? null;
+				return { ...column, name, fits: name !== null };
+			}),
+			mean
+		};
 	});
+	const columns = $derived(layout.columns);
+	const meanLabel = $derived(layout.mean);
 	const sideRows = $derived(sidewaysRows(profile.bars));
 	// Marks with no name in the chart (rows too thin for one, bars with no room) are listed under
 	// it, and so is the deep bench, whose players only fit there; with listNarrow, so are names
@@ -111,9 +116,11 @@
 	}
 
 	/**
-	 * Names for the bars. The tallest bar is always named in full. Then each bar gets the
-	 * longest form of its name that fits over it, and the bars still unnamed, tallest first, the
-	 * longest form that can spill past the bar without touching another bar or name.
+	 * Names for the bars, and where the average minute's label goes. The tallest bar is always
+	 * named in full. The label takes the first clear end of the dashed line, above it or below,
+	 * so on a lopsided roster it doesn't sit on that name. Then each bar gets the longest form of
+	 * its name that fits over it, and the bars still unnamed, tallest first, the longest form that
+	 * can spill past the bar without touching another bar or name.
 	 */
 	function placeNames(bars) {
 		const placed = [];
@@ -123,9 +130,19 @@
 			y0: Math.min(column.zero, column.end),
 			y1: Math.max(column.zero, column.end)
 		}));
-		const meanText = `Average minute ${formatSigned(profile.mean, 2)}`;
-		const meanRight = M.left + plotW - 2;
-		const meanBaseline = y(profile.mean) - 5;
+		const meanWidth = textWidth(`Average minute ${formatSigned(profile.mean, 2)}`);
+		const meanSpots = [
+			{ x: M.left + plotW - 2, y: y(profile.mean) - 5, anchor: 'end' },
+			{ x: M.left + plotW - 2, y: y(profile.mean) + 13, anchor: 'end' },
+			{ x: M.left + 2, y: y(profile.mean) - 5, anchor: 'start' },
+			{ x: M.left + 2, y: y(profile.mean) + 13, anchor: 'start' }
+		].map((spot) => ({
+			...spot,
+			x0: spot.anchor === 'end' ? spot.x - meanWidth - 2 : spot.x - 2,
+			x1: spot.anchor === 'end' ? spot.x + 2 : spot.x + meanWidth + 2,
+			y0: spot.y - 10,
+			y1: spot.y + 3
+		}));
 		const names = new Map();
 		const box = (column, text) => {
 			const half = textWidth(text) / 2;
@@ -144,12 +161,15 @@
 			.map((column, index) => index)
 			.sort((a, b) => Math.abs(bars[b].bar.dpm) - Math.abs(bars[a].bar.dpm));
 		if (order.length) place(order[0], box(bars[order[0]], labelFor(bars[order[0]].bar)));
-		placed.push({
-			x0: meanRight - textWidth(meanText) - 2,
-			x1: meanRight + 2,
-			y0: meanBaseline - 10,
-			y1: meanBaseline + 3
-		});
+		const mean =
+			meanSpots.find(
+				(spot) =>
+					spot.y0 > M.top &&
+					spot.y1 < M.top + plotH &&
+					placed.every((other) => !overlaps(spot, other)) &&
+					rects.every((rect) => !overlaps(spot, rect))
+			) ?? meanSpots[0];
+		placed.push(mean);
 		for (const index of order) {
 			if (names.has(bars[index].bar.id)) continue;
 			for (const text of nameForms(labelFor(bars[index].bar))) {
@@ -170,7 +190,7 @@
 				}
 			}
 		}
-		return names;
+		return { names, mean };
 	}
 
 	/** A bar from the zero line to its value, rounded only at the data end. */
@@ -314,7 +334,7 @@
 						>{column.name.text}</text>
 					{/if}
 				{/each}
-				<text class="mc-text mc-mean-label" x={M.left + plotW - 2} y={y(profile.mean) - 5} text-anchor="end">
+				<text class="mc-text mc-mean-label" x={meanLabel.x} y={meanLabel.y} text-anchor={meanLabel.anchor}>
 					Average minute {formatSigned(profile.mean, 2)}
 				</text>
 				{#each SHARE_TICKS as share, index (share)}
