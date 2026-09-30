@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -6,7 +7,8 @@ import {
     buildSeismograph,
     formatSigned,
     getSeismographSeasons,
-    seasonOfRow
+    seasonOfRow,
+    withGameNumbers
 } from '../src/lib/utils/seismograph.js';
 import { teamAbbrFromId } from '../src/lib/utils/teamAbbreviations.js';
 
@@ -171,4 +173,50 @@ test('every theme and the Shiny view define the offense and defense colors', asy
     assert.match(shinyDesign, /seismograph: Object\.freeze\(/);
     assert.match(profile, /<SeismographChart\s+\{seismograph\}/);
     assert.match(profile, /class="seismograph-kicker" data-shiny-role="editorial-kicker"/);
+});
+
+test('games are numbered as played: not the days sat out, a forecast or the offseason', () => {
+    // Kobe's first days: a game he sat out, then three he played; then an offseason row and the
+    // next season's forecast.
+    const rows = withGameNumbers([
+        { date: '1996-11-01', career_game_num: 1, seconds_played: 0, future_game: 0, tm_id: 1610612747 },
+        { date: '1996-11-03', career_game_num: 2, seconds_played: 382, future_game: 0, tm_id: 1610612747 },
+        { date: '1996-11-05', career_game_num: 3, seconds_played: 196, future_game: 0, tm_id: 1610612747 },
+        { date: '1996-11-06', career_game_num: 4, seconds_played: 409, future_game: 0, tm_id: 1610612747 },
+        { date: '1997-07-26', career_game_num: 5, seconds_played: 0, future_game: 1, tm_id: OFFSEASON_TEAM_ID },
+        { date: '1997-10-31', career_game_num: 6, seconds_played: 0, future_game: 1, tm_id: 1610612747 }
+    ]);
+    assert.deepEqual(rows.map((row) => row.game_num), [null, 1, 2, 3, null, null]);
+    assert.equal(rows[1].career_game_num, 2, 'the rest of the row is kept');
+    assert.deepEqual(withGameNumbers(null), []);
+});
+
+test('Career Trajectories counts, plots and rolls over games played', async () => {
+    const loader = await fs.readFile('src/lib/server/supabase.js', 'utf8');
+    const start = loader.indexOf('const TRAJECTORY_RATING_COLUMNS = [');
+    const columns = loader.slice(start, loader.indexOf("].join(', ');", start));
+    assert.match(columns, /'seconds_played',\s*'future_game',/);
+    // The history numbers the games and keeps the flags server-side.
+    assert.match(loader, /rows: withGameNumbers\(history\.rows\)\.map\(\(\{ seconds_played, future_game, \.\.\.row \}\) => row\)/);
+
+    const page = await fs.readFile('src/routes/trajectories/+page.svelte', 'utf8');
+    assert.match(page, /function gameX\(row\) \{\s*const value = Number\.parseFloat\(isWowyMetric \? row\?\.career_game_num : row\?\.game_num\);/);
+    // Games mode draws games played, at their number; the range filter and the summaries agree.
+    assert.match(page, /\} else if \(timeScale === 'games'\) \{\s*rows = rows\.flatMap\(\(row\) => \{\s*const x = gameX\(row\);/);
+    assert.match(page, /\} else \{\s*val = gameX\(row\);\s*\}/);
+    assert.match(page, /const gamePoints = metricPoints\.filter\(\(point\) => gameX\(point\.row\) != null\);/);
+    assert.match(page, /label: 'Games Played',\s*value: formatInteger\(gamePoints\.length\)/);
+    assert.match(page, /const game = gameX\(row\);\s*if \(value == null \|\| game == null\) return null;/);
+    assert.doesNotMatch(page, /Games Tracked/);
+    const chart = await fs.readFile('src/lib/components/TrajectoryChart.svelte', 'utf8');
+    assert.match(chart, /if \(timeScale === 'games'\) \{\s*\/\/ Games played, numbered by the page \(routes\/trajectories\)\.\s*const n = Number\.parseFloat\(row\._gameX\);/);
+    assert.doesNotMatch(chart, /row\.career_game_num/);
+});
+
+test('Career Trajectories: no NBA ids on the chips, and the examples shrink to a row once a player is on', async () => {
+    const page = await fs.readFile('src/routes/trajectories/+page.svelte', 'utf8');
+    assert.doesNotMatch(page, /<small>\{p\.nba_id\}<\/small>/);
+    assert.match(page, /\{#if selectedPlayers\.length === 0\}\s*<div class="trajectory-starter-grid"/);
+    assert.match(page, /\{:else if moreStarters\.length > 0\}\s*<div class="trajectory-starter-row" aria-label="Suggested players">/);
+    assert.match(page, /const moreStarters = \$derived\(\s*STARTER_PLAYERS\.filter\(\(starter\) => !selectedPlayers\.some/);
 });

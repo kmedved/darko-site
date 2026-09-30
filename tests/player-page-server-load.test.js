@@ -5,15 +5,20 @@ import { isHttpError } from '@sveltejs/kit';
 
 import { loadPlayerPageData } from '../src/lib/server/playerPage.js';
 
-test('player page load rejects invalid nbaId values with 400', async () => {
-    await assert.rejects(
-        () =>
-            loadPlayerPageData({
-                nbaIdParam: 'abc',
-                loadFullHistory: async () => ({ rows: [] })
-            }),
-        (err) => isHttpError(err, 400)
-    );
+test('player page load answers an id that isn\'t a player id with 404', async () => {
+    // No such page, rather than "Something went wrong": abc, 0, -5, and a decimal that would load
+    // the same player at a second address.
+    for (const nbaIdParam of ['abc', '0', '-5', '1628983.5']) {
+        await assert.rejects(
+            () =>
+                loadPlayerPageData({
+                    nbaIdParam,
+                    loadFullHistory: async () => ({ rows: [] })
+                }),
+            (err) => isHttpError(err, 404),
+            nbaIdParam
+        );
+    }
 });
 
 test('player page load returns 404 when no history rows exist', async () => {

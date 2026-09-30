@@ -66,6 +66,15 @@
     const simFinished = $derived(sim ? isSeasonComplete([sim]) : false);
 
     const teamPlayers = $derived(players || []);
+    // Compare takes four: the four DARKO projects the most minutes for.
+    const compareHref = $derived.by(() => {
+        const ids = teamPlayers
+            .filter((player) => Number(player?.x_minutes) > 0)
+            .sort((a, b) => Number(b.x_minutes) - Number(a.x_minutes))
+            .slice(0, 4)
+            .map((player) => player.nba_id);
+        return ids.length > 1 ? `/compare?ids=${ids.join(',')}` : null;
+    });
     const teamPlayerHeatScales = $derived(buildPresetHeatScales(teamPlayers, 'talent'));
     const dpmTintLimit = $derived(tintLimit(teamPlayers.map((player) => player?.dpm)));
     const teamWinDist = $derived(winDist || []);
@@ -370,6 +379,9 @@
             {#if abbr && teamPlayers.length > 0}
                 <a class="btn" href="/lab?a={abbr}">Rebuild in the Roster Lab</a>
             {/if}
+            {#if compareHref}
+                <a class="btn" href={compareHref} title="The four players DARKO projects the most minutes for">Compare the top four</a>
+            {/if}
             <button
                 class="btn"
                 type="button"
@@ -460,7 +472,7 @@
                                     {@const value = getPlayerTableCellValue(player, column)}
                                     {#if column.key === 'player_name'}
                                         <td class="name">
-                                            <a href="/compare?ids={player.nba_id}">{player.player_name}</a>
+                                            <a href="/player/{player.nba_id}">{player.player_name}</a>
                                         </td>
                                     {:else}
                                         <td
@@ -698,6 +710,7 @@
 
     .team-score-split :global(.od-bar) {
         width: 180px;
+        max-width: 100%;
     }
 
     .team-score-note {
@@ -738,9 +751,14 @@
             grid-area: value;
         }
 
+        /* The split takes the column beside the number and no more, so on a narrow phone the bar
+           shortens rather than running off the screen. */
         .team-score-split {
             grid-area: split;
+            grid-template-columns: minmax(0, 1fr);
             justify-items: start;
+            justify-self: stretch;
+            min-width: 0;
         }
 
         .team-score-note {

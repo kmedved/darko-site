@@ -118,6 +118,32 @@
                     "value": "public, max-age=31536000, immutable"
                 }
             ]
+        },
+        {
+            "source": "/darko-about-logo.png",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/fonts/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                },
+                {
+                    "key": "Vercel-CDN-Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
         }
     ],
     "routes": [

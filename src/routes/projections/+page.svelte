@@ -5,6 +5,7 @@
 	import { browser } from '$app/environment';
 	import { afterNavigate, replaceState } from '$app/navigation';
 	import { exportCsvRows, getFantasyCsvColumns } from '$lib/utils/csvPresets.js';
+	import { searchByName } from '$lib/utils/nameSearch.js';
 	import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
 	import { getPositionCategory } from '$lib/utils/positionCategories.js';
 	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
@@ -50,6 +51,8 @@
 
 	const isCategories = $derived(Boolean(FANTASY_PRESETS[preset]?.categories));
 	const valueLabel = $derived(isCategories ? 'Total z' : 'FP/G');
+	// Pinned at the right on phones, the score column's width puts the scroll fade beside it.
+	let valueColumnWidth = $state(0);
 	const board = $derived.by(() =>
 		buildFantasyBoard(data.players, { preset, customWeights, minMinutes: MIN_PROJECTED_MINUTES })
 	);
@@ -58,10 +61,11 @@
 			teamAbbr(a).localeCompare(teamAbbr(b))
 		)
 	);
+	// Names match as every player search does (nameSearch.js).
+	const nameMatches = $derived(query.trim() ? new Set(searchByName(board, query)) : null);
 	const filteredRows = $derived.by(() => {
-		const needle = query.trim().toLowerCase();
 		return board.filter((row) => {
-			if (needle && !String(row.player_name || '').toLowerCase().includes(needle)) return false;
+			if (nameMatches && !nameMatches.has(row)) return false;
 			if (teamFilter && row.team_name !== teamFilter) return false;
 			if (positionFilter && getPositionCategory(row.position) !== positionFilter) return false;
 			return true;
@@ -338,7 +342,7 @@
 			</p>
 		{/if}
 
-		<div class="table-scroll-host" use:scrollEdges={'.table-wrapper'}>
+		<div class="table-scroll-host" style:--value-col-width="{valueColumnWidth}px" use:scrollEdges={'.table-wrapper'}>
 			<div class="table-wrapper" data-shiny-table>
 				<table>
 					<thead>
@@ -374,6 +378,7 @@
 								scope="col"
 								class="align-right value-col"
 								class:active={sortColumn === 'value'}
+								bind:clientWidth={valueColumnWidth}
 								aria-sort={getSortAriaValue(sortColumn, sortDirection, 'value')}
 							>
 								<button type="button" class="sort-button" onclick={() => toggleSort('value')}>
@@ -858,6 +863,19 @@
 			left: auto;
 			box-shadow: none;
 		}
+
+		/* The score the ranking comes from stays in view at the right while the categories scroll. */
+		.table-scroll-host {
+			--pinned-right-width: var(--value-col-width, 0px);
+		}
+
+		th.value-col,
+		td.value-cell {
+			position: sticky;
+			right: 0;
+			z-index: 1;
+			box-shadow: -1px 0 0 var(--border-subtle);
+		}
 	}
 	/* End touch/mobile scroll mode */
 
@@ -894,6 +912,18 @@
 			top: auto;
 			left: auto;
 			box-shadow: none;
+		}
+
+		.table-scroll-host {
+			--pinned-right-width: var(--value-col-width, 0px);
+		}
+
+		th.value-col,
+		td.value-cell {
+			position: sticky;
+			right: 0;
+			z-index: 1;
+			box-shadow: -1px 0 0 var(--border-subtle);
 		}
 	}
 </style>

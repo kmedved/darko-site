@@ -56,7 +56,7 @@ const COLUMN_DEFINITIONS = Object.freeze({
     },
     o_dpm: {
         key: 'o_dpm',
-        label: 'ODPM',
+        label: 'Off',
         type: 'number',
         align: 'right',
         alignClass: 'num',
@@ -66,7 +66,7 @@ const COLUMN_DEFINITIONS = Object.freeze({
     },
     d_dpm: {
         key: 'd_dpm',
-        label: 'DDPM',
+        label: 'Def',
         type: 'number',
         align: 'right',
         alignClass: 'num',

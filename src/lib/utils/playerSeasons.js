@@ -20,6 +20,21 @@ function toNumber(value) {
 	return Number.isFinite(n) ? n : null;
 }
 
+const DAY_MS = 86_400_000;
+/** How far behind today a player's latest row can be with their season still under way. */
+export const SEASON_UNDER_WAY_DAYS = 30;
+
+/**
+ * Whether a player's latest row has their season under way: a row with a real team (the next
+ * game's forecast, or a game) from the last SEASON_UNDER_WAY_DAYS. The rows of a season DARKO
+ * never closed with an offseason row (the 2026 Finalists') end months back.
+ */
+export function seasonUnderWay(row, now = new Date()) {
+	if (!row || !(toNumber(row.tm_id) > 0)) return false;
+	const time = Date.parse(`${String(row.date ?? '').slice(0, 10)}T00:00:00Z`);
+	return Number.isFinite(time) && now.getTime() - time <= SEASON_UNDER_WAY_DAYS * DAY_MS;
+}
+
 /**
  * The table's rows, newest first. With `asOf` (the Time Machine), only seasons that had ended by
  * then; `inProgress` marks the season still being played, whose row is its latest game day.

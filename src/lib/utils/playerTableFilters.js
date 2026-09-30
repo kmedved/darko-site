@@ -1,3 +1,5 @@
+import { searchByName } from './nameSearch.js';
+
 function parseFilterNumber(value) {
 	const normalized = String(value)
 		.trim()
@@ -7,8 +9,18 @@ function parseFilterNumber(value) {
 	return Number.parseFloat(normalized);
 }
 
-/** Filter players by column filters. Supports text substring, >N, <N, and exact match for numbers. */
+/**
+ * Filter players by column filters. Supports text substring, >N, <N, and exact match for numbers.
+ * The player's name matches as every player search does (nameSearch.js): "alex sa", "jakucionis".
+ */
 export function filterPlayers(players, columns, columnFilters) {
+	const nameMatches = new Map();
+	for (const col of columns) {
+		const filter = (columnFilters[col.key] || '').trim();
+		if (col.key === 'player_name' && filter) {
+			nameMatches.set(col.key, new Set(searchByName(players, filter, { name: (p) => p[col.key] })));
+		}
+	}
 	return players.filter((p) => {
 		for (const col of columns) {
 			const filter = (columnFilters[col.key] || '').trim();
@@ -16,7 +28,9 @@ export function filterPlayers(players, columns, columnFilters) {
 
 			const val = p[col.key];
 
-			if (col.type === 'text') {
+			if (nameMatches.has(col.key)) {
+				if (!nameMatches.get(col.key).has(p)) return false;
+			} else if (col.type === 'text') {
 				if (!String(val || '').toLowerCase().includes(filter.toLowerCase())) return false;
 			} else {
 				const rawNumber = Number.parseFloat(val);

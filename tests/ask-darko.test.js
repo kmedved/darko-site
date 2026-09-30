@@ -70,14 +70,15 @@ test('leaderboard questions parse sizes, positions, ages, sorts and teams', () =
     assert.equal(parseLeaderboardQuestion('shot blockers').sort.label, 'blocks per 100');
 });
 
-test('leaderboard answers keep rotation players unless a team is named', () => {
+test('leaderboard answers keep rotation players, on a team too', () => {
     const board = runLeaderboardQuestion(parseLeaderboardQuestion('best guards'), PLAYERS);
     // The 4-minute guard sits out; the G-F wing counts as a guard.
     assert.deepEqual(board.rows.map((row) => row.id), [5]);
     assert.equal(board.title, 'Top 1 guards by DPM');
 
+    // The 4-minute bench guard doesn't top the Knicks' list either.
     const knicks = runLeaderboardQuestion(parseLeaderboardQuestion('best knicks'), PLAYERS);
-    assert.deepEqual(knicks.rows.map((row) => row.id), [6, 5]);
+    assert.deepEqual(knicks.rows.map((row) => row.id), [5]);
 
     const shooters = runLeaderboardQuestion(parseLeaderboardQuestion('3-point shooters'), PLAYERS);
     // Giannis takes one three per 100, under the four-attempt floor.

@@ -1,8 +1,11 @@
 <script>
 	// The top five in DPM for one of the leaderboard rail's cards (a position, a year in the
 	// league): the first three on a podium in their teams' colours, each headshot standing on its
-	// block, and the next two in rows below. A new five (another tab, team or board) raises the
-	// podium again. The Shiny view keeps its plain list instead (routes/+page.svelte).
+	// block, and the next two in rows below. The podium rises once, when it comes into view; a new
+	// five (another tab, team or board) fades in over it. The Shiny view keeps its plain list
+	// instead (routes/+page.svelte).
+	import { untrack } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import { formatSignedMetric } from '$lib/utils/csvPresets.js';
 	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
 	import { teamColor, teamInk } from '$lib/utils/teamColors.js';
@@ -14,6 +17,43 @@
 	const podium = $derived(players.slice(0, 3));
 	const chasers = $derived(players.slice(3, 5));
 	const lineup = $derived(players.map((player) => player.nba_id).join());
+
+	// 'painted': the entrance runs as the page paints, the podium being in view. 'waiting': off
+	// screen at first, it holds its starting pose until a third of it shows. 'settled': it has
+	// risen, and the next five fade in instead of rising again.
+	let entrance = $state('painted');
+	let shownLineup = untrack(() => lineup);
+
+	$effect.pre(() => {
+		if (lineup === shownLineup) return;
+		shownLineup = lineup;
+		if (untrack(() => entrance) !== 'waiting') entrance = 'settled';
+	});
+
+	function reducedMotion() {
+		return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+	}
+
+	function riseInView(node) {
+		if (reducedMotion() || typeof IntersectionObserver !== 'function') return;
+		const box = node.getBoundingClientRect();
+		if (box.bottom > 0 && box.top < window.innerHeight) return;
+		entrance = 'waiting';
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (!entries.some((entry) => entry.isIntersecting)) return;
+				observer.disconnect();
+				entrance = 'painted';
+			},
+			{ threshold: 0.35 }
+		);
+		observer.observe(node);
+		return { destroy: () => observer.disconnect() };
+	}
+
+	function fadeIn(node) {
+		return fade(node, { duration: reducedMotion() ? 0 : 150 });
+	}
 
 	function lastName(player) {
 		const name = String(player?.player_name ?? '');
@@ -35,61 +75,69 @@
 	}
 </script>
 
-{#key lineup}
-	<div class="podium-stage" style:--lead={teamColor(podium[0]?.team_name) ?? 'var(--accent)'}>
-		<ol class="podium">
-			{#each podium as player, index (player.nba_id)}
-				<li
-					class="podium-place podium-place--{index + 1}"
-					style:--team={teamColor(player.team_name) ?? 'var(--accent)'}
-					style:--ink={teamInk(player.team_name) ?? '#ffffff'}
-				>
-					<a
-						href={href(player)}
-						aria-label={`${PLACES[index]}: ${player.player_name}${team(player) ? `, ${team(player)}` : ''}, DPM ${formatSignedMetric(player.dpm)}`}
+<div
+	class="podium-stage"
+	class:waiting={entrance === 'waiting'}
+	class:settled={entrance === 'settled'}
+	style:--lead={teamColor(podium[0]?.team_name) ?? 'var(--accent)'}
+	use:riseInView
+>
+	{#key lineup}
+		<div class="podium-lineup" in:fadeIn>
+			<ol class="podium">
+				{#each podium as player, index (player.nba_id)}
+					<li
+						class="podium-place podium-place--{index + 1}"
+						style:--team={teamColor(player.team_name) ?? 'var(--accent)'}
+						style:--ink={teamInk(player.team_name) ?? '#ffffff'}
 					>
-						<span class="podium-stand">
-							<span class="podium-figure">
-								{#if photo(player)}
-									<img class="podium-photo" src={photo(player)} alt="" loading="lazy" onerror={hideBrokenImage} />
-								{/if}
+						<a
+							href={href(player)}
+							aria-label={`${PLACES[index]}: ${player.player_name}${team(player) ? `, ${team(player)}` : ''}, DPM ${formatSignedMetric(player.dpm)}`}
+						>
+							<span class="podium-stand">
+								<span class="podium-figure">
+									{#if photo(player)}
+										<img class="podium-photo" src={photo(player)} alt="" loading="lazy" onerror={hideBrokenImage} />
+									{/if}
+								</span>
+								<span class="podium-block">
+									<span class="podium-rank">{PLACES[index]}</span>
+									<strong class="podium-value">{formatSignedMetric(player.dpm)}</strong>
+								</span>
 							</span>
-							<span class="podium-block">
-								<span class="podium-rank">{PLACES[index]}</span>
-								<strong class="podium-value">{formatSignedMetric(player.dpm)}</strong>
-							</span>
-						</span>
-						<span class="podium-caption">
-							<span class="podium-name" class:podium-name--long={isLongName(lastName(player))}>{lastName(player)}</span>
-							<small>{team(player)}{player.position ? `${team(player) ? ' · ' : ''}${player.position}` : ''}</small>
-						</span>
-					</a>
-				</li>
-			{/each}
-		</ol>
-		{#if chasers.length > 0}
-			<ol class="chasers" start="4">
-				{#each chasers as player, index (player.nba_id)}
-					<li style:--team={teamColor(player.team_name) ?? 'var(--accent)'} style:--order={index}>
-						<a class="chaser" href={href(player)}>
-							<span class="chaser-rank" aria-hidden="true">{index + 4}</span>
-							<span class="chaser-face">
-								{#if photo(player)}
-									<img src={photo(player)} alt="" loading="lazy" onerror={hideBrokenImage} />
-								{/if}
-							</span>
-							<span class="chaser-name">
-								<span>{player.player_name}</span>
+							<span class="podium-caption">
+								<span class="podium-name" class:podium-name--long={isLongName(lastName(player))}>{lastName(player)}</span>
 								<small>{team(player)}{player.position ? `${team(player) ? ' · ' : ''}${player.position}` : ''}</small>
 							</span>
-							<strong class="chaser-value">{formatSignedMetric(player.dpm)}</strong>
 						</a>
 					</li>
 				{/each}
 			</ol>
-		{/if}
-	</div>
-{/key}
+			{#if chasers.length > 0}
+				<ol class="chasers" start="4">
+					{#each chasers as player, index (player.nba_id)}
+						<li style:--team={teamColor(player.team_name) ?? 'var(--accent)'} style:--order={index}>
+							<a class="chaser" href={href(player)}>
+								<span class="chaser-rank" aria-hidden="true">{index + 4}</span>
+								<span class="chaser-face">
+									{#if photo(player)}
+										<img src={photo(player)} alt="" loading="lazy" onerror={hideBrokenImage} />
+									{/if}
+								</span>
+								<span class="chaser-name">
+									<span>{player.player_name}</span>
+									<small>{team(player)}{player.position ? `${team(player) ? ' · ' : ''}${player.position}` : ''}</small>
+								</span>
+								<strong class="chaser-value">{formatSignedMetric(player.dpm)}</strong>
+							</a>
+						</li>
+					{/each}
+				</ol>
+			{/if}
+		</div>
+	{/key}
+</div>
 
 <style>
 	.podium-stage {
@@ -420,12 +468,44 @@
 		}
 	}
 
+	/* Waiting off screen: the entrance's starting pose, played when the podium shows. */
+	.waiting .podium-block {
+		animation: none;
+		clip-path: inset(100% 0 0 0);
+	}
+
+	.waiting .podium-photo,
+	.waiting .chaser {
+		animation: none;
+		opacity: 0;
+	}
+
+	/* Risen once: a new five only fades in (the podium-lineup's fadeIn). */
+	.settled .podium-block,
+	.settled .podium-photo,
+	.settled .chaser,
+	.waiting .podium-place--1 .podium-block::after,
+	.settled .podium-place--1 .podium-block::after {
+		animation: none;
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.podium-block,
 		.podium-photo,
 		.chaser,
 		.podium-place--1 .podium-block::after {
 			animation: none;
+		}
+	}
+
+	@media print {
+		.waiting .podium-block {
+			clip-path: none;
+		}
+
+		.waiting .podium-photo,
+		.waiting .chaser {
+			opacity: 1;
 		}
 	}
 </style>
