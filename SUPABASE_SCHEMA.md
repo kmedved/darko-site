@@ -267,9 +267,11 @@ than current DARKO team metadata. This preserves defunct and relocated franchise
 New Jersey, Kansas City, and Washington correctly. A traded player's `team_code` and `team_name`
 are slash-joined historical display labels in chronological first-seen order, never a claim that
 the average belongs to only one stint. The paired `team_codes` and `team_names` arrays preserve
-each individual team for filters and provenance. The historical RPC returns no current `tm_id` or
-position, preventing an old team from receiving a modern logo/link; `date` is a compatibility
-alias for `last_date`, while seasonal UI should use the explicit date range and game count.
+each individual team for filters and provenance. The per-season RPC that served these rows,
+`get_wowy_season_player_ratings` (dropped by `20260929_002`), returned no current `tm_id` or
+position, preventing an old team from receiving a modern logo/link, and its `date` was a
+compatibility alias for `last_date`; seasonal UI should use the explicit date range and game
+count.
 
 The 20260711 filter fields deliberately do not change that historical identity contract:
 `filter_position` and `height_inches` are explicit player-dimension metadata for filtering only.
@@ -277,9 +279,10 @@ They are sourced from the current crosswalk, not inferred historical roster, tea
 the display `position` remains `NULL` for every historical row.
 
 Migration 010's `wowy_season_opening_snapshots` table remains a model publication artifact. After
-the guarded manual activation operation, `get_wowy_leaderboard_seasons()` and
-`get_wowy_season_player_ratings(p_season)` source only the season-average table and return
-`snapshot_context = 'season-average'`.
+the guarded manual activation operation, `get_wowy_leaderboard_seasons()` lists seasons from the
+season-average table. Its per-season companion `get_wowy_season_player_ratings(p_season)` lost its
+last caller when `/wowy` season views moved to Season-Adjusted ratings, and
+`20260929_002_drop_unused_wowy_rpcs.sql` drops it.
 
 Migration `20260814_001_publish_unified_wowy_from_1957.sql` lowers only the
 Daily/Final Cut and season-average/opening constraints to 1957. Season-Adjusted
@@ -626,9 +629,9 @@ Comma-joined string of 70 of the 76 `player_ratings` columns, selected by the pe
 |---|---|---|---|
 | `getActivePlayers()` | Finds the latest `player_ratings.season` and calls `get_active_player_ratings(p_season)`, which returns each `active_roster = 1` player's latest row in that season, whole (`pr.*`). This includes `future_game = 1` projection rows, which are the current DARKO snapshot. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
 | `getActiveWowyPlayers()` | Calls `get_active_wowy_player_ratings()`, normalizes team IDs/display positions plus explicit bio filter fields, and caches the compact current-active snapshot for five minutes. | One current-identity row per active player with a latest observed WOWY RAPM row, canonical filter position, and plausible listed height | `/wowy` |
-| `getWowyAllTimePlayers()` | Calls `get_wowy_all_time_player_seasons()`, preserves its database-owned deterministic top-100 order for one hour, and does not cache an empty pre-activation response. | At most 100 all-time player-season rows with unweighted WOWY averages, ordinal rank, season, historical teams, and explicit bio filter fields | `/wowy` default |
+| `getWowyAllTimePage(options)` / `getWowyAdjustedAllTimePage(options)` | Call `get_wowy_all_time_player_seasons_page(...)` in Average or Adjusted mode with the page's filters, sort, limit and offset, preserve its database-owned order, cache each page for one hour, and do not cache an inactive pre-activation Average page. | `{ players, totalCount, hasMore, activated }` with at most 100 player-season rows | `/wowy` default (Adjusted), `/api/wowy/all-time` |
 | `getWowyLeaderboardSeasons()` | Calls `get_wowy_leaderboard_seasons()` and caches the season list for one hour. | All published historical season end years (1978 onward) | `/wowy` |
-| `getWowySeasonPlayers(season)` | Calls `get_wowy_season_player_ratings(p_season)`, preserves chronological historical team arrays, and caches the selected season for five minutes. | One player-season row with unweighted WOWY means, historical teams, date range, game count, and explicit bio filter fields | `/wowy?season=YYYY` |
+| `getWowyAdjustedSeasonPlayers(season)` | Calls `get_wowy_adjusted_season_player_ratings(p_season)`, fills `minutes` and `bpm` from `wowy_season_box_context`, sorts by WOWY RAPM, and caches the selected season for five minutes. | One Season-Adjusted row per modeled player-season, with historical teams and explicit bio filter fields | `/wowy?season=YYYY` |
 | `getPlayersIndex()` | `players` with explicit `PLAYERS_DIM_COLUMNS`, merged with `getActivePlayers()`. **Hardcodes output fields** — does NOT pass through survivorship, projections, or RAPM columns. | Array of player objects (subset of fields) | Player search/index pages |
 | `getLongevityRows()` | Calls `getActivePlayers()`, maps DB columns to frontend-aliased keys | Array with aliased longevity fields | `/api/longevity` |
 | `getLongevityTrajectory(id)` | `player_ratings` filtered to one player, maps to chart fields | Array of trajectory points | `/api/player/[id]/longevity` |
@@ -670,13 +673,15 @@ All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. 
 | longevityTrajectory | 10min |
 | lineupRatings | 1h |
 | lineupSizeCounts | 1h |
-| playerCurrent | 60s |
 | playerHistory | 5min |
 | activeWowyPlayers | 5min |
+| wowyAllTimePlayers / wowyAdjustedAllTimePlayers | 1h |
 | wowyLeaderboardSeasons | 1h |
-| wowySeasonPlayers | 5min |
+| wowyAdjustedSeasonPlayers | 5min |
 | wowyPlayerHistory | 30min |
 | wowyPublication | 5min |
+
+These are the main keys; `CACHE_MS` in `src/lib/server/supabase.js` lists every one.
 
 ### API routes
 

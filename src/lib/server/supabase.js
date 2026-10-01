@@ -42,13 +42,11 @@ const CACHE_MS = {
     wowyAllTimePlayers: 3_600_000,
     wowyAdjustedAllTimePlayers: 3_600_000,
     wowyLeaderboardSeasons: 3_600_000,
-    wowySeasonPlayers: 300_000,
     wowyAdjustedSeasonPlayers: 300_000,
     leaderboardSeasons: 3_600_000,
     seasonStartPlayers: 3_600_000,
     playersAsOf: 3_600_000,
     playersIndex: 300_000,
-    playerCurrent: 60_000,
     playerHistory: 300_000,
     fullPlayerHistory: 1_800_000,
     wowyPlayerHistory: 1_800_000,
@@ -1059,15 +1057,6 @@ export function getWowyAdjustedAllTimePage(options = {}) {
     return getWowyAllTimePageForMode('adjusted', options);
 }
 
-// Compatibility wrappers for callers that only need the initial row array.
-export async function getWowyAllTimePlayers(options = {}) {
-    return (await getWowyAllTimePage(options)).players;
-}
-
-export async function getWowyAdjustedAllTimePlayers(options = {}) {
-    return (await getWowyAdjustedAllTimePage(options)).players;
-}
-
 /**
  * Every team and height the all-time WOWY filters can match, for one rating mode. Reads only the
  * team columns of each published player-season, once an hour.
@@ -1116,24 +1105,6 @@ export async function getWowyLeaderboardSeasons() {
                     .filter((season) => Number.isInteger(season))
             )
         ).sort((a, b) => b - a);
-    });
-}
-
-/** Get each historical WOWY per-player season-average summary. */
-export async function getWowySeasonPlayers(season) {
-    const seasonEndYear = Number.parseInt(season, 10);
-    if (!Number.isInteger(seasonEndYear)) {
-        throw new TypeError(`Invalid WOWY season end year: ${season}`);
-    }
-
-    const key = cacheKey('wowySeasonPlayers', seasonEndYear);
-    return runCached(key, CACHE_MS.wowySeasonPlayers, async () => {
-        const { data, error } = await supabase.rpc('get_wowy_season_player_ratings', {
-            p_season: seasonEndYear
-        });
-        if (error) throw error;
-
-        return sortByWowyRapmDesc(normalizeWowyLeaderboardRows(data));
     });
 }
 
@@ -1748,27 +1719,6 @@ export async function getWowyPublication() {
 
         if (error) throw error;
         return data || null;
-    });
-}
-
-/**
- * Get current snapshot for a specific player.
- */
-export async function getPlayerCurrent(nbaId) {
-    const key = cacheKey('playerCurrent', nbaId);
-    return runCached(key, CACHE_MS.playerCurrent, async () => {
-        const { data, error } = await supabase
-            .from('player_ratings')
-            .select(RATING_COLUMNS)
-            .eq('nba_id', nbaId)
-            .order('date', { ascending: false })
-            .limit(1);
-
-        if (error) throw error;
-        if (!data || data.length === 0) throw new Error(`Player ${nbaId} not found`);
-
-        const playersMap = await getPlayersMapByIds([nbaId]);
-        return mergeWithPlayerDim(data[0], playersMap.get(nbaId));
     });
 }
 

@@ -543,22 +543,15 @@ test('all-era historical WOWY rows are sourced from unweighted season averages',
     );
 });
 
-test('historical WOWY helpers cache season options and selected-season snapshots', () => {
+test('historical WOWY seasons helper caches the season list', () => {
     const seasonsStart = supabaseHelper.indexOf('export async function getWowyLeaderboardSeasons()');
-    const playersStart = supabaseHelper.indexOf('export async function getWowySeasonPlayers(season)');
-    const playersEnd = supabaseHelper.indexOf('/**\n * Get every season', playersStart);
-    assert.ok(seasonsStart >= 0 && playersStart > seasonsStart, 'WOWY season helpers should be discoverable');
-    assert.ok(playersEnd > playersStart, 'WOWY season helper boundary should be discoverable');
+    const seasonsEnd = supabaseHelper.indexOf('\nexport ', seasonsStart + 1);
+    assert.ok(seasonsStart >= 0, 'WOWY seasons helper should be discoverable');
+    assert.ok(seasonsEnd > seasonsStart, 'WOWY seasons helper boundary should be discoverable');
 
-    const seasonsHelper = supabaseHelper.slice(seasonsStart, playersStart);
-    const playersHelper = supabaseHelper.slice(playersStart, playersEnd);
+    const seasonsHelper = supabaseHelper.slice(seasonsStart, seasonsEnd);
     assert.match(seasonsHelper, /CACHE_MS\.wowyLeaderboardSeasons/);
     assert.match(seasonsHelper, /\.rpc\('get_wowy_leaderboard_seasons'\)/);
-    assert.match(playersHelper, /CACHE_MS\.wowySeasonPlayers/);
-    assert.match(playersHelper, /\.rpc\('get_wowy_season_player_ratings'/);
-    assert.match(playersHelper, /p_season: seasonEndYear/);
-    assert.match(playersHelper, /normalizeWowyLeaderboardRows\(data\)/);
-    assert.match(playersHelper, /sortByWowyRapmDesc/);
 });
 
 test('all-time WOWY helper requests bounded filtered pages and preserves database order', () => {
