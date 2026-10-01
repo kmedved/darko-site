@@ -1,18 +1,56 @@
--- MANUAL PRODUCTION OPERATION — do not run this file as part of normal
--- Supabase migration replay.
+-- ONE-TIME MANUAL PRODUCTION OPERATION: ALREADY APPLIED. DO NOT RE-RUN.
 --
--- Run only after migration 011 has provisioned public.wowy_season_player_averages,
--- later WOWY schema migrations (currently through 20260711_001) are applied,
--- and `33_wowy_rapm/scripts/publish_wowy_season_player_averages.py --publish`
--- has loaded its checked artifact. This file opens and commits its own
--- transaction; run it with a client in autocommit mode, not inside another
--- transaction.
+-- A historical record, kept so the migration replay (npm run migrations:replay) can
+-- reproduce the July 2026 state and use this file's marker DDL. It is not a migration and
+-- not part of any publish.
 --
--- The guard fails closed: it compares every published `(season, nba_id)` group
--- with public.wowy_ratings, including each simple (unweighted) player-game mean,
--- so the public RPCs cannot move to a partial, stale, or weighted artifact.
+-- Applied to production once, on 2026-07-10, as the second phase of the WOWY season-average
+-- rollout, after migration 20260710_011 provisioned public.wowy_season_player_averages and
+-- the WOWY program's season-average publisher loaded its checked artifact (site commit
+-- 2073894 wrote it; 8c1ca76 redeployed the site onto it). The next day 9eb195e edited this
+-- copy so its season RPC carries the filter columns that 20260711_001 added; production got
+-- them from 20260711_001 itself. In one transaction it:
+--   1. verified, failing closed, that public.wowy_season_player_averages matched
+--      public.wowy_ratings (seasons from 1980, the floor then) on every (season, nba_id)
+--      group: presence, game count, first and last dates, and each unweighted mean;
+--   2. created the private singleton marker table public.wowy_season_average_activation
+--      (row-level security on, no API grants);
+--   3. redefined get_wowy_leaderboard_seasons() to list the season-average seasons and
+--      get_wowy_season_player_ratings(integer) to return the averages, with their grants;
+--   4. wrote the marker row, id = 1, and asked PostgREST to reload its schema cache.
+--
+-- Since then, 20260814_002 lowered the marker's floor to 1957, and the WOWY program's
+-- unified publisher (pipeline_scripts/publish/wowy/publish_unified_1957.py in nba_darko)
+-- keeps the marker row current; 20260929_001_reassert_function_ownership.sql redefined
+-- get_wowy_leaderboard_seasons() to check the marker itself and reasserted
+-- get_wowy_season_player_ratings(integer) from 20260814_001; and
+-- 20260929_002_drop_unused_wowy_rpcs.sql (on the C.3 dead-code branch) drops the latter.
+--
+-- Do not re-run it. It would replace get_wowy_leaderboard_seasons() with its July
+-- definition and re-create the July get_wowy_season_player_ratings(integer), undoing
+-- 20260929_001 and 20260929_002. The first block below therefore refuses to run once the
+-- marker row exists; on a database without the marker table (such as the replay's) it lets
+-- the original data guard decide.
 
 begin;
+
+-- Already applied: refuse to run again once the activation marker exists. The marker
+-- table is looked up first, and read with dynamic SQL, so a database without it reaches
+-- the data guard below.
+do $already_applied$
+declare
+    marker_exists boolean := false;
+begin
+    if to_regclass('public.wowy_season_average_activation') is not null then
+        execute 'select exists (select 1 from public.wowy_season_average_activation where id = 1)'
+            into marker_exists;
+    end if;
+    if marker_exists then
+        raise exception
+            'WOWY season averages are already activated (public.wowy_season_average_activation id = 1). This one-time operation was applied on 2026-07-10; re-running it would redefine get_wowy_leaderboard_seasons() and re-create get_wowy_season_player_ratings(integer), undoing 20260929_001 and 20260929_002. Nothing was changed.';
+    end if;
+end;
+$already_applied$;
 
 do $guard$
 declare
