@@ -1,30 +1,30 @@
 {
-  "date": "2026-09-30",
+  "date": "2026-10-01",
   "players": [
     {
-      "nba_id": 202695,
-      "name": "Kawhi Leonard",
-      "reason": "New reporting on alleged off-court payments"
+      "nba_id": 1631105,
+      "name": "Jalen Duren",
+      "reason": "Qualifying-offer deadline; Pistons reportedly drop weight clause"
+    },
+    {
+      "nba_id": 1628415,
+      "name": "Dillon Brooks",
+      "reason": "Charged with DUI stemming from March arrest"
     },
     {
       "nba_id": 1626156,
       "name": "D'Angelo Russell",
-      "reason": "Reported Shanghai Sharks deal after Grizzlies release"
+      "reason": "Reported Shanghai Sharks signing after NBA exit"
     },
     {
-      "nba_id": 2544,
-      "name": "LeBron James",
-      "reason": "Sixers camp debut and helicopter commute draw attention"
+      "nba_id": 202695,
+      "name": "Kawhi Leonard",
+      "reason": "Raptors camp ramp-up and Clippers investigation fallout"
     },
     {
-      "nba_id": 1631105,
-      "name": "Jalen Duren",
-      "reason": "Contract standoff ahead of qualifying-offer deadline"
-    },
-    {
-      "nba_id": 1626157,
-      "name": "Karl-Anthony Towns",
-      "reason": "Reported disagreement over Knicks extension pay cut"
+      "nba_id": 1630178,
+      "name": "Tyrese Maxey",
+      "reason": "Prioritizes Sixers wins over individual stats"
     }
   ]
 }
