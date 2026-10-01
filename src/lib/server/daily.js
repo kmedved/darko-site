@@ -3,8 +3,8 @@ import { supabase } from './supabase.js';
 import { careerGamesById } from '../utils/playerProfile.js';
 
 /**
- * The Daily's tables, published by nba_darko's push_website.py
- * (pipeline_scripts/publish/website_daily.py):
+ * The Daily's tables, published by nba_darko's pipeline_scripts/publish/website.py (formerly
+ * 1_historic_darko/push_website.py) and built in pipeline_scripts/publish/website_daily.py:
  * - rating_moves: every player's rating change into the latest date over 7 days, 30 days and
  *   the season (`period`), with the games played in between;
  * - game_updates: the latest season's games, each with the rating going in and coming out

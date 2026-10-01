@@ -46,7 +46,8 @@
 - Fantasy Lab (`/projections`) scoring and per-game conversion: `src/lib/utils/fantasyScoring.js`
 - Player-page Seismograph: `src/lib/utils/seismograph.js`. Each `player_ratings` row is the forecast going
   into that day's game, so a game's update is the next row minus that row; offseason rows (`tm_id` -999) end a season.
-  Opponents come from `opp_id`, published by nba_darko's `push_website.py`.
+  Opponents come from `opp_id`, published by nba_darko's `pipeline_scripts/publish/website.py`
+  (formerly `1_historic_darko/push_website.py`, which the Part A pipeline branch still uses).
 - Time Machine (`?asof=YYYY-MM-DD`): helpers in `src/lib/utils/timeMachine.js`, the strip in
   `src/lib/components/TimeMachine.svelte`, kept across navigation by `beforeNavigate` in `+layout.svelte`.
   Date-aware routes: `/`, `/player/*`, `/lab`, `/rewind`; snapshots come from `getPlayersAsOf` in `supabase.js`.
@@ -55,14 +56,15 @@
   `app.html` applies the same rule before first paint, and `--time-machine-height` drops to 0 so sticky
   offsets follow. Its colour, `--time`, is each theme's `--accent` by design.
 - History tables `season_calendar` and `rating_frames` (Rewind, the strip's trace) come from nba_darko's
-  `push_website.py` (`build_season_calendar`, `build_rating_frames`), read in `src/lib/server/history.js`.
+  `pipeline_scripts/publish/website.py` (`build_season_calendar`, `build_rating_frames`), read in
+  `src/lib/server/history.js`.
   In `npm run dev` only, `DARKO_LOCAL_DATA_DIR` points at JSON files from the same builder.
 - Roster Lab math: `src/lib/utils/rosterLab.js`; Rewind helpers: `src/lib/utils/rewind.js`.
 - The leaderboard's players and a player page's career history ship column by column
   (`packRows` in the loader, `unpackRows` in the page; `src/lib/utils/columnar.js`).
 - `/lineups` loads the selected size's rows plus every size's counts (`getLineupSizeCounts`), and ships
   them packed (`packLineups` / `unpackLineups` in `src/lib/utils/lineupTransport.js`).
-- Supabase schema, column mappings, API data layer, pipeline scripts, and freshness: `SUPABASE_SCHEMA.md`
+- Supabase schema, column mappings, API data layer, the pipeline publisher, and freshness: `SUPABASE_SCHEMA.md`
 
 ## Workflow Notes
 
@@ -72,6 +74,7 @@
 - Version policy is **Policy B**: only shipped/runtime behavior changes bump `package.json`'s version.
 
 - App is read-only for analytics tables (`player_ratings`, `players`, `season_sim`, `win_distribution`). The Elo voting feature (`elo_ratings`, `elo_votes` tables) is the exception — it performs writes via `/api/rate/vote`.
+- Every Postgres function is a migration in `supabase/migrations/`; the publisher never defines one. **Never make a database object depend on a table the publisher replaces** (`player_ratings`, `lineup_ratings`, `season_calendar`, `rating_frames`, `player_comps`, `player_seasons`, `game_updates`, `rating_moves`). Each publish drops them with a plain `DROP TABLE`, so a view, a foreign key, a rule, a policy or constraint trigger on another table that reads one, a function or column of its row type or an array of it (`returns setof public.player_ratings`), or a `BEGIN ATOMIC` function that reads one makes every later publish fail and roll back. Write string-bodied (`as $function$ ... $function$`) `language sql` or `plpgsql` functions that return a scalar, `jsonb`, `setof record` or `table(...)` with explicit columns. An index, trigger, policy or grant a migration adds to one of those tables is lost at its next replacement. Run `npm run migrations:replay` before applying a migration; it fails, naming it, on such a dependent of any of the eight. Details: `SUPABASE_SCHEMA.md` (Ownership) and `DEPLOY.md`.
 
 ## MCP Servers
 You have access to:

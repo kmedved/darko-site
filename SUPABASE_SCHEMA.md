@@ -5,16 +5,61 @@ Reference for the Supabase (Postgres) tables powering darko-site. Use this when 
 ## Architecture
 
 ```
-Python pipeline (local)
-  → parquet files (calculated_data/, calculated_data/temp/)
-  → build_supabase_tables.py joins them into supabase_tables/*.parq
-  → upload_to_supabase.py loads to Postgres via COPY
+Python pipeline (nba_darko, run on the writer Mac)
+  → pipeline_scripts/publish/website.py builds each website table as a Polars frame
+  → uploads each table (for player_ratings, only its changed days unless it is rebuilt)
+    into a "<table>__next" staging table the site cannot read
+  → one short transaction swaps the staged tables in (plain DROP TABLE + RENAME),
+    re-applies row-level security, records the publication, and NOTIFYs PostgREST
+  → calls the Vercel deploy hook so the site redeploys with an empty cache
 
 SvelteKit (darko-site/, deployed on Vercel)
   → queries Supabase via PostgREST (supabase-js client)
   → src/lib/server/supabase.js — all DB access, caching, field mapping
   → API routes in src/routes/api/ serve JSON to frontend components
 ```
+
+The publisher is `pipeline_scripts/publish/website.py` in `nba_darko` (formerly
+`1_historic_darko/push_website.py`, which the Part A pipeline branch
+`codex/website-function-ownership-20260928-v1` still uses); see
+[Pipeline publisher](#pipeline-publisher). The WOWY tables have their own publishers.
+
+**Ownership.** `nba_darko` owns the tables it publishes: columns, indexes, staging and
+swap, and the read policies on tables the swap recreates. `darko-site` owns application
+state (the Elo vote path and `elo_rate_limits`) and every Postgres function, through
+`supabase/migrations/`. The publisher never issues `CREATE OR REPLACE FUNCTION`, and a
+publish never removes a function: string-bodied SQL functions record no dependency on the
+tables they name. `supabase/migrations/20260929_001_reassert_function_ownership.sql` put
+production at this repository's definitions as of that migration. It is a point-in-time
+reassertion: later migrations redefine or drop some of those functions, so re-running 001
+must be followed by re-running, in filename order, every later migration that touches them.
+
+**Nothing may depend on a table the publisher replaces.** Every publish replaces
+`player_ratings` (on a full rebuild), `lineup_ratings`, `season_calendar`, `rating_frames`,
+`player_comps`, `player_seasons`, `game_updates` and `rating_moves` with a plain
+`DROP TABLE`, without `CASCADE`. If any other database object depends on one of them, that
+drop fails, the whole publication rolls back, and every later publish fails the same way
+until the dependent is removed. These create such a dependency:
+
+- a view or materialized view that reads the table;
+- a foreign key in another table that references it;
+- a rule, a policy on another table whose expression reads it, or a constraint trigger on
+  another table declared `FROM` it;
+- a function or column whose type is the table's row type or an array of it, such as
+  `returns setof public.player_ratings` or an argument of type `public.player_ratings`;
+- a function or procedure with a SQL-standard `BEGIN ATOMIC` body that reads the table.
+
+Safe: a string-bodied (`as $function$ ... $function$`) `language sql` or `language plpgsql`
+function that returns a scalar (`text`, `boolean`, ...), `jsonb`, `setof record`, or
+`table(...)` with explicit column types.
+Postgres records no dependency from a string body on the tables it names, so the drop goes
+through and the function reads the new table on its next call. Every function in
+`supabase/migrations/` follows this pattern. Anything attached to one of those tables itself
+(an index, trigger, policy, grant or comment added by a migration) is dropped with the old
+table at the next replacement and not recreated: indexes belong in `TABLE_INDEXES` in the
+publisher, and the swap re-applies only row-level security, the `allow_public_read` policy
+and `SELECT` for `anon` and `authenticated`. `npm run migrations:replay` fails, naming the
+dependent, if a migration creates one on any of these eight tables.
 
 ---
 
@@ -24,98 +69,119 @@ SvelteKit (darko-site/, deployed on Vercel)
 
 Core fact table. One row per player per game-date.
 
-- **Primary key:** `(nba_id, date)`
-- **Indexes:** `date DESC`, `season`, `nba_id`
+- **Primary key:** `(nba_id, date)` (`pk_player_ratings`)
+- **Indexes** (`TABLE_INDEXES` in the publisher): `date DESC`; `season`; `nba_id`;
+  `(season DESC, active_roster, nba_id, date DESC)`; `(season, team_name, date)`;
+  `(nba_id, date DESC) INCLUDE (team_name, tm_id)` where `team_name` is set and `tm_id > 0`
+  (the last also created by `20260710_004_add_latest_team_index.sql`)
 - **Rows:** ~1,089,000
-- **Update strategy:** DELETE current season + INSERT current season (atomic transaction). Historical seasons are only re-uploaded if the table is dropped.
+- **Update strategy:** only the days whose fingerprints changed are replaced (row locks, readers never wait); a full staged rebuild and swap when `--full-player-ratings` is passed, nothing is published yet, more than a quarter of the rows changed, or the columns or fingerprints no longer match.
+- **Site reads:** every column reaches the server, because `get_active_player_ratings` and
+  `get_season_start_player_ratings` return whole rows (`pr.*`). The direct selects and filters
+  in `src/lib/server/supabase.js` (`RATING_COLUMNS`, `TRAJECTORY_RATING_COLUMNS`,
+  `PLAYER_PROFILE_RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS`, `SEASON_ROW_COLUMNS`,
+  `FROZEN_RATING_FIELDS` from `src/lib/utils/frozenRatings.js`, and literal selects) name 71 of the
+  76: all but `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`, which no
+  page uses.
 
-Built by `build_supabase_tables.py` which left-joins six source files on `(nba_id, date)`:
+Built by `build_supabase_tables()` in `pipeline_scripts/publish/website.py`, which left-joins six
+source files on `(nba_id, date)`, each filtered to the base table's keys before it is collected:
 
 | Source parquet | Join type | Columns contributed |
 |---|---|---|
-| `temp/spm_outputs.parq` | base table | nba_id, date, season, team_name, tm_id, future_game, active_roster, available, poss, dpm/o_dpm/d_dpm, box_dpm/box_odpm/box_ddpm, on_off_dpm/on_off_odpm/on_off_ddpm |
+| `temp/spm_outputs.parq` | base table | nba_id, date, season, team_name, tm_id, opp_id, future_game, active_roster, available, poss, dpm/o_dpm/d_dpm, box_dpm/box_odpm/box_ddpm, on_off_dpm/on_off_odpm/on_off_ddpm |
 | `5_assembled_features.parq` | left join | age, career_game_num, seconds_played, position, position_num, x_position |
-| `bayes_rapm_ratings.parq` | left join (semi-join filtered) | bayes_rapm_off, bayes_rapm_def, bayes_rapm_total, rapm_exposure |
+| `bayes_rapm_ratings.parq` | left join | bayes_rapm_off, bayes_rapm_def, bayes_rapm_total, rapm_exposure |
 | `talent_game_predictions.parq` | left join | x_minutes, x_pace, x_{stat}_100 columns, x_{pct} columns, tr_minutes, tr_starter, tr_fg3_pct, tr_ft_pct |
 | `temp/nba_survivorship.parq` | left join | projected_years_remaining, projected_years_remaining_cal, x_retirement_age, x_retirement_age_cal, s1–s15 |
-| `dpm_salary.parq` | left join | game_value, wins_pg, warp, sal_market_fixed, actual_salary, surplus_value |
+| `dpm_salary.parq` | left join | game_value, wins_pg, warp, sal_poolshare, sal_vetfloor, sal_market, sal_market_fixed, actual_salary, surplus_value (a null in the last three takes the player-season's last row that has all three) |
 
-**All 72 columns (exact Postgres types):**
+**All 76 columns, in published order.** The builder casts `nba_id` (bigint), `date` (date),
+`season`, `tm_id`, `opp_id`, `future_game`, `career_game_num` and `seconds_played` (integer),
+`active_roster` (smallint) and `poss` (real); every other column keeps its source parquet's
+type (Float32 is `real`, Float64 `double precision`, strings and categoricals `text`). These
+are the types of the bundle the builder writes on nba_darko's `codex/wowy-import-20260928-v1`;
+the Part A pipeline branch's `1_historic_darko/push_website.py` publishes the same columns with
+the same types.
 
 | # | Column | Postgres type | Source | Notes |
 |---|---|---|---|---|
 | 1 | nba_id | bigint | spm | Player NBA ID |
-| 2 | date | timestamp without time zone | spm | Game date |
-| 3 | season | real | spm | NBA season ending year, e.g. 2026.0 for 2025-26 |
+| 2 | date | date | spm | Game date |
+| 3 | season | integer | spm | NBA season ending year, e.g. 2026 for 2025-26 |
 | 4 | team_name | text | spm | Team abbreviation |
-| 5 | tm_id | bigint | spm | Team NBA ID |
-| 6 | future_game | integer | spm | 1 = projected future game |
-| 7 | active_roster | smallint | spm | 1 = on active roster |
-| 8 | available | real | spm | Availability probability [0,1] |
-| 9 | poss | real | spm | Possessions played |
-| 10 | dpm | real | spm | Full DPM (o_dpm + d_dpm) |
-| 11 | o_dpm | real | spm | Offensive DPM |
-| 12 | d_dpm | real | spm | Defensive DPM |
-| 13 | box_dpm | real | spm | Box-score DPM |
-| 14 | box_odpm | real | spm | Box-score offensive DPM |
-| 15 | box_ddpm | real | spm | Box-score defensive DPM |
-| 16 | on_off_dpm | real | spm | On/off DPM |
-| 17 | on_off_odpm | real | spm | On/off offensive DPM |
-| 18 | on_off_ddpm | real | spm | On/off defensive DPM |
-| 19 | age | double precision | bio | Player age at game date |
-| 20 | career_game_num | bigint | bio | Career game count |
-| 21 | seconds_played | double precision | bio | Seconds played in game |
-| 22 | position | text | bio | Position label |
-| 23 | position_num | double precision | bio | Numeric position (1–5 continuous) |
-| 24 | x_position | text | bio | Model-predicted position |
-| 25 | bayes_rapm_off | real | rapm | Bayesian RAPM offensive (pts/100 poss above avg) |
-| 26 | bayes_rapm_def | real | rapm | Bayesian RAPM defensive |
-| 27 | bayes_rapm_total | real | rapm | Bayesian RAPM total |
-| 28 | rapm_exposure | real | rapm | Exponentially-weighted accumulated possessions |
-| 29 | x_minutes | real | projections | Projected minutes per game |
-| 30 | x_pace | real | projections | Projected pace |
-| 31 | x_pts_100 | real | projections | Projected pts/100 poss |
-| 32 | x_ast_100 | real | projections | Projected ast/100 poss |
-| 33 | x_orb_100 | real | projections | Projected orb/100 poss |
-| 34 | x_drb_100 | real | projections | Projected drb/100 poss |
-| 35 | x_stl_100 | real | projections | Projected stl/100 poss |
-| 36 | x_blk_100 | real | projections | Projected blk/100 poss |
-| 37 | x_tov_100 | real | projections | Projected tov/100 poss |
-| 38 | x_fga_100 | real | projections | Projected fga/100 poss |
-| 39 | x_fg3a_100 | real | projections | Projected fg3a/100 poss |
-| 40 | x_fta_100 | real | projections | Projected fta/100 poss |
-| 41 | x_fg_pct | real | projections | Projected FG% |
-| 42 | x_fg3_pct | real | projections | Projected 3P% |
-| 43 | x_ft_pct | real | projections | Projected FT% |
-| 44 | tr_minutes | real | projections | Time-decayed running avg minutes |
-| 45 | tr_starter | real | projections | Time-decayed starter probability |
-| 46 | tr_fg3_pct | real | projections | Time-decayed 3P% |
-| 47 | tr_ft_pct | real | projections | Time-decayed FT% |
-| 48 | projected_years_remaining | real | survivorship | Coherent expected years = sum(S(t)), curve-calibrated |
-| 49 | projected_years_remaining_cal | real | survivorship | Presentation-calibrated expected years (non-coherent, better per age cohort) |
-| 50 | x_retirement_age | double precision | survivorship | age + projected_years_remaining |
-| 51 | x_retirement_age_cal | double precision | survivorship | age + projected_years_remaining_cal |
-| 52 | s1 | real | survivorship | P(plays ≥1 more season) |
-| 53 | s2 | real | survivorship | P(plays ≥2 more seasons) |
-| 54 | s3 | real | survivorship | P(plays ≥3 more seasons) |
-| 55 | s4 | real | survivorship | P(plays ≥4 more seasons) |
-| 56 | s5 | real | survivorship | P(plays ≥5 more seasons) |
-| 57 | s6 | real | survivorship | P(plays ≥6 more seasons) |
-| 58 | s7 | real | survivorship | P(plays ≥7 more seasons) |
-| 59 | s8 | real | survivorship | P(plays ≥8 more seasons) |
-| 60 | s9 | real | survivorship | P(plays ≥9 more seasons) |
-| 61 | s10 | real | survivorship | P(plays ≥10 more seasons) |
-| 62 | s11 | real | survivorship | P(plays ≥11 more seasons) |
-| 63 | s12 | real | survivorship | P(plays ≥12 more seasons) |
-| 64 | s13 | real | survivorship | P(plays ≥13 more seasons) |
-| 65 | s14 | real | survivorship | P(plays ≥14 more seasons) |
-| 66 | s15 | real | survivorship | P(plays ≥15 more seasons) |
-| 67 | game_value | double precision | salary | Per-game dollar value based on DPM and minutes |
-| 68 | wins_pg | double precision | salary | Wins produced per game |
-| 69 | warp | double precision | salary | Wins above replacement player |
-| 70 | sal_market_fixed | double precision | salary | Fair market salary estimate (dollars) |
-| 71 | actual_salary | double precision | salary | Actual contract salary (dollars) |
-| 72 | surplus_value | double precision | salary | sal_market_fixed − actual_salary (positive = underpaid) |
+| 5 | tm_id | integer | spm | Team NBA ID |
+| 6 | opp_id | integer | spm | Opponent's team NBA ID; -999 on offseason rows, like `tm_id` |
+| 7 | future_game | integer | spm | 1 = projected future game |
+| 8 | active_roster | smallint | spm | 1 = on active roster |
+| 9 | available | real | spm | Availability probability [0,1] |
+| 10 | poss | real | spm | Possessions played |
+| 11 | dpm | real | spm | Full DPM (o_dpm + d_dpm) |
+| 12 | o_dpm | real | spm | Offensive DPM |
+| 13 | d_dpm | real | spm | Defensive DPM |
+| 14 | box_dpm | real | spm | Box-score DPM |
+| 15 | box_odpm | real | spm | Box-score offensive DPM |
+| 16 | box_ddpm | real | spm | Box-score defensive DPM |
+| 17 | on_off_dpm | real | spm | On/off DPM |
+| 18 | on_off_odpm | real | spm | On/off offensive DPM |
+| 19 | on_off_ddpm | real | spm | On/off defensive DPM |
+| 20 | age | double precision | bio | Player age at game date |
+| 21 | career_game_num | integer | bio | Career game count |
+| 22 | seconds_played | integer | bio | Seconds played in game |
+| 23 | position | text | bio | Position label |
+| 24 | position_num | double precision | bio | Numeric position (1–5 continuous) |
+| 25 | x_position | text | bio | Model-predicted position |
+| 26 | bayes_rapm_off | real | rapm | Bayesian RAPM offensive (pts/100 poss above avg) |
+| 27 | bayes_rapm_def | real | rapm | Bayesian RAPM defensive |
+| 28 | bayes_rapm_total | real | rapm | Bayesian RAPM total |
+| 29 | rapm_exposure | real | rapm | Exponentially-weighted accumulated possessions |
+| 30 | x_minutes | real | projections | Projected minutes per game |
+| 31 | x_pace | real | projections | Projected pace |
+| 32 | x_pts_100 | real | projections | Projected pts/100 poss |
+| 33 | x_ast_100 | real | projections | Projected ast/100 poss |
+| 34 | x_orb_100 | real | projections | Projected orb/100 poss |
+| 35 | x_drb_100 | real | projections | Projected drb/100 poss |
+| 36 | x_stl_100 | real | projections | Projected stl/100 poss |
+| 37 | x_blk_100 | real | projections | Projected blk/100 poss |
+| 38 | x_tov_100 | real | projections | Projected tov/100 poss |
+| 39 | x_fga_100 | real | projections | Projected fga/100 poss |
+| 40 | x_fg3a_100 | real | projections | Projected fg3a/100 poss |
+| 41 | x_fta_100 | real | projections | Projected fta/100 poss |
+| 42 | x_fg_pct | real | projections | Projected FG% |
+| 43 | x_fg3_pct | real | projections | Projected 3P% |
+| 44 | x_ft_pct | real | projections | Projected FT% |
+| 45 | tr_minutes | real | projections | Time-decayed running avg minutes |
+| 46 | tr_starter | real | projections | Time-decayed starter probability |
+| 47 | tr_fg3_pct | real | projections | Time-decayed 3P% |
+| 48 | tr_ft_pct | real | projections | Time-decayed FT% |
+| 49 | projected_years_remaining | real | survivorship | Coherent expected years = sum(S(t)), curve-calibrated |
+| 50 | projected_years_remaining_cal | real | survivorship | Presentation-calibrated expected years (non-coherent, better per age cohort) |
+| 51 | x_retirement_age | double precision | survivorship | age + projected_years_remaining |
+| 52 | x_retirement_age_cal | double precision | survivorship | age + projected_years_remaining_cal |
+| 53 | s1 | real | survivorship | P(plays ≥1 more season) |
+| 54 | s2 | real | survivorship | P(plays ≥2 more seasons) |
+| 55 | s3 | real | survivorship | P(plays ≥3 more seasons) |
+| 56 | s4 | real | survivorship | P(plays ≥4 more seasons) |
+| 57 | s5 | real | survivorship | P(plays ≥5 more seasons) |
+| 58 | s6 | real | survivorship | P(plays ≥6 more seasons) |
+| 59 | s7 | real | survivorship | P(plays ≥7 more seasons) |
+| 60 | s8 | real | survivorship | P(plays ≥8 more seasons) |
+| 61 | s9 | real | survivorship | P(plays ≥9 more seasons) |
+| 62 | s10 | real | survivorship | P(plays ≥10 more seasons) |
+| 63 | s11 | real | survivorship | P(plays ≥11 more seasons) |
+| 64 | s12 | real | survivorship | P(plays ≥12 more seasons) |
+| 65 | s13 | real | survivorship | P(plays ≥13 more seasons) |
+| 66 | s14 | real | survivorship | P(plays ≥14 more seasons) |
+| 67 | s15 | real | survivorship | P(plays ≥15 more seasons) |
+| 68 | game_value | double precision | salary | Per-game dollar value based on DPM and minutes |
+| 69 | wins_pg | double precision | salary | Wins produced per game |
+| 70 | warp | double precision | salary | Wins above replacement player |
+| 71 | sal_poolshare | double precision | salary | Annualized salary from the player's share of his game's positive value (82 games × the per-game cap pool) |
+| 72 | sal_vetfloor | double precision | salary | Veteran minimum plus his positive-value share of the per-game surplus, annualized |
+| 73 | sal_market | double precision | salary | Market salary from his share of the game's total value (negatives allowed), annualized |
+| 74 | sal_market_fixed | double precision | salary | Fair market salary estimate (dollars); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
+| 75 | actual_salary | double precision | salary | Actual contract salary (dollars); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
+| 76 | surplus_value | double precision | salary | sal_market_fixed − actual_salary (positive = underpaid); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
 
 ---
 
@@ -272,7 +338,7 @@ Dimension table. One row per player.
 
 - **Primary key:** `nba_id`
 - **Rows:** ~5,347
-- **Update strategy:** TRUNCATE + reload every run
+- **Update strategy:** upserted on `nba_id` every publish (`INSERT ... ON CONFLICT DO UPDATE`); a player the bundle lacks keeps his row
 - **Source:** `supabase_tables/players.parq`, built from `player_master_crosswalk.csv` + latest row per player from `spm_outputs` + `rookie_season` from `nba_survivorship`
 - **RLS:** Enabled by `supabase/migrations/20260529_001_lock_public_read_tables.sql`; `anon` and `authenticated` keep `SELECT` only.
 
@@ -299,11 +365,21 @@ Dimension table. One row per player.
 Season simulation results. One row per team.
 
 - **Rows:** 30
-- **Update strategy:** TRUNCATE + reload every run
-- **Source:** `calculated_data/season_sim.csv`
+- **Update strategy:** reloaded on every publish: inside the swap, `TRUNCATE` and `INSERT` from
+  its staging table, so the table keeps its definition, grants and policies. Before staging, the
+  publish checks that every bundle column exists in the live table with the same type or a
+  lossless widening (`smallint` to `integer` to `bigint`, `real` to `double precision`) and
+  refuses otherwise, so a new column needs a migration first. Only on a database without the
+  table does the publish create it from the bundle's types, with the read policy and grants.
+- **Indexes:** none from the publisher
+- **Source:** `calculated_data/season_sim.csv`, written by the season-simulation stage
+  (`34_season_simulation_work/season_sim/`), read with `pl.read_csv` and published as it is. The
+  types below are the bundle's, as Polars reads that file.
 - **RLS:** Enabled by `supabase/migrations/20260529_001_lock_public_read_tables.sql`; `anon` and `authenticated` keep `SELECT` only for standings/team pages.
+- **Site reads:** all forty (`select('*')`, filtered on `conference` and ordered by `Rk` for
+  standings, filtered on `team_name` for team pages)
 
-| # | Column | Postgres type | Notes |
+| # | Column | Type (bundle) | Notes |
 |---|---|---|---|
 | 1 | conference | text | "East" or "West" |
 | 2 | Rk | bigint | Rank within conference |
@@ -342,23 +418,34 @@ Season simulation results. One row per team.
 | 35 | Pick2% | double precision | P(2nd overall pick) |
 | 36 | Pick3% | double precision | P(3rd overall pick) |
 | 37 | ExpPick | double precision | Expected draft pick position |
+| 38 | Rem SOS | double precision | Remaining strength of schedule: mean opponent SRS, adjusted for home court (higher is harder) |
+| 39 | Rem H | bigint | Remaining home games |
+| 40 | Rem A | bigint | Remaining away games |
 
 ---
 
 ### win_distribution
 
-Win probability distribution. One row per team per win count.
+Win probability distribution. One row per team per simulated win total.
 
-- **Rows:** ~525 (30 teams × ~17–18 win buckets)
-- **Update strategy:** TRUNCATE + reload every run
-- **Source:** `calculated_data/win_distribution.parq`
+- **Rows:** up to ~525 during a season (30 teams × ~17–18 win totals); 30 once every game is played
+- **Update strategy:** reloaded on every publish: inside the swap, `TRUNCATE` and `INSERT` from
+  its staging table, so the table keeps its definition, grants and policies. Before staging, the
+  publish checks that every bundle column exists in the live table with the same type or a
+  lossless widening (`smallint` to `integer` to `bigint`, `real` to `double precision`) and
+  refuses otherwise, so a new column needs a migration first. Only on a database without the
+  table does the publish create it from the bundle's types, with the read policy and grants.
+- **Indexes:** none from the publisher
+- **Source:** `calculated_data/win_distribution.parq`, written by the season-simulation stage and
+  published as it is; the types below are the bundle's, as Polars reads that file.
 - **RLS:** Enabled by `supabase/migrations/20260529_001_lock_public_read_tables.sql`; `anon` and `authenticated` keep `SELECT` only for team win-distribution charts.
+- **Site reads:** all five (`select('*')`, filtered on `team_name`, ordered by `wins`)
 
-| # | Column | Postgres type | Notes |
+| # | Column | Type (bundle) | Notes |
 |---|---|---|---|
-| 1 | tm_id | integer | Team NBA ID |
-| 2 | wins | bigint | Win count |
-| 3 | count | integer | Simulation count for this bucket |
+| 1 | tm_id | bigint | Team NBA ID |
+| 2 | wins | bigint | Win total |
+| 3 | count | integer | Simulations ending with this many wins |
 | 4 | prob | double precision | Probability of finishing with this many wins |
 | 5 | team_name | text | Team abbreviation |
 
@@ -366,34 +453,156 @@ Win probability distribution. One row per team per win count.
 
 ### lineup_ratings
 
-Five-man lineup ratings used by the `/lineups` page. One row per lineup variant.
+Two- to five-man lineup ratings used by the `/lineups` page and team pages. One row per lineup,
+team and variant.
 
-- **Rows:** varies by upload
-- **Update strategy:** reloads with the lineup upload pipeline
-- **RLS:** Enabled by `supabase/migrations/20260616_001_lock_public_fact_tables.sql`; `anon` and `authenticated` keep `SELECT` only for the `/lineups` page.
-- **Frontend note:** `/lineups` reads `team_name` when present and falls back to `"Team pending"` while that column is rolling out.
-- **Variant note:** `variant='pi'` stays PI; `variant='raw'` and `variant='npi'` are both normalized into the NPI bucket on the frontend during the upload transition.
+- **Rows:** 145,194 in the current lineup files (72,597 per variant)
+- **Update strategy:** rebuilt and swapped in on every publish (`--no-full-reload lineup_ratings`
+  refills the existing table instead)
+- **Indexes** (`TABLE_INDEXES`): `(variant, lineup_size)`, `(min_season_poss DESC)`, `(tm_id)`
+- **Source:** `build_lineup_ratings()` in `pipeline_scripts/publish/website.py`. It stacks every
+  column of `external_share/lineup_elo_pi_2pass.parq` and `lineup_elo_npi_2pass.parq` (falling
+  back to the files without `_2pass`), renames `Player 1` … `Player 5` to `player_1` …
+  `player_5`, adds `computed_on`, and on `raw` rows fills the three `total_*` columns from the
+  `*_elo_rating` ones. No pipeline stage rebuilds those files; the current ones were written on
+  2026-03-26. The types below are the builder's output from them.
+- **RLS:** Enabled by `supabase/migrations/20260616_001_lock_public_fact_tables.sql` and
+  re-applied by every swap; `anon` and `authenticated` keep `SELECT` only.
+- **Variant note:** the NPI file's rows carry `variant = 'raw'`. The site queries `pi`, `raw` and
+  `npi` and puts `raw` and `npi` in its NPI bucket; team names come from `tm_id`.
+- **Site reads:** 22 of the 34 columns: `LINEUP_RATING_COLUMNS` in `src/lib/server/supabase.js`
+  (`variant`, `lineup_size`, `min_season_poss`, the three `total_*` ratings, the three
+  `*_synergy` columns, `tm_id`, `player_1` … `player_5` and `player_1_id` … `player_5_id`), plus
+  `group_key` (sort order) and `computed_on`; not `off_elo_rating`, `def_elo_rating`,
+  `net_elo_rating`, the four `*_total_poss` and `*_season_poss` columns, the three `*_prior`
+  columns, `expansion_mode` or `net_rating_model`
 
 | # | Column | Postgres type | Notes |
 |---|---|---|---|
-| 1 | variant | text | Variant label (`pi`, `raw`, `npi`) |
-| 2 | min_season_poss | real | Minimum possession sample used for the lineup |
-| 3 | total_net_rating | real | Total net rating shown as Net +/- |
-| 4 | total_off_rating | real | Total offensive rating shown as Off +/- |
-| 5 | total_def_rating | real | Total defensive rating shown as Def +/- |
-| 6 | team_name | text | Optional team label; may be absent during rollout |
-| 7 | player_1 | text | First player display name |
-| 8 | player_2 | text | Second player display name |
-| 9 | player_3 | text | Third player display name |
-| 10 | player_4 | text | Fourth player display name |
-| 11 | player_5 | text | Fifth player display name |
-| 12 | player_1_id | bigint | First player NBA ID |
-| 13 | player_2_id | bigint | Second player NBA ID |
-| 14 | player_3_id | bigint | Third player NBA ID |
-| 15 | player_4_id | bigint | Fourth player NBA ID |
-| 16 | player_5_id | bigint | Fifth player NBA ID |
+| 1 | off_elo_rating | double precision | The lineup model's offensive rating; the builder copies it into `total_off_rating` on `raw` rows |
+| 2 | off_total_poss | double precision | The model's effective sample behind the offensive rating |
+| 3 | off_season_poss | double precision | The lineup's offensive possessions this season |
+| 4 | player_1_id | bigint | First player NBA ID |
+| 5 | player_2_id | bigint | Second player NBA ID |
+| 6 | player_1 | text | First player display name |
+| 7 | player_2 | text | Second player display name |
+| 8 | def_elo_rating | double precision | The lineup model's defensive rating; copied into `total_def_rating` on `raw` rows |
+| 9 | def_total_poss | double precision | The model's effective sample behind the defensive rating |
+| 10 | def_season_poss | double precision | The lineup's defensive possessions this season |
+| 11 | net_elo_rating | double precision | The lineup model's net rating; copied into `total_net_rating` on `raw` rows |
+| 12 | min_season_poss | double precision | The smaller of `off_season_poss` and `def_season_poss`; the site filters on it |
+| 13 | tm_id | bigint | Team NBA ID |
+| 14 | off_synergy | double precision | Offensive rating beyond the players' prior (null on `raw` rows) |
+| 15 | def_synergy | double precision | Defensive rating beyond the players' prior (null on `raw` rows) |
+| 16 | net_synergy | double precision | `off_synergy + def_synergy` (null on `raw` rows) |
+| 17 | off_prior | double precision | Offensive prior from the players (null on `raw` rows) |
+| 18 | def_prior | double precision | Defensive prior from the players (null on `raw` rows) |
+| 19 | net_prior | double precision | `off_prior + def_prior` (null on `raw` rows) |
+| 20 | total_off_rating | double precision | Offensive rating shown as Off +/-: prior plus synergy on `pi` rows, `off_elo_rating` on `raw` rows |
+| 21 | total_def_rating | double precision | Defensive rating shown as Def +/-: prior plus synergy on `pi` rows, `def_elo_rating` on `raw` rows |
+| 22 | total_net_rating | double precision | Net rating shown as Net +/-: prior plus synergy on `pi` rows, `net_elo_rating` on `raw` rows |
+| 23 | group_key | text | Player IDs joined with `|`; a tie-breaker in the site's page order |
+| 24 | lineup_size | bigint | Players in the lineup, 2 to 5 |
+| 25 | variant | text | `pi` (prior-informed) or `raw` (the NPI file's rows) |
+| 26 | expansion_mode | text | `2pass` or `cross`: how the model expanded lineup groups |
+| 27 | net_rating_model | text | The net-rating method (`heuristic_2pass` or `joint_cross`) |
+| 28 | player_3 | text | Third player display name (null below three players) |
+| 29 | player_3_id | bigint | Third player NBA ID (null below three players) |
+| 30 | player_4 | text | Fourth player display name (null below four players) |
+| 31 | player_4_id | bigint | Fourth player NBA ID (null below four players) |
+| 32 | player_5 | text | Fifth player display name (null below five players) |
+| 33 | player_5_id | bigint | Fifth player NBA ID (null below five players) |
+| 34 | computed_on | date | The day the newer lineup file was written; the files carry no dates |
 
 ---
+
+### season_calendar
+
+First game, first team finale, last regular-season game and last game of every season. Built by
+`build_season_calendar()` in `pipeline_scripts/publish/website.py`; rebuilt and swapped in on
+every publish. Read by `src/lib/server/history.js` for the Time Machine and Rewind.
+
+- **Unique index:** `(season)`
+- **Columns:** `season`, `first_game`, `earliest_team_finale` (the first date any team played its
+  last regular-season game), `regular_season_end`, `last_game`
+- **Site reads:** all five
+
+### rating_frames
+
+The weekly top 20 players by DPM in every regular season since 1996-97, each at his latest
+rating as of the frame date. Frames fall on every seventh day of the regular season and on its
+last day; a player needs three games that season and a game in the 28 days before the frame.
+Built by `build_rating_frames()` in `pipeline_scripts/publish/website.py`; rebuilt and swapped
+in on every publish. Read by `src/lib/server/history.js` for Rewind.
+
+- **Unique index:** `(frame_date, rank)`; index on `season`
+- **Columns:** `frame_date`, `season`, `rank`, `nba_id`, `player_name`, `tm_id`, `team_name`,
+  `dpm`, `o_dpm`, `d_dpm`, `games` (games played that season through the frame)
+- **Site reads:** all eleven
+
+### player_comps
+
+Up to 25 historical comps for every current player, closest first, each comp at its
+closest season with five finished seasons of futures. Built by `build_player_comps()` in
+`pipeline_scripts/publish/website_comps.py`, called by `build_comps_table()` in
+`pipeline_scripts/publish/website.py`; rebuilt and swapped in on every publish. Read by
+`src/lib/server/comps.js` for player pages and Echoes.
+
+- **Unique index:** `(nba_id, rank)`; index on `comp_id`
+- **Columns:** `nba_id`, `season`, `as_of`, `age`, `dpm`, `rank`, `comp_id`, `comp_name`,
+  `comp_season`, `comp_age`, `comp_dpm`, `comp_o_dpm`, `comp_d_dpm`, `similarity`, `weight`,
+  `dpm_next_1` … `dpm_next_5`
+- **Site reads:** all twenty (player pages filter on `nba_id`; Echoes read `nba_id`, `rank`,
+  `comp_season` and `similarity` filtered on `comp_id`)
+
+### player_seasons
+
+Every player-season since 1996-97 at its last game day, with regular-season games and minutes,
+playoff games, and where its DPM ranks among all seasons at the same whole-year age. Built by
+`build_player_seasons()` in `pipeline_scripts/publish/website_daily.py`; rebuilt and swapped in
+on every publish. Read by `src/lib/server/daily.js` for The Daily and player-page season
+tables.
+
+- **Unique index:** `(nba_id, season)`; index on `(season, age_rank)`
+- **Columns:** `nba_id`, `season`, `player_name`, `date`, `tm_id`, `age`, `dpm`, `o_dpm`,
+  `d_dpm`, `games` (regular season), `minutes` (regular season), `playoff_games`, `age_rank`,
+  `age_count` (both null for a season with fewer than 20 regular-season games or no age)
+- **Site reads:** all fourteen
+
+### game_updates
+
+Every game of the latest season each player played, with the rating going into it and coming
+out. Built by `build_game_updates()` in `pipeline_scripts/publish/website_daily.py`; rebuilt
+and swapped in on every publish. Read by `src/lib/server/daily.js` for The Daily's biggest
+updates and its sparklines (also served by `/api/daily/watch`).
+
+- **Unique index:** `(nba_id, date)`; index on `date`
+- **Columns:** `nba_id`, `player_name`, `date`, `season`, `player_game`, `game_type`, `tm_id`,
+  `opp_id`, `minutes`, `dpm_before`, `o_before`, `d_before`, `dpm_after`, `o_after`,
+  `d_after`, `dpm_update`, `o_update`, `d_update`, `abs_update`
+- **Site reads:** `nba_id`, `player_name`, `date`, `game_type`, `tm_id`, `opp_id`, `minutes`,
+  `dpm_before`, `o_before`, `dpm_after`, `dpm_update`, `o_update`, `d_update`, `abs_update`;
+  not `season`, `player_game`, `d_before`, `o_after` or `d_after`
+
+### rating_moves
+
+Each player's rating change into the latest published date over 7 days, 30 days and since the
+season began (`period` `'7'`, `'30'` or `'season'`), with the games played in between; a player
+with no game in a window is left out of it. Built by `build_rating_moves()` in
+`pipeline_scripts/publish/website_daily.py`; rebuilt and swapped in on every publish. Read by
+`src/lib/server/daily.js` for The Daily and `/api/daily/watch`.
+
+- **Unique index:** `(period, nba_id)`
+- **Columns:** `period`, `start_date`, `end_date`, `nba_id`, `player_name`, `tm_id`, `games`,
+  `dpm_from`, `o_from`, `dpm_to`, `o_to`, `delta`, `o_delta`
+- **Site reads:** all thirteen
+
+Each **Columns** list above is its builder's exact output, in order; the builder in nba_darko
+(`pipeline_scripts/publish/website.py`, formerly `1_historic_darko/push_website.py`, and its
+helpers) and its test in `tests/test_website*.py` are the source of truth, and
+`TABLE_INDEXES` in `website.py` defines the indexes. **Site reads** names the
+columns the site selects or filters on. The builders compute `seconds_played`, `last_played`
+and `age_year` along the way but publish none of them.
 
 ## SvelteKit Data Access Layer
 
@@ -409,13 +618,13 @@ Elo voting remains the only write path. `supabase/migrations/20260617_001_restor
 
 ### RATING_COLUMNS
 
-Comma-joined string of all 69 fetched `player_ratings` column names (66 original + `sal_market_fixed`, `actual_salary`, `surplus_value`), used by `getActivePlayers()` and `getPlayerHistory()` in `.select(RATING_COLUMNS)`. If you add a column to the DB, you must also add it here or it won't be fetched. Note: 3 salary columns (`game_value`, `wins_pg`, `warp`) exist in the DB but are not in RATING_COLUMNS since they aren't displayed on the frontend.
+Comma-joined string of 70 of the 76 `player_ratings` columns, selected by the per-player history reads (`getPlayerHistory()`, and `getFullPlayerHistory()` by default). It leaves out `opp_id` (the player-profile history selects it through `PLAYER_PROFILE_RATING_COLUMNS`) and five salary columns no page displays: `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`. If you add a column to the DB, add it here (or to the narrower lists) or those reads won't fetch it; the whole-row RPCs return it regardless.
 
 ### Core data functions
 
 | Function | Queries | Returns | Used by |
 |---|---|---|---|
-| `getActivePlayers()` | Finds the latest `player_ratings.season`, reads current-season `player_ratings` rows with RATING_COLUMNS and `active_roster = 1`, and dedupes to the latest row per player. This includes `future_game = 1` projection rows, which are the current DARKO snapshot. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
+| `getActivePlayers()` | Finds the latest `player_ratings.season` and calls `get_active_player_ratings(p_season)`, which returns each `active_roster = 1` player's latest row in that season, whole (`pr.*`). This includes `future_game = 1` projection rows, which are the current DARKO snapshot. Merges with current-season `players` dimension via `mergeWithPlayerDim` (`...row` spread — all columns pass through). | Array of full player-rating objects | Leaderboard, longevity, player index, everywhere |
 | `getActiveWowyPlayers()` | Calls `get_active_wowy_player_ratings()`, normalizes team IDs/display positions plus explicit bio filter fields, and caches the compact current-active snapshot for five minutes. | One current-identity row per active player with a latest observed WOWY RAPM row, canonical filter position, and plausible listed height | `/wowy` |
 | `getWowyAllTimePlayers()` | Calls `get_wowy_all_time_player_seasons()`, preserves its database-owned deterministic top-100 order for one hour, and does not cache an empty pre-activation response. | At most 100 all-time player-season rows with unweighted WOWY averages, ordinal rank, season, historical teams, and explicit bio filter fields | `/wowy` default |
 | `getWowyLeaderboardSeasons()` | Calls `get_wowy_leaderboard_seasons()` and caches the season list for one hour. | All published historical season end years (1978 onward) | `/wowy` |
@@ -444,14 +653,14 @@ The longevity page uses aliased field names. The mapping happens in `getLongevit
 |---|---|---|
 | x_retirement_age_cal (fallback: x_retirement_age) | est_retirement_age | `firstFiniteNumber()` picks first non-null |
 | projected_years_remaining_cal (fallback: projected_years_remaining) | years_remaining | `firstFiniteNumber()` picks first non-null |
-| career_game_num | career_games | Direct rename |
+| none (`player_seasons.games`) | career_games | Regular-season games: the sum of `player_seasons.games` over the player's seasons (since 1996-97), read by `getCareerGames()` in `src/lib/server/daily.js` and summed by `careerGames()` in `src/lib/utils/playerProfile.js`; `/api/longevity` passes `getCareerGames` in as `loadGames`. `0` for a player with no `player_seasons` row; `null` when `getLongevityRows()` is called without `loadGames`, when `player_seasons` is not published, or when the read fails. Not `career_game_num`, which counts model rows, not games |
 | s1–s15 | p1–p15 | `normalizeProbability()` converts [0,1] → percentage |
 
 **Important:** `getPlayersIndex()` does NOT pass through survivorship or projection columns. It hardcodes a specific field list (DPM, position, shooting trends, minutes). If you need survivorship data on a page that uses `getPlayersIndex()`, you must either add the fields explicitly or use `getActivePlayers()` directly.
 
 ### Caching
 
-All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. Cache clears on server restart / Vercel redeploy. **After uploading new data to Supabase, you must redeploy to Vercel to see changes immediately** (otherwise wait for TTL expiry).
+All data functions use `runCached(key, maxAgeMs, loader)` with in-memory store. Cache clears on server restart / Vercel redeploy. The publisher calls the Vercel deploy hook after every publish (see [Pipeline publisher](#pipeline-publisher)). **After any other change to Supabase data, redeploy to Vercel to see it immediately** (otherwise wait for TTL expiry).
 
 | Cache key | TTL |
 |---|---|
@@ -503,72 +712,125 @@ Deferred shifts to evaluate:
 
 ---
 
-## Pipeline Scripts
+## Pipeline publisher
 
-The two Python scripts that build and upload data live in the DARKO pipeline repo (outside `darko-site/`). They are **not** part of the SvelteKit project but are the sole source of truth for Supabase data.
+Every table documented above except the WOWY tables is published by one script in the
+`nba_darko` repository, outside `darko-site/`: `pipeline_scripts/publish/website.py` (formerly
+`1_historic_darko/push_website.py`, which the Part A pipeline branch still uses; that copy has
+no writer guard on the build or the publish and gives a table it creates no row-level security,
+and otherwise behaves the same). It is the source of truth for those tables' data, columns and indexes.
+`pipeline_scripts/run_all.py` runs it as the `push-website` stage, in two actions: a build
+(`--skip-upload`) and a publish (`--skip-build`). Run by hand from the `nba_darko` root,
+`python pipeline_scripts/publish/website.py` does both.
 
-### `build_supabase_tables.py` — Build parquet files
+### Build
 
-Joins six source parquet files into two Supabase-ready tables using Polars lazy scans + semi-joins (avoids eagerly loading the 15.7 M-row RAPM table).
+`build_supabase_tables()` reads the runtime root (`--runtime-root`, default
+`NBA_DARKO_RUNTIME_ROOT`) and writes the release bundle to `supabase_tables/`:
 
-**Inputs** (all relative to the DARKO project root):
+- `player_ratings`: the six-source join described under [player_ratings](#player_ratings),
+  checked for duplicate `(nba_id, date)` keys and for the base table's row count;
+- `players`: `player_master_crosswalk.csv`, each player's latest `spm_outputs` row, and
+  `rookie_season` from `nba_survivorship`;
+- `lineup_ratings` from the PI and NPI lineup Elo files in `external_share/`;
+- `season_calendar`, `rating_frames`, `player_comps`, `player_seasons`, `game_updates` and
+  `rating_moves`, by the builders named in their sections above.
 
-| File | Approx rows | Role |
-|---|---:|---|
-| `calculated_data/temp/spm_outputs.parq` | 1,089,000 | Base grain (defines the key space) |
-| `calculated_data/5_assembled_features.parq` | 1,089,000 | Bio columns: age, career_game_num, position, etc. |
-| `calculated_data/bayes_rapm_ratings.parq` | 15,700,000 | RAPM ratings (semi-join filtered before collect) |
-| `calculated_data/talent_game_predictions.parq` | 1,089,000 | Projected per-100, shooting, minutes, pace |
-| `calculated_data/temp/nba_survivorship.parq` | 1,084,000 | Survivorship curves s1–s15, retirement age |
-| `calculated_data/dpm_salary.parq` | varies | DPM-based salary valuation (game_value, warp, sal_market_fixed, surplus_value) |
+`season_sim` and `win_distribution` are published from `calculated_data/` as they are. A
+manifest (`supabase_tables/player_ratings.manifest.json`) seals the bundle with the hashes of
+its sources, builder code and outputs, and the publish refuses a bundle that changed after it
+was read.
 
-**Outputs:**
-- `supabase_tables/players.parq` — dimension (one row per player)
-- `supabase_tables/player_ratings.parq` — fact (one row per player per date, 72 columns)
+**A build into a shared runtime needs the writer.** From the pipeline import branch
+(`codex/wowy-import-20260928-v1`) on, a build-only run (`--skip-upload`) takes the writer's
+scope (`build_write_scope()`) whenever `<runtime-root>/supabase_tables` lies in a shared runtime,
+by the rule of `shared_runtime_containing()` in `pipeline_scripts/lib/shared_runtime.py`: the
+path is at or below `NBA_DARKO_RUNTIME_ROOT` (exported, or loaded from the runner's `.env`), or
+it or an ancestor directory holds a `WRITER.txt` marker. Under `run_all.py` the `push-website`
+build action verifies the runner's inherited lock; run by hand, the build needs the same writer
+authorization as a publish (step 1 below) and holds the full-run lock, so on a machine that is
+not the writer it is refused before anything is built. A build into a runtime root outside
+every shared runtime needs no writer. The Part A pipeline branch's
+`1_historic_darko/push_website.py` has no build guard.
 
-**Validation:** Asserts no duplicate `(nba_id, date)` rows and that row count equals the base table after all joins.
+### Publish
 
-### `1_historic_darko/push_website.py` — Upload to Supabase Postgres
+1. **Writer guard.** The publish runs inside the pipeline's single-writer scope
+   (`pipeline_scripts/lib/writer_guard.py`) and fails before connecting when this Mac is not the
+   writer. Under `run_all.py` it verifies the runner's inherited full-run lock; run by hand it
+   requires `NBA_DARKO_WRITE_ENABLED=1` and an `NBA_DARKO_MACHINE_ID` that matches `WRITER.txt`
+   in the runtime root, and holds the full-run lock until it finishes. A build-only run
+   (`--skip-upload`) takes the same scope when it writes into a shared runtime; see
+   [Build](#build).
+2. **Connection.** `SUPABASE_PG_DSN` is required. The session sets a 10-minute
+   `statement_timeout` and a 5-minute `idle_in_transaction_session_timeout`, so a stalled
+   upload rolls back instead of holding locks.
+3. **Changed days of `player_ratings`.** Each publication records the SHA-256 of every day of
+   `player_ratings` (of the exact CSV it uploads for that date) in `player_ratings_days`, and
+   the table's columns, rows and days in `website_publication`. Both tables are private:
+   row-level security on and no grants to `anon` or `authenticated`. The next publication
+   uploads only the days whose fingerprint changed and, in the swap, deletes those dates (and
+   any that left the bundle) and inserts the new rows: row locks only, so readers never wait.
+   It rebuilds the whole table instead when `--full-player-ratings` is passed, nothing is
+   published yet, no fingerprints are recorded, the fingerprint method or the columns changed,
+   the live rows no longer match their fingerprints, or more than a quarter of the rows changed.
+4. **Staging.** Each table is uploaded first into `<table>__next`, which has row-level security
+   on and no grants to `anon` or `authenticated`, so the site cannot read it; the published
+   tables stay unlocked meanwhile. Rows go in by `COPY ... FROM STDIN` in CSV chunks of 10,000
+   rows (`--copy-chunksize`), over up to 8 connections for large tables (`--copy-workers`). A
+   table that will be replaced gets its keys and indexes (`TABLE_INDEXES`) and `ANALYZE` while
+   still staged.
+5. **Swap.** One short transaction (`lock_timeout` 3 s; up to five attempts 15 s apart while
+   readers hold the tables) first does the row-lock work (the `players` upsert,
+   `player_ratings`' changed days and their fingerprints), then locks every table it replaces or
+   refills in one `LOCK TABLE ... IN ACCESS EXCLUSIVE MODE`, then publishes each table:
 
-Loads parquet files to Supabase via `psycopg2` COPY FROM STDIN (CSV), chunked at 50,000 rows with `tqdm` progress.
+   | Table | Mode | In the swap |
+   |---|---|---|
+   | `player_ratings` when rebuilt, `lineup_ratings`, `season_calendar`, `rating_frames`, `player_comps`, `player_seasons`, `game_updates`, `rating_moves` | replace | plain `DROP TABLE` of the published table (no `CASCADE`), `ALTER TABLE <table>__next RENAME TO <table>`, indexes renamed, then row-level security enabled, policy `allow_public_read` (`SELECT` to `anon`, `authenticated`) recreated, `REVOKE ALL` from `PUBLIC`, `anon`, `authenticated`, and `GRANT SELECT` to `anon`, `authenticated` |
+   | `player_ratings` otherwise | changed days | `DELETE` the changed and removed dates, `INSERT` the staged rows |
+   | `players` | upsert | `INSERT ... ON CONFLICT (nba_id) DO UPDATE`; rows the bundle lacks stay |
+   | `season_sim`, `win_distribution` | reload | `TRUNCATE` and `INSERT`; the table keeps its definition, policies and grants |
+   | a table that does not exist yet | create | `CREATE TABLE` and `COPY` (and `players`' primary key), then the same row-level security, policy and grants as a replaced table |
 
-**Upload modes per table:**
+   It then checks that `player_ratings` holds exactly the bundle's rows over its fingerprinted
+   days, records the publication in `website_publication`, and issues
+   `NOTIFY pgrst, 'reload schema'`, which PostgREST receives on commit and which makes it see
+   the new relations. Any failure, including a `DROP TABLE` blocked by a dependent object
+   (see Ownership under [Architecture](#architecture)), rolls the whole swap back: the old
+   tables keep serving and the staging tables are dropped.
+6. **Verification.** It prints every published table's row count, the latest date, and the top
+   five players by DPM and PI five-man lineups.
+7. **Site refresh.** After the publication commits, `refresh_site_cache()`
+   (`pipeline_scripts/publish/site_refresh.py`) POSTs the Vercel deploy hook in
+   `DARKO_SITE_DEPLOY_HOOK`; the redeploy starts the site with an empty in-memory cache.
+   Without the hook, or if the call fails, the publication stands and pages refresh as their
+   caches expire.
 
-| Table | `full_reload=True` | `full_reload=False` | Fresh (table missing) |
-|---|---|---|---|
-| `players` | TRUNCATE + reload (CASCADE to elo_ratings) | same | CREATE + bulk load + PK + read-only RLS via darko-site migration |
-| `player_ratings` | DROP + CREATE + bulk load + indexes + RLS | DELETE current season + INSERT (atomic) | CREATE + bulk load + indexes + RLS |
-| `season_sim` | TRUNCATE + reload | same | CREATE + bulk load + read-only RLS via darko-site migration |
-| `win_distribution` | TRUNCATE + reload | same | CREATE + bulk load + read-only RLS via darko-site migration |
+The publisher never creates, replaces or drops a Postgres function; see Ownership above.
 
-**Indexes created on `player_ratings`:**
-- `pk_player_ratings PRIMARY KEY (nba_id, date)`
-- `idx_ratings_date (date DESC)`
-- `idx_ratings_season (season)`
-- `idx_ratings_nba_id (nba_id)`
-- `idx_ratings_active_latest (season DESC, active_roster, nba_id, date DESC)`
-- `idx_ratings_leaderboard_team_opener (season, team_name, date ASC)`
-- `idx_ratings_player_team_latest (nba_id, date DESC) INCLUDE (team_name, tm_id)` for valid team rows
-- Read-only RLS plus `SELECT` grants for `anon` and `authenticated`
-- Invoker-safe player-rating RPCs restored after every fresh/full rebuild: `get_active_player_ratings`, `get_latest_player_teams`, `get_leaderboard_seasons`, `get_season_start_player_ratings`, `get_latest_player_search_ratings`, and `get_active_wowy_player_ratings`. `get_wowy_leaderboard_seasons` and `get_wowy_season_player_ratings` are also kept in sync there, but their all-era source is the independent `wowy_season_player_averages` table, so they survive a `player_ratings` rebuild.
+### WOWY publishers
 
-**Connection:** Uses `SUPABASE_PG_DSN` env var, falling back to `fixed_data/supabase_secret.json`.
+The WOWY tables (`wowy_ratings`, `wowy_publication`, `wowy_season_opening_snapshots`,
+`wowy_season_player_averages` and their siblings) are not touched by `website.py`. The WOWY
+RAPM program (GitHub `kmedved/wowy-rapm`, the Dropbox checkout `33_wowy_rapm`, being imported
+into `nba_darko` as `pipeline_scripts/wowy_rapm/`) has its own publishers. `publish_wowy_site.py`
+independently validates the certified WOWY manifest, COPY-loads a temporary staging table,
+verifies keys, counts and date coverage, and in one transaction replaces the rows of
+`wowy_ratings` (`TRUNCATE` and `INSERT`) and upserts the `wowy_publication` row. It never drops
+a table, so indexes, grants, constraints and row-level security on the WOWY tables survive
+publication.
 
-The model-owned `33_wowy_rapm/scripts/publish_wowy_site.py` independently validates the certified
-WOWY manifest, COPY-loads a temporary staging table, verifies keys/counts/date coverage, and replaces
-`wowy_ratings` plus `wowy_publication` in one transaction. It never uses the generic drop/recreate
-uploader, so indexes, grants, constraints, and RLS survive publication.
-
-`33_wowy_rapm/scripts/export_wowy_season_opening_snapshots.py` builds the matching all-era
-opening-game artifact from the certified player-game publication plus BBRef historical team data.
-`scripts/publish_wowy_season_opening_snapshots.py` validates season coverage, team context, keys,
-and RAPM decomposition before atomically replacing `wowy_season_opening_snapshots`.
+`export_wowy_season_opening_snapshots.py` builds the matching all-era opening-game artifact
+from the certified player-game publication plus BBRef historical team data.
+`publish_wowy_season_opening_snapshots.py` validates season coverage, team context, keys, and
+RAPM decomposition before atomically replacing the rows of `wowy_season_opening_snapshots`.
 
 ---
 
 ## Pipeline Freshness Requirements
 
-**All source parquet files must cover the same date range.** The build script left-joins everything onto `spm_outputs` by `(nba_id, date)`. If any source file lags behind, those columns will be null for all dates beyond that file's max date.
+**All source parquet files must cover the same date range.** The build (`build_supabase_tables()` in `website.py`) left-joins everything onto `spm_outputs` by `(nba_id, date)`. If any source file lags behind, those columns will be null for all dates beyond that file's max date.
 
 `getActivePlayers()` always returns the most recent active-roster row per player in the latest season, including `future_game = 1` projection rows. If that row has null survivorship/projections/RAPM because the source file was stale at build time, the entire column appears empty on the site — even though older rows in the DB have the data.
 
@@ -576,7 +838,7 @@ The homepage's historical leaderboard uses `get_season_start_player_ratings(p_se
 
 **Debugging null columns on the site:**
 1. Check max dates of all source parquet files — they should match `spm_outputs`
-2. If a file is stale, re-run its pipeline notebook
-3. Run `build_supabase_tables.py` — check the coverage line in output
-4. Run `upload_to_supabase.py`
-5. Redeploy on Vercel (or restart dev server) to clear in-memory cache
+2. If a file is stale, re-run the pipeline stage that writes it (`pipeline_scripts/run_all.py`; `pipeline_scripts/manifest.py` lists each stage's outputs)
+3. Rebuild the bundle without publishing and check the `coverage` line it prints: from the `nba_darko` root, `python pipeline_scripts/publish/website.py --skip-upload`. On the writer Mac that writes the shared runtime's `supabase_tables/` under the writer guard. From the pipeline import branch on, any other machine is refused a build into the shared runtime (see [Build](#build)), so there pass `--runtime-root` a scratch runtime root outside `NBA_DARKO_RUNTIME_ROOT`, with no `WRITER.txt` in it or any directory above it, holding copies of the files the build reads from `calculated_data/`, `fixed_data/crosswalks/` and `external_share/`
+4. Publish on the writer Mac: `python pipeline_scripts/publish/website.py` builds and publishes, `--skip-build` publishes a bundle already built into its runtime, or leave it to the next `run_all.py`
+5. The publish calls the Vercel deploy hook; without one, redeploy on Vercel (or restart the dev server) to clear the in-memory cache
