@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-01",
+  "date": "2026-10-02",
   "players": [
     {
       "nba_id": 1631105,
       "name": "Jalen Duren",
-      "reason": "Qualifying-offer deadline; Pistons reportedly drop weight clause"
+      "reason": "Agrees to five-year, $200 million Pistons deal"
     },
     {
-      "nba_id": 1628415,
-      "name": "Dillon Brooks",
-      "reason": "Charged with DUI stemming from March arrest"
+      "nba_id": 1641705,
+      "name": "Victor Wembanyama",
+      "reason": "Rejects sports-betting endorsements"
     },
     {
-      "nba_id": 1626156,
-      "name": "D'Angelo Russell",
-      "reason": "Reported Shanghai Sharks signing after NBA exit"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "Heat preseason opener approaches"
+    },
+    {
+      "nba_id": 1642261,
+      "name": "Dalton Knecht",
+      "reason": "Lakers roster uncertainty fuels trade and waiver reports"
     },
     {
       "nba_id": 202695,
       "name": "Kawhi Leonard",
-      "reason": "Raptors camp ramp-up and Clippers investigation fallout"
-    },
-    {
-      "nba_id": 1630178,
-      "name": "Tyrese Maxey",
-      "reason": "Prioritizes Sixers wins over individual stats"
+      "reason": "Raptors return ahead of preseason opener"
     }
   ]
 }
