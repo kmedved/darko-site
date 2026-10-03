@@ -1,30 +1,25 @@
 {
-  "date": "2026-10-02",
+  "date": "2026-10-03",
   "players": [
     {
       "nba_id": 1631105,
       "name": "Jalen Duren",
-      "reason": "Agrees to five-year, $200 million Pistons deal"
-    },
-    {
-      "nba_id": 1641705,
-      "name": "Victor Wembanyama",
-      "reason": "Rejects sports-betting endorsements"
+      "reason": "Rejoins Pistons after five-year, $200 million agreement"
     },
     {
       "nba_id": 203507,
       "name": "Giannis Antetokounmpo",
-      "reason": "Heat preseason opener approaches"
+      "reason": "Anticipated Heat debut in tonight's preseason opener"
     },
     {
-      "nba_id": 1642261,
-      "name": "Dalton Knecht",
-      "reason": "Lakers roster uncertainty fuels trade and waiver reports"
+      "nba_id": 1641705,
+      "name": "Victor Wembanyama",
+      "reason": "Betting-endorsement rejection continues to draw reaction"
     },
     {
       "nba_id": 202695,
       "name": "Kawhi Leonard",
-      "reason": "Raptors return ahead of preseason opener"
+      "reason": "Raptors return in focus ahead of preseason opener"
     }
   ]
 }
