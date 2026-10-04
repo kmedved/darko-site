@@ -1,25 +1,25 @@
 {
-  "date": "2026-10-03",
+  "date": "2026-10-04",
   "players": [
-    {
-      "nba_id": 1631105,
-      "name": "Jalen Duren",
-      "reason": "Rejoins Pistons after five-year, $200 million agreement"
-    },
     {
       "nba_id": 203507,
       "name": "Giannis Antetokounmpo",
-      "reason": "Anticipated Heat debut in tonight's preseason opener"
+      "reason": "Heat debut: nine points, seven assists in preseason win"
     },
     {
-      "nba_id": 1641705,
-      "name": "Victor Wembanyama",
-      "reason": "Betting-endorsement rejection continues to draw reaction"
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "Puts on a show at Sixers open scrimmage"
     },
     {
       "nba_id": 202695,
       "name": "Kawhi Leonard",
-      "reason": "Raptors return in focus ahead of preseason opener"
+      "reason": "Held out of Raptors preseason opener"
+    },
+    {
+      "nba_id": 201939,
+      "name": "Stephen Curry",
+      "reason": "Warriors preseason opener in Hawaii approaches"
     }
   ]
 }
