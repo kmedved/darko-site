@@ -1,25 +1,30 @@
 {
-  "date": "2026-10-04",
+  "date": "2026-10-05",
   "players": [
     {
-      "nba_id": 203507,
-      "name": "Giannis Antetokounmpo",
-      "reason": "Heat debut: nine points, seven assists in preseason win"
+      "nba_id": 203999,
+      "name": "Nikola Jokic",
+      "reason": "Behind-the-back assist dazzles in preseason opener"
     },
     {
       "nba_id": 2544,
       "name": "LeBron James",
-      "reason": "Puts on a show at Sixers open scrimmage"
+      "reason": "Possible Sixers preseason debut against Knicks tonight"
     },
     {
-      "nba_id": 202695,
-      "name": "Kawhi Leonard",
-      "reason": "Held out of Raptors preseason opener"
+      "nba_id": 1629060,
+      "name": "Rui Hachimura",
+      "reason": "Scores 21 in Clippers preseason debut"
     },
     {
       "nba_id": 201939,
       "name": "Stephen Curry",
-      "reason": "Warriors preseason opener in Hawaii approaches"
+      "reason": "Preseason opener and advice for rookie Yaxel Lendeborg"
+    },
+    {
+      "nba_id": 1631105,
+      "name": "Jalen Duren",
+      "reason": "Says he wants to be a Piston for life"
     }
   ]
 }
