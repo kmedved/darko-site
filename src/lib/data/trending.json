@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-07",
+  "date": "2026-10-08",
   "players": [
-    {
-      "nba_id": 1630574,
-      "name": "Ariel Hukporti",
-      "reason": "Torn right Achilles confirmed after Sixers preseason injury"
-    },
-    {
-      "nba_id": 2544,
-      "name": "LeBron James",
-      "reason": "Denies report of confronting Embiid over practice lateness"
-    },
     {
       "nba_id": 1630169,
       "name": "Tyrese Haliburton",
-      "reason": "Expected return tonight after missing last season"
+      "reason": "Returns from Achilles injury in Iowa State homecoming"
     },
     {
-      "nba_id": 201939,
-      "name": "Stephen Curry",
-      "reason": "Shines in Warriors preseason win on Nellie Night"
+      "nba_id": 203081,
+      "name": "Damian Lillard",
+      "reason": "Scores 15 in Portland return after Achilles recovery"
     },
     {
       "nba_id": 1629630,
       "name": "Ja Morant",
-      "reason": "Possible Portland preseason debut tonight"
+      "reason": "Makes Blazers debut alongside Damian Lillard"
+    },
+    {
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "Denial of Embiid practice report draws continued coverage"
+    },
+    {
+      "nba_id": 1631114,
+      "name": "Jalen Williams",
+      "reason": "Strong preseason return against Bucks"
     }
   ]
 }
