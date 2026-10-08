@@ -29,6 +29,8 @@
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 	import { isWowyPlayerId } from '$lib/utils/wowyPlayerId.js';
+	import { readCareerQuery, writeCareerQuery } from '$lib/utils/careerChartSpec.js';
+	import { filterCareerRows } from '$lib/utils/careerChartData.js';
 
 	let { data } = $props();
 
@@ -43,6 +45,13 @@
 	let yAxisMax = $state(null);
 	let rangeFilterMin = $state(null);
 	let rangeFilterMax = $state(null);
+	let dateFrom = $state(null);
+	let dateTo = $state(null);
+	let customChartTitle = $state('');
+	let showPoints = $state(true);
+	let smoothLines = $state(true);
+	let linkedColors = $state({});
+	let exportSettings = $state({ format: 'wide', annotations: [], at: null });
 	let prevTalentType = $state('dpm');
 	let prevTimeScale = $state('games');
 	let chartOptionsOpen = $state(false);
@@ -69,7 +78,7 @@
 		selectedPlayers.flatMap((player, index) => {
 			const detail = newsPlayers.find((entry) => entry.nbaId === player.nba_id)?.detail;
 			if (!detail) return [];
-			const color = getSeriesColor(index, displayMode.view);
+			const color = linkedColors[player.nba_id] || getSeriesColor(index, displayMode.view);
 			return [{ nba_id: player.nba_id, name: player.player_name, color, detail }];
 		})
 	);
@@ -164,9 +173,9 @@
 	const selectedMetricLabel = $derived(getMetricDisplayLabel(talentType));
 	const isWowyMetric = $derived(WOWY_METRICS.has(talentType));
 	const chartTitle = $derived(
-		isWowyMetric
+		customChartTitle || (isWowyMetric
 			? `Career ${selectedMetricLabel} Progression`
-			: `DARKO Career ${selectedMetricLabel} Progression`
+			: `DARKO Career ${selectedMetricLabel} Progression`)
 	);
 	const wowyPublicationLabel = $derived(
 		wowyPublication?.season_through
@@ -205,6 +214,7 @@
 	const chartData = $derived(
 		selectedPlayers.map((p, index) => {
 			let rows = rowsForPlayer(p);
+			if (!isWowyMetric && (dateFrom || dateTo)) rows = filterCareerRows(rows, { scale: timeScale, from: dateFrom, to: dateTo });
 			if (rangeFilterMin != null || rangeFilterMax != null) {
 				rows = rows.filter((row) => {
 					let val;
@@ -231,7 +241,7 @@
 					return x === null ? [] : [{ ...row, _gameX: x }];
 				});
 			}
-			return { ...p, color: getSeriesColor(index, displayMode.view), rows };
+			return { ...p, color: linkedColors[p.nba_id] || getSeriesColor(index, displayMode.view), rows };
 		})
 	);
 	const hasChartRows = $derived(chartData.some((player) => player.rows.length > 0));
@@ -522,6 +532,22 @@
 			timeScale = requestedScale;
 		}
 
+		const restored = readCareerQuery($page.url.searchParams);
+		prevTalentType = talentType;
+		prevTimeScale = timeScale;
+		rangeFilterMin = restored.min;
+		rangeFilterMax = restored.max;
+		dateFrom = restored.from;
+		dateTo = restored.to;
+		yAxisMin = restored.ymin;
+		yAxisMax = restored.ymax;
+		customChartTitle = restored.title;
+		exportSettings = { format: restored.format, annotations: restored.annotations, at: restored.at };
+		showPoints = restored.points;
+		smoothLines = restored.smooth;
+		linkedColors = Object.fromEntries(restored.ids.flatMap((id, index) =>
+			/^#[0-9a-fA-F]{6}$/.test(restored.colors[index] || '') ? [[id, restored.colors[index]]] : []));
+
 		const initialKind = WOWY_METRICS.has(talentType) ? 'wowy' : 'darko';
 		const ids = $page.url.searchParams.get('ids');
 		if (ids) {
@@ -546,35 +572,16 @@
 	// Sync selected player IDs and chart controls to URL
 	$effect(() => {
 		if (!initialLoadDone || loading) return;
-		const ids = selectedPlayers.map((p) => p.nba_id).join(',');
-		const currentIds = $page.url.searchParams.get('ids') || '';
-		const desiredMetric = talentType === 'dpm' ? null : talentType;
-		const desiredScale = timeScale === 'games' ? null : timeScale;
-		const currentMetric = $page.url.searchParams.get('metric');
-		const currentScale = $page.url.searchParams.get('scale');
-		if (
-			ids !== currentIds ||
-			desiredMetric !== currentMetric ||
-			desiredScale !== currentScale
-		) {
-			const url = new URL($page.url);
-			if (ids) {
-				url.searchParams.set('ids', ids);
-			} else {
-				url.searchParams.delete('ids');
-			}
-			if (desiredMetric) {
-				url.searchParams.set('metric', desiredMetric);
-			} else {
-				url.searchParams.delete('metric');
-			}
-			if (desiredScale) {
-				url.searchParams.set('scale', desiredScale);
-			} else {
-				url.searchParams.delete('scale');
-			}
-			goto(`${url.pathname}${url.search}`, { replaceState: true, keepFocus: true });
-		}
+		const url = new URL($page.url);
+		const colors = selectedPlayers.map((player, index) => linkedColors[player.nba_id] || getSeriesColor(index, displayMode.view));
+		writeCareerQuery(url.searchParams, {
+			ids: selectedPlayers.map((player) => player.nba_id), metric: talentType, scale: timeScale,
+			min: rangeFilterMin, max: rangeFilterMax, from: dateFrom, to: dateTo,
+			ymin: yAxisMin, ymax: yAxisMax, title: customChartTitle,
+			points: showPoints, smooth: smoothLines, colors: Object.keys(linkedColors).length ? colors : [],
+			display: displayMode.view, ...exportSettings
+		});
+		if (url.search !== $page.url.search) goto(`${url.pathname}${url.search}`, { replaceState: true, keepFocus: true });
 	});
 
 	async function loadPlayerById(nbaId) {
@@ -797,7 +804,7 @@
 					<span class="control-label">Select Players to Compare</span>
 					<div class="player-chip-list">
 						{#each selectedPlayers as p, index (p.nba_id)}
-							<span class="player-chip" style:--player-color={getSeriesColor(index, displayMode.view)}>
+							<span class="player-chip" style:--player-color={linkedColors[p.nba_id] || getSeriesColor(index, displayMode.view)}>
 								<span>
 									<strong>{p.player_name}</strong>
 								</span>
@@ -869,6 +876,12 @@
 					{/if}
 
 					{#if selectedPlayers.length > 0 && hasChartRows}
+						{#if !isWowyMetric}
+							<p class="coverage-note">History begins in 1996–97. For earlier careers, game 1 is the first appearance in available history.</p>
+						{/if}
+						{#if dateFrom || dateTo}
+							<p class="coverage-note">Date range: {dateFrom || 'start'} to {dateTo || 'latest'}.</p>
+						{/if}
 						<TrajectoryChart
 							players={chartData}
 							{timeScale}
@@ -876,7 +889,11 @@
 							title={chartTitle}
 							yMin={yAxisMin}
 							yMax={yAxisMax}
+							showPoints={showPoints}
+							smooth={smoothLines}
+							gameLabel={isWowyMetric ? 'Career Game Number' : 'Games played in available history'}
 						/>
+
 					{:else if selectedPlayers.length > 0 && !loading}
 						<div class="trajectory-message empty-state trajectory-empty-state">
 							<strong>No {selectedMetricLabel} history is available for the selected players.</strong>

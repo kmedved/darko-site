@@ -1,6 +1,6 @@
 <script>
 	import * as d3 from 'd3';
-	import { loess } from '$lib/utils/loess.js';
+	import { smoothCareerPoints } from '$lib/utils/careerChartData.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { formatDollarsMillions, getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 	import { getChartLayout, getSeasonTickStep, getAgeTickCount } from '$lib/utils/chartLayout.js';
@@ -15,7 +15,10 @@
 		talentType = 'dpm',
 		title = '',
 		yMin = null,
-		yMax = null
+		yMax = null,
+		showPoints = true,
+		smooth = true,
+		gameLabel = 'Career Game Number'
 	} = $props();
 
 	let containerEl = $state(null);
@@ -119,6 +122,8 @@
 		void players;
 		void yMin;
 		void yMax;
+		void showPoints;
+		void smooth;
 		void displayMode.view;
 		renderChart();
 		return withResizeObserver({ element: containerEl, onResize: renderChart });
@@ -250,7 +255,7 @@
 			const { player, rows } = entry;
 			if (rows.length < 1) continue;
 
-			g.selectAll(null)
+			if (showPoints) g.selectAll(null)
 				.data(rows)
 				.join('circle')
 				.attr('cx', (d) => x(d.x))
@@ -261,12 +266,7 @@
 
 			if (rows.length < 2) continue;
 
-			const xVals = rows.map((point) => point.x);
-			const yVals = rows.map((point) => point.y);
-			const bandwidth = chartTheme.smoothingBandwidth
-				?? (rows.length > 100 ? 0.25 : 0.35);
-			const smoothedY = loess(xVals, yVals, bandwidth);
-			const loessData = xVals.map((xv, i) => ({ x: xv, y: smoothedY[i] }));
+			const loessData = smooth ? smoothCareerPoints(rows, displayMode.view).points : rows;
 
 			const line = d3
 				.line()
@@ -320,7 +320,7 @@
 			.attr('font-size', chartTheme.axisLabelSize)
 			.attr('font-weight', chartTheme.axisLabelWeight)
 			.style('fill', 'var(--text)')
-			.text(TIME_LABELS[timeScale] || 'Games');
+			.text(timeScale === 'games' ? gameLabel : TIME_LABELS[timeScale] || 'Games');
 
 		// Attribution
 		g.append('text')

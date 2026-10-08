@@ -27,8 +27,8 @@ test('trajectories restores and serializes metric and scale URL state', async ()
     assert.match(contents, /searchParams\.get\('scale'\)/);
     assert.match(contents, /talentTypes\.some\(\(option\) => option\.key === requestedMetric\)/);
     assert.match(contents, /timeScaleOptions\.some\(\(option\) => option\.key === requestedScale\)/);
-    assert.match(contents, /url\.searchParams\.set\('metric', desiredMetric\)/);
-    assert.match(contents, /url\.searchParams\.set\('scale', desiredScale\)/);
+    assert.match(contents, /writeCareerQuery\(url\.searchParams/);
+    assert.match(contents, /readCareerQuery\(\$page\.url\.searchParams\)/);
     assert.match(contents, /WOWY_METRICS\.has\(talentType\) \? 'wowy' : 'darko'/);
 });
 

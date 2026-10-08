@@ -91,7 +91,7 @@ test('Career Trajectories opens on a player in the news while the file is curren
 	);
 	// Over the chart, why each of them is in the news, beside a dot in their line's color.
 	assert.match(page, /\{#each newsNotes as note \(note\.nba_id\)\}\s*<li style:--player-color=\{note\.color\}><span>\{note\.name\}<\/span> \{note\.detail\}<\/li>/);
-	assert.match(page, /const color = getSeriesColor\(index, displayMode\.view\);/);
+	assert.match(page, /const color = linkedColors\[player\.nba_id\] \|\| getSeriesColor\(index, displayMode\.view\);/);
 });
 
 test("the trajectory chart's legend wraps rather than running off a phone", async () => {
