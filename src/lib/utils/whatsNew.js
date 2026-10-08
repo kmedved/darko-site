@@ -12,6 +12,14 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'assistant-charts',
+		title: 'DARKO in your assistant',
+		launched: '2026-10-08T21:20:19.768Z',
+		text: 'The assistant beta creates career-history charts for up to six players. Edit the players, metric and age or games range in the chart, add peak labels, and download a wide or square image.',
+		cta: 'Connect DARKO',
+		href: '/assistant'
+	},
+	{
 		key: 'about-page',
 		title: 'The About page, rebuilt',
 		launched: '2026-09-29T21:33:47Z',
