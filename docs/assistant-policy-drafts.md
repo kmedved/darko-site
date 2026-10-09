@@ -20,7 +20,7 @@ of an existing license or contract.
   and 16 MiB, with five-minute freshness. Search strings are used in memory cache
   keys with two-minute freshness. Freshness is not a deletion deadline: entries
   can remain until a subsequent read, eviction or process termination.
-- PNG responses request public CDN caching with five-minute freshness and stale
+- PNG responses request public CDN caching with one-day freshness and one-day stale
   allowances. There is no per-user control to purge individual cached charts.
 - The chart service does not write charts or chats to a database or durable chart
   files. Its temporary disk file is the embedded rendering font.
@@ -48,7 +48,7 @@ This policy covers the DARKO assistant integration and the career charts and lin
 it creates on darko.app. Your assistant provider handles your conversation under
 its own privacy policy and account controls.
 
-Publisher identity and contact: **pending confirmation**.
+Publisher: **DARKO**. Private support and privacy contact: **kostya@darko.app**.
 Effective date: set to the date the approved policy is published.
 
 ### Information processed and purposes
@@ -98,14 +98,15 @@ website preferences from your browser, and manage the connection and conversatio
 through your assistant provider. Stopping sharing does not revoke a previously
 shared link. DARKO has no personal chart account or per-chart deletion control.
 
-Private questions or requests: **contact pending confirmation**. Do not post
+Private questions or requests: **kostya@darko.app**. Do not post
 private information in public GitHub issues. A private request process and any
 applicable retention/deletion commitments need confirmation before publication.
 
 ## Terms page draft
 
-Publisher identity, contact and effective date: **pending confirmation**.
-Review and approve the following proposed terms before publication.
+Publisher: **DARKO**. Contact: **kostya@darko.app**. Effective date: the date the approved terms are published.
+DARKO is available worldwide, free, with no payments or purchases.
+Review the remaining proposed access conditions before publication.
 
 ### Using DARKO
 
@@ -125,10 +126,10 @@ a future career.
 
 ### Charts, sharing and reuse
 
-Proposed permission: users may download and share charts while keeping their DARKO
-label and data-date context. **Confirm attribution, commercial reuse and any
-separate data/model licensing conditions before publication.** This draft grants
-no license to third-party marks or data beyond what the publisher can authorize.
+Users may download and reuse individual charts with attribution to DARKO. Keep
+the DARKO credit and data date intact. This permission covers individual charts;
+it does not grant a separate license to bulk datasets, the model, or third-party
+marks and data.
 
 ### Responsible access
 

@@ -8,7 +8,7 @@
       "interface": {
         "displayName": "DARKO",
         "shortDescription": "Create NBA career charts",
-        "longDescription": "Compare up to six NBA players on one DARKO career-history chart. Align careers by age, games played or season; switch between total, offensive and defensive DPM; adjust ranges, colors and titles; and download wide or square images on a white background. Reopen a shared DARKO chart or player page to keep editing it. Start from a draft class or the latest rating risers and fallers, and explore published player comparisons, ratings and filtered rankings. DARKO histories are retrospective pregame estimates with coverage beginning in 1996\u201397, so earlier careers are partial. DARKO reads public basketball data and does not require a DARKO account.",
+        "longDescription": "Compare up to six NBA players on one DARKO career-history chart. Align careers by age, games played or season; switch between total, offensive and defensive DPM; adjust ranges, colors and titles; and download wide or square images on a white background. Reopen a shared DARKO chart or player page to keep editing it. Start from a draft class or the latest rating risers and fallers, and explore published player comparisons, ratings and filtered rankings. DARKO histories are retrospective pregame estimates with coverage beginning in 1996–97, so earlier careers are partial. DARKO reads public basketball data and does not require a DARKO account.",
         "developerName": "DARKO",
         "category": "Productivity",
         "capabilities": [
@@ -76,10 +76,13 @@
               "prompt": "Make a DARKO career-history comparison of Caitlin Clark and A'ja Wilson."
             }
           ]
-        }
+        },
+        "commerce": false,
+        "commerce_description": "DARKO is free to use and does not support payments or purchases."
       },
       "publication": {
-        "release_notes": "DARKO career-history charts for up to six NBA players, with interactive chart edits, wide and square PNG exports, shared-chart and player-page reopening, draft classes, rating movers, published player comparisons, ratings and rankings. Charts plot played games only, and every chart carries the data date and DARKO's credit line."
+        "release_notes": "DARKO career-history charts for up to six NBA players, with interactive chart edits, wide and square PNG exports, shared-chart and player-page reopening, draft classes, rating movers, published player comparisons, ratings and rankings. Charts plot played games only, and every chart carries the data date and DARKO's credit line.",
+        "countries": []
       }
     }
   }

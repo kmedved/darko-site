@@ -44,10 +44,11 @@ folder. Private technical evidence: `.agents/audit-evidence/darko-sharing-1.2.0`
 
 ## Required decisions and materials
 
-1. Confirm the verified individual or business publisher name. The existing
-   `developerName: DARKO` is not evidence of a verified identity.
-2. Confirm country availability and whether there are payments or purchases.
-   Country and commerce metadata remain absent pending those answers.
+1. Publisher name is DARKO; private support/privacy contact is kostya@darko.app.
+   This is the publisher's instruction, not evidence of completed portal identity verification.
+2. Availability is worldwide, free, with no payments or purchases. The manifest
+   records `publication.countries: []` and `review.commerce: false`.
+   Individual charts may be reused with DARKO attribution.
 3. Confirm a private support/privacy contact, actual hosting/log retention,
    external logging/analytics integrations and the policy/terms text. Publish
    the approved privacy and terms pages, and the support page, before putting
