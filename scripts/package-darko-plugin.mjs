@@ -25,6 +25,9 @@ if (process.env.DARKO_PLUGIN_MCP_URL) {
   config.mcpServers.darko.url = endpoint.href;
   writeFileSync(path, JSON.stringify(config, null, 2) + '\n');
 }
+const skillArchive = join(stage, 'darko-analysis-skill.zip');
+execFileSync('zip', ['-q', '-r', skillArchive, 'darko-analysis'], { cwd: join(stage, 'skills') });
+copyFileSync(skillArchive, new URL('../static/darko-analysis-skill.zip', import.meta.url));
 mkdirSync(resolve(output, '..'), { recursive: true });
 const archive = join(stage, 'archive.zip');
 execFileSync('zip', ['-q', '-r', archive, 'plugin.json', appId ? '.app.json' : 'mcp.json', 'skills', 'assets'], { cwd: stage });

@@ -82,7 +82,7 @@ test('Career Trajectories opens on a player in the news while the file is curren
 		read('src/routes/trajectories/+page.server.js')
 	]);
 	assert.match(load, /import trending from '\$lib\/data\/trending\.json';/);
-	assert.match(load, /return \{ newsPlayers: newsPlayers\(trending\) \};/);
+	assert.match(load, /newsPlayers: newsPlayers\(trending\)/);
 
 	// A shared link's players come first, then the players in the news, then anyone active.
 	assert.match(

@@ -51,6 +51,7 @@
 		{ href: '/scatterplot', label: 'Scatterplot', match: (path) => path === '/scatterplot' },
 		{ href: '/compare', label: 'Compare', match: (path) => path === '/compare' },
 		{ href: '/rate', label: 'Rate a Player', match: (path) => path === '/rate' },
+		{ href: '/assistant', label: 'Use DARKO in an assistant', match: (path) => path === '/assistant' || path === '/support' },
 		{ href: '/about', label: 'About', match: (path) => path.startsWith('/about') }
 	];
 	const ALL_NAV_ITEMS = [...PRIMARY_NAV_ITEMS, ...MORE_NAV_ITEMS];

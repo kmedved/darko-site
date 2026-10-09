@@ -20,7 +20,7 @@ npm install
 npm run dev -- --host 127.0.0.1 --port 4192
 ```
 
-Example image: `http://127.0.0.1:4192/api/charts/career.png?ids=1628369,202331&scale=age&display=shiny`
+Example image: `http://127.0.0.1:4192/api/charts/career.png?ids=1628369,202331&scale=age&display=modern`
 
 Add `width=2400&download=1` for the download. The same `ids`, `metric`, `scale`,
 `min`/`max`, `from`/`to`, display, colors and display options work on
@@ -162,6 +162,108 @@ published cohort basis through `ui/update-model-context`. v3 explicitly asks
 the model to call `create_career_chart` for conversational edits. Full history
 series stay on the server. The chart result contains no base64 image block;
 server and skill instructions ask for a caption and links without added imagery.
+
+## Local update — version 1.2.0
+
+This update is implemented locally and has not been deployed. The v4 widget and
+trajectories page accept an optional `bandwidth` in (0,1]; omitted values keep
+the existing Modern or Shiny preset. `smoothed_peak` is an optional annotation
+for the maximum of the displayed LOESS samples, distinct from the raw `peak`.
+Up to three annotations can be selected. Selected labels say “Near age 23”
+rather than implying an exact age observation.
+
+Trajectories and player pages serve Open Graph and Twitter metadata before
+JavaScript runs. `/api/charts/social.png` uses the career renderer and redirects
+to the DARKO logo when a chart cannot render. Unsupported website metrics and
+cohorts use the logo without changing the website's chart settings.
+
+The assistant guide is in More and linked beside chart downloads. It preserves
+current chart settings in a copyable request, shows an actual example and the
+data-through date, and includes setup blocks for ChatGPT, Claude.ai, Claude Code,
+Codex and Cursor. Packaging also creates `static/darko-analysis-skill.zip`, a
+skill-only archive for Claude.ai; it does not include the plugin manifest or MCP
+configuration.
+
+MCP clients can discover `compare_career_histories` and
+`compare_with_darko_comps` prompts and read `darko://methodology`. The methodology
+resource and packaged reference use the same generator. Tool-call logs contain
+only `tool`, `duration_ms` and `player_count`; hosting request logs are separate.
+
+Verification: all 486 tests pass. Live localhost checks exercised both PNG sizes,
+raw/smoothed/selected statistics, SSR social tags on both pages, render-failure
+fallback, prompt/resource discovery and the downloadable skill. A 390px guide
+had no horizontal overflow; editing smoothing preserved the value and chart
+settings in the assistant handoff. Claude Code made actual search/chart calls
+and received a valid 1200×650 PNG. This does not establish v4 widget behavior
+in Claude.ai, Cursor or ChatGPT, and is not execution of the directory's eight
+natural-language review cases. Existing production host evidence below applies
+to the preceding release.
+
+## Pre-release fixes for 1.2.0 (October 8, 2026)
+
+Added before 1.2.0 shipped; the package version stays 1.2.0.
+
+- **Played games only.** Trajectory rows also carry rating states for missed,
+  scheduled and offseason dates (`game_num` null). Charts, the PNG renderer and the
+  trajectories page plot played games only, on every axis, so a frozen July carrier
+  no longer extends age curves or opens a 2026-27 season. `available_to` is now the
+  last played game.
+- **Smoothing.** `loess.js` picks each point's k nearest neighbours by distance. The
+  index-centred window jumped between adjacent days near season gaps (0.12 DPM for
+  Paul George at the Modern default; 0.004 after). This also changes the site's own
+  trajectory, talent-trend and longevity curves, slightly and only near gaps.
+- **Link previews.** `/api/charts/social.png` renders a dedicated 1200 × 630 card with
+  an automatic title naming the players, and ignores a link's custom title, square
+  format and annotations. Page titles and alt text are automatic too
+  (`src/lib/utils/careerChartTitle.js`). Unsupported links use the wide branded
+  `static/og-default.png` (regenerate with `node scripts/generate-og-default.mjs`).
+- **Titles.** Chart titles must be drawable by the bundled Archivo font
+  (`src/lib/server/charts/titleCharacters.js`, checked against the font by a test);
+  emoji and other scripts are refused with a clear message.
+- **Images.** The renderer prints the site's credit line
+  (`@kmedved | www.darko.app | @anpatt7`), labels seasons `2003-04`, and gives the
+  sixth player the reference palette's light-surface violet `#4a3aa7` on white images
+  (green sat too close to aqua, and the dark-surface violet too close to blue). Chart
+  images and social cards cache for a day at the edge; each publish redeploys.
+- **Clients.** ChatGPT is recognized by its `openai/*` request metadata (or user
+  agent) and gets the widget without an image block; every other client also gets the
+  1200-pixel PNG in the result. A headless Claude Code run received and described it.
+  Tools carry `openai/toolInvocation/*` status text.
+- **Tools.** `get_draft_class` (pick order, first-game and current DPM, from
+  `getRookieStarts`) and `get_rating_movers` (the Daily's 7-day, 30-day and season
+  windows with their dates). `import_career_chart` also accepts player pages and
+  social-card URLs.
+- **Usage counts.** Each tool call logs one line and increments a daily row in
+  `mcp_usage_daily` through `record_mcp_usage` (service role only): day, tool, client
+  family, success, milliseconds, player count. **Apply
+  `supabase/migrations/20261008_001_add_mcp_usage_daily.sql` in the SQL editor
+  before or with the deploy;** until then the counter fails quietly and only the log
+  line remains. Local development never writes counts.
+- **Monitoring.** `.github/workflows/production-check.yml` runs
+  `scripts/check-darko-plugin.mjs` against production daily, as the `monitor` client.
+- **Guide and skill.** The guide no longer claims Claude or Cursor show the widget,
+  notes Claude's one-connector free limit and the new usage counts. The skill is
+  client-neutral, and a test keeps `static/darko-analysis-skill.zip` identical to it.
+
+Verification: 500 tests, Svelte check, production build, `npm run migrations:replay`,
+and the acceptance script against a local server with live data, including link
+previews, the draft class, movers and a player-page import.
+
+## Final release corrections
+
+Social-preview eligibility clears the page's custom title before font validation;
+the automatic card title remains independent of it, and the original page URL is
+preserved. Numeric history results identify their basis as
+`all_published_rating_states`: missed-game, scheduled-game and offseason states
+are included, whereas chart summaries use played games only. Starts, ends and
+peaks may therefore differ. The skill and methodology explain the distinction.
+Usage recording passes an abort signal to the Supabase request and cancels it
+at the deadline, without failing the tool result.
+
+The five positive directory cases now cover all nine tools. The six-player case
+uses the first six picks of the 2022 draft; the numeric case includes the latest
+published season's rating movers. Exact host execution is recorded separately
+in `docs/assistant-submission.md`.
 
 ## Verification and remaining client limitations
 

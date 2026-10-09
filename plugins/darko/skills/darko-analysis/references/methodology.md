@@ -2,7 +2,11 @@
 
 Generated from src/lib/utils/aboutDarko.js, metricDefinitions.js and csvPresets.js. Regenerate with npm run plugin:reference after source changes.
 
-Source: https://darko.app/about
+Source: https://www.darko.app/about
+
+## Interpretation
+
+DARKO career histories are retrospective pregame estimates, not an archive of ratings originally published on each date. Past values can change after a refit. Coverage begins in 1996–97; earlier careers are partial. Games count played appearances in available history. LOESS is a presentation curve, not a future projection. Raw peaks and smoothed peaks are different statistics. Selected values use the nearest observed rating inside coverage; retain its actual date and axis value. Charts include played games only. Numeric monthly and seasonal summaries include all published rating states, including missed-game, scheduled-game and offseason states, so their starts, ends and peaks can differ from the chart.
 
 ## Metrics
 

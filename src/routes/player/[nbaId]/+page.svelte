@@ -1,6 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import SocialMetadata from '$lib/components/SocialMetadata.svelte';
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import CompsFutures from '$lib/components/CompsFutures.svelte';
 	import EchoesToday from '$lib/components/EchoesToday.svelte';
@@ -454,6 +455,8 @@
 	}
 </script>
 
+<SocialMetadata metadata={data.social} />
+
 <svelte:head>
 	<title>{playerInfo?.player_name || 'Player'} Profile — DARKO DPM</title>
 </svelte:head>
@@ -570,6 +573,7 @@
 					{/if}
 					<div class="profile-actions">
 						<a href="/compare?ids={nbaId}" class="btn compare-link">Compare this player</a>
+						<a href="/assistant?chart={encodeURIComponent(`https://www.darko.app/trajectories?ids=${nbaId}`)}" class="btn">Explore in an assistant</a>
 						{#if labTeam}
 							<a href="/lab?a={labTeam}" class="btn compare-link">Open {labTeam} in the Roster Lab</a>
 						{/if}

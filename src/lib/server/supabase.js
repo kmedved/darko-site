@@ -610,6 +610,16 @@ async function getPlayersMapByIds(ids = [], columns = PLAYERS_DIM_COLUMNS) {
     return map;
 }
 
+/** Player names for chart titles and link previews, in the order asked for; unknown IDs are null. */
+export async function getPlayerNames(ids = []) {
+    const unique = [...new Set(ids)].filter((id) => Number.isInteger(id) && id > 0).sort((a, b) => a - b);
+    if (unique.length === 0) return ids.map(() => null);
+    const map = await runCached(cacheKey('playerNames', unique.join(',')), CACHE_MS.playerHistory, () =>
+        getPlayersMapByIds(unique, 'nba_id, player_name')
+    );
+    return ids.map((id) => map.get(id)?.player_name ?? null);
+}
+
 function getLookbackStartDate(anchorDate, days) {
     const parsed = new Date(anchorDate);
     if (Number.isNaN(parsed.getTime())) return null;

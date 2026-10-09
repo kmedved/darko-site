@@ -1,11 +1,11 @@
-import { getSeriesColor } from '../../utils/chartTheme.js';
+import { getWhiteSurfaceSeriesColor } from '../../utils/chartTheme.js';
 
-export const CAREER_WIDGET_URI = 'ui://darko/career-chart/v3.html';
+export const CAREER_WIDGET_URI = 'ui://darko/career-chart/v4.html';
 
 // Only image URLs, specs and compact summaries cross the bridge; histories stay on the server.
 export function careerWidgetHtml(origin, themeTokens = '') {
   const safeJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
-  const palettes = Object.fromEntries(['modern', 'shiny'].map((display) => [display, Array.from({ length: 12 }, (_, i) => getSeriesColor(i, display))]));
+  const palettes = Object.fromEntries(['modern', 'shiny'].map((display) => [display, Array.from({ length: 12 }, (_, i) => getWhiteSurfaceSeriesColor(i, display))]));
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 :root{${themeTokens}}
@@ -27,13 +27,15 @@ export function careerWidgetHtml(origin, themeTokens = '') {
 <label>Since date<input id="from" type="date"></label><label>Through date<input id="to" type="date"></label>
 <label>Minimum DPM<input id="ymin" type="number" step="any" placeholder="Automatic"></label><label>Maximum DPM<input id="ymax" type="number" step="any" placeholder="Automatic"></label>
 <label>Style<select id="display"><option value="modern">Modern · white</option><option value="shiny">Shiny · white</option></select></label>
-<div class="checks"><label><input id="points" type="checkbox">Raw points</label><label><input id="smooth" type="checkbox">Smoothed curve</label><label><input id="annotate-peak" type="checkbox">Mark peaks</label><label><input id="annotate-latest" type="checkbox">Mark last in range</label><label><input id="annotate-selected" type="checkbox">Mark selected value</label></div>
+<label>Smoothing span<input id="bandwidth" type="number" min="0" max="1" step="any" placeholder="Auto"></label>
+<p class="help checks">Higher values smooth more; blank uses the preset. Choose up to three annotations.</p>
+<div class="checks"><label><input id="points" type="checkbox">Raw points</label><label><input id="smooth" type="checkbox">Smoothed curve</label><label><input id="annotate-peak" type="checkbox">Raw peaks</label><label><input id="annotate-smoothed_peak" type="checkbox">Smoothed peaks</label><label><input id="annotate-latest" type="checkbox">Mark last in range</label><label><input id="annotate-selected" type="checkbox">Mark selected value</label></div>
 <div class="cohort-row"><label>Compare a player with published DARKO comps<select id="anchor"></select></label><button id="cohort" type="button">Use DARKO comps</button></div>
 <p class="help checks" id="cohort-note">Replaces this comparison with the anchor and up to five distinct historical comps at their matching age.</p>
 </div></details></form></fieldset></section>
 <figure><img id="chart" hidden alt="DARKO career trajectories"><figcaption id="status" class="status" role="status">Preparing career chart…</figcaption></figure>
 <nav class="links"><a id="download" hidden target="_blank" rel="noopener">Download 2x PNG</a><a id="source" hidden target="_blank" rel="noopener">Open on darko.app</a></nav>
-<section id="comparison" class="comparison" hidden aria-label="Comparison summary"><h2 class="comparison-heading" id="comparison-heading">Compare ratings</h2><ul id="comparison-list" class="comparison-list"></ul><p class="help">Latest available can be outside the range. Peaks use raw observations in the range. Selected values use the nearest observation inside coverage, never a projection.</p></section>
+<section id="comparison" class="comparison" hidden aria-label="Comparison summary"><h2 class="comparison-heading" id="comparison-heading">Compare ratings</h2><ul id="comparison-list" class="comparison-list"></ul><p class="help">Latest available can be outside the range. Raw peaks use observations in the range; smoothed peaks use the displayed curve. Selected values use the nearest observation inside coverage, never a projection.</p></section>
 <details class="import-panel"><summary>Reopen an existing DARKO chart</summary><form id="import-form" class="import-row"><input id="import-url" type="url" maxlength="4096" aria-label="DARKO chart URL" placeholder="Paste a DARKO chart link" required><button type="submit">Reopen</button></form></details>
 <script>(${careerWidgetClient.toString()})(${safeJson(origin)},${safeJson(palettes)});</script></body></html>`;
 }
@@ -65,10 +67,10 @@ function careerWidgetClient(allowedOrigin, palettes) {
     if (!data) throw new Error('Open a chart before editing.');
     const spec = { ...data.specification };
     for (const id of ['metric', 'scale', 'display', 'format', 'title']) spec[id] = el(id).value;
-    for (const id of ['min', 'max', 'ymin', 'ymax', 'at']) spec[id] = number(id);
+    for (const id of ['min', 'max', 'ymin', 'ymax', 'at', 'bandwidth']) spec[id] = number(id);
     for (const id of ['from', 'to']) spec[id] = el(id).value || null;
     for (const id of ['points', 'smooth']) spec[id] = el(id).checked;
-    spec.annotations = ['peak', 'latest', 'selected'].filter((kind) => el('annotate-' + kind).checked);
+    spec.annotations = ['peak', 'smoothed_peak', 'latest', 'selected'].filter((kind) => el('annotate-' + kind).checked);
     return spec;
   }
   function withPlayers(spec, ids) {
@@ -100,9 +102,10 @@ function careerWidgetClient(allowedOrigin, palettes) {
     const spec = data.specification;
     if (cohortContext && (!spec.ids.includes(cohortContext.anchor_id) || !spec.ids.every((id) => cohortContext.ids.includes(id)))) cohortContext = null;
     el('cohort-note').textContent = cohortContext ? cohortContext.basis + ' Matched age: ' + (cohortContext.matched_age?.toFixed(1) ?? 'unavailable') + ' · Comps as of ' + (cohortContext.as_of || 'unavailable') + '.' : defaultCohortNote;
-    for (const id of ['metric', 'scale', 'display', 'format', 'title', 'min', 'max', 'ymin', 'ymax', 'at', 'from', 'to']) el(id).value = spec[id] ?? '';
+    for (const id of ['metric', 'scale', 'display', 'format', 'title', 'min', 'max', 'ymin', 'ymax', 'at', 'bandwidth', 'from', 'to']) el(id).value = spec[id] ?? '';
     for (const id of ['points', 'smooth']) el(id).checked = spec[id];
-    for (const kind of ['peak', 'latest', 'selected']) el('annotate-' + kind).checked = spec.annotations?.includes(kind) || false;
+    for (const kind of ['peak', 'smoothed_peak', 'latest', 'selected']) el('annotate-' + kind).checked = spec.annotations?.includes(kind) || false;
+    el('annotate-smoothed_peak').disabled = !spec.smooth;
     axisLabels(); el('controls').hidden = false;
     el('players').replaceChildren(); el('anchor').replaceChildren();
     for (const player of data.coverage || []) {
@@ -121,12 +124,16 @@ function careerWidgetClient(allowedOrigin, palettes) {
     for (const player of data.comparison || []) {
       const row = node('li'), name = node('div', null, 'comparison-name'); name.style.setProperty('--player-color', player.color); name.append(node('span', null, 'swatch'), node('span', player.player_name));
       const dl = node('dl');
-      const selected = spec.at == null ? ['Last in range', player.latest_in_range] : ['At ' + spec.at + ' · nearest', player.selected.observed];
-      for (const [label, point] of [['Latest available', player.latest_available], ['Peak in range', player.peak_in_range], selected]) {
+      const selected = spec.at == null ? ['Last in range', player.latest_in_range] : ['Near ' + ({ age: 'age', games: 'game', seasons: 'season' }[spec.scale]) + ' ' + spec.at, player.selected.observed];
+      for (const [label, point] of [['Latest available', player.latest_available], ['Raw peak in range', player.peak_in_range], selected]) {
         const item = node('div'); item.append(node('dt', label));
         const dd = node('dd', point ? (point.value >= 0 ? '+' : '') + point.value.toFixed(2) : 'Unavailable');
         if (point) dd.append(node('small', point.date + (point.x == null ? '' : ' · ' + Number(point.x.toFixed(2)))));
         item.append(dd); dl.append(item);
+      }
+      if (spec.annotations?.includes('smoothed_peak')) {
+        const item = node('div'); item.append(node('dt', 'Smoothed peak in range'));
+        item.append(node('dd', player.smoothed_peak_in_range ? player.smoothed_peak_in_range.value.toFixed(2) : 'Unavailable')); dl.append(item);
       }
       row.append(name, dl); el('comparison-list').append(row);
     }
@@ -170,7 +177,8 @@ function careerWidgetClient(allowedOrigin, palettes) {
   }));
   el('import-form').addEventListener('submit', (event) => { event.preventDefault(); operation(async () => { const result = await call('import_career_chart', { url: el('import-url').value }); cohortContext = null; render(result); request('ui/update-model-context', { content: [{ type: 'text', text: 'Reopened DARKO chart. For every conversational edit, call create_career_chart with this specification plus the requested changes to render a fresh widget. Do not construct chart URLs manually or reply with links alone. Current specification: ' + JSON.stringify(data.specification) }] }).catch(() => {}); }); });
   for (const id of ['download', 'source']) el(id).addEventListener('click', (event) => { event.preventDefault(); request('ui/open-link', { url: event.currentTarget.href }).catch(() => status('Use the image or download link in the assistant response.', true)); });
+  el('smooth').addEventListener('change', () => { el('annotate-smoothed_peak').disabled = !el('smooth').checked; if (!el('smooth').checked) el('annotate-smoothed_peak').checked = false; });
   el('chart').addEventListener('load', size); el('chart').addEventListener('error', () => status('Image unavailable. Use the link in the assistant response.', true));
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(size).observe(document.body);
-  request('ui/initialize', { appInfo: { name: 'DARKO career chart', version: '1.1.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' }).then(() => notify('ui/notifications/initialized', {})).catch(() => {});
+  request('ui/initialize', { appInfo: { name: 'DARKO career chart', version: '1.2.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' }).then(() => notify('ui/notifications/initialized', {})).catch(() => {});
 }
