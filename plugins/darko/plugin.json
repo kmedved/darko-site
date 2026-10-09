@@ -1,26 +1,85 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "darko",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Create, edit and share DARKO NBA career-history charts, compare player ratings, and explore rankings.",
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "DARKO",
         "shortDescription": "Create NBA career charts",
-        "longDescription": "Create, edit and share DARKO NBA career-history charts, compare player ratings, and explore rankings.",
+        "longDescription": "Compare up to six NBA players on one DARKO career-history chart. Align careers by age, games played or season; switch between total, offensive and defensive DPM; adjust ranges, colors and titles; and download wide or square images on a white background. Reopen a shared DARKO chart or player page to keep editing it. Start from a draft class or the latest rating risers and fallers, and explore published player comparisons, ratings and filtered rankings. DARKO histories are retrospective pregame estimates with coverage beginning in 1996\u201397, so earlier careers are partial. DARKO reads public basketball data and does not require a DARKO account.",
         "developerName": "DARKO",
         "category": "Productivity",
         "capabilities": [
-          "Read"
+          "Create career charts",
+          "Edit and reopen charts",
+          "Export PNG images",
+          "Read ratings and rankings",
+          "Find published player comps",
+          "Chart draft classes",
+          "Find rating movers"
         ],
         "websiteURL": "https://www.darko.app/assistant",
         "composerIcon": "./assets/icon.png",
-        "logo": "./assets/icon.png",
+        "logo": "./assets/logo.png",
         "defaultPrompt": [
           "Chart Tatum and Paul George by age.",
-          "Add Kawhi and show defensive DPM at ages 19\u201325."
+          "Compare LeBron James and Stephen Curry over their first 200 games, and make a square image."
         ]
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "In a fresh conversation with DARKO selected, create the main two-player age comparison and verify its widget and export links.",
+              "prompt": "Chart Jayson Tatum and Paul George at the same age. Give me the image download and a link to reopen the chart.",
+              "tools_triggered": "search_players, create_career_chart",
+              "expected_behavior": "Resolve both names in one batch and create one chart with their returned NBA IDs, metric dpm, scale age, Modern styling and wide format. Show two labeled series on white in the actual DARKO widget. Provide the returned source_url and 2400x1300 download_url, preserving data dates and coverage notes. Do not replace the chart with a seasonal table or invented values."
+            },
+            {
+              "description": "In a fresh conversation with DARKO selected, start from the 2022 draft class and test a six-player chart cropped by played appearances. Shorter careers stop at their available history.",
+              "prompt": "Use the 2022 NBA draft class to compare the first six picks over their first 200 games. Give me a wide DARKO chart to download.",
+              "tools_triggered": "get_draft_class, create_career_chart",
+              "expected_behavior": "Request get_draft_class with year 2022, limit 6 and include_undrafted false. Use its returned IDs in pick order to create a DPM chart with six players, scale games, max 200, Modern styling and wide format. Show six distinct labeled colors and the returned download/source links. Number available played appearances before cropping; no displayed observation exceeds game 200. Explain that the draft list includes players with a published NBA game and first_game is a pregame debut rating. Do not extrapolate shorter histories or put full daily career arrays in the tool result."
+            },
+            {
+              "description": "In a fresh conversation with DARKO selected, reopen the supplied Tatum/George specification and edit it while preserving existing player/color pairs.",
+              "prompt": "Reopen https://www.darko.app/trajectories?ids=1628369,202331&scale=age&display=modern. Add Kawhi Leonard, switch to defensive DPM at ages 19-25, make it square, and mark each player's peak and rating nearest age 23.",
+              "tools_triggered": "import_career_chart, search_players, create_career_chart",
+              "expected_behavior": "Import the URL, resolve Kawhi and edit the returned specification. Final settings contain Tatum, George and Kawhi, metric d_dpm, scale age, min 19, max 25, format square, at 23 and peak/selected annotations. Preserve the imported ID/color pairs. Show a new 1200x1200 widget and a 2400x2400 download. Peaks use raw observations in the displayed range; selected values disclose actual observed age/date. Keep unavailable observations null without extrapolation."
+            },
+            {
+              "description": "In a fresh conversation with DARKO selected, form a comparison chart from Tatum's published player comps. Precondition: confirm published Tatum comps are available in the submitted dataset.",
+              "prompt": "Compare Jayson Tatum's career with his five closest published DARKO player comps at the same age. Explain what makes these the comparison group.",
+              "tools_triggered": "search_players, get_comparison_cohort, create_career_chart",
+              "expected_behavior": "Resolve Tatum, request up to five published comps and chart the cohort tool's returned IDs by age, with at most six players total. Deduplicate repeated player seasons, exclude the anchor from suggestions and preserve published rank order. Explain the matched-age player-season basis and comps as-of date. Do not invent peers or call this a forecast. If comps are unavailable, explain the limitation; the successful-chart case remains blocked until its precondition is met."
+            },
+            {
+              "description": "In a fresh conversation with DARKO selected, answer numerical questions using current rankings, batch ratings, compact seasonal histories and the published season rating movers.",
+              "prompt": "Who are the current top three DPM players projected to play at least 20 minutes per game? Show their offensive and defensive DPM, then summarize their seasonal DPM starts, ends and peaks since July 1, 2022. Also show the three biggest DPM risers over the latest published season, with their rating changes and the dates that window covers.",
+              "tools_triggered": "get_rankings, get_players, get_player_histories, get_rating_movers",
+              "expected_behavior": "Get current descending dpm rankings with limit 3 and minutes_min 20. Use returned IDs for batched impact ratings and season-granularity dpm histories from 2022-07-01. Report only returned values, dated start/end/peak observations and season-ending-year labels. Explain that minutes are projected per game. Preserve per-player snapshot dates and distinguish incorporated-game timing from publication/model vintage, which are unavailable. Omit raw daily arrays. Explain that history summaries include all served pregame rating states, including dates without a played game, while chart peaks use played-game observations. Request get_rating_movers with window season, direction risers and limit 3; report returned players, start_date, end_date, min_games and DPM changes. Describe the returned published window rather than assuming it is the current calendar season."
+            }
+          ],
+          "negative": [
+            {
+              "description": "The integration cannot change ratings, refit models or start publication jobs. Explain the read-only limit without invoking DARKO tools or claiming any update occurred.",
+              "prompt": "Set Jayson Tatum's DARKO rating to +8 and republish the model now."
+            },
+            {
+              "description": "Posting to a social account is unsupported. Do not invoke DARKO tools or claim a post was sent. Explain that DARKO supplies chart downloads and links but cannot publish to X.",
+              "prompt": "Using only DARKO, post my latest chart directly to my X account."
+            },
+            {
+              "description": "This integration serves NBA career histories, not WNBA data. Explain that scope without invoking NBA search/chart tools, substituting NBA players or inventing WNBA ratings.",
+              "prompt": "Make a DARKO career-history comparison of Caitlin Clark and A'ja Wilson."
+            }
+          ]
+        }
+      },
+      "publication": {
+        "release_notes": "DARKO career-history charts for up to six NBA players, with interactive chart edits, wide and square PNG exports, shared-chart and player-page reopening, draft classes, rating movers, published player comparisons, ratings and rankings. Charts plot played games only, and every chart carries the data date and DARKO's credit line."
       }
     }
   }

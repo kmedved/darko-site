@@ -102,7 +102,7 @@ test('Teams and the two labs are in the top bar; the specialist views are under 
     const hrefs = (block) => [...block.matchAll(/href: '([^']+)'/g)].map((match) => match[1]);
 
     assert.deepEqual(hrefs(primary), ['/daily', '/', '/trajectories', '/teams', '/standings', '/wowy', '/lineups', '/lab', '/projections']);
-    assert.deepEqual(hrefs(more), ['/rewind', '/longevity', '/scatterplot', '/compare', '/rate', '/about']);
+    assert.deepEqual(hrefs(more), ['/rewind', '/longevity', '/scatterplot', '/compare', '/rate', '/assistant', '/about']);
     // Career Trajectories, DARKO's signature view, sits beside the leaderboard.
     assert.match(primary, /\{ href: '\/trajectories', label: 'Career Trajectories', match: \(path\) => path === '\/trajectories' \}/);
     // A team's own page counts as Teams.

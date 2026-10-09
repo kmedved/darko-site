@@ -129,6 +129,19 @@ export function getChartTheme(view, { isMobile = false } = {}) {
 	return isMobile ? THEMES.shinyMobile : THEMES.shiny;
 }
 
+// Career-chart images (PNG downloads, social cards and the assistant widget) are always drawn
+// on white, and up to six players share one chart. On white the reference palette's
+// light-surface violet stands clear of the other five; green sits too close to aqua (OKLab
+// ΔE 11.9) and the dark-surface violet too close to blue (9.8). On-screen charts keep
+// MODERN_SERIES, whose steps must also clear 3:1 on the dark themes.
+const WHITE_SURFACE_SIXTH = '#4a3aa7';
+
+/** Series colour for charts drawn on a white surface, such as DARKO's career-chart images. */
+export function getWhiteSurfaceSeriesColor(index, view = 'modern') {
+	if (view !== 'shiny' && index === 5) return WHITE_SURFACE_SIXTH;
+	return getSeriesColor(index, view);
+}
+
 export function getSeriesColor(index, view = 'modern') {
 	const palette = view === 'shiny' ? SHINY_SERIES : MODERN_SERIES;
 	const presetColor = palette[index];

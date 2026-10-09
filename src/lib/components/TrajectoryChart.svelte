@@ -18,6 +18,8 @@
 		yMax = null,
 		showPoints = true,
 		smooth = true,
+		bandwidth = null,
+		assistantHref = null,
 		gameLabel = 'Career Game Number'
 	} = $props();
 
@@ -124,6 +126,7 @@
 		void yMax;
 		void showPoints;
 		void smooth;
+		void bandwidth;
 		void displayMode.view;
 		renderChart();
 		return withResizeObserver({ element: containerEl, onResize: renderChart });
@@ -266,7 +269,7 @@
 
 			if (rows.length < 2) continue;
 
-			const loessData = smooth ? smoothCareerPoints(rows, displayMode.view).points : rows;
+			const loessData = smooth ? smoothCareerPoints(rows, displayMode.view, bandwidth).points : rows;
 
 			const line = d3
 				.line()
@@ -469,6 +472,7 @@
 
 <div class="chart-download-shell">
 	<div class="chart-download-toolbar">
+		{#if assistantHref}<a class="btn btn-sm" href={assistantHref}>Use in an assistant</a>{/if}
 		<ChartDownloadMenu
 			{svgEl}
 			captureRootEl={containerEl}

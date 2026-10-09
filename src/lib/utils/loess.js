@@ -1,6 +1,9 @@
 /**
  * LOESS (Locally Estimated Scatterplot Smoothing).
- * Fits weighted local linear regressions with tricube weights.
+ * Fits weighted local linear regressions with tricube weights over each point's k nearest
+ * neighbours in x, where k = bandwidth × n. The window is chosen by distance, not by index:
+ * an index-centred window jumps where the data have gaps (the months between NBA seasons),
+ * which drew visible steps into career curves.
  *
  * @param {number[]} xVals - x values (sorted ascending)
  * @param {number[]} yVals - corresponding y values
@@ -12,20 +15,18 @@ export function loess(xVals, yVals, bandwidth = 0.3) {
 	if (n === 0) return [];
 	if (n === 1) return [...yVals];
 
-	const k = Math.max(2, Math.ceil(bandwidth * n));
-	const halfWindow = Math.floor((k - 1) / 2);
-	const maxWindowStart = Math.max(0, n - k);
+	const k = Math.min(n, Math.max(2, Math.ceil(bandwidth * n)));
 	const smoothed = new Array(n);
+	let start = 0;
 
 	for (let i = 0; i < n; i++) {
 		const xi = xVals[i];
-		let start = i - halfWindow;
-		if (start < 0) start = 0;
-		if (start > maxWindowStart) start = maxWindowStart;
-		let end = Math.min(n - 1, start + k - 1);
-		if (end - start + 1 < k && start > 0) {
-			start = Math.max(0, end - k + 1);
-		}
+		// The k nearest points are contiguous in sorted x. Slide the window right while the
+		// point just past it is nearer than its first point; the window only ever moves right.
+		while (start + k < n && xVals[start + k] - xi < xi - xVals[start]) start += 1;
+		// Tied x values can stop the slide short of i; keep i inside its own window.
+		if (start < i - k + 1) start = i - k + 1;
+		const end = start + k - 1;
 
 		const maxDist = Math.max(Math.abs(xVals[start] - xi), Math.abs(xVals[end] - xi)) || 1;
 

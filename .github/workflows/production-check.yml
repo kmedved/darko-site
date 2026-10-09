@@ -1,0 +1,31 @@
+name: Production check
+
+# Once a day, exercise the live assistant endpoint, chart images and link previews end to end, so a
+# broken publish or dependency shows up here before users find it. A failed run emails the repo
+# owner; the evidence it gathered is attached to the run.
+on:
+  schedule:
+    - cron: '17 14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  assistant:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check www.darko.app
+        run: node scripts/check-darko-plugin.mjs https://www.darko.app "$RUNNER_TEMP/darko-plugin"
+      - name: Keep the evidence from a failed check
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: darko-plugin-evidence
+          path: ${{ runner.temp }}/darko-plugin
+          if-no-files-found: ignore

@@ -1,11 +1,11 @@
-import { getSeriesColor } from './chartTheme.js';
+import { getWhiteSurfaceSeriesColor } from './chartTheme.js';
 
 export const MAX_CHART_PLAYERS = 6;
 export const CAREER_METRICS = Object.freeze(['dpm', 'o_dpm', 'd_dpm']);
 export const CAREER_SCALES = Object.freeze(['games', 'age', 'seasons']);
 export const CHART_QUERY_KEYS = Object.freeze([
   'ids', 'metric', 'scale', 'min', 'max', 'from', 'to', 'ymin', 'ymax',
-  'colors', 'title', 'points', 'smooth', 'display', 'format', 'annotations', 'at'
+  'colors', 'title', 'points', 'smooth', 'bandwidth', 'display', 'format', 'annotations', 'at'
 ]);
 
 export function optionalNumber(value) {
@@ -27,7 +27,7 @@ export function readCareerQuery(params) {
     title: params.get('title') || '', points: params.get('points') !== '0',
     format: params.get('format') || 'wide', annotations: (params.get('annotations') || '').split(',').filter(Boolean),
     at: optionalNumber(params.get('at')),
-    smooth: params.get('smooth') !== '0', display: params.get('display') === 'shiny' ? 'shiny' : 'modern'
+    smooth: params.get('smooth') !== '0', bandwidth: optionalNumber(params.get('bandwidth')), display: params.get('display') === 'shiny' ? 'shiny' : 'modern'
   };
 }
 
@@ -36,7 +36,7 @@ export function writeCareerQuery(params, spec) {
   if (spec.ids?.length) params.set('ids', spec.ids.join(','));
   if (spec.metric && spec.metric !== 'dpm') params.set('metric', spec.metric);
   if (spec.scale && spec.scale !== 'games') params.set('scale', spec.scale);
-  for (const key of ['min', 'max', 'from', 'to', 'ymin', 'ymax', 'title', 'at']) {
+  for (const key of ['min', 'max', 'from', 'to', 'ymin', 'ymax', 'title', 'at', 'bandwidth']) {
     if (spec[key] !== null && spec[key] !== undefined && spec[key] !== '') params.set(key, String(spec[key]));
   }
   if (spec.format && spec.format !== 'wide') params.set('format', spec.format);
@@ -53,8 +53,8 @@ export function resolveChartColors(spec) {
   return spec.ids.map((id, index) => {
     if (spec.colors?.[index]) return spec.colors[index];
     let slot = 0;
-    while (used.has(getSeriesColor(slot, spec.display))) slot += 1;
-    const color = getSeriesColor(slot, spec.display);
+    while (used.has(getWhiteSurfaceSeriesColor(slot, spec.display))) slot += 1;
+    const color = getWhiteSurfaceSeriesColor(slot, spec.display);
     used.add(color);
     return color;
   });

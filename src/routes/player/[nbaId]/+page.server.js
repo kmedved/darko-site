@@ -1,3 +1,4 @@
+import { careerShareMetadata } from '$lib/server/charts/share.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 import { getPlayerComps, getPlayerEchoes } from '$lib/server/comps.js';
 import { getPlayerSeasons } from '$lib/server/daily.js';
@@ -47,8 +48,11 @@ export async function load({ params, setHeaders }) {
             })
     });
     // The career history ships column by column; the page rebuilds the rows.
+    const shareUrl = new URL(`/player/${nbaId}?ids=${nbaId}`, 'https://www.darko.app');
+    const social = await careerShareMetadata(shareUrl, { title: `${page.playerInfo.player_name} — DARKO`, description: `Explore ${page.playerInfo.player_name}'s DARKO NBA ratings and career history.` });
+    social.url = `https://www.darko.app/player/${nbaId}`;
     return {
-        ...page,
+        ...page, social,
         history: packRows(historyRows),
         comps: await comps,
         seasons: await seasons,

@@ -1,6 +1,7 @@
 <script>
 	import AllPlayerSearch from '$lib/components/AllPlayerSearch.svelte';
 	import TrajectoryChart from '$lib/components/TrajectoryChart.svelte';
+	import SocialMetadata from '$lib/components/SocialMetadata.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import StatTile from '$lib/components/StatTile.svelte';
 	import {
@@ -29,8 +30,8 @@
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 	import { isWowyPlayerId } from '$lib/utils/wowyPlayerId.js';
-	import { readCareerQuery, writeCareerQuery } from '$lib/utils/careerChartSpec.js';
-	import { filterCareerRows } from '$lib/utils/careerChartData.js';
+	import { readCareerQuery, writeCareerQuery, careerChartLinks, CAREER_METRICS, MAX_CHART_PLAYERS } from '$lib/utils/careerChartSpec.js';
+	import { filterCareerRows, isPlayedGame } from '$lib/utils/careerChartData.js';
 
 	let { data } = $props();
 
@@ -50,6 +51,7 @@
 	let customChartTitle = $state('');
 	let showPoints = $state(true);
 	let smoothLines = $state(true);
+	let bandwidth = $state(null);
 	let linkedColors = $state({});
 	let exportSettings = $state({ format: 'wide', annotations: [], at: null });
 	let prevTalentType = $state('dpm');
@@ -107,6 +109,13 @@
 	function handleYMaxChange(e) {
 		const v = parseFloat(e.target.value);
 		yAxisMax = Number.isFinite(v) ? v : null;
+	}
+
+	// A span outside (0, 1] is not a LOESS span; treat it as blank so the preset applies and
+	// share links, social cards and the assistant handoff stay valid.
+	function handleBandwidthChange(e) {
+		const v = parseFloat(e.target.value);
+		bandwidth = Number.isFinite(v) && v > 0 && v <= 1 ? v : null;
 	}
 
 	function handleRangeMinChange(e) {
@@ -191,6 +200,8 @@
 		const years = new Set();
 		for (const p of selectedPlayers) {
 			for (const row of rowsForPlayer(p)) {
+				// A DARKO carrier row after the last game must not offer a season not yet played.
+				if (!isWowyMetric && !isPlayedGame(row)) continue;
 				const y = isWowyMetric
 					? Number.parseInt(row.season, 10) - 1
 					: getSeasonStartYear(row.date);
@@ -213,7 +224,10 @@
 
 	const chartData = $derived(
 		selectedPlayers.map((p, index) => {
-			let rows = rowsForPlayer(p);
+			// DARKO rows also carry rating states for missed, scheduled and offseason dates; only
+			// played games are plotted, so no axis runs past a player's last game. Every WOWY
+			// row is a game played.
+			let rows = isWowyMetric ? rowsForPlayer(p) : rowsForPlayer(p).filter(isPlayedGame);
 			if (!isWowyMetric && (dateFrom || dateTo)) rows = filterCareerRows(rows, { scale: timeScale, from: dateFrom, to: dateTo });
 			if (rangeFilterMin != null || rangeFilterMax != null) {
 				rows = rows.filter((row) => {
@@ -545,6 +559,7 @@
 		exportSettings = { format: restored.format, annotations: restored.annotations, at: restored.at };
 		showPoints = restored.points;
 		smoothLines = restored.smooth;
+		bandwidth = restored.bandwidth;
 		linkedColors = Object.fromEntries(restored.ids.flatMap((id, index) =>
 			/^#[0-9a-fA-F]{6}$/.test(restored.colors[index] || '') ? [[id, restored.colors[index]]] : []));
 
@@ -569,18 +584,25 @@
 		if (isWowyMetric) void loadWowyPublication();
 	});
 
+	const currentSpec = $derived({
+		ids: selectedPlayers.map((player) => player.nba_id), metric: talentType, scale: timeScale,
+		min: rangeFilterMin, max: rangeFilterMax, from: dateFrom, to: dateTo,
+		ymin: yAxisMin, ymax: yAxisMax, title: customChartTitle,
+		points: showPoints, smooth: smoothLines, bandwidth,
+		colors: selectedPlayers.map((player, index) => linkedColors[player.nba_id] || getSeriesColor(index, displayMode.view)),
+		display: displayMode.view, ...exportSettings
+	});
+	const assistantEligible = $derived(CAREER_METRICS.includes(talentType) && currentSpec.ids.length > 0 &&
+		currentSpec.ids.length <= MAX_CHART_PLAYERS && currentSpec.ids.every((id) => Number.isInteger(id) && id > 0));
+	const assistantHref = $derived(assistantEligible
+		? '/assistant?chart=' + encodeURIComponent(careerChartLinks(currentSpec).source_url)
+		: '/assistant');
+
 	// Sync selected player IDs and chart controls to URL
 	$effect(() => {
 		if (!initialLoadDone || loading) return;
 		const url = new URL($page.url);
-		const colors = selectedPlayers.map((player, index) => linkedColors[player.nba_id] || getSeriesColor(index, displayMode.view));
-		writeCareerQuery(url.searchParams, {
-			ids: selectedPlayers.map((player) => player.nba_id), metric: talentType, scale: timeScale,
-			min: rangeFilterMin, max: rangeFilterMax, from: dateFrom, to: dateTo,
-			ymin: yAxisMin, ymax: yAxisMax, title: customChartTitle,
-			points: showPoints, smooth: smoothLines, colors: Object.keys(linkedColors).length ? colors : [],
-			display: displayMode.view, ...exportSettings
-		});
+		writeCareerQuery(url.searchParams, currentSpec);
 		if (url.search !== $page.url.search) goto(`${url.pathname}${url.search}`, { replaceState: true, keepFocus: true });
 	});
 
@@ -645,6 +667,8 @@
 			}));
 	}
 </script>
+
+<SocialMetadata metadata={data.social} />
 
 <svelte:head>
 	<title>Player Career Trajectories — DARKO DPM</title>
@@ -732,6 +756,23 @@
 								/>
 							</label>
 						</div>
+					</div>
+
+					<div class="control-group">
+						<span class="control-label">Smoothing Span</span>
+						<label class="range-field">
+							<span>Higher values smooth more; leave blank for the preset.</span>
+							<input
+								aria-label="Smoothing span"
+								type="number"
+								min="0.05"
+								max="1"
+								step="0.05"
+								placeholder="Auto"
+								value={bandwidth ?? ''}
+								oninput={handleBandwidthChange}
+							/>
+						</label>
 					</div>
 
 					{#if showRangeFilter}
@@ -891,6 +932,8 @@
 							yMax={yAxisMax}
 							showPoints={showPoints}
 							smooth={smoothLines}
+							{bandwidth}
+							{assistantHref}
 							gameLabel={isWowyMetric ? 'Career Game Number' : 'Games played in available history'}
 						/>
 
