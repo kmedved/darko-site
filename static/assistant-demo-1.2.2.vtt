@@ -1,0 +1,19 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:09.800
+Installed DARKO 1.2.2, connected to the production NBA endpoint.
+
+00:00:09.800 --> 00:00:20.300
+Request a six-player chart of the first six picks in the 2022 draft.
+
+00:00:20.300 --> 00:00:39.400
+Compare the first 200 played games, with six colors and PNG/source links.
+
+00:00:39.400 --> 00:00:54.800
+Use the widget to select defensive DPM, ages 19–25, square export and smoothing.
+
+00:00:54.800 --> 00:00:58.800
+Download the actual 2400 × 2400 PNG.
+
+00:00:58.800 --> 00:01:18.300
+WNBA histories are unsupported: explain the NBA-only scope without invented ratings.

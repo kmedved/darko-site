@@ -21,6 +21,8 @@
 
   <p>For private support or privacy questions, email <a href="mailto:kostya@darko.app">kostya@darko.app</a>.</p>
 
+  <p><a href="/assistant-privacy">Assistant privacy policy</a> · <a href="/assistant-terms">Assistant terms and chart reuse</a></p>
+
   <h2>Understand the data</h2>
   <p>DARKO career histories are retrospective pregame estimates, with coverage beginning in 1996–97. Earlier careers are partial. The games axis counts played appearances in the available history, and historical values can change when the model is refit.</p>
   <p><a href="/about">Read how DARKO works</a> · <a href="/trajectories">Explore career trajectories</a></p>

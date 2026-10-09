@@ -81,7 +81,7 @@
   <section aria-labelledby="meaning-heading"><h2 id="meaning-heading">What the charts mean</h2>
     <p>DARKO histories are retrospective pregame estimates, with coverage beginning in 1996–97. Earlier careers are partial. The games axis counts played appearances in available history. A raw peak is the highest observed rating in the selected range; a smoothed peak is the maximum of the displayed curve. Smoothing is a presentation choice, not a future projection.</p>
     <p>The integration reads public basketball data without a DARKO account. DARKO counts tool calls by day, tool and assistant app, with timing, success and how many players were involved; the counts contain no player names, chart settings or conversation text. Your assistant provider handles your conversation under its own privacy settings.</p>
-    <p><a href="/trajectories">Explore career trajectories</a> · <a href="/about">Read about DARKO</a> · <a href="/support">Get support</a></p>
+    <p><a href="/trajectories">Explore career trajectories</a> · <a href="/about">Read about DARKO</a> · <a href="/support">Get support</a> · <a href="/assistant-privacy">Privacy</a> · <a href="/assistant-terms">Terms and chart reuse</a></p>
   </section>
 </div>
 </div>
