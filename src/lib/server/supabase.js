@@ -1783,6 +1783,33 @@ export async function getRookieStarts(draftYear) {
     });
 }
 
+/** Actual played debuts for assistant comparisons; keep the About page's opening priors separate. */
+export async function getRookieDebuts(draftYear) {
+    const year = Number(draftYear);
+    if (!Number.isInteger(year) || year < 1996 || year > 2100) return [];
+    return runCached(cacheKey('rookieDebuts', year), CACHE_MS.rookieStarts, async () => {
+        const opening = await getRookieStarts(year);
+        const debuts = await mapWithConcurrency(opening, 4, async (player) => {
+            const { data, error } = await supabase.from('player_ratings')
+                .select('date, age, dpm, o_dpm, d_dpm')
+                .eq('nba_id', player.nba_id)
+                .or('future_game.is.null,future_game.neq.1')
+                .gt('seconds_played', 0)
+                .or('tm_id.is.null,tm_id.neq.-999')
+                .order('date', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+            if (error) throw error;
+            if (!data) return null;
+            return { ...player, ...data, initial_estimate: {
+                date: player.date, age: player.age,
+                dpm: player.dpm, o_dpm: player.o_dpm, d_dpm: player.d_dpm
+            } };
+        });
+        return debuts.filter(Boolean);
+    });
+}
+
 const SEASON_ROW_COLUMNS = 'nba_id, date, season, team_name, tm_id, opp_id, dpm, o_dpm, d_dpm, seconds_played, future_game';
 
 /**

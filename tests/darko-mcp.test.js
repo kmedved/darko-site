@@ -28,6 +28,10 @@ const sources = {
     { nba_id: 4, player_name: 'Second Pick', draft_slot: 2, date: '2022-10-20', age: 19.5, dpm: -2, o_dpm: -1.5, d_dpm: -0.5 },
     { nba_id: 5, player_name: 'Undrafted Guard', draft_slot: null, date: '2022-11-01', age: 22, dpm: -3, o_dpm: -2, d_dpm: -1 }
   ] : [],
+  getRookieDebuts: async (year) => (await sources.getRookieStarts(year)).map((row) => ({
+    ...row, ...(row.nba_id === 4 ? { date: '2023-10-25', age: 20.5, dpm: 0.1, o_dpm: 0.2, d_dpm: -0.1 } : {}),
+    initial_estimate: { date: row.date, age: row.age, dpm: row.dpm, o_dpm: row.o_dpm, d_dpm: row.d_dpm }
+  })),
   getRatingMoves: async () => [
     { period: '7', start_date: '2025-01-01', end_date: '2025-01-08', nba_id: 1, player_name: 'A Williams', games: 3, dpm_from: 1, dpm_to: 2.5, delta: 1.5, o_delta: 1 },
     { period: '7', start_date: '2025-01-01', end_date: '2025-01-08', nba_id: 2, player_name: 'B Williams', games: 1, dpm_from: 0, dpm_to: 4, delta: 4, o_delta: 2 },
@@ -241,4 +245,16 @@ test('rating movers sort by change among players with enough games and report th
   assert.deepEqual(fallers.ids, [3]);
   const missing = (await rpc('tools/call', { name: 'get_rating_movers', arguments: { window: '30' } })).structuredContent;
   assert.equal(missing.available, false);
+});
+
+
+test('draft debut estimates match played debuts rather than an earlier opening forecast', async () => {
+  const data = (await rpc('tools/call', { name: 'get_draft_class', arguments: { year: 2022, limit: 2 } })).structuredContent;
+  assert.deepEqual(data.ids, [1, 4]);
+  const delayed = data.players[1];
+  assert.equal(delayed.first_game.date, '2023-10-25');
+  assert.equal(delayed.first_game.dpm, 0.1);
+  assert.equal(delayed.initial_estimate.date, '2022-10-20');
+  assert.equal(delayed.initial_estimate.dpm, -2);
+  assert.match(data.basis, /matches game 1/);
 });

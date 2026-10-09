@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "darko",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Create, edit and share DARKO NBA career-history charts, compare player ratings, and explore rankings.",
   "extensions": {
     "com.openai": {
@@ -27,7 +27,9 @@
           "Chart Tatum and Paul George by age.",
           "Compare LeBron James and Stephen Curry over their first 200 games, and make a square image."
         ],
-        "supportURL": "https://www.darko.app/support"
+        "supportURL": "https://www.darko.app/support",
+        "privacyPolicyURL": "https://www.darko.app/assistant-privacy",
+        "termsOfServiceURL": "https://www.darko.app/assistant-terms"
       },
       "review": {
         "test_cases": {
@@ -40,9 +42,9 @@
             },
             {
               "description": "In a fresh conversation with DARKO selected, start from the 2022 draft class and test a six-player chart cropped by played appearances. Shorter careers stop at their available history.",
-              "prompt": "Use the 2022 NBA draft class to compare the first six picks over their first 200 games. Give me a wide DARKO chart to download.",
+              "prompt": "Use the 2022 NBA draft class to compare the first six picks over their first 200 games. Give me a wide DARKO chart to download. Explain which draft players are included and what the rating entering game 1 means.",
               "tools_triggered": "get_draft_class, create_career_chart",
-              "expected_behavior": "Request get_draft_class with year 2022, limit 6 and include_undrafted false. Use its returned IDs in pick order to create a DPM chart with six players, scale games, max 200, Modern styling and wide format. Show six distinct labeled colors and the returned download/source links. Number available played appearances before cropping; no displayed observation exceeds game 200. Explain that the draft list includes players with a published NBA game and first_game is a pregame debut rating. Do not extrapolate shorter histories or put full daily career arrays in the tool result."
+              "expected_behavior": "Request get_draft_class with year 2022, limit 6 and include_undrafted false. Use its returned IDs in pick order to create a DPM chart with six players, scale games, max 200, Modern styling and wide format. Show six distinct labeled colors and the returned download/source links. Number available played appearances before cropping; no displayed observation exceeds game 200. Explain that the draft list includes players with a published NBA game and first_game is a pregame debut rating. Do not extrapolate shorter histories or put full daily career arrays in the tool result. When first-game values are reported, use first_game and match the played game-1 observation; keep any earlier initial_estimate distinct, especially for delayed debuts such as Chet Holmgren."
             },
             {
               "description": "In a fresh conversation with DARKO selected, reopen the supplied Tatum/George specification and edit it while preserving existing player/color pairs.",
@@ -79,7 +81,8 @@
           ]
         },
         "commerce": false,
-        "commerce_description": "DARKO is free to use and does not support payments or purchases."
+        "commerce_description": "DARKO is free to use and does not support payments or purchases.",
+        "demo_recording_url": "https://www.darko.app/assistant-demo-1.2.2.mp4"
       },
       "publication": {
         "release_notes": "DARKO career-history charts for up to six NBA players, with interactive chart edits, wide and square PNG exports, shared-chart and player-page reopening, draft classes, rating movers, published player comparisons, ratings and rankings. Charts plot played games only, and every chart carries the data date and DARKO's credit line.",

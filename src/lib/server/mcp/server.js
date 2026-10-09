@@ -54,7 +54,7 @@ export function summarizeHistory(rows, metric, granularity) {
 }
 
 /** Register once per request; injected readers let tests exercise public MCP contracts. */
-export function createDarkoServer({ sources, charts, chartSpecSchema, origin = 'https://www.darko.app', version = '1.2.1', onToolCall, userAgent = '' }) {
+export function createDarkoServer({ sources, charts, chartSpecSchema, origin = 'https://www.darko.app', version = '1.2.3', onToolCall, userAgent = '' }) {
   const server = new McpServer({ name: 'DARKO', version }, { instructions: 'DARKO serves NBA data only and is read-only. For WNBA histories, direct social posting, rating changes, model refits or publishing jobs, explain the unsupported scope without calling DARKO tools. Never search the NBA catalog for WNBA players. Resolve names in batches. For career comparisons create a chart; reuse the returned specification for edits. Full histories stay on the server, and charts plot played games only. Ratings are retrospective pregame estimates. Clients with MCP Apps can show the interactive chart widget; other clients receive the chart image in the tool result. If the host displays the widget, provide a caption and download link without duplicate images. Do not claim a widget appeared where none did. Never add unrelated photos, thumbnails or image cards.' });
   // `status` is the short text ChatGPT shows while a tool runs and after it finishes.
   const register = (name, description, inputSchema, handler, { status, ...meta } = {}) => server.registerTool(name, {
@@ -210,10 +210,10 @@ export function createDarkoServer({ sources, charts, chartSpecSchema, origin = '
       players: matching.slice(0, input.limit).map((row, index) => ({ ...snapshot(row), rank: index + 1, value: finite(row[input.metric]) })) });
   }, { status: ['Ranking players…', 'Rankings ready'] });
 
-  register('get_draft_class', 'List an NBA draft class (1996 onward) in pick order: each player’s DARKO rating going into his first game, and his current rating if he is on a current roster. Only players with at least one NBA game appear. Returns chart-ready IDs for the first six; chart them with create_career_chart, usually by games played or age.', z.object({
+  register('get_draft_class', 'List an NBA draft class (1996 onward) in pick order: each player’s DARKO rating going into his first played NBA game, an earlier initial estimate when available, and his current rating if he is on a current roster. Only players with at least one NBA game appear. Returns chart-ready IDs for the first six; chart them with create_career_chart, usually by games played or age.', z.object({
     year: z.number().int().min(1996).max(2100), limit: z.number().int().min(1).max(60).default(10), include_undrafted: z.boolean().default(false)
   }), async ({ year, limit, include_undrafted }) => {
-    const [rows, active] = await Promise.all([sources.getRookieStarts(year), sources.getActivePlayers()]);
+    const [rows, active] = await Promise.all([sources.getRookieDebuts(year), sources.getActivePlayers()]);
     const current = new Map(active.map((row) => [row.nba_id, row]));
     const eligible = rows.filter((row) => include_undrafted || row.draft_slot != null);
     const players = eligible.slice(0, limit).map((row) => {
@@ -221,12 +221,13 @@ export function createDarkoServer({ sources, charts, chartSpecSchema, origin = '
       return {
         nba_id: row.nba_id, player_name: row.player_name, pick: row.draft_slot ?? null, undrafted: row.draft_slot == null,
         first_game: { date: row.date ? String(row.date).slice(0, 10) : null, age: finite(row.age), dpm: finite(row.dpm), o_dpm: finite(row.o_dpm), d_dpm: finite(row.d_dpm) },
+        initial_estimate: row.initial_estimate ? { date: row.initial_estimate.date ? String(row.initial_estimate.date).slice(0, 10) : null, age: finite(row.initial_estimate.age), dpm: finite(row.initial_estimate.dpm), o_dpm: finite(row.initial_estimate.o_dpm), d_dpm: finite(row.initial_estimate.d_dpm) } : null,
         current: now ? { team_name: now.team_name ?? null, dpm: finite(now.dpm), snapshot_date: ratingDate(now)?.slice(0, 10) ?? null } : null,
         source_url: `https://www.darko.app/player/${row.nba_id}`
       };
     });
     return result({ year, players, ids: players.slice(0, MAX_CHART_PLAYERS).map((player) => player.nba_id), players_with_games: eligible.length,
-      basis: 'Players drafted that year with at least one NBA game in DARKO history, in pick order. first_game is DARKO’s pregame rating going into the debut, set from age, draft slot and size before any games.',
+      basis: 'Players drafted that year with at least one NBA game in DARKO history, in pick order. first_game is the pregame rating entering the first actually played NBA game and matches game 1 on the career chart. initial_estimate is the first modeled state in the retrospective history; it can precede the NBA debut and differ from first_game.',
       dataset_as_of: await sources.getLatestGameDate(), snapshot_timing: 'pregame',
       limitation: players.length ? null : 'No player from this draft has a published DARKO game yet. Players appear after their first published game.' });
   }, { status: ['Reading draft class…', 'Draft class ready'] });
