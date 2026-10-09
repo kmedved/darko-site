@@ -4,7 +4,7 @@ Status: October 9, 2026. The production server and existing private ChatGPT plug
 
 ## Publisher and public materials
 
-Publisher: DARKO. Support and privacy contact: kostya@darko.app. Availability: worldwide, free, no payments or purchases. Individual charts may be reused, including commercially, with DARKO attribution. See the published terms for the distinction between chart reuse and bulk data/model redistribution.
+Publisher: DARKO. Support and privacy contact: kostya@darko.app. Availability: worldwide, free, no payments or purchases. Individual charts may be reused for noncommercial purposes with DARKO attribution. Commercial use of charts, data, ratings or other outputs is prohibited without prior permission from DARKO; attribution alone is insufficient. See the published terms for the distinction between chart reuse and bulk data/model redistribution.
 
 - Website and setup: https://www.darko.app/assistant
 - MCP endpoint: https://www.darko.app/mcp

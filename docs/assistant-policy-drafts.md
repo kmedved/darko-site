@@ -2,7 +2,7 @@
 
 Publisher and contact are confirmed: DARKO, kostya@darko.app.
 Access is worldwide and free, with no payments or purchases. Individual charts
-may be reused with attribution. Public pages use the current retention disclosure: no promised support-mail deletion deadline, with deletion requests sent to DARKO. The previously proposed 12-month rule was not adopted. Effective date: October 9, 2026.
+may be reused for noncommercial purposes with attribution; commercial use requires prior permission from DARKO. Public pages use the current retention disclosure: no promised support-mail deletion deadline, with deletion requests sent to DARKO. The previously proposed 12-month rule was not adopted. Effective date: October 9, 2026.
 
 
 ## Privacy policy
@@ -87,9 +87,13 @@ careers are partial. Smoothing describes the displayed curve; it does not
 predict a future career. Preserve the data-date and coverage context when
 interpreting a chart.
 
-You may freely reuse individual charts, including in commercial work, with
-attribution to DARKO. Credit DARKO; a source link and incorporated-game date are encouraged. This permission does not grant a separate license
-to bulk datasets, the model, or third-party marks and data.
+You may freely reuse individual charts for noncommercial purposes with attribution
+to DARKO. Credit DARKO; a source link and incorporated-game date are encouraged.
+Commercial use of DARKO charts, data, ratings or other outputs is prohibited
+without prior permission from DARKO. Attribution alone does not authorize
+commercial use. To request permission, contact kostya@darko.app. The permission
+for noncommercial chart reuse does not grant a separate license to bulk datasets,
+the model, or third-party marks and data.
 
 Do not interfere with the service, bypass its access or rate limits, or send
 confidential information in chart titles or tool inputs. Reasonable limits may
