@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "darko",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Create, edit and share DARKO NBA career-history charts, compare player ratings, and explore rankings.",
   "extensions": {
     "com.openai": {

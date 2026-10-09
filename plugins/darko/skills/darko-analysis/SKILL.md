@@ -3,6 +3,11 @@ name: darko-analysis
 description: Create, edit and reopen DARKO NBA career-history comparison charts, find published player comps, export wide or square images, and answer questions about public DARKO ratings and rankings.
 ---
 
+This integration serves NBA data only. For WNBA histories, direct social posting,
+ratings changes, model refits or publishing jobs, explain the unsupported scope
+without calling DARKO tools. Do not search the NBA catalog for WNBA players or
+claim a lookup happened when no tool ran.
+
 Career charts are the main workflow. Resolve requested player names together
 with `search_players`, including retired players. Clarify genuinely ambiguous
 names; the first candidate is not automatically the intended player.
