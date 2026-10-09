@@ -1,145 +1,111 @@
-# DARKO assistant policy drafts
+# DARKO assistant policies for publisher review
 
-These drafts are not published policies. Confirm the publisher, private contact,
-retention and any external integrations before turning them into public pages.
-Proposed terms below require the publisher's decision; they are not statements
-of an existing license or contract.
+Publisher and contact are confirmed: DARKO, kostya@darko.app.
+Access is worldwide and free, with no payments or purchases. Individual charts
+may be reused with attribution. Public pages use the current retention disclosure: no promised support-mail deletion deadline, with deletion requests sent to DARKO. The previously proposed 12-month rule was not adopted. Effective date: October 9, 2026.
 
-## Facts checked in the current code
 
-- The integration reads public NBA data and has no DARKO account or OAuth flow.
-- Inputs include player names and IDs, metrics, dates, filters, custom titles,
-  colors, annotations and imported chart URLs. Requests also carry protocol/
-  client information and HTTP headers. The integration does not retrieve a
-  user's entire conversation; it processes supplied tool arguments.
-- Widget edits send chart settings and compact comparisons back to the assistant.
-- Chart source/image/download URLs carry chart settings, including custom titles.
-  They are publicly accessible to people with the URL and can appear in browser
-  history and infrastructure logs.
-- Chart specifications and PNGs enter an in-process cache bounded to 16 entries
-  and 16 MiB, with five-minute freshness. Search strings are used in memory cache
-  keys with two-minute freshness. Freshness is not a deletion deadline: entries
-  can remain until a subsequent read, eviction or process termination.
-- PNG responses request public CDN caching with one-day freshness and one-day stale
-  allowances. There is no per-user control to purge individual cached charts.
-- The chart service does not write charts or chats to a database or durable chart
-  files. Its temporary disk file is the embedded rendering font.
-- Each tool call writes one log line and increments one daily counter row (`mcp_usage_daily`, written only through `service_role`): UTC day, tool name, a coarse client family (chatgpt, claude, claude-code, cursor, codex, vscode, monitor or other, from ChatGPT's `openai/*` request metadata or the user agent), success, elapsed milliseconds and player count. Neither contains player names, IDs, titles, chart URLs, request bodies, IP addresses or user agents. Hosting may separately record request metadata; its retention still needs confirmation.
-- Unhandled errors log request method/path, route, Vercel request ID and error
-  details. The code does not explicitly log complete request bodies or query
-  strings. Hosting and database logging are separate and need confirmation.
-- Vercel hosts the site; Supabase supplies basketball data. The widget uses
-  transient state rather than its own localStorage. Ordinary website pages store
-  theme/font/display preferences in browser storage. Optional website fonts can
-  load from Google Fonts. No analytics integration was found in the reviewed code;
-  that does not establish what is configured outside the code.
+## Privacy policy
 
-Evidence: `src/routes/mcp/+server.ts`, `src/lib/server/mcp/server.js`,
-`src/lib/server/mcp/widget.js`, `src/lib/server/charts/service.js`,
-`src/lib/server/supabase.js`, `src/lib/utils/careerChartSpec.js`,
-`src/routes/api/charts/career.png/+server.js`, `src/lib/server/cacheHeaders.js`,
-`src/hooks.server.js`, `src/app.html` and `src/lib/fonts.js`.
+DARKO provides an assistant integration for public NBA ratings and career charts.
+This policy covers that integration and its chart links on darko.app. Your
+assistant provider manages your conversation under its own policy and controls.
+For private support or privacy questions, contact kostya@darko.app.
 
-## Privacy page draft
+### What DARKO processes
 
-### Scope
+DARKO processes the tool arguments your assistant sends: player searches and NBA
+IDs, metrics, filters, date and chart ranges, colors, titles, annotations and
+imported DARKO links. Requests also include technical client information and
+standard HTTP metadata. The hosting provider receives network information such
+as an IP address to deliver and protect the service.
 
-This policy covers the DARKO assistant integration and the career charts and links
-it creates on darko.app. Your assistant provider handles your conversation under
-its own privacy policy and account controls.
+These inputs are used to retrieve public basketball data, generate charts,
+return results, maintain the service and diagnose errors. DARKO has no user
+account or OAuth requirement and does not retrieve your entire conversation.
+Widget edits send the current chart settings and compact comparisons back to
+your assistant.
 
-Publisher: **DARKO**. Private support and privacy contact: **kostya@darko.app**.
-Effective date: set to the date the approved policy is published.
+### Links and providers
 
-### Information processed and purposes
+Chart links contain their settings, including custom titles. Anyone with a link
+can access the chart. Links can appear in browser history, caches and provider
+logs; avoid putting confidential information in them. Stopping sharing does not
+revoke a link that was already shared.
 
-DARKO receives the tool inputs sent by your assistant: player searches and NBA
-IDs, selected metrics, filters, date and chart ranges, colors, titles, annotations
-and imported DARKO links. The requests also include technical client/protocol
-information and standard HTTP metadata. The hosting provider receives the
-network information needed to serve those requests, such as an IP address.
+Vercel hosts and delivers the service. Supabase serves basketball queries and
+aggregate usage counters. Your assistant provider receives the returned settings,
+comparisons, images and links. Ordinary website pages store local display
+preferences; optional website fonts can contact Google Fonts. GitHub handles
+public issue reports. Email sent to kostya@darko.app is processed by the support
+mail service.
 
-These inputs are used to find public basketball data, generate requested charts,
-return results, keep the service working and diagnose errors. DARKO does not
-require an account or retrieve your entire chat. When you edit a widget, its
-current settings and comparison results are sent back to your assistant.
-
-### Chart links and service providers
-
-Chart links include the selected settings and any custom title. Anyone with a
-link can access its chart, and links may be saved in browser history or service
-logs. Avoid placing personal or confidential information in a chart title or link.
-
-Vercel provides hosting and delivery. Supabase provides the basketball-data
-service and processes the queries needed to retrieve it. Your assistant provider
-receives the returned chart links, settings and comparison results. Visiting the
-ordinary website can store local display preferences; selecting optional web
-fonts can contact Google Fonts. Public issue reports are handled by GitHub.
-
-Any additional configured analytics, log drains or service providers:
-**pending confirmation before publication**.
+Vercel Web Analytics is disabled, and no external Vercel or Supabase log drains
+are configured. The integration's own logs and daily usage counters contain only
+the UTC day, tool, coarse client family, outcome, duration and player count.
+They contain no user/session identifier, player name or ID, title, URL, request
+body, IP address or raw user agent. Infrastructure logs are separate.
 
 ### Retention
 
-Rendered charts, their settings and search keys are cached in application memory
-and chart images may be cached by the delivery network. These caches support
-performance and freshness, rather than personal chart accounts. Entries can
-remain until expiry is acted on, eviction or process termination; there is no
-user-facing control to purge an individual cache entry.
+Application-memory chart and search caches have freshness intervals of five and
+two minutes. Entries may remain until a subsequent read, eviction or process
+termination. PNG delivery requests one-day CDN freshness and one-day stale
+allowances. These are cache settings, not guaranteed deletion deadlines. There
+is no personal chart account or individual-cache purge control.
 
-Actual hosting/security/error/database log retention periods and support-message
-retention: **pending confirmation before publication**. Do not replace these with
-the application's five-minute cache freshness interval.
+Vercel's current Pro plan without Observability Plus has one-day runtime-log and
+standard Observability windows, including CDN request events. Its firewall
+traffic view covers the last 24 hours. Supabase's current Pro plan provides a
+seven-day API/database log window. These feature windows are separate from any
+provider-held security or legal records and from live database storage; see the
+providers' policies. Aggregate daily usage counters have no automatic expiry.
 
-### Choices and contact
+DARKO does not currently promise a fixed deletion deadline for support and privacy correspondence, which may be retained indefinitely. Contact DARKO to request deletion; records needed for an ongoing dispute or legal obligation may be retained.
 
-You can omit or change custom titles, choose whether to share a chart link, clear
-website preferences from your browser, and manage the connection and conversation
-through your assistant provider. Stopping sharing does not revoke a previously
-shared link. DARKO has no personal chart account or per-chart deletion control.
+### Your choices
 
-Private questions or requests: **kostya@darko.app**. Do not post
-private information in public GitHub issues. A private request process and any
-applicable retention/deletion commitments need confirmation before publication.
+You can change or omit custom titles, decide whether to share links, clear local
+website preferences and manage the connection and conversation through your
+assistant provider. Send privacy questions or requests to kostya@darko.app.
+Keep private information out of public GitHub issues.
 
-## Terms page draft
+## Terms
 
-Publisher: **DARKO**. Contact: **kostya@darko.app**. Effective date: the date the approved terms are published.
-DARKO is available worldwide, free, with no payments or purchases.
-Review the remaining proposed access conditions before publication.
+DARKO provides public NBA ratings, comparisons and career-history charts worldwide
+and free of charge. There are no payments or purchases. Questions can be sent
+to kostya@darko.app.
 
-### Using DARKO
+The integration reads published data. It cannot change ratings, refit or publish
+the model, post to social accounts, or provide WNBA histories. Charts support up
+to six NBA players. Assistant features and availability depend on your provider.
 
-DARKO provides public NBA ratings, comparisons and career-history charts. The
-assistant integration supports up to six players per chart and reads published
-data; it cannot change ratings, refit the model, publish model updates or post to
-your social accounts. Availability in an assistant depends on that provider's
-supported features.
+Ratings are estimates, not guarantees. Histories are retrospective pregame
+estimates rather than an archive of values originally published each day. Past
+values can change after model refits. Coverage begins in 1996–97, so earlier
+careers are partial. Smoothing describes the displayed curve; it does not
+predict a future career. Preserve the data-date and coverage context when
+interpreting a chart.
 
-### Reading ratings and histories
+You may freely reuse individual charts, including in commercial work, with
+attribution to DARKO. Credit DARKO; a source link and incorporated-game date are encouraged. This permission does not grant a separate license
+to bulk datasets, the model, or third-party marks and data.
 
-Ratings are estimates, not guarantees of player performance. Career histories are
-retrospective pregame estimates and are not an archive of values originally
-published on each day. Historical values can change after a model refit. Coverage
-starts in 1996–97; earlier careers are partial. Chart smoothing does not project
-a future career.
+Do not interfere with the service, bypass its access or rate limits, or send
+confidential information in chart titles or tool inputs. Reasonable limits may
+be applied to keep chart generation available. The service and its estimates
+are provided as available, and features or availability may change.
 
-### Charts, sharing and reuse
+## Verification and sources
 
-Users may download and reuse individual charts with attribution to DARKO. Keep
-the DARKO credit and data date intact. This permission covers individual charts;
-it does not grant a separate license to bulk datasets, the model, or third-party
-marks and data.
+Checked against the released route, chart cache/CDN headers, usage migration,
+widget, shared methodology and configured dashboards. Vercel Pro/no Plus,
+Web Analytics disabled/no team drains; Supabase actual Pro badge/no configured
+log-drain destinations. Usage counters were verified from real production calls.
 
-### Responsible access
-
-Proposed access condition: do not interfere with the service, bypass its access
-or rate limits, or send confidential information in chart titles or tool inputs.
-The service can impose reasonable limits to keep chart generation available.
-**Confirm this condition and the desired availability/change terms.**
-
-### Questions
-
-Public bug reports can use the existing DARKO GitHub issue channel. A private
-support contact, any required jurisdiction-specific terms and additional legal
-commitments remain **pending the publisher's decision**.
+- [Vercel runtime logs](https://vercel.com/docs/logs/runtime)
+- [Vercel Observability limits](https://vercel.com/docs/observability/observability-plus#limitations)
+- [Vercel firewall traffic](https://vercel.com/docs/vercel-firewall/firewall-observability)
+- [Vercel privacy and retention](https://vercel.com/legal/privacy-notice#how-we-retain-your-information)
+- [Supabase plan limits](https://supabase.com/pricing)
+- [OpenAI plugin privacy requirements](https://developers.openai.com/plugins/plugin-guidelines#privacy-policy)

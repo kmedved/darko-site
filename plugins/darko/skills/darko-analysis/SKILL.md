@@ -46,7 +46,9 @@ including colors and export settings; a player page opens as that player's chart
 
 For a draft class ("chart the top five picks of 2022"), call `get_draft_class`
 with the draft year, then `create_career_chart` with its returned `ids`, usually
-by games played. Players appear only after their first published game. For
+by games played. In the caption, explain that only players with a published NBA
+game appear and that `first_game` is the pregame estimate going into the debut,
+not a rating after the debut. For
 recent risers and fallers, call `get_rating_movers` with window `7`, `30` or
 `season`; always state its dates, because between seasons the windows describe
 the last games published, not the past week.
