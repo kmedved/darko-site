@@ -12,6 +12,14 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'assistant-sharing',
+		title: 'Career charts to share and reopen',
+		launched: '2026-10-09T02:36:26.432Z',
+		text: 'Shared chart and player links now show social previews. In your assistant, reopen a chart, compare a draft class or rating movers, and label raw or smoothed peaks. The connection guide includes ChatGPT, Claude, Codex and Cursor.',
+		cta: 'Use DARKO in your assistant',
+		href: '/assistant'
+	},
+	{
 		key: 'assistant-charts',
 		title: 'DARKO in your assistant',
 		launched: '2026-10-08T21:20:19.768Z',

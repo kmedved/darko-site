@@ -61,6 +61,7 @@ export function createDarkoServer({ sources, charts, chartSpecSchema, origin = '
     title: name.replaceAll('_', ' '), description, inputSchema,
     outputSchema: z.record(z.string(), z.unknown()), annotations, _meta: {
       ...meta,
+      ...(meta.ui?.resourceUri ? { 'openai/outputTemplate': meta.ui.resourceUri } : {}),
       ...(status ? { 'openai/toolInvocation/invoking': status[0], 'openai/toolInvocation/invoked': status[1] } : {}),
       ui: { visibility: ['model', 'app'], ...meta.ui }, 'openai/widgetAccessible': true
     }
