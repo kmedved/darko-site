@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-08",
+  "date": "2026-10-09",
   "players": [
-    {
-      "nba_id": 1630169,
-      "name": "Tyrese Haliburton",
-      "reason": "Returns from Achilles injury in Iowa State homecoming"
-    },
-    {
-      "nba_id": 203081,
-      "name": "Damian Lillard",
-      "reason": "Scores 15 in Portland return after Achilles recovery"
-    },
-    {
-      "nba_id": 1629630,
-      "name": "Ja Morant",
-      "reason": "Makes Blazers debut alongside Damian Lillard"
-    },
     {
       "nba_id": 2544,
       "name": "LeBron James",
-      "reason": "Denial of Embiid practice report draws continued coverage"
+      "reason": "Makes Sixers preseason debut against Nets"
     },
     {
-      "nba_id": 1631114,
-      "name": "Jalen Williams",
-      "reason": "Strong preseason return against Bucks"
+      "nba_id": 1630578,
+      "name": "Alperen Sengun",
+      "reason": "Triple-double powers Rockets win in Macao"
+    },
+    {
+      "nba_id": 1642843,
+      "name": "Cooper Flagg",
+      "reason": "Scores 19 in NBA China Games opener"
+    },
+    {
+      "nba_id": 201142,
+      "name": "Kevin Durant",
+      "reason": "Headlines Rockets appearance at NBA China Games"
+    },
+    {
+      "nba_id": 203076,
+      "name": "Anthony Davis",
+      "reason": "Scores 16 in Wizards preseason debut"
     }
   ]
 }
