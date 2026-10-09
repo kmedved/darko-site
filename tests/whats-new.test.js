@@ -98,6 +98,7 @@ test('items stay for 30 days from launch, newest first', () => {
     // A month on, the first night's launches have left and the later ones remain.
     assert.deepEqual(keys(currentNews(new Date('2026-10-27T12:00:00Z'))), [
         'daily',
+        'assistant-sharing',
         'assistant-charts',
         'about-page',
         'rail-podiums',
@@ -121,13 +122,13 @@ test('items stay for 30 days from launch, newest first', () => {
         'lab',
         'rewind'
     ]);
-    assert.deepEqual(keys(currentNews(new Date('2026-11-01T00:00:00Z'))), ['daily', 'assistant-charts']);
+    assert.deepEqual(keys(currentNews(new Date('2026-11-01T00:00:00Z'))), ['daily', 'assistant-sharing', 'assistant-charts']);
     assert.deepEqual(currentNews(new Date('2026-11-22T00:00:00Z')), []);
     // The menus count features, not the design note, to match the page's headline.
     assert.equal(newFeatureCount(now), 7);
     assert.equal(newFeatureCount(afternoon), 7);
     assert.equal(newFeatureCount(evening), 10);
-    assert.equal(newFeatureCount(new Date('2026-11-01T00:00:00Z')), 2);
+    assert.equal(newFeatureCount(new Date('2026-11-01T00:00:00Z')), 3);
 });
 
 function routeExists(href) {

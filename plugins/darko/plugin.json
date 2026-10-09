@@ -26,7 +26,8 @@
         "defaultPrompt": [
           "Chart Tatum and Paul George by age.",
           "Compare LeBron James and Stephen Curry over their first 200 games, and make a square image."
-        ]
+        ],
+        "supportURL": "https://www.darko.app/support"
       },
       "review": {
         "test_cases": {

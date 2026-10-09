@@ -70,6 +70,11 @@ test('stateless MCP lists nine read-only tools with status text and its image re
   }
   assert.equal(result.tools.find((tool) => tool.name === 'create_career_chart')._meta['openai/toolInvocation/invoking'], 'Drawing career chart…');
   assert.ok(result.tools.every((tool) => tool._meta.ui.visibility.includes('app')));
+  for (const name of ['create_career_chart', 'import_career_chart']) {
+    const meta = result.tools.find((tool) => tool.name === name)._meta;
+    assert.equal(meta['openai/outputTemplate'], 'ui://darko/career-chart/v4.html');
+    assert.equal(meta['openai/outputTemplate'], meta.ui.resourceUri);
+  }
   const resource = await rpc('resources/read', { uri: 'ui://darko/career-chart/v4.html' });
   assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.equal(resource.contents[0]._meta.ui.domain, 'https://www.darko.app');
