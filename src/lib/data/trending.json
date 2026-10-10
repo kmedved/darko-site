@@ -1,30 +1,25 @@
 {
-  "date": "2026-10-09",
+  "date": "2026-10-10",
   "players": [
     {
       "nba_id": 2544,
       "name": "LeBron James",
-      "reason": "Makes Sixers preseason debut against Nets"
+      "reason": "Sixers preseason debut and workload draw attention"
     },
     {
       "nba_id": 1630578,
       "name": "Alperen Sengun",
-      "reason": "Triple-double powers Rockets win in Macao"
+      "reason": "Macao triple-double leads Rockets past Mavericks"
     },
     {
-      "nba_id": 1642843,
-      "name": "Cooper Flagg",
-      "reason": "Scores 19 in NBA China Games opener"
+      "nba_id": 1641824,
+      "name": "Matas Buzelis",
+      "reason": "Leaves preseason game with right ankle injury"
     },
     {
-      "nba_id": 201142,
-      "name": "Kevin Durant",
-      "reason": "Headlines Rockets appearance at NBA China Games"
-    },
-    {
-      "nba_id": 203076,
-      "name": "Anthony Davis",
-      "reason": "Scores 16 in Wizards preseason debut"
+      "nba_id": 1630191,
+      "name": "Isaiah Stewart",
+      "reason": "Ankle sprain; reevaluation in two weeks"
     }
   ]
 }
