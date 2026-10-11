@@ -1,25 +1,30 @@
 {
-  "date": "2026-10-10",
+  "date": "2026-10-11",
   "players": [
     {
-      "nba_id": 2544,
-      "name": "LeBron James",
-      "reason": "Sixers preseason debut and workload draw attention"
+      "nba_id": 202681,
+      "name": "Kyrie Irving",
+      "reason": "Scores 17 in return from ACL injury"
     },
     {
-      "nba_id": 1630578,
-      "name": "Alperen Sengun",
-      "reason": "Macao triple-double leads Rockets past Mavericks"
+      "nba_id": 1641764,
+      "name": "Brandin Podziemski",
+      "reason": "Signs five-year, $110 million Warriors extension"
     },
     {
-      "nba_id": 1641824,
-      "name": "Matas Buzelis",
-      "reason": "Leaves preseason game with right ankle injury"
+      "nba_id": 1642875,
+      "name": "Maxime Raynaud",
+      "reason": "Leaves preseason game with right knee injury"
     },
     {
-      "nba_id": 1630191,
-      "name": "Isaiah Stewart",
-      "reason": "Ankle sprain; reevaluation in two weeks"
+      "nba_id": 202331,
+      "name": "Paul George",
+      "reason": "Five steals in Celtics preseason debut"
+    },
+    {
+      "nba_id": 1627732,
+      "name": "Ben Simmons",
+      "reason": "Returns to NBA action in Kings debut"
     }
   ]
 }
