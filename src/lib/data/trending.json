@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-12",
+  "date": "2026-10-13",
   "players": [
     {
-      "nba_id": 202681,
-      "name": "Kyrie Irving",
-      "reason": "Comeback from ACL injury draws continued coverage"
+      "nba_id": 1630162,
+      "name": "Anthony Edwards",
+      "reason": "26 points and five threes in win over Knicks"
     },
     {
-      "nba_id": 203999,
-      "name": "Nikola Jokic",
-      "reason": "22-point triple-double in preseason win"
+      "nba_id": 204001,
+      "name": "Kristaps Porzingis",
+      "reason": "Expected back at Warriors facility amid health absence"
     },
     {
-      "nba_id": 1642875,
-      "name": "Maxime Raynaud",
-      "reason": "Knee injury; reevaluation in about two weeks"
+      "nba_id": 1630163,
+      "name": "LaMelo Ball",
+      "reason": "Wolves chemistry and Finch praise draw attention"
     },
     {
-      "nba_id": 201935,
-      "name": "James Harden",
-      "reason": "Scores 24 in Cavaliers preseason debut"
+      "nba_id": 1627732,
+      "name": "Ben Simmons",
+      "reason": "Reportedly expected to start Kings season opener"
     },
     {
-      "nba_id": 1641706,
-      "name": "Brandon Miller",
-      "reason": "Extension buzz and 18-point preseason debut"
+      "nba_id": 202695,
+      "name": "Kawhi Leonard",
+      "reason": "Set for Raptors preseason debut against Knicks"
     }
   ]
 }
