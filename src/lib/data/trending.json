@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-14",
+  "date": "2026-10-15",
   "players": [
     {
-      "nba_id": 202695,
-      "name": "Kawhi Leonard",
-      "reason": "Scores 21 in Raptors return against Knicks"
-    },
-    {
-      "nba_id": 1630202,
-      "name": "Payton Pritchard",
-      "reason": "Agrees to two-year, $44.2 million Celtics extension"
+      "nba_id": 1641705,
+      "name": "Victor Wembanyama",
+      "reason": "Leads NBA GM survey MVP and franchise-player picks"
     },
     {
       "nba_id": 204001,
       "name": "Kristaps Porzingis",
-      "reason": "Return timetable remains unclear amid health absence"
+      "reason": "Shares health update; remains out indefinitely"
     },
     {
-      "nba_id": 1631117,
-      "name": "Walker Kessler",
-      "reason": "Makes Lakers preseason debut against Warriors"
+      "nba_id": 1631105,
+      "name": "Jalen Duren",
+      "reason": "Scores 24 in 15-minute preseason debut"
     },
     {
-      "nba_id": 203081,
-      "name": "Damian Lillard",
-      "reason": "Portland comeback after Achilles injury draws coverage"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "20 points and 15 rebounds in Heat win"
+    },
+    {
+      "nba_id": 1631124,
+      "name": "Julian Strawther",
+      "reason": "Left knee injury prompts scheduled MRI"
     }
   ]
 }
