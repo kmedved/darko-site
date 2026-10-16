@@ -76,7 +76,7 @@ test('the jump menu lists only the sections a page shows, in page order', () => 
         profileSections({ seismograph: true, echoes: true, career: true, seasons: true, percentiles: true }).map(
             (section) => section.id
         ),
-        ['seismograph', 'echoes', 'career', 'seasons', 'percentiles']
+        ['echoes', 'career', 'seasons', 'percentiles', 'seismograph']
     );
     assert.deepEqual(profileSections({}), []);
 });

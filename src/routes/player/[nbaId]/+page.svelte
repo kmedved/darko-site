@@ -614,145 +614,6 @@
 					</nav>
 				{/if}
 
-				{#if seismograph}
-					<section
-						class="chart-panel seismograph-panel"
-						id="seismograph"
-						data-shiny-surface="plot"
-						aria-labelledby="seismograph-title"
-					>
-						<header class="seismograph-header">
-							<div>
-								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Game by game</p>
-								<h2 id="seismograph-title">Seismograph</h2>
-								<p class="seismograph-lede">
-									DARKO updates every rating after every game. The lines show the rating going
-									into each game; the bars show how much each game moved it, split into offense
-									and defense.
-								</p>
-							</div>
-							<label class="seismograph-season">
-								<span class="sidebar-label">Season</span>
-								<select
-									class="sidebar-select"
-									value={seismographSeason}
-									onchange={(event) => pickSeismographSeason(event.currentTarget.value)}
-								>
-									{#each seismographSeasons as season (season)}
-										<option value={season}>{seasonLabel(season)}</option>
-									{/each}
-								</select>
-							</label>
-						</header>
-
-						<div class="seismograph-body">
-							<div class="seismograph-chart">
-								<SeismographChart
-									{seismograph}
-									playerName={playerInfo.player_name}
-									markerDate={asOfDate}
-								/>
-							</div>
-							{#if seismographSummary}
-								<dl class="seismograph-callouts">
-									<div class="seismograph-callout">
-										<dt>Season change</dt>
-										<dd class="seismograph-callout-value">
-											{formatSigned(seismographSummary.change)}
-										</dd>
-										<dd class="seismograph-callout-note">
-											{formatSigned(seismographSummary.start)} before the first game,
-											{formatSigned(seismographSummary.end)}
-											{SEASON_END_LABELS[seismographSummary.endStatus] ?? 'at the end'}
-										</dd>
-									</div>
-									{#if seismographSummary.best?.update.dpm > 0}
-										<div class="seismograph-callout">
-											<dt>Biggest boost</dt>
-											<dd class="seismograph-callout-value">
-												{formatSigned(seismographSummary.best.update.dpm)}
-											</dd>
-											<dd class="seismograph-callout-note">{gameLabel(seismographSummary.best)}</dd>
-										</div>
-									{/if}
-									{#if seismographSummary.worst?.update.dpm < 0}
-										<div class="seismograph-callout">
-											<dt>Biggest drop</dt>
-											<dd class="seismograph-callout-value">
-												{formatSigned(seismographSummary.worst.update.dpm)}
-											</dd>
-											<dd class="seismograph-callout-note">{gameLabel(seismographSummary.worst)}</dd>
-										</div>
-									{/if}
-									{#if seismographSummary.typicalUpdate !== null}
-										<div class="seismograph-callout">
-											<dt>Typical change per game</dt>
-											<dd class="seismograph-callout-value">
-												{(seismographSummary.recentUpdate ?? seismographSummary.typicalUpdate).toFixed(2)}
-											</dd>
-											<dd class="seismograph-callout-note">
-												{#if seismographSummary.window}
-													Last {seismographSummary.window} games, vs
-													{seismographSummary.earlyUpdate.toFixed(2)} in the first
-													{seismographSummary.window}.
-												{:else}
-													Average size of a game's change this season.
-												{/if}
-												Smaller changes mean each game moves DARKO's view less.
-											</dd>
-										</div>
-									{/if}
-								</dl>
-							{/if}
-						</div>
-
-						<button
-							type="button"
-							class="btn btn-sm seismograph-log-toggle"
-							aria-expanded={showGameLog}
-							aria-controls="seismograph-game-log"
-							onclick={() => (showGameLog = !showGameLog)}
-						>
-							{showGameLog ? 'Hide game log' : 'Show game log'}
-						</button>
-						<div id="seismograph-game-log" class="seismograph-log" hidden={!showGameLog}>
-							{#if showGameLog}
-								<table class="seismograph-log-table">
-									<caption class="sr-only">
-										{playerInfo.player_name}, {seismograph.label}, game by game
-									</caption>
-									<thead>
-										<tr>
-											<th scope="col">Date</th>
-											<th scope="col" class="log-team">Team</th>
-											<th scope="col">Opp</th>
-											<th scope="col">Min</th>
-											<th scope="col">DPM going in</th>
-											<th scope="col">Change</th>
-											<th scope="col"><OffenseDefenseGlyph side="offense" /> Offense</th>
-											<th scope="col"><OffenseDefenseGlyph side="defense" /> Defense</th>
-										</tr>
-									</thead>
-									<tbody>
-										{#each gameLog as game (game.date)}
-											<tr>
-												<td>{formatGameDate(game.date)}</td>
-												<td class="log-team">{teamAbbr(game.team)}</td>
-												<td>{game.opponent ?? '—'}</td>
-												<td>{Math.round(game.minutes)}</td>
-												<td>{formatSigned(game.dpm)}</td>
-												<td>{game.update ? formatSigned(game.update.dpm) : '—'}</td>
-												<td>{game.update ? formatSigned(game.update.o) : '—'}</td>
-												<td>{game.update ? formatSigned(game.update.d) : '—'}</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							{/if}
-						</div>
-					</section>
-				{/if}
-
 				<!-- Comps come from today's ratings, so the Time Machine hides them. -->
 				{#if comps.length > 0 && !asOfDate}
 					<section
@@ -937,6 +798,145 @@
 						<ProjectedBoxScore box={boxScore} playerName={playerInfo.player_name} />
 					</section>
 				{/if}
+				{#if seismograph}
+					<section
+						class="chart-panel seismograph-panel"
+						id="seismograph"
+						data-shiny-surface="plot"
+						aria-labelledby="seismograph-title"
+					>
+						<header class="seismograph-header">
+							<div>
+								<p class="seismograph-kicker" data-shiny-role="editorial-kicker">Game by game</p>
+								<h2 id="seismograph-title">Seismograph</h2>
+								<p class="seismograph-lede">
+									DARKO updates every rating after every game. The lines show the rating going
+									into each game; the bars show how much each game moved it, split into offense
+									and defense.
+								</p>
+							</div>
+							<label class="seismograph-season">
+								<span class="sidebar-label">Season</span>
+								<select
+									class="sidebar-select"
+									value={seismographSeason}
+									onchange={(event) => pickSeismographSeason(event.currentTarget.value)}
+								>
+									{#each seismographSeasons as season (season)}
+										<option value={season}>{seasonLabel(season)}</option>
+									{/each}
+								</select>
+							</label>
+						</header>
+
+						<div class="seismograph-body">
+							<div class="seismograph-chart">
+								<SeismographChart
+									{seismograph}
+									playerName={playerInfo.player_name}
+									markerDate={asOfDate}
+								/>
+							</div>
+							{#if seismographSummary}
+								<dl class="seismograph-callouts">
+									<div class="seismograph-callout">
+										<dt>Season change</dt>
+										<dd class="seismograph-callout-value">
+											{formatSigned(seismographSummary.change)}
+										</dd>
+										<dd class="seismograph-callout-note">
+											{formatSigned(seismographSummary.start)} before the first game,
+											{formatSigned(seismographSummary.end)}
+											{SEASON_END_LABELS[seismographSummary.endStatus] ?? 'at the end'}
+										</dd>
+									</div>
+									{#if seismographSummary.best?.update.dpm > 0}
+										<div class="seismograph-callout">
+											<dt>Biggest boost</dt>
+											<dd class="seismograph-callout-value">
+												{formatSigned(seismographSummary.best.update.dpm)}
+											</dd>
+											<dd class="seismograph-callout-note">{gameLabel(seismographSummary.best)}</dd>
+										</div>
+									{/if}
+									{#if seismographSummary.worst?.update.dpm < 0}
+										<div class="seismograph-callout">
+											<dt>Biggest drop</dt>
+											<dd class="seismograph-callout-value">
+												{formatSigned(seismographSummary.worst.update.dpm)}
+											</dd>
+											<dd class="seismograph-callout-note">{gameLabel(seismographSummary.worst)}</dd>
+										</div>
+									{/if}
+									{#if seismographSummary.typicalUpdate !== null}
+										<div class="seismograph-callout">
+											<dt>Typical change per game</dt>
+											<dd class="seismograph-callout-value">
+												{(seismographSummary.recentUpdate ?? seismographSummary.typicalUpdate).toFixed(2)}
+											</dd>
+											<dd class="seismograph-callout-note">
+												{#if seismographSummary.window}
+													Last {seismographSummary.window} games, vs
+													{seismographSummary.earlyUpdate.toFixed(2)} in the first
+													{seismographSummary.window}.
+												{:else}
+													Average size of a game's change this season.
+												{/if}
+												Smaller changes mean each game moves DARKO's view less.
+											</dd>
+										</div>
+									{/if}
+								</dl>
+							{/if}
+						</div>
+
+						<button
+							type="button"
+							class="btn btn-sm seismograph-log-toggle"
+							aria-expanded={showGameLog}
+							aria-controls="seismograph-game-log"
+							onclick={() => (showGameLog = !showGameLog)}
+						>
+							{showGameLog ? 'Hide game log' : 'Show game log'}
+						</button>
+						<div id="seismograph-game-log" class="seismograph-log" hidden={!showGameLog}>
+							{#if showGameLog}
+								<table class="seismograph-log-table">
+									<caption class="sr-only">
+										{playerInfo.player_name}, {seismograph.label}, game by game
+									</caption>
+									<thead>
+										<tr>
+											<th scope="col">Date</th>
+											<th scope="col" class="log-team">Team</th>
+											<th scope="col">Opp</th>
+											<th scope="col">Min</th>
+											<th scope="col">DPM going in</th>
+											<th scope="col">Change</th>
+											<th scope="col"><OffenseDefenseGlyph side="offense" /> Offense</th>
+											<th scope="col"><OffenseDefenseGlyph side="defense" /> Defense</th>
+										</tr>
+									</thead>
+									<tbody>
+										{#each gameLog as game (game.date)}
+											<tr>
+												<td>{formatGameDate(game.date)}</td>
+												<td class="log-team">{teamAbbr(game.team)}</td>
+												<td>{game.opponent ?? '—'}</td>
+												<td>{Math.round(game.minutes)}</td>
+												<td>{formatSigned(game.dpm)}</td>
+												<td>{game.update ? formatSigned(game.update.dpm) : '—'}</td>
+												<td>{game.update ? formatSigned(game.update.o) : '—'}</td>
+												<td>{game.update ? formatSigned(game.update.d) : '—'}</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							{/if}
+						</div>
+					</section>
+				{/if}
+
 			{/if}
 		</div>
 	</div>

@@ -16,9 +16,10 @@ test('the player page leads with the player, then the sections, each chart with 
 	const [page, shinyCss] = await Promise.all([read('src/routes/player/[nbaId]/+page.svelte'), read('src/shiny-view.css')]);
 	const markup = page.slice(page.indexOf('</script>'), page.indexOf('<style>'));
 
-	// Header, then the jump menu, then the Seismograph: nothing else in between on a phone.
+	// Header, then the jump menu; the Seismograph follows the other player sections.
 	assert.ok(at(markup, /<header class="profile-header">/) < at(markup, /<nav\s+class="profile-jump"/));
-	assert.ok(at(markup, /<nav\s+class="profile-jump"/) < at(markup, /id="seismograph"/));
+	assert.ok(at(markup, /<nav\s+class="profile-jump"/) < at(markup, /id="comps"/));
+	assert.ok(at(markup, /id="box-score"/) < at(markup, /id="seismograph"/));
 	assert.match(markup, /<span class="profile-score-value">\{formatSigned\(playerRating\.dpm, 1\)\}<\/span>/);
 
 	// Each chart's controls sit over it; the Shiny sidebar renders the same controls itself.

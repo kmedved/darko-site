@@ -119,14 +119,14 @@ export function compsSummary(seasons, comps) {
 /** The jump menu: the page's sections in order, each only when the page shows it. */
 export function profileSections(shown) {
 	return [
-		['seismograph', 'Seismograph'],
 		['comps', 'Comps & futures'],
 		['echoes', 'Echoes today'],
 		['career', 'Career'],
 		['contract', 'Contract & longevity'],
 		['seasons', 'Season by season'],
 		['percentiles', 'Percentiles'],
-		['box-score', 'Box score']
+		['box-score', 'Box score'],
+		['seismograph', 'Seismograph']
 	]
 		.filter(([id]) => shown[id])
 		.map(([id, label]) => ({ id, label }));
