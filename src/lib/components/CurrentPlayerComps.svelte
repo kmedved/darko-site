@@ -7,31 +7,35 @@
 	let failedPhotos = $state(new Set());
 </script>
 
+<div class="comp-columns" aria-hidden="true">
+	<span>Player</span>
+	<div class="comp-stat-columns"><span>DPM</span><span>Off / Def</span><span>PTS / REB / AST · per 100</span></div>
+	<span>Match / 100</span>
+</div>
 <ol class="current-comps">
 	{#each comps as comp, index (comp.id)}
 		<li class:reference={comp.self}>
 			<div class="comp-identity">
-				<span class="comp-rank" aria-label="Rank {index + 1}">{String(index + 1).padStart(2, '0')}</span>
+				<span class="comp-rank" aria-label="Rank {index + 1}">{index + 1}</span>
 				<div class="comp-photo" aria-hidden="true">
 					{#if !failedPhotos.has(comp.id)}
 						<img src="https://cdn.nba.com/headshots/nba/latest/260x190/{comp.id}.png" alt="" loading="lazy" onerror={() => (failedPhotos = new Set([...failedPhotos, comp.id]))} />
 					{/if}
 				</div>
-				<div class="comp-name">
-					<a href="/player/{comp.id}">{comp.name}</a>
-					<span>{teamAbbr(comp.team)} · Age {comp.age.toFixed(1)}{#if comp.self} <strong>Reference player</strong>{/if}</span>
-				</div>
-				<div class="comp-match"><strong>{comp.similarity.toFixed(1)}</strong><span>match / 100</span></div>
+				<a class="comp-name" href="/player/{comp.id}">{comp.name}</a>
+				<span class="comp-team">{teamAbbr(comp.team)}</span>
+				{#if comp.self}
+					<span class="comp-self" title="Reference player">Self</span>
+				{:else}
+					<a class="compare-link" href="/compare?ids={referenceId},{comp.id}" aria-label="Compare with {comp.name}" title="Compare with {comp.name}">↗</a>
+				{/if}
 			</div>
-			<div class="match-track" aria-hidden="true"><span style:width="{comp.similarity}%"></span></div>
-			<div class="comp-ratings">
-				<span><strong>{formatSigned(comp.dpm, 1)}</strong> DPM</span>
+			<div class="comp-stats">
+				<span class="comp-dpm"><strong>{formatSigned(comp.dpm, 1)}</strong><span class="mobile-label"> DPM</span><span class="sr-only"> DPM</span></span>
 				<OffenseDefenseSplit offense={comp.offense} defense={comp.defense} />
+				<span class="comp-box"><span class="sr-only">Per 100 possessions: </span>{comp.points.toFixed(1)}<span class="sr-only"> points</span><span aria-hidden="true"> / </span>{comp.rebounds.toFixed(1)}<span class="sr-only"> rebounds</span><span aria-hidden="true"> / </span>{comp.assists.toFixed(1)}<span class="sr-only"> assists</span><span class="mobile-label"> P/R/A</span></span>
 			</div>
-			<div class="comp-bottom">
-				<p><strong>{comp.points.toFixed(1)}</strong> PTS <strong>{comp.rebounds.toFixed(1)}</strong> REB <strong>{comp.assists.toFixed(1)}</strong> AST <span>/ 100 poss.</span></p>
-				{#if !comp.self}<a class="compare-link" href="/compare?ids={referenceId},{comp.id}" aria-label="Compare with {comp.name}">Compare <span aria-hidden="true">↗</span></a>{/if}
-			</div>
+			<strong class="comp-match" aria-label="Match score {comp.similarity.toFixed(1)} out of 100">{comp.similarity.toFixed(1)}</strong>
 		</li>
 	{/each}
 </ol>
@@ -42,35 +46,38 @@
 </details>
 
 <style>
-	.current-comps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin: 16px 0 0; padding: 0; list-style: none; }
-	.current-comps li { min-width: 0; padding: 16px 0; border-top: 1px solid var(--border-subtle); }
-	.comp-identity { display: flex; align-items: center; gap: 10px; }
-	.comp-rank { font: 12px var(--font-mono); color: var(--text-muted); }
-	.comp-photo { width: 58px; height: 44px; flex: none; overflow: hidden; background: var(--bg-elevated); border-radius: var(--radius-sm); }
+	.comp-columns, .current-comps li { display: grid; grid-template-columns: minmax(240px, 1fr) 350px 72px; align-items: center; column-gap: 20px; }
+	.comp-columns { margin-top: 14px; padding-bottom: 5px; color: var(--text-muted); font-size: 11px; }
+	.comp-columns > span:last-child { text-align: right; }
+	.comp-stat-columns, .comp-stats { display: grid; grid-template-columns: 60px 120px minmax(0, 1fr); align-items: baseline; gap: 10px; }
+	.current-comps { margin: 0; padding: 0; list-style: none; }
+	.current-comps li { min-width: 0; min-height: 36px; padding: 4px 0; border-top: 1px solid var(--border-subtle); }
+	.comp-identity { display: flex; align-items: center; gap: 8px; min-width: 0; }
+	.comp-rank { width: 18px; flex: none; font: 11px var(--font-mono); color: var(--text-muted); text-align: right; }
+	.comp-photo { width: 28px; height: 24px; flex: none; overflow: hidden; border-radius: 2px; background: var(--bg-elevated); }
 	.comp-photo img { width: 100%; height: 100%; object-fit: cover; }
-	.comp-name { min-width: 0; flex: 1; }
-	.comp-name a { display: block; width: fit-content; max-width: 100%; color: var(--text); font-weight: 650; font-size: 14px; text-decoration: none; }
-	.comp-name a:hover, .comp-name a:focus-visible, .compare-link:hover { text-decoration: underline; }
-	.comp-name > span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-	.comp-name strong { display: inline-block; color: var(--accent); font-weight: 500; margin-left: 4px; }
-	.comp-match { text-align: right; flex: none; }
-	.comp-match strong { display: block; font: var(--figure-weight-strong) 21px var(--font-mono); color: var(--text); letter-spacing: -1px; }
-	.reference .comp-match strong { color: var(--accent); }
-	.comp-match span { font-size: 10px; color: var(--text-muted); }
-	.match-track { height: 2px; margin: 12px 0 10px; background: var(--border-subtle); }
-	.match-track span { display: block; height: 100%; background: var(--graphic-muted); }
-	.reference .match-track span { background: var(--accent); }
-	.comp-ratings { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--text-muted); }
-	.comp-ratings strong { font: var(--figure-weight-strong) 14px var(--font-mono); color: var(--text); }
-	.comp-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 8px; }
-	.comp-bottom p { margin: 0; color: var(--text-muted); font-size: 10px; }
-	.comp-bottom p strong { font: 11px var(--font-mono); color: var(--text-secondary); margin-left: 7px; }
-	.comp-bottom p strong:first-child { margin-left: 0; }
-	.comp-bottom p > span { white-space: nowrap; }
-	.compare-link { color: var(--text-secondary); font-size: 11px; text-decoration: none; white-space: nowrap; }
-	.comp-method { margin-top: 12px; color: var(--text-muted); font-size: 12px; }
+	.comp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 13px; font-weight: 600; text-decoration: none; }
+	.comp-name:hover, .comp-name:focus-visible { text-decoration: underline; }
+	.comp-team { flex: none; font-size: 11px; color: var(--text-muted); }
+	.comp-self { font-size: 11px; color: var(--accent); }
+	.compare-link { flex: none; padding: 2px 4px; font-size: 15px; line-height: 1; color: var(--text-muted); text-decoration: none; }
+	.compare-link:hover, .compare-link:focus-visible { color: var(--accent); }
+	.comp-stats { color: var(--text-secondary); font-size: 12px; }
+	.comp-dpm strong { color: var(--text); font: var(--figure-weight-strong) 12px var(--font-mono); }
+	.comp-box { font: 11px var(--font-mono); white-space: nowrap; }
+	.comp-match { text-align: right; font: var(--figure-weight-strong) 14px var(--font-mono); color: var(--text); }
+	.reference .comp-match { color: var(--accent); }
+	.mobile-label { display: none; }
+	.comp-method { margin-top: 10px; color: var(--text-muted); font-size: 11px; }
 	.comp-method summary { cursor: pointer; width: fit-content; }
-	.comp-method p { max-width: 90ch; margin: 8px 0 0; line-height: 1.6; }
-	@media (max-width: 740px) { .current-comps { grid-template-columns: 1fr; } }
-	@media (max-width: 380px) { .comp-photo { width: 44px; height: 38px; } .comp-identity { gap: 7px; } .comp-bottom { flex-wrap: wrap; } }
+	.comp-method p { max-width: 90ch; margin: 8px 0 0; font-size: 12px; line-height: 1.6; }
+	@media (max-width: 850px) {
+		.comp-columns { grid-template-columns: minmax(0, 1fr) 62px; }
+		.comp-stat-columns { display: none; }
+		.current-comps li { grid-template-columns: minmax(0, 1fr) 62px; row-gap: 3px; padding: 5px 0; }
+		.comp-identity { grid-column: 1; grid-row: 1; gap: 6px; }
+		.comp-match { grid-column: 2; grid-row: 1; }
+		.comp-stats { grid-column: 1 / -1; grid-row: 2; grid-template-columns: 68px 114px minmax(0, 1fr); gap: 6px; }
+		.mobile-label { display: inline; font: 11px var(--font-sans); color: var(--text-muted); }
+	}
 </style>
