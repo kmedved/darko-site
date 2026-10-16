@@ -73,10 +73,10 @@ test('the line over Comps & futures: the latest season against its age, and the 
 
 test('the jump menu lists only the sections a page shows, in page order', () => {
     assert.deepEqual(
-        profileSections({ seismograph: true, echoes: true, career: true, seasons: true, percentiles: true }).map(
+        profileSections({ 'current-comps': true, career: true, seasons: true, percentiles: true }).map(
             (section) => section.id
         ),
-        ['echoes', 'career', 'seasons', 'percentiles', 'seismograph']
+        ['current-comps', 'career', 'seasons', 'percentiles']
     );
     assert.deepEqual(profileSections({}), []);
 });
@@ -88,7 +88,7 @@ test('the player page wires the jump menu, rank, Lab link, contract panel and co
     ]);
     assert.match(page, /\{#each sections as section \(section\.id\)\}\s*<a\s+href="#\{section\.id\}"/);
     // Every section the menu can name has that id on the page.
-    for (const id of ['seismograph', 'comps', 'echoes', 'career', 'contract', 'seasons', 'percentiles', 'box-score']) {
+    for (const id of ['comps', 'current-comps', 'career', 'contract', 'seasons', 'percentiles', 'box-score']) {
         assert.match(page, new RegExp(`id="${id}"`), id);
     }
     // Today's figures: current players only, and not in the Time Machine.
@@ -97,5 +97,5 @@ test('the player page wires the jump menu, rank, Lab link, contract panel and co
     assert.match(page, /data\.dpmRank && !asOfDate \? `#\$\{data\.dpmRank\.rank\} of \$\{data\.dpmRank\.of\}`/);
     assert.match(page, /<a href="\/lab\?a=\{labTeam\}" class="btn compare-link">Open \{labTeam\} in the Roster Lab<\/a>/);
     assert.match(page, /const compsLine = \$derived\(asOfDate \? null : compsSummary\(seasonsTable, comps\)\);/);
-    assert.match(server, /dpmRank: await rank/);
+    assert.match(server, /dpmRank: dpmRank\(nbaId, await active\)/);
 });

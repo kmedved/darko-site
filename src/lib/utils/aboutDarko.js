@@ -150,7 +150,7 @@ export const BLEND_EXAMPLES = Object.freeze([
 /** The site's tools, for the About page's tour. */
 export const SITE_TOOLS = Object.freeze([
 	{ href: '/', label: 'Active Leaderboard', text: "Every player's DPM today, with filters, column sets, views you can share and CSV downloads." },
-	{ href: '/player/203999', label: 'Player pages', text: 'Every game in the Seismograph, every season since 1996-97, comps and a projected box score.' },
+	{ href: '/player/203999', label: 'Player pages', text: 'Career ratings, every season since 1996-97, historical and current-player comps, and a projected box score.' },
 	{ href: '/daily', label: 'The Daily', text: 'What moved in the ratings, game by game, while the season is on.', daily: true },
 	{ href: '/compare', label: 'Compare', text: 'Up to four players side by side, head to head.' },
 	{ href: '/trajectories', label: 'Career Trajectories', text: 'Careers against each other by game, age or season.' },

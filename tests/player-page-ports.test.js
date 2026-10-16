@@ -71,7 +71,7 @@ test('player pages and the Teams page wire the ports in', async () => {
     const read = (file) => fs.readFile(path.resolve(process.cwd(), file), 'utf8');
     const page = await read('src/routes/player/[nbaId]/+page.svelte');
     // Echoes and the box score come from today's data, so the Time Machine hides them.
-    assert.match(page, /\{#if echoes\.length > 0 && !asOfDate\}/);
+    assert.match(page, /\{#if currentComps\.length > 0 && !asOfDate\}/);
     assert.match(page, /<SeasonBySeason rows=\{seasonsTable\}/);
     assert.match(page, /seasonRows\(data\.seasons, \{ asOf: asOfDate, inProgress: inProgressSeason \}\)/);
     // Only current players get a projected box score.

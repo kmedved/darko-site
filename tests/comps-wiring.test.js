@@ -7,12 +7,12 @@ const read = (file) => fs.readFile(path.resolve(process.cwd(), file), 'utf8');
 
 test('player pages load comps beside the history, and never fail over them', async () => {
     const load = await read('src/routes/player/[nbaId]/+page.server.js');
-    // Comps, echoes and seasons are side panels: a failure leaves them empty, not the page.
+    // Comps, current comps and seasons are side panels: a failure leaves them empty, not the page.
     assert.match(load, /const sidePanel = \(label, promise\) =>\s*promise\.catch\(/);
     assert.match(load, /const comps = sidePanel\('comps', getPlayerComps\(nbaId\)\);/);
     assert.match(load, /sidePanel\('seasons', getPlayerSeasons\(nbaId\)/);
-    assert.match(load, /sidePanel\(\s*'echoes',/);
-    assert.match(load, /comps: await comps,\s*seasons: await seasons,\s*echoes: await echoes/);
+    assert.match(load, /sidePanel\('active players', getActivePlayers\(\)/);
+    assert.match(load, /comps: await comps,\s*seasons: await seasons,\s*currentComps: currentPlayerComps\(page.playerInfo, await active\)/);
 
     const server = await read('src/lib/server/comps.js');
     assert.match(server, /from\('player_comps'\)/);

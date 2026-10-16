@@ -171,8 +171,7 @@ test('every theme and the Shiny view define the offense and defense colors', asy
     const shinyRoot = shinyCss.slice(shinyCss.indexOf(":root[data-view='shiny'] {"));
     assert.match(shinyRoot.slice(0, shinyRoot.indexOf('}')), /--offense:\s*#ed7d3a;[\s\S]*--defense:\s*#385bbb;/);
     assert.match(shinyDesign, /seismograph: Object\.freeze\(/);
-    assert.match(profile, /<SeismographChart\s+\{seismograph\}/);
-    assert.match(profile, /class="seismograph-kicker" data-shiny-role="editorial-kicker"/);
+    assert.match(profile, /class="profile-section-kicker" data-shiny-role="editorial-kicker"/);
 });
 
 test('games are numbered as played: not the days sat out, a forecast or the offseason', () => {

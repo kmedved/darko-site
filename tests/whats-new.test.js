@@ -27,19 +27,18 @@ test('items stay for 30 days from launch, newest first', () => {
         'ask',
         'lab',
         'rewind',
-        'seismograph',
         'fantasy',
         'offense-defense'
     ]);
 
-    const seismograph = WHATS_NEW.find((item) => item.key === 'seismograph');
-    const launched = Date.parse(seismograph.launched);
-    assert.equal(newUntil(seismograph).getTime(), launched + 30 * DAY);
+    const fantasy = WHATS_NEW.find((item) => item.key === 'fantasy');
+    const launched = Date.parse(fantasy.launched);
+    assert.equal(newUntil(fantasy).getTime(), launched + 30 * DAY);
     // On the site for just under 30 days: still new. At 30 days: gone.
-    assert.ok(keys(currentNews(new Date(launched + 30 * DAY - 1))).includes('seismograph'));
-    assert.ok(!keys(currentNews(new Date(launched + 30 * DAY))).includes('seismograph'));
+    assert.ok(keys(currentNews(new Date(launched + 30 * DAY - 1))).includes('fantasy'));
+    assert.ok(!keys(currentNews(new Date(launched + 30 * DAY))).includes('fantasy'));
     // Before launch, nothing about it shows.
-    assert.ok(!keys(currentNews(new Date(launched - 1))).includes('seismograph'));
+    assert.ok(!keys(currentNews(new Date(launched - 1))).includes('fantasy'));
 
     // Comps & futures went live that morning and leads until the evening's launches.
     const afternoon = new Date('2026-09-28T14:00:00Z');
@@ -52,17 +51,17 @@ test('items stay for 30 days from launch, newest first', () => {
     // The leaderboard's tools and the fuller player pages followed that night.
     const night = new Date('2026-09-28T20:00:00Z');
     assert.deepEqual(keys(currentNews(night)).slice(0, 3), ['leaderboard-tools', 'player-pages', 'teams']);
-    assert.equal(newFeatureCount(night), 12);
+    assert.equal(newFeatureCount(night), 11);
 
     // Late that night: the rearranged pages, the moving dots and a design note.
     const late = new Date('2026-09-28T23:30:00Z');
     assert.deepEqual(keys(currentNews(late)).slice(0, 4), ['page-headers', 'distribution-motion', 'easier-reading', 'leaderboard-tools']);
-    assert.equal(newFeatureCount(late), 14);
+    assert.equal(newFeatureCount(late), 13);
 
     // Just after: Career Trajectories on the players in the news.
     const nextMorning = new Date('2026-09-29T02:30:00Z');
     assert.deepEqual(keys(currentNews(nextMorning)).slice(0, 2), ['trajectories-news', 'page-headers']);
-    assert.equal(newFeatureCount(nextMorning), 15);
+    assert.equal(newFeatureCount(nextMorning), 14);
 
     // Then the connected research tools, and a design note on dated ratings.
     const researchTools = new Date('2026-09-29T03:00:00Z');
@@ -73,22 +72,22 @@ test('items stay for 30 days from launch, newest first', () => {
         'ratings-dates',
         'trajectories-news'
     ]);
-    assert.equal(newFeatureCount(researchTools), 18);
+    assert.equal(newFeatureCount(researchTools), 17);
 
     // Then a design note on the leaderboard's look, which the feature count leaves out.
     const redesign = new Date('2026-09-29T06:00:00Z');
     assert.equal(keys(currentNews(redesign))[0], 'leaderboard-look');
-    assert.equal(newFeatureCount(redesign), 18);
+    assert.equal(newFeatureCount(redesign), 17);
 
     // Then the rail's podiums for positions and young players.
     const podiums = new Date('2026-09-29T13:00:00Z');
     assert.equal(keys(currentNews(podiums))[0], 'rail-podiums');
-    assert.equal(newFeatureCount(podiums), 19);
+    assert.equal(newFeatureCount(podiums), 18);
 
     // Then the rebuilt About page.
     const about = new Date('2026-09-29T22:00:00Z');
     assert.equal(keys(currentNews(about))[0], 'about-page');
-    assert.equal(newFeatureCount(about), 20);
+    assert.equal(newFeatureCount(about), 19);
 
     // The Daily is off the site between seasons and counts as new from its return.
     assert.equal(WHATS_NEW.find((item) => item.key === 'daily').launched, DAILY_RETURNS);
@@ -125,9 +124,9 @@ test('items stay for 30 days from launch, newest first', () => {
     assert.deepEqual(keys(currentNews(new Date('2026-11-01T00:00:00Z'))), ['daily', 'assistant-sharing', 'assistant-charts']);
     assert.deepEqual(currentNews(new Date('2026-11-22T00:00:00Z')), []);
     // The menus count features, not the design note, to match the page's headline.
-    assert.equal(newFeatureCount(now), 7);
-    assert.equal(newFeatureCount(afternoon), 7);
-    assert.equal(newFeatureCount(evening), 10);
+    assert.equal(newFeatureCount(now), 6);
+    assert.equal(newFeatureCount(afternoon), 6);
+    assert.equal(newFeatureCount(evening), 9);
     assert.equal(newFeatureCount(new Date('2026-11-01T00:00:00Z')), 3);
 });
 

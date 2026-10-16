@@ -2,7 +2,6 @@
 	import BlendSlider from '$lib/components/about/BlendSlider.svelte';
 	import DpmScale from '$lib/components/about/DpmScale.svelte';
 	import DpmWorth from '$lib/components/about/DpmWorth.svelte';
-	import LearnDemo from '$lib/components/about/LearnDemo.svelte';
 	import MemoryChart from '$lib/components/about/MemoryChart.svelte';
 	import ModelFlow from '$lib/components/about/ModelFlow.svelte';
 	import RookieStarts from '$lib/components/about/RookieStarts.svelte';
@@ -17,7 +16,6 @@
 
 	const SECTIONS = [
 		{ id: 'dpm', label: 'Reading DPM' },
-		{ id: 'learn', label: 'Watch DARKO learn' },
 		{ id: 'memory', label: 'How long it remembers' },
 		{ id: 'model', label: 'Inside the model' },
 		{ id: 'box-to-dpm', label: 'From box scores to DPM' },
@@ -118,16 +116,6 @@
 				<DpmWorth players={data.players} leagueMean={data.leagueMean} />
 			</section>
 
-			<section id="learn">
-				<h2>Watch DARKO learn</h2>
-				<p>
-					DARKO updates every player's projection after every game. Each game moves the rating a
-					little: more when it surprises DARKO, and more early in a career, when DARKO knows less.
-					Here is one season in the player pages' Seismograph. The lines are the rating going into
-					each game; the bars are how much each game moved it, split into offense and defense.
-				</p>
-				<LearnDemo initial={data.learn} />
-			</section>
 
 			<section id="memory">
 				<h2>How long DARKO remembers</h2>
@@ -329,7 +317,7 @@
 					<p>
 						DARKO updates every rating after every game. A game that surprises it moves the rating
 						more, and so does a game early in a career, when DARKO knows less. Each player page's
-						Seismograph shows every game's move.
+						Career charts show how a player's rating changes.
 					</p>
 				</details>
 				<details>

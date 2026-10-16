@@ -31,7 +31,7 @@ export const WHATS_NEW = Object.freeze([
 		key: 'about-page',
 		title: 'The About page, rebuilt',
 		launched: '2026-09-29T21:33:47Z',
-		text: "What DARKO is and what DPM means, shown with live data: today's league on one line, what a player is worth to a team, a season game by game, how long DARKO remembers each stat and where it starts each rookie.",
+		text: "What DARKO is and what DPM means, shown with live data: today's league on one line, what a player is worth to a team, how long DARKO remembers each stat and where it starts each rookie.",
 		cta: 'Read about DARKO',
 		href: '/about'
 	},
@@ -138,11 +138,11 @@ export const WHATS_NEW = Object.freeze([
 	},
 	{
 		key: 'seasons',
-		title: 'Season by season and Echoes today',
+		title: 'Season by season',
 		launched: '2026-09-28T17:43:21Z',
-		text: "Player pages list every season since 1996-97 with team, games, minutes and DPM, and where it ranks among all players that age. Echoes today names the current players whose closest comps include one of a player's seasons.",
-		cta: "See Kobe Bryant's echoes",
-		href: '/player/977#echoes'
+		text: "Player pages list every season since 1996-97 with team, games, minutes and DPM, and where it ranks among all players that age.",
+		cta: "See Kobe Bryant's seasons",
+		href: '/player/977#seasons'
 	},
 	{
 		key: 'box-score',
@@ -202,14 +202,6 @@ export const WHATS_NEW = Object.freeze([
 		text: 'The Time Machine under the menu takes the whole site to any date since November 1996. Rewind plays the top 15 of every regular season, one week per beat.',
 		cta: 'Play Rewind',
 		href: '/rewind'
-	},
-	{
-		key: 'seismograph',
-		title: 'Seismograph',
-		launched: '2026-09-27T02:07:34Z',
-		text: "DARKO re-estimates every player after every game. The Seismograph plots each update under the season's rating line, split into offense and defense, so you can see which nights moved the needle.",
-		cta: "See Cooper Flagg's season",
-		href: '/player/1642843#seismograph'
 	},
 	{
 		key: 'fantasy',

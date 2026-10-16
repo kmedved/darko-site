@@ -109,10 +109,10 @@ test('the About page keeps its methodology and accuracy claim, and says the rest
 	assert.match(page, /const PODCAST = 'https:\/\/open\.spotify\.com\/episode\/2S4dqtsdntTNwxdlYuA7pr';/);
 	assert.match(page, /DARKO \(Daily Adjusted and Regressed Kalman Optimized projections\) is an attempt to fill\s+that gap\./);
 	// The interactive pieces, and a way to each section.
-	for (const component of ['DpmScale', 'DpmWorth', 'LearnDemo', 'MemoryChart', 'ModelFlow', 'BlendSlider', 'RookieStarts']) {
+	for (const component of ['DpmScale', 'DpmWorth', 'MemoryChart', 'ModelFlow', 'BlendSlider', 'RookieStarts']) {
 		assert.match(page, new RegExp(`<${component}[ />]`), component);
 	}
-	for (const id of ['dpm', 'learn', 'memory', 'model', 'box-to-dpm', 'rookies', 'accuracy', 'tour', 'faq', 'glossary', 'origins']) {
+	for (const id of ['dpm', 'memory', 'model', 'box-to-dpm', 'rookies', 'accuracy', 'tour', 'faq', 'glossary', 'origins']) {
 		assert.match(page, new RegExp(`<section id="${id}">`), id);
 	}
 	assert.ok(SITE_TOOLS.every((tool) => tool.href.startsWith('/')));

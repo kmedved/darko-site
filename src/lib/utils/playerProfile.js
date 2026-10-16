@@ -120,13 +120,12 @@ export function compsSummary(seasons, comps) {
 export function profileSections(shown) {
 	return [
 		['comps', 'Comps & futures'],
-		['echoes', 'Echoes today'],
+		['current-comps', 'Top 10 comps today'],
 		['career', 'Career'],
 		['contract', 'Contract & longevity'],
 		['seasons', 'Season by season'],
 		['percentiles', 'Percentiles'],
-		['box-score', 'Box score'],
-		['seismograph', 'Seismograph']
+		['box-score', 'Box score']
 	]
 		.filter(([id]) => shown[id])
 		.map(([id, label]) => ({ id, label }));

@@ -277,7 +277,7 @@
 					<p class="empty">Game-by-game updates arrive with the next data publish.</p>
 				{:else}
 					{#each updates as row (`${row.nba_id}-${row.date}`)}
-						<a class="update" href="/player/{row.nba_id}#seismograph">
+						<a class="update" href="/player/{row.nba_id}#career">
 							<span class="update-date">{formatGameDate(row.date)}</span>
 							<span class="mover-who">
 								<b>{row.player_name}</b>
@@ -290,7 +290,7 @@
 						<p class="empty">No games in this window.</p>
 					{/each}
 					<p class="panel-note">
-						Games of {UPDATE_MIN_MINUTES}+ minutes. Open any player to see every update in the Seismograph.
+						Games of {UPDATE_MIN_MINUTES}+ minutes. Open a player to explore their career ratings.
 					</p>
 				{/if}
 			</section>
