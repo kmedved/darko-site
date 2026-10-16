@@ -12,6 +12,14 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'current-comps',
+		title: 'Top 10 comps today',
+		launched: '2026-10-16T16:18:36.250Z',
+		text: "Player pages now rank ten current players by similarity in DARKO ratings, age and projected box-score style. Current players start with themselves at 100, followed by their closest matches, with photos, stats and links to compare side by side.",
+		cta: "See Coby White's matches",
+		href: '/player/1629632#current-comps'
+	},
+	{
 		key: 'assistant-sharing',
 		title: 'Career charts to share and reopen',
 		launched: '2026-10-09T02:36:26.432Z',
