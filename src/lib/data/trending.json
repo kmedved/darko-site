@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-16",
+  "date": "2026-10-17",
   "players": [
+    {
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "Sixers home debut and Maxey connection draw attention"
+    },
     {
       "nba_id": 1641705,
       "name": "Victor Wembanyama",
-      "reason": "GM survey MVP pick fuels championship expectations"
+      "reason": "Self alley-oop highlights Spurs preseason finale"
     },
     {
-      "nba_id": 1626157,
-      "name": "Karl-Anthony Towns",
-      "reason": "Extension uncertainty and potential suitors draw coverage"
+      "nba_id": 1631124,
+      "name": "Julian Strawther",
+      "reason": "Knee sprain; reevaluation in six weeks"
     },
     {
-      "nba_id": 1642278,
-      "name": "Tyler Kolek",
-      "reason": "Late three-pointer lifts Knicks past Raptors"
+      "nba_id": 203954,
+      "name": "Joel Embiid",
+      "reason": "Preseason performance and Sixers roles draw attention"
     },
     {
-      "nba_id": 1629012,
-      "name": "Collin Sexton",
-      "reason": "Progressing toward Lakers opening-night availability"
-    },
-    {
-      "nba_id": 1641708,
-      "name": "Amen Thompson",
-      "reason": "Aerial highlights in Rockets win over Thunder"
+      "nba_id": 203999,
+      "name": "Nikola Jokic",
+      "reason": "Passing highlights in preseason win over Lakers"
     }
   ]
 }
