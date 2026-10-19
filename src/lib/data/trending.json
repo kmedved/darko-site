@@ -1,25 +1,30 @@
 {
-  "date": "2026-10-18",
+  "date": "2026-10-19",
   "players": [
     {
-      "nba_id": 201142,
-      "name": "Kevin Durant",
-      "reason": "Responds to Suns owner Mat Ishbia’s criticism"
+      "nba_id": 1627732,
+      "name": "Ben Simmons",
+      "reason": "Torn Achilles in Kings practice derails comeback"
     },
     {
-      "nba_id": 1631110,
-      "name": "Jeremy Sochan",
-      "reason": "Waived by Portland before season opener"
+      "nba_id": 201939,
+      "name": "Stephen Curry",
+      "reason": "Ankle tweak at practice; Kerr says he is fine"
     },
     {
-      "nba_id": 1630202,
-      "name": "Payton Pritchard",
-      "reason": "Signs two-year Celtics contract extension"
+      "nba_id": 1641717,
+      "name": "Cason Wallace",
+      "reason": "Agrees to five-year, $139 million Thunder extension"
     },
     {
-      "nba_id": 1626192,
-      "name": "Pat Connaughton",
-      "reason": "Hornets waive veteran guard to finalize roster"
+      "nba_id": 1641710,
+      "name": "Anthony Black",
+      "reason": "Magic extension reportedly unlikely as deadline nears"
+    },
+    {
+      "nba_id": 1641706,
+      "name": "Brandon Miller",
+      "reason": "Hornets extension talks reach deadline day"
     }
   ]
 }
