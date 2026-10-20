@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-19",
+  "date": "2026-10-20",
   "players": [
     {
-      "nba_id": 1627732,
-      "name": "Ben Simmons",
-      "reason": "Torn Achilles in Kings practice derails comeback"
-    },
-    {
-      "nba_id": 201939,
-      "name": "Stephen Curry",
-      "reason": "Ankle tweak at practice; Kerr says he is fine"
-    },
-    {
-      "nba_id": 1641717,
-      "name": "Cason Wallace",
-      "reason": "Agrees to five-year, $139 million Thunder extension"
-    },
-    {
-      "nba_id": 1641710,
-      "name": "Anthony Black",
-      "reason": "Magic extension reportedly unlikely as deadline nears"
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "Set for Sixers regular-season debut against Knicks"
     },
     {
       "nba_id": 1641706,
       "name": "Brandon Miller",
-      "reason": "Hornets extension talks reach deadline day"
+      "reason": "Signs five-year, $209 million Hornets extension"
+    },
+    {
+      "nba_id": 1630183,
+      "name": "Jaden McDaniels",
+      "reason": "Agrees to one-year, $40 million Timberwolves extension"
+    },
+    {
+      "nba_id": 1642261,
+      "name": "Dalton Knecht",
+      "reason": "Waived by Lakers ahead of season opener"
+    },
+    {
+      "nba_id": 1629645,
+      "name": "Kevin Porter Jr.",
+      "reason": "Waived by Bucks at roster deadline"
     }
   ]
 }
