@@ -66,3 +66,19 @@ test('an offseason projection row keeps its ratings but takes the last real team
     assert.equal(withLatestTeam(rows[0], rows), rows[0], 'a row with a team is left alone');
     assert.equal(withLatestTeam({ team_name: null }, []).team_name, null, 'no team anywhere stays empty');
 });
+
+test('a free agent keeps no team and remembers his last one', async () => {
+    const { withLatestTeam } = await import('../src/lib/utils/latestTeam.js');
+    const rows = [
+        { date: '2026-03-19', team_name: 'Sacramento Kings', tm_id: 1610612758 },
+        { date: '2026-10-22', team_name: null, tm_id: -999, free_agent: true }
+    ];
+    const info = withLatestTeam(rows[1], rows);
+    assert.equal(info.team_name, null);
+    assert.equal(info.last_team_name, 'Sacramento Kings');
+
+    const page = await fs.readFile(path.resolve(process.cwd(), 'src/routes/player/[nbaId]/+page.svelte'), 'utf8');
+    assert.match(page, /`Free agent \(last: \$\{playerInfo\.last_team_name\}\)`/);
+    const server = await fs.readFile(path.resolve(process.cwd(), 'src/lib/server/supabase.js'), 'utf8');
+    assert.match(server, /free_agent: Boolean\(draft\) && draft\.current_team == null/);
+});

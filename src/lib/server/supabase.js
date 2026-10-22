@@ -284,7 +284,7 @@ const PLAYERS_DIM_COLUMNS = [
 ].join(', ');
 // Where a player was drafted and is from, and their size, for the player page's header only:
 // PLAYERS_DIM_COLUMNS also feeds the players index that search downloads.
-const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot, country, height, weight';
+const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot, country, height, weight, current_team';
 
 const WOWY_RATING_COLUMNS = [
     'nba_id',
@@ -1650,7 +1650,9 @@ export async function getFullPlayerProfileHistory(nbaId, options = {}) {
             draft_slot: draft?.draft_slot ?? null,
             country: draft?.country ?? null,
             height: draft?.height ?? null,
-            weight: draft?.weight ?? null
+            weight: draft?.weight ?? null,
+            // The publisher leaves current_team empty only for a free agent: off every roster this season.
+            free_agent: Boolean(draft) && draft.current_team == null
         }
     };
 }

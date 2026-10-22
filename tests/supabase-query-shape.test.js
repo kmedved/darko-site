@@ -64,7 +64,7 @@ test('player pages get draft year, pick, country and size without adding them to
     assert.ok(shared && !/draft|country|height|weight/.test(shared[1]));
 
     const profile = contents.slice(contents.indexOf('export async function getFullPlayerProfileHistory'));
-    assert.match(contents, /const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot, country, height, weight';/);
+    assert.match(contents, /const PLAYER_DRAFT_COLUMNS = 'nba_id, draft_year, draft_slot, country, height, weight, current_team';/);
     assert.match(profile, /getPlayersMapByIds\(\[nbaId\], PLAYER_DRAFT_COLUMNS\)/);
     assert.match(
         profile,
