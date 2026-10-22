@@ -343,10 +343,20 @@
 					</p>
 				</details>
 				<details>
+					<summary>What are the projected box-score stats?</summary>
+					<p>
+						DARKO's forecast of a player's rates for the rest of the season, per 100 possessions and as
+						shooting percentages, against an average opponent at a neutral site. They change slowly,
+						game to game. Per-game numbers multiply them by his projected minutes and pace.
+					</p>
+				</details>
+				<details>
 					<summary>What are projected minutes?</summary>
 					<p>
-						DARKO's forecast of a player's minutes a game, from his recent playing time and role.
-						Minutes are the hardest thing any projection system forecasts.
+						DARKO's forecast of a player's minutes a game when he plays, from his recent playing time
+						and role. A player ruled out by the official NBA injury report still shows his minutes when
+						healthy, and his page says he is out for his next game. Minutes are the hardest thing any
+						projection system forecasts.
 					</p>
 				</details>
 				<details>
@@ -401,7 +411,7 @@
 					</div>
 					<div id="glossary-minutes">
 						<dt>Projected minutes</dt>
-						<dd>DARKO's forecast of a player's minutes a game.</dd>
+						<dd>DARKO's forecast of a player's minutes a game when he plays.</dd>
 					</div>
 					<div id="glossary-fair-salary">
 						<dt>Fair salary ($ Value)</dt>
