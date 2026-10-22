@@ -298,6 +298,12 @@
 
 	// Two lines under the name: who the player is (age, size, country), then the career (draft,
 	// rookie season, games).
+	// A free agent has no current team; the header names where he last played.
+	const playerTeamLabel = $derived(
+		playerInfo?.free_agent
+			? playerInfo.last_team_name ? `Free agent (last: ${playerInfo.last_team_name})` : 'Free agent'
+			: playerInfo?.team_name
+	);
 	const playerBioText = $derived.by(() => {
 		if (!playerInfo) return '';
 		const parts = [];
@@ -503,7 +509,7 @@
 							{#if nbaId}<WatchStar nbaId={nbaId} name={playerInfo.player_name} />{/if}
 						</div>
 						<p class="player-meta">
-							{[playerInfo.team_name, playerInfo.position || '?'].filter(Boolean).join(' · ')}
+							{[playerTeamLabel, playerInfo.position || '?'].filter(Boolean).join(' · ')}
 						</p>
 						{#if playerBioText}<p class="player-detail">{playerBioText}</p>{/if}
 						{#if playerDetailText}<p class="player-detail">{playerDetailText}</p>{/if}
