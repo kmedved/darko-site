@@ -21,7 +21,7 @@ test("a current player's rank on today's board", () => {
     assert.equal(dpmRank(9, board), null);
 });
 
-test('contract tiles: money, WARP in season only, and the calibrated longevity figures', () => {
+test('contract tiles: money, WARP in season only, and the main longevity figures (not the _cal ones)', () => {
     const info = {
         sal_market_fixed: 101_400_179.9,
         actual_salary: 55_224_526,
@@ -38,8 +38,8 @@ test('contract tiles: money, WARP in season only, and the calibrated longevity f
         ['Salary', '$55.2M'],
         ['Surplus', '+$46.2M'],
         ['WARP', '15.8'],
-        ['Seasons left', '9.0'],
-        ['Retires at', '40.4']
+        ['Seasons left', '8.1'],
+        ['Retires at', '39.9']
     ]);
     assert.equal(tiles.find((tile) => tile.key === 'surplus').tone, 'up');
     assert.equal(contractTiles({ surplus_value: -2_300_000 })[0].tone, 'down');

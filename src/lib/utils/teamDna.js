@@ -272,7 +272,7 @@ export function coreOutlook(players, limit = CORE_PLAYERS) {
 				minutes: row.minutes,
 				age: toNumber(player?.age),
 				dpm: toNumber(player?.dpm),
-				seasonsLeft: toNumber(player?.projected_years_remaining_cal) ?? toNumber(player?.projected_years_remaining),
+				seasonsLeft: toNumber(player?.projected_years_remaining) ?? toNumber(player?.projected_years_remaining_cal),
 				// s3 is a probability; older bundles stored percentages.
 				onRosterIn3: onRoster === null ? null : onRoster <= 1 ? onRoster * 100 : onRoster
 			};

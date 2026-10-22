@@ -509,7 +509,7 @@
                                         <th class="core-th num">Age</th>
                                         <th class="core-th num">DPM</th>
                                         <th class="core-th num">
-                                            <MetricTooltip text="DARKO's projected seasons left in the league, from its survival model.">
+                                            <MetricTooltip text="DARKO's projected seasons left in the league within the next 15, from its survival model.">
                                                 <span>Years left</span>
                                             </MetricTooltip>
                                         </th>

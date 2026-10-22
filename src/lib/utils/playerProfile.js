@@ -72,7 +72,8 @@ export function dpmRank(nbaId, activePlayers) {
 
 /**
  * The contract and longevity tiles: fair value, salary, surplus, WARP, projected seasons left and
- * retirement age (calibrated where published). Tiles without a value are left out. `inSeason`:
+ * retirement age (the survival model's main numbers; its `_cal` columns, calibrated on retired players
+ * only, run about 0.3 seasons low). Tiles without a value are left out. `inSeason`:
  * the offseason's placeholder rows publish WARP at about a tenth of the season's (Jokic 1.7 on
  * 2026-07-26 against 15.8 at the season's end), so WARP waits for the season.
  */
@@ -82,8 +83,8 @@ export function contractTiles(info, { inSeason = true } = {}) {
 	const salary = toNumber(info.actual_salary);
 	const surplus = toNumber(info.surplus_value);
 	const warp = inSeason ? toNumber(info.warp) : null;
-	const seasonsLeft = firstNumber(info.projected_years_remaining_cal, info.projected_years_remaining);
-	const retiresAt = firstNumber(info.x_retirement_age_cal, info.x_retirement_age);
+	const seasonsLeft = firstNumber(info.projected_years_remaining, info.projected_years_remaining_cal);
+	const retiresAt = firstNumber(info.x_retirement_age, info.x_retirement_age_cal);
 	return [
 		fair === null ? null : { key: 'fair', label: 'Fair value', value: formatMillions(fair), note: "DARKO's market estimate" },
 		salary === null ? null : { key: 'salary', label: 'Salary', value: formatMillions(salary), note: 'Actual' },
@@ -91,7 +92,7 @@ export function contractTiles(info, { inSeason = true } = {}) {
 			? null
 			: { key: 'surplus', label: 'Surplus', value: formatSignedMillions(surplus), note: 'Value minus salary', tone: surplus >= 0 ? 'up' : 'down' },
 		warp === null ? null : { key: 'warp', label: 'WARP', value: warp.toFixed(1), note: 'Wins above replacement' },
-		seasonsLeft === null ? null : { key: 'seasons', label: 'Seasons left', value: seasonsLeft.toFixed(1), note: 'Projected' },
+		seasonsLeft === null ? null : { key: 'seasons', label: 'Seasons left', value: seasonsLeft.toFixed(1), note: 'Projected, within 15' },
 		retiresAt === null ? null : { key: 'retires', label: 'Retires at', value: retiresAt.toFixed(1), note: 'Projected age' }
 	].filter(Boolean);
 }

@@ -302,7 +302,7 @@
             {
                 label: 'Years Remaining',
                 value: formatFixedValue(player?.years_remaining, 1),
-                detail: 'Seasons'
+                detail: 'Seasons, within the next 15'
             },
             {
                 label: 'Prob. Active in +5 Seasons',

@@ -1900,12 +1900,12 @@ export async function getLongevityRows(options = {}) {
 
         for (const row of rows) {
             const yearsRemaining = firstFiniteNumber(
-                row.projected_years_remaining_cal,
-                row.projected_years_remaining
+                row.projected_years_remaining,
+                row.projected_years_remaining_cal
             );
             const estRetirementAge = firstFiniteNumber(
-                row.x_retirement_age_cal,
-                row.x_retirement_age
+                row.x_retirement_age,
+                row.x_retirement_age_cal
             );
 
             longevityRows.push({
@@ -1972,7 +1972,7 @@ export async function getLongevityTrajectory(nbaId) {
 
         const points = [];
         for (const [season, row] of [...bySeason.entries()].sort((a, b) => a[0] - b[0])) {
-            const retirementAge = firstFiniteNumber(row.x_retirement_age_cal, row.x_retirement_age);
+            const retirementAge = firstFiniteNumber(row.x_retirement_age, row.x_retirement_age_cal);
             if (!Number.isFinite(retirementAge)) continue;
             const seasonStartYear = season - 1;
             if (!Number.isFinite(seasonStartYear)) continue;
