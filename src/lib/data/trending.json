@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-21",
+  "date": "2026-10-22",
   "players": [
     {
-      "nba_id": 2544,
-      "name": "LeBron James",
-      "reason": "Winning Sixers debut spoils Knicks banner night"
+      "nba_id": 1630162,
+      "name": "Anthony Edwards",
+      "reason": "Scores 45 to spoil Giannis’s Heat debut"
     },
     {
-      "nba_id": 1641705,
-      "name": "Victor Wembanyama",
-      "reason": "Shoots 1-for-13 in opening loss to Thunder"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "Scores 35 in Heat debut despite loss"
     },
     {
-      "nba_id": 202331,
-      "name": "Paul George",
-      "reason": "Record 38-point Celtics debut despite loss"
+      "nba_id": 1629029,
+      "name": "Luka Doncic",
+      "reason": "Leads Lakers past Warriors with 28 points"
     },
     {
-      "nba_id": 1628983,
-      "name": "Shai Gilgeous-Alexander",
-      "reason": "Scores 32 as Thunder win West finals rematch"
+      "nba_id": 203081,
+      "name": "Damian Lillard",
+      "reason": "Scores 25 in triumphant Portland return"
     },
     {
-      "nba_id": 1630178,
-      "name": "Tyrese Maxey",
-      "reason": "Leads Sixers with 28 points in opening win"
+      "nba_id": 1629660,
+      "name": "Ty Jerome",
+      "reason": "Career-high 45 points in Grizzlies season opener"
     }
   ]
 }
