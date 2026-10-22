@@ -2084,14 +2084,24 @@ export async function getLineupSizeCounts() {
     });
 }
 
-export async function getTeamLineups(teamName, { variant = 'pi', topN = 5 } = {}) {
+/**
+ * A team's best and worst lineups. The published lineups are as of their `computed_on` date, so
+ * after trades most of a team's hold players who have left; given `rosterIds`, only lineups whose
+ * players are all on the roster count. The worst come from the lineups not already among the
+ * best, so a team with few lineups never lists one twice.
+ */
+export async function getTeamLineups(teamName, { variant = 'pi', topN = 5, rosterIds = null } = {}) {
     const allLineups = await getLineupRatings();
     const bucket = allLineups?.[variant] ?? [];
-    const teamRows = bucket.filter((r) => r.team_name === teamName);
+    const roster = rosterIds ? new Set(rosterIds.map((id) => String(id))) : null;
+    const teamRows = bucket.filter(
+        (r) => r.team_name === teamName && (!roster || r.players.every((p) => p.id != null && roster.has(p.id)))
+    );
     const sorted = [...teamRows].sort((a, b) => b.net_pm - a.net_pm);
+    const top = sorted.slice(0, topN);
     return {
-        top: sorted.slice(0, topN),
-        worst: sorted.slice(-topN).reverse()
+        top,
+        worst: sorted.slice(top.length).slice(-topN).reverse()
     };
 }
 
@@ -2159,13 +2169,15 @@ export async function getTeamPageData(teamName) {
     }
 
     // Every team's rating, from the same cached active players, ranks this one (Team DNA).
-    const [players, allPlayers, sim, winDist, lineups] = await Promise.all([
+    const [players, allPlayers, sim, winDist, computedOn] = await Promise.all([
         getActivePlayers({ teamName: normalizedTeam }),
         getActivePlayers(),
         getTeamSimulation(normalizedTeam),
         getTeamWinDistribution(normalizedTeam),
-        getTeamLineups(normalizedTeam)
+        getLineupsComputedOn().catch(() => null)
     ]);
+    const rosterIds = (players || []).map((player) => player.nba_id).filter((id) => id != null);
+    const lineups = { ...(await getTeamLineups(normalizedTeam, { rosterIds })), computedOn };
 
     return {
         players: players || [],

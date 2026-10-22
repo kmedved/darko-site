@@ -71,8 +71,11 @@ test('risers and fallers come from players with enough games, biggest moves firs
 
     // Enough movers: the week stays; too few (the month has none): the season instead.
     assert.deepEqual(chooseWindow(byWindow, '7'), { key: '7', fellBack: false });
-    assert.deepEqual(chooseWindow(byWindow, '30'), { key: 'season', fellBack: true });
+    assert.deepEqual(chooseWindow(byWindow, '30'), { key: 'season', fellBack: true, played: false, minGames: 5 });
     assert.deepEqual(chooseWindow(byWindow, 'nonsense'), { key: '7', fellBack: false });
+    // Opening week: everyone has played once, too few for the week's two games.
+    const opening = movesByWindow(Array.from({ length: 8 }, (_, index) => move('7', index + 1, 1, index)));
+    assert.deepEqual(chooseWindow(opening, '7'), { key: 'season', fellBack: true, played: true, minGames: 2 });
 });
 
 test('the edition follows this past week\'s games', () => {

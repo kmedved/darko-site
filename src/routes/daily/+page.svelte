@@ -237,7 +237,12 @@
 				{:else}
 					{#if choice.fellBack}
 						<p class="panel-note">
-							No games in the last {windowFor(requested).label.toLowerCase()}, so this shows the whole season.
+							{#if choice.played}
+								Too few players have {choice.minGames}+ games in the last {windowFor(requested).label.toLowerCase()} yet, so
+								this shows the whole season.
+							{:else}
+								No games in the last {windowFor(requested).label.toLowerCase()}, so this shows the whole season.
+							{/if}
 						</p>
 					{/if}
 					<div class="movers">

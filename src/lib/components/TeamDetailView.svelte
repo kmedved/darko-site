@@ -603,9 +603,15 @@
             </div>
             <div>
                 <h2 class="section-title">Worst Lineups</h2>
-                {@render lineupTable(worstLineups, 'No lineup data available.')}
+                {@render lineupTable(worstLineups, 'No other lineup is still together.')}
             </div>
         </div>
+        {#if lineups?.computedOn}
+            <p class="lineup-note">
+                Lineups whose five players are all on today's roster, from lineup ratings computed
+                {formatAsOfDate(lineups.computedOn)}.
+            </p>
+        {/if}
     {/if}
 
     {#if sim && teamWinDist.length > 0 && !simFinished}
@@ -1250,6 +1256,12 @@
     .lineup-empty {
         color: var(--text-muted);
         font-size: 13px;
+    }
+
+    .lineup-note {
+        margin: -20px 0 32px;
+        color: var(--text-muted);
+        font-size: 12px;
     }
 
     .lineup-table tbody tr:hover .lineup-cell {
