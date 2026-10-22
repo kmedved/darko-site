@@ -157,6 +157,11 @@
 	// Only current players have a projection worth showing: a retired player's last row still
 	// carries the projections from his final season.
 	const isCurrentPlayer = $derived(Boolean(playerInfo) && Number(playerInfo.active_roster) === 1);
+	// Ruled out of his next game by the official NBA injury report (the next-game availability flag).
+	const outNextGame = $derived(
+		Boolean(playerInfo) && !asOfDate && Number(playerInfo.future_game) === 1 && Number(playerInfo.available) === 0 &&
+			Number(playerInfo.tm_id) > 0
+	);
 	const boxScore = $derived(
 		playerInfo && !asOfDate && isCurrentPlayer ? projectedBoxScore(playerInfo) : null
 	);
@@ -511,6 +516,7 @@
 						<p class="player-meta">
 							{[playerTeamLabel, playerInfo.position || '?'].filter(Boolean).join(' · ')}
 						</p>
+						{#if outNextGame}<p class="player-status">Out for his next game (official NBA injury report)</p>{/if}
 						{#if playerBioText}<p class="player-detail">{playerBioText}</p>{/if}
 						{#if playerDetailText}<p class="player-detail">{playerDetailText}</p>{/if}
 					</div>
@@ -747,8 +753,9 @@
 								<h2 id="box-score-title">Projected box score</h2>
 								<p class="profile-section-lede">
 									{#if boxScore.projected}
-										DARKO's per-100 projections, and per game at {boxScore.minutes.toFixed(1)} projected minutes
-										and a pace of {boxScore.pace?.toFixed(1) ?? '—'}.
+										DARKO's rest-of-season projections per 100 possessions, and per game at
+										{boxScore.minutes.toFixed(1)} projected minutes when he plays and a pace of {boxScore.pace?.toFixed(1) ?? '—'}.
+										{#if outNextGame}He is out for his next game.{/if}
 									{:else}
 										DARKO's per-100 projections. It projects no minutes for {playerInfo.player_name} right now,
 										so there is no per-game line.
@@ -868,6 +875,12 @@
 		font-weight: 700;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
+	}
+
+	.player-status {
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--negative);
 	}
 
 	.player-detail {
