@@ -156,8 +156,9 @@
 		const yExtent = d3.extent(points, (d) => d.yVal);
 		const xRange = xExtent[1] - xExtent[0];
 		const yRange = yExtent[1] - yExtent[0];
-		const xPad = Math.max(xRange * 0.05, 0.1);
-		const yPad = Math.max(yRange * 0.05, 0.1);
+		// Shooting percentages are fractions: a 0.1 floor would pad them by ten points.
+		const xPad = Math.max(xRange * 0.05, PERCENT_METRICS.has(xMetric) ? 0.01 : 0.1);
+		const yPad = Math.max(yRange * 0.05, PERCENT_METRICS.has(yMetric) ? 0.01 : 0.1);
 
 		const x = d3.scaleLinear()
 			.domain([xExtent[0] - xPad, xExtent[1] + xPad])
