@@ -91,11 +91,18 @@ export function pickMovers(window, key) {
 	};
 }
 
-/** The window to show: the one asked for, or the season when it has too few movers. */
+/**
+ * The window to show: the one asked for, or the season when it has too few movers. A fallback
+ * says whether the window had games at all: early in a season it does, but few players have
+ * played enough of them (`minGames`) to rank.
+ */
 export function chooseWindow(byWindow, requested) {
 	const key = WINDOWS.some((entry) => entry.key === requested) ? requested : DEFAULT_WINDOW;
 	if (key === 'season') return { key, fellBack: false };
-	return pickMovers(byWindow[key], key).eligible >= MOVERS_SHOWN ? { key, fellBack: false } : { key: 'season', fellBack: true };
+	const picked = pickMovers(byWindow[key], key);
+	if (picked.eligible >= MOVERS_SHOWN) return { key, fellBack: false };
+	const played = (byWindow[key]?.rows ?? []).some((row) => row.games > 0);
+	return { key: 'season', fellBack: true, played, minGames: picked.minGames };
 }
 
 /** Which edition: games this past week make a game-day or playoff edition, else offseason. */

@@ -34,6 +34,9 @@
 
     const PLAYOFF_LOCK_THRESHOLD = 95;
     const PLAYOFF_LIKELY_THRESHOLD = 70;
+    // Under this, a team is a lottery team, not a bubble team: with 10,000 simulations almost no
+    // team is at exactly 0%, so a 1.5% team counted as Bubble.
+    const PLAYOFF_BUBBLE_THRESHOLD = 10;
 
     const standingsSortConfig = {
         Rk: { type: 'number' },
@@ -194,7 +197,7 @@
     const bubbleTeams = $derived(
         standings.filter((team) => {
             const playoffOdds = numberValue(team?.Playoffs);
-            return playoffOdds > 0 && playoffOdds < PLAYOFF_LIKELY_THRESHOLD;
+            return playoffOdds >= PLAYOFF_BUBBLE_THRESHOLD && playoffOdds < PLAYOFF_LIKELY_THRESHOLD;
         }).length
     );
 
@@ -327,10 +330,14 @@
                 label: 'Bubble',
                 count: rows.filter((team) => {
                     const odds = numberValue(team?.Playoffs);
-                    return odds > 0 && odds < PLAYOFF_LIKELY_THRESHOLD;
+                    return odds >= PLAYOFF_BUBBLE_THRESHOLD && odds < PLAYOFF_LIKELY_THRESHOLD;
                 }).length
             },
-            { key: 'lottery', label: 'Lottery', count: rows.filter((team) => numberValue(team?.Playoffs) <= 0).length }
+            {
+                key: 'lottery',
+                label: 'Lottery',
+                count: rows.filter((team) => numberValue(team?.Playoffs) < PLAYOFF_BUBBLE_THRESHOLD).length
+            }
         ];
         const maxCount = Math.max(...buckets.map((bucket) => bucket.count), 1);
         const total = Math.max(rows.length, 1);

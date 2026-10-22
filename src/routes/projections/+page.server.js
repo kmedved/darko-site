@@ -1,4 +1,5 @@
 import { getActivePlayers } from '$lib/server/supabase.js';
+import { getLatestGameDate } from '$lib/server/daily.js';
 import { projectPlayers } from '$lib/server/playerViews.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 
@@ -15,11 +16,16 @@ export async function load({ setHeaders }) {
         sie: 86400
     });
 
-    const players = projectPlayers(await getActivePlayers(), 'fantasy');
-    const asOf = players.reduce(
-        (latest, player) => (typeof player.date === 'string' && player.date > latest ? player.date : latest),
-        ''
-    );
+    const [active, latestGame] = await Promise.all([getActivePlayers(), getLatestGameDate().catch(() => null)]);
+    const players = projectPlayers(active, 'fantasy');
+    // In season each player's latest row is dated his team's next game, so the latest of those is
+    // days ahead for teams idle until then; the projections are as of the last game played.
+    const asOf =
+        latestGame ??
+        players.reduce(
+            (latest, player) => (typeof player.date === 'string' && player.date > latest ? player.date : latest),
+            ''
+        );
 
     return { players, asOf: asOf || null };
 }
