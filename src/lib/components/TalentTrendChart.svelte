@@ -212,7 +212,8 @@
 				]
 				: yVals
 		);
-		const yPad = Math.max(Math.abs(yExtent[1] - yExtent[0]) * 0.1, 0.5);
+		// Shooting percentages are fractions, so their padding floor is half a point, not half a unit.
+		const yPad = Math.max(Math.abs(yExtent[1] - yExtent[0]) * 0.1, PERCENT_METRICS.has(talentType) ? 0.005 : 0.5);
 
 		const x = d3.scaleTime().domain(xExtent).range([0, w]);
 		const y = d3
