@@ -51,7 +51,7 @@
 			<div>
 				<dt>Salary <code>actual_salary</code></dt>
 				<dd>
-					Reported salary expressed in 2025&ndash;26 cap dollars by preserving the player's
+					Reported salary expressed in 2026&ndash;27 cap dollars by preserving the player's
 					salary as a share of that season's cap.
 				</dd>
 			</div>
