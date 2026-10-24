@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-22",
+  "date": "2026-10-24",
   "players": [
     {
-      "nba_id": 1630162,
-      "name": "Anthony Edwards",
-      "reason": "Scores 45 to spoil Giannis’s Heat debut"
+      "nba_id": 1642843,
+      "name": "Cooper Flagg",
+      "reason": "Shoulder sprain rules him out against Spurs"
     },
     {
-      "nba_id": 203507,
-      "name": "Giannis Antetokounmpo",
-      "reason": "Scores 35 in Heat debut despite loss"
+      "nba_id": 1631094,
+      "name": "Paolo Banchero",
+      "reason": "MRI confirms high ankle sprain"
     },
     {
-      "nba_id": 1629029,
-      "name": "Luka Doncic",
-      "reason": "Leads Lakers past Warriors with 28 points"
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "Ruled out against Bucks"
     },
     {
-      "nba_id": 203081,
-      "name": "Damian Lillard",
-      "reason": "Scores 25 in triumphant Portland return"
+      "nba_id": 1628369,
+      "name": "Jayson Tatum",
+      "reason": "Scores 36 as Celtics hold off Knicks"
     },
     {
-      "nba_id": 1629660,
-      "name": "Ty Jerome",
-      "reason": "Career-high 45 points in Grizzlies season opener"
+      "nba_id": 1631117,
+      "name": "Walker Kessler",
+      "reason": "22 points and six blocks in Lakers win"
     }
   ]
 }
