@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-24",
+  "date": "2026-10-25",
   "players": [
     {
-      "nba_id": 1642843,
-      "name": "Cooper Flagg",
-      "reason": "Shoulder sprain rules him out against Spurs"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "Fouls out as Heat fall to 0-3"
     },
     {
-      "nba_id": 1631094,
-      "name": "Paolo Banchero",
-      "reason": "MRI confirms high ankle sprain"
+      "nba_id": 203999,
+      "name": "Nikola Jokic",
+      "reason": "35-point triple-double fuels overtime comeback win"
     },
     {
-      "nba_id": 2544,
-      "name": "LeBron James",
-      "reason": "Ruled out against Bucks"
+      "nba_id": 203954,
+      "name": "Joel Embiid",
+      "reason": "Triple-double keeps Sixers unbeaten without LeBron"
     },
     {
-      "nba_id": 1628369,
-      "name": "Jayson Tatum",
-      "reason": "Scores 36 as Celtics hold off Knicks"
+      "nba_id": 1626164,
+      "name": "Devin Booker",
+      "reason": "Scores 43 in Suns win over Warriors"
     },
     {
-      "nba_id": 1631117,
-      "name": "Walker Kessler",
-      "reason": "22 points and six blocks in Lakers win"
+      "nba_id": 1627750,
+      "name": "Jamal Murray",
+      "reason": "Scores 42 in Nuggets overtime victory"
     }
   ]
 }
