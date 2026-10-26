@@ -1,7 +1,7 @@
 import { getWhiteSurfaceSeriesColor } from './chartTheme.js';
 
 export const MAX_CHART_PLAYERS = 6;
-export const CAREER_METRICS = Object.freeze(['dpm', 'o_dpm', 'd_dpm']);
+export const CAREER_METRICS = Object.freeze(['dpm', 'o_dpm', 'd_dpm', 'bayes_rapm_total', 'market_rating']);
 export const CAREER_SCALES = Object.freeze(['games', 'age', 'seasons']);
 export const CHART_QUERY_KEYS = Object.freeze([
   'ids', 'metric', 'scale', 'min', 'max', 'from', 'to', 'ymin', 'ymax',

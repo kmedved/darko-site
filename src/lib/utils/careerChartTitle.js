@@ -1,7 +1,7 @@
 // Automatic names for career comparisons. Social cards and link previews use these instead of
 // a link's custom title, so a darko.app card always says what the chart shows.
 
-const METRIC_WORDS = Object.freeze({ dpm: 'DPM', o_dpm: 'offensive DPM', d_dpm: 'defensive DPM' });
+const METRIC_WORDS = Object.freeze({ dpm: 'DPM', o_dpm: 'offensive DPM', d_dpm: 'defensive DPM', bayes_rapm_total: 'RAPM', market_rating: 'market rating' });
 const AXIS_WORDS = Object.freeze({ games: 'games played', age: 'age', seasons: 'season' });
 const SUFFIX = /^(jr\.?|sr\.?|ii|iii|iv|v)$/i;
 

@@ -76,10 +76,10 @@ test('stateless MCP lists nine read-only tools with status text and its image re
   assert.ok(result.tools.every((tool) => tool._meta.ui.visibility.includes('app')));
   for (const name of ['create_career_chart', 'import_career_chart']) {
     const meta = result.tools.find((tool) => tool.name === name)._meta;
-    assert.equal(meta['openai/outputTemplate'], 'ui://darko/career-chart/v4.html');
+    assert.equal(meta['openai/outputTemplate'], 'ui://darko/career-chart/v5.html');
     assert.equal(meta['openai/outputTemplate'], meta.ui.resourceUri);
   }
-  const resource = await rpc('resources/read', { uri: 'ui://darko/career-chart/v4.html' });
+  const resource = await rpc('resources/read', { uri: 'ui://darko/career-chart/v5.html' });
   assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.equal(resource.contents[0]._meta.ui.domain, 'https://www.darko.app');
   assert.deepEqual(resource.contents[0]._meta.ui.csp.resourceDomains, ['https://www.darko.app']);
@@ -101,6 +101,16 @@ test('summaries retain dated start/end/peak without daily arrays', async () => {
   assert.equal(player.rows, undefined);
   assert.equal(player.periods.length, 1);
   assert.equal(summarizeHistory([{ date: '2025-01-01', dpm: null }], 'dpm', 'season').length, 0);
+});
+
+test('career tools accept RAPM and the market rating', async () => {
+  const histories = await rpc('tools/call', { name: 'get_player_histories', arguments: { ids: [1], metric: 'market_rating' } });
+  assert.equal(histories.structuredContent.metric, 'market_rating');
+  assert.match(histories.structuredContent.definition, /closing betting spreads/);
+  for (const metric of ['bayes_rapm_total', 'market_rating']) {
+    const chart = await rpc('tools/call', { name: 'create_career_chart', arguments: { ids: [1], metric } });
+    assert.equal(chart.structuredContent.specification.metric, metric);
+  }
 });
 
 test('ChatGPT gets widget data and links without an image; other clients also get the chart image', async () => {

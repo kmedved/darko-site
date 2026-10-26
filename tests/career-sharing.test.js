@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { careerShareMetadata, socialChartResponse, socialImageUrl, SOCIAL_FALLBACK } from '../src/lib/server/charts/share.js';
 import { chartSpecFromUrl, canonicalChartSpec } from '../src/lib/server/charts/schema.js';
-import { careerChartLinks } from '../src/lib/utils/careerChartSpec.js';
+import { careerChartLinks, CAREER_METRICS } from '../src/lib/utils/careerChartSpec.js';
 import { careerComparisonTitle } from '../src/lib/utils/careerChartTitle.js';
 
 const names = { 1628369: 'Jayson Tatum', 202331: 'Paul George', 202695: 'Kawhi Leonard' };
 const lookupNames = async (ids) => ids.map((id) => names[id] ?? null);
 
 test('chart previews name the players and always use the wide card, whatever the chart format', async () => {
-  for (const metric of ['dpm', 'o_dpm', 'd_dpm']) {
+  for (const metric of CAREER_METRICS) {
     const spec = canonicalChartSpec({ ids: [1, 2, 3, 4, 5, 6], metric, scale: 'age', min: 19, max: 25,
       title: 'Career <comparison>', bandwidth: 0.5, format: 'square', at: 23, annotations: ['peak', 'smoothed_peak', 'selected'] });
     const social = await careerShareMetadata(new URL(careerChartLinks(spec).source_url));
@@ -35,6 +35,9 @@ test('preview titles are automatic, so a link cannot put its own headline on a d
   assert.equal(three.title, 'Tatum, George and Leonard · DARKO defensive DPM by games played');
   assert.equal(careerComparisonTitle(['Gary Payton', 'Gary Payton II', 'Tim Hardaway Jr.'], { metric: 'o_dpm', scale: 'seasons' }),
     'Payton, Payton II and Hardaway Jr. · DARKO offensive DPM by season');
+  const market = await careerShareMetadata(new URL('https://www.darko.app/trajectories?ids=1628369,202331&metric=market_rating&scale=age'), { lookupNames });
+  assert.equal(market.title, 'Jayson Tatum vs. Paul George · DARKO market rating by age');
+  assert.equal(chartSpecFromUrl(market.image).metric, 'market_rating');
   // A failed name lookup still yields a truthful automatic title.
   const unnamed = await careerShareMetadata(url, { lookupNames: async () => { throw new Error('down'); } });
   assert.equal(unnamed.title, 'NBA career comparison · DARKO DPM by age');

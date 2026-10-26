@@ -21,7 +21,7 @@ export function chartPalette(css) {
   return { bg: values['--bg'], text: values['--text'], muted: values['--text-muted'], grid: values['--border-subtle'], border: values['--border'] };
 }
 
-const METRIC_LABELS = { dpm: 'DARKO DPM', o_dpm: 'Offensive DPM', d_dpm: 'Defensive DPM' };
+const METRIC_LABELS = { dpm: 'DARKO DPM', o_dpm: 'Offensive DPM', d_dpm: 'Defensive DPM', bayes_rapm_total: 'RAPM', market_rating: 'Market rating' };
 
 /**
  * DOM-free rendition of the site's raw-point/LOESS comparison chart. `layout: 'social'` draws

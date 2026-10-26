@@ -1,6 +1,6 @@
 {
   "name": "darko-site",
-  "version": "0.1.93",
+  "version": "0.1.94",
   "private": true,
   "scripts": {
     "dev": "node node_modules/vite/bin/vite.js dev",
