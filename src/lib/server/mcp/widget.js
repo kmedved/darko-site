@@ -1,6 +1,6 @@
 import { getWhiteSurfaceSeriesColor } from '../../utils/chartTheme.js';
 
-export const CAREER_WIDGET_URI = 'ui://darko/career-chart/v4.html';
+export const CAREER_WIDGET_URI = 'ui://darko/career-chart/v5.html';
 
 // Only image URLs, specs and compact summaries cross the bridge; histories stay on the server.
 export function careerWidgetHtml(origin, themeTokens = '') {
@@ -15,7 +15,7 @@ export function careerWidgetHtml(origin, themeTokens = '') {
 <div id="players" class="players" aria-label="Selected players"></div>
 <form id="search-form" class="search-row"><input id="player-query" aria-label="Player name" placeholder="Add a player by name" maxlength="80" minlength="2" required><button type="submit">Add player</button></form><div id="candidates" class="candidates" aria-label="Choose a player"></div>
 <form id="chart-form"><div class="fields">
-<label>Metric<select id="metric"><option value="dpm">DPM</option><option value="o_dpm">Offensive DPM</option><option value="d_dpm">Defensive DPM</option></select></label>
+<label>Metric<select id="metric"><option value="dpm">DPM</option><option value="o_dpm">Offensive DPM</option><option value="d_dpm">Defensive DPM</option><option value="bayes_rapm_total">RAPM</option><option value="market_rating">Market rating</option></select></label>
 <label>Compare by<select id="scale"><option value="games">Games played</option><option value="age">Age</option><option value="seasons">Season</option></select></label>
 <label><span id="min-label">From game</span><input id="min" type="number" step="any" placeholder="First"></label>
 <label><span id="max-label">To game</span><input id="max" type="number" step="any" placeholder="Last"></label><button class="btn-primary" type="submit">Update chart</button></div>
@@ -25,7 +25,7 @@ export function careerWidgetHtml(origin, themeTokens = '') {
 <label>Export shape<select id="format"><option value="wide">Wide · 1200 × 650</option><option value="square">Square · 1200 × 1200</option></select></label>
 <label>Selected axis value<input id="at" type="number" step="any" placeholder="Age or game number"></label>
 <label>Since date<input id="from" type="date"></label><label>Through date<input id="to" type="date"></label>
-<label>Minimum DPM<input id="ymin" type="number" step="any" placeholder="Automatic"></label><label>Maximum DPM<input id="ymax" type="number" step="any" placeholder="Automatic"></label>
+<label>Minimum rating<input id="ymin" type="number" step="any" placeholder="Automatic"></label><label>Maximum rating<input id="ymax" type="number" step="any" placeholder="Automatic"></label>
 <label>Style<select id="display"><option value="modern">Modern · white</option><option value="shiny">Shiny · white</option></select></label>
 <label>Smoothing span<input id="bandwidth" type="number" min="0" max="1" step="any" placeholder="Auto"></label>
 <p class="help checks">Higher values smooth more; blank uses the preset. Choose up to three annotations.</p>
@@ -120,7 +120,7 @@ function careerWidgetClient(allowedOrigin, palettes) {
     status('Pregame estimates · Games incorporated through ' + (data.dataset_as_of || 'unavailable') + (data.limitations?.length ? ' · ' + data.limitations.join(' ') : ''));
     for (const [id, key] of [['download', 'download_url'], ['source', 'source_url']]) { const link = el(id), url = safeUrl(data[key]); link.hidden = !url; if (url) link.href = url; }
     el('comparison-list').replaceChildren(); el('comparison').hidden = !data.comparison?.length;
-    el('comparison-heading').textContent = 'Compare ' + ({ dpm: 'DPM', o_dpm: 'offensive DPM', d_dpm: 'defensive DPM' }[spec.metric]) + ' · points / 100 possessions';
+    el('comparison-heading').textContent = 'Compare ' + ({ dpm: 'DPM', o_dpm: 'offensive DPM', d_dpm: 'defensive DPM', bayes_rapm_total: 'RAPM', market_rating: 'market rating' }[spec.metric]) + ' · points / 100 possessions';
     for (const player of data.comparison || []) {
       const row = node('li'), name = node('div', null, 'comparison-name'); name.style.setProperty('--player-color', player.color); name.append(node('span', null, 'swatch'), node('span', player.player_name));
       const dl = node('dl');
