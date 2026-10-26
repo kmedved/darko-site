@@ -22,7 +22,6 @@
 	import { unpackRows } from '$lib/utils/columnar.js';
 	import { normalizeComps } from '$lib/utils/comps.js';
 	import { AS_OF_PARAM, formatAsOfDate, parseAsOfDate } from '$lib/utils/timeMachine.js';
-	import { isRapmMetric, staleRapmDate } from '$lib/utils/latestRapm.js';
 	import { describeMarket, marketRating } from '$lib/utils/marketRating.js';
 	import { seasonRows, seasonUnderWay } from '$lib/utils/playerSeasons.js';
 	import { projectedBoxScore } from '$lib/utils/boxScore.js';
@@ -214,12 +213,6 @@
 			return { metric, value: percentileAmong(playerValue, values, metric) };
 		}).filter(Boolean);
 	});
-
-	// RAPM hasn't come with each day's ratings since March: the percentiles use each player's
-	// latest published value, and say how old it is.
-	const percentileRapmFrom = $derived(
-		isRapmMetric(selectedPercentileMetrics.find(isRapmMetric)) ? staleRapmDate([playerInfo]) : null
-	);
 
 	const currentDate = $derived.by(() => {
 		if (!playerInfo?.date) return '';
@@ -746,9 +739,6 @@
 							rawValues={skillInfo}
 							labels={SKILL_LABELS}
 						/>
-						{#if percentileRapmFrom}
-							<p class="percentile-notice">RAPM is from {formatAsOfDate(percentileRapmFrom)}, the latest published.</p>
-						{/if}
 					</div>
 				{/if}
 

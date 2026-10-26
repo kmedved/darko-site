@@ -1,4 +1,3 @@
-import { withLatestRapm } from '../utils/latestRapm.js';
 import { withLatestTeam } from '../utils/latestTeam.js';
 import { careerGames } from '../utils/playerProfile.js';
 
@@ -77,7 +76,7 @@ export async function loadComparePageData({
             continue;
         }
 
-        const currentRow = withLatestRapm(withLatestTeam(rows.at(-1) ?? {}, rows), rows);
+        const currentRow = withLatestTeam(rows.at(-1) ?? {}, rows);
         // Games played, regular season and playoffs, from the season table; career_game_num
         // counts model rows, not games. Without the table the games are left unknown.
         const seasons = seasonResults[index].status === 'fulfilled' ? seasonResults[index].value : null;

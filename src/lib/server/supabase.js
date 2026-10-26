@@ -13,7 +13,6 @@ import { createActivePlayersAccessor } from './activePlayersCache.js';
 import { asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
 import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilterOptions.js';
 import { leagueTeamRatings } from '$lib/utils/teamDna.js';
-import { fillLatestRapm } from '$lib/utils/latestRapm.js';
 import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '$lib/utils/frozenRatings.js';
 import { searchByName } from '$lib/utils/nameSearch.js';
 import { mergeWowyPages, namesMatching, wowySearchWord } from '$lib/utils/wowySearch.js';
@@ -59,7 +58,6 @@ const CACHE_MS = {
     teamWinDistribution: 60_000,
     lineupRatings: 3_600_000,
     lineupSizeCounts: 3_600_000,
-    latestRapmSnapshot: 3_600_000,
     eloLeaderboard: 30_000,
     rookieStarts: 3_600_000,
     seasonRows: 600_000
@@ -597,7 +595,6 @@ function mergePlayerWithActiveSnapshot(player, active) {
         box_ddpm: active?.box_ddpm ?? null,
         on_off_dpm: active?.on_off_dpm ?? null,
         bayes_rapm_total: active?.bayes_rapm_total ?? null,
-        bayes_rapm_date: active?.bayes_rapm_date ?? null,
         tr_fg3_pct: active?.tr_fg3_pct ?? null,
         tr_ft_pct: active?.tr_ft_pct ?? null,
         x_minutes: active?.x_minutes ?? null,
@@ -744,54 +741,6 @@ async function getLatestCurrentSeasonRatingRows(season) {
  * Uses the latest season value and returns the most recent row per player, including
  * future projection rows.
  */
-// RAPM rows exist only on the old RAPM file's snapshot days, for whoever played that day, so each
-// player's newest comes from this many days before the latest.
-const RAPM_LOOKBACK_DAYS = 183;
-
-/**
- * The latest published RAPM: its date, and each player's newest RAPM row (with its own date)
- * from the RAPM_LOOKBACK_DAYS before it, for fillLatestRapm. RAPM stopped coming with each
- * day's ratings on 2026-03-07; newest-first on the date index, the first search stops at the
- * first day with any. Best effort: without it RAPM stays blank.
- */
-async function getLatestRapmSnapshot() {
-    return runCached(cacheKey('latestRapmSnapshot'), CACHE_MS.latestRapmSnapshot, async () => {
-        const latest = await supabase
-            .from('player_ratings')
-            .select('date')
-            .not('bayes_rapm_total', 'is', null)
-            .order('date', { ascending: false })
-            .limit(1);
-        if (latest.error) throw latest.error;
-        const date = latest.data?.[0]?.date ? String(latest.data[0].date).slice(0, 10) : null;
-        if (!date) return null;
-        const since = new Date(Date.parse(`${date}T00:00:00Z`) - RAPM_LOOKBACK_DAYS * 86_400_000)
-            .toISOString()
-            .slice(0, 10);
-        const rows = await fetchAllPages(
-            (options) =>
-                supabase
-                    .from('player_ratings')
-                    .select('nba_id, date, bayes_rapm_total, bayes_rapm_off, bayes_rapm_def', options)
-                    .not('bayes_rapm_total', 'is', null)
-                    .gt('date', since)
-                    .lte('date', date)
-                    .order('date', { ascending: false })
-                    .order('nba_id', { ascending: true }),
-            { guessPages: 2 }
-        );
-        const byId = new Map();
-        for (const row of rows) {
-            const id = Number(row.nba_id);
-            if (!byId.has(id)) byId.set(id, row);
-        }
-        return { date, byId };
-    }).catch((error) => {
-        console.error('latest RAPM snapshot failed', error);
-        return null;
-    });
-}
-
 async function loadAllActivePlayers() {
     const latestSeason = await getLatestActiveSeason();
     if (!latestSeason) {
@@ -818,15 +767,12 @@ async function loadAllActivePlayers() {
             );
         })
         .map((row) => row.nba_id);
-    const [teamMap, rapm] = await Promise.all([
-        getLatestTeamMapByIds(missingTeamIds, latestDate),
-        getLatestRapmSnapshot()
-    ]);
+    const teamMap = await getLatestTeamMapByIds(missingTeamIds, latestDate);
     const merged = unique.map((row) =>
         mergeWithPlayerDim(row, playersMap.get(row.nba_id), teamMap.get(row.nba_id))
     );
 
-    return sortByDpmDesc(fillLatestRapm(merged, rapm));
+    return sortByDpmDesc(merged);
 }
 
 const getCachedActivePlayers = createActivePlayersAccessor({
@@ -1657,20 +1603,17 @@ export async function getFullPlayerProfileHistory(nbaId, options = {}) {
     const draftLookup = runCached(cacheKey('playerDraft', nbaId), CACHE_MS.playerHistory, () =>
         getPlayersMapByIds([nbaId], PLAYER_DRAFT_COLUMNS)
     );
-    const [profileHistory, latestRows, draftById, rapm] = await Promise.all([
+    const [profileHistory, latestRows, draftById] = await Promise.all([
         history,
         getPlayerHistory(nbaId, 1),
-        draftLookup,
-        getLatestRapmSnapshot()
+        draftLookup
     ]);
     const latest = latestRows.at(-1) ?? null;
     const draft = draftById.get(nbaId);
-    // RAPM from the same snapshot as the active players this player's percentiles rank against.
-    const [info] = latest ? fillLatestRapm([latest], rapm) : [null];
     return {
         ...profileHistory,
-        playerInfo: info && {
-            ...info,
+        playerInfo: latest && {
+            ...latest,
             draft_year: draft?.draft_year ?? null,
             draft_slot: draft?.draft_slot ?? null,
             country: draft?.country ?? null,
