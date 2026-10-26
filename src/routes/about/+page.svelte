@@ -402,7 +402,8 @@
 						<dt>RAPM</dt>
 						<dd>
 							Regularized adjusted plus-minus: team results credited to the players on the floor,
-							shrunk toward average.
+							shrunk toward average. DARKO's uses play-by-play only, with no box-score prior, and
+							updates daily.
 						</dd>
 					</div>
 					<div id="glossary-wowy">

@@ -4,18 +4,13 @@
     import { apiPlayerHistory } from '$lib/api.js';
     import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
     import { formatMinutes, formatSignedMetric, formatPercent, formatFixed } from '$lib/utils/csvPresets.js';
-    import { staleRapmDate } from '$lib/utils/latestRapm.js';
     import { describeMarket } from '$lib/utils/marketRating.js';
-    import { formatAsOfDate } from '$lib/utils/timeMachine.js';
     import { snapshotNote } from '$lib/utils/headToHead.js';
 
     // `color` is this player's series colour on the Compare page, so each card's sparkline matches
     // its player rather than turning green or red with the sign of their DPM.
     let { player, onRemove, historyRows, color = 'var(--accent)' } = $props();
 
-    // RAPM older than the card's ratings (it hasn't come with each day's ratings since March)
-    // says when it's from.
-    const rapmFrom = $derived(staleRapmDate([player]));
     // The experimental market rating's hint names the day of the fit it comes from.
     const marketAsOf = $derived(player?.market_as_of ? String(player.market_as_of).slice(0, 10) : null);
 
@@ -131,7 +126,7 @@
             <span class="value {cls(player.on_off_dpm)}">{formatSignedMetric(player.on_off_dpm)}</span>
         </div>
         <div class="stat-row">
-            <span class="label">RAPM{#if rapmFrom}{' '}<span class="as-of">{formatAsOfDate(rapmFrom, { short: true })}</span>{/if}</span>
+            <span class="label">RAPM</span>
             <span class="value {cls(player.bayes_rapm_total)}">{formatSignedMetric(player.bayes_rapm_total)}</span>
         </div>
         <!-- Experimental, so in plain ink rather than the signed colours. -->

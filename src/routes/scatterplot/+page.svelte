@@ -4,9 +4,7 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ScatterplotChart from '$lib/components/ScatterplotChart.svelte';
 	import { getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
-	import { isRapmMetric, staleRapmDate } from '$lib/utils/latestRapm.js';
 	import { readScatterState, scatterSearch, scatterSearchParams } from '$lib/utils/scatterplotState.js';
-	import { formatAsOfDate } from '$lib/utils/timeMachine.js';
 	import { isIncomingNavigation, pathAndSearch } from '$lib/utils/urlSync.js';
 
 	let { data } = $props();
@@ -117,12 +115,6 @@
 			return Number.isFinite(mpg) && mpg >= mpgMinimum;
 		});
 	});
-
-	// RAPM hasn't come with each day's ratings since March, so the chart plots each player's
-	// latest published value and says how old it is.
-	const rapmFrom = $derived(
-		isRapmMetric(xMetric) || isRapmMetric(yMetric) ? staleRapmDate(filteredPlayers) : null
-	);
 </script>
 
 <svelte:head>
@@ -226,9 +218,6 @@
 				highlight={highlightedPlayers.map((player) => Number(player.nba_id))}
 			/>
 		</div>
-		{#if rapmFrom}
-			<p class="scatterplot-note">RAPM values are each player's latest published, through {formatAsOfDate(rapmFrom)}.</p>
-		{/if}
 	</div>
 </div>
 
@@ -262,11 +251,6 @@
 		align-self: center;
 	}
 
-	.scatterplot-note {
-		margin: 0;
-		font-size: 12px;
-		color: var(--text-secondary);
-	}
 
 	.scatterplot-chart-area {
 		min-width: 0;
