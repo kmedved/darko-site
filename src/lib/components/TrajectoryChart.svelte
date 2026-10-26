@@ -49,6 +49,7 @@
 		'bayes_rapm_total',
 		'bayes_rapm_off',
 		'bayes_rapm_def',
+		'market_rating',
 		'wowy_rapm',
 		'wowy_orapm',
 		'wowy_drapm'

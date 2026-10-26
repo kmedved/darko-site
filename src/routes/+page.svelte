@@ -317,7 +317,21 @@
     const leaderboardHeatScales = $derived.by(() =>
         buildPresetHeatScales(players, 'talent')
     );
-    const dpmTintLimit = $derived(tintLimit(players.map((player) => player?.dpm)));
+    // The column the board is sorted by carries the tint (DPM when sorted by rank, name or team): signed ratings
+    // diverge from zero, other numbers (minutes, percentages, salaries) from the board's median.
+    const SIGNED_TINT_FORMATS = new Set(['signed', 'signedMillions']);
+    const tintColumn = $derived.by(() => {
+        const sorted = dataColumns.find((column) => column.key === activeSortColumn);
+        return sorted?.alignClass === 'num' && !textSortColumns.has(sorted.key) ? sorted.key : 'dpm';
+    });
+    const tintScale = $derived.by(() => {
+        const column = dataColumns.find((entry) => entry.key === tintColumn);
+        const values = column
+            ? players.map((player) => toNumber(getLeaderboardCellValue(player, column, 0))).filter((n) => n !== null)
+            : [];
+        const center = !column || SIGNED_TINT_FORMATS.has(column.format) ? 0 : median(values);
+        return { center, limit: tintLimit(values.map((n) => n - center)) };
+    });
     const leaderboardRangeStart = $derived(
         sortedPlayers.length === 0 ? 0 : (activeLeaderboardPage - 1) * LEADERBOARD_PAGE_SIZE + 1
     );
@@ -631,16 +645,25 @@
         picked = [];
     }
 
-    // Numbers stay in neutral ink; DPM, the column the table ranks by, carries a diverging tint.
+    // Numbers stay in neutral ink; the column the board is sorted by carries a diverging tint (tintColumn).
     function statClass(column, value) {
         const n = toNumber(value);
         if (n === null) return 'metric-muted';
-        return column === 'dpm' ? 'tint-cell' : '';
+        return column === tintColumn ? 'tint-cell' : '';
     }
 
     function cellStyle(column, value) {
         const shinyHeat = getMetricHeatVariables(column.key, value, leaderboardHeatScales);
-        return column.key === 'dpm' ? `${shinyHeat} ${divergingTint(value, dpmTintLimit)}` : shinyHeat;
+        return column.key === tintColumn
+            ? `${shinyHeat} ${divergingTint(value, tintScale.limit, tintScale.center)}`
+            : shinyHeat;
+    }
+
+    function median(values) {
+        if (values.length === 0) return 0;
+        const sorted = [...values].sort((a, b) => a - b);
+        const middle = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
     }
 
     function keyClass(key) {

@@ -246,6 +246,7 @@ const TRAJECTORY_RATING_COLUMNS = [
     'seconds_played',
     'future_game',
     'bayes_rapm_total',
+    'market_rating',
     'x_minutes',
     'x_pace',
     'x_pts_100',
