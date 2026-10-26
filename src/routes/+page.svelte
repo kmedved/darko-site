@@ -43,6 +43,7 @@
     import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
     import { buildLeaderboardCsvRows } from '$lib/utils/leaderboardCsv.js';
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
+    import { describeMarket, latestMarketAsOf } from '$lib/utils/marketRating.js';
     import { formatSeasonEndYearLabel } from '$lib/utils/seasonUtils.js';
     import { AS_OF_PARAM, formatAsOfDate } from '$lib/utils/timeMachine.js';
     import { unpackRows } from '$lib/utils/columnar.js';
@@ -121,6 +122,8 @@
     // The note on $ Value, only while that column is on the board.
     const showsValueColumn = $derived(playerColumns.some((column) => column.key === 'sal_market_fixed'));
     const dataColumns = $derived(playerColumns.filter((column) => column.sortable !== false));
+    // The Market column's hint names the day of the fit its numbers come from.
+    const marketAsOf = $derived(latestMarketAsOf(players));
     const sortConfigs = $derived(buildPlayerTableSortConfig(dataColumns));
     // Sorting by a column that has gone (Since, after leaving the Time Machine) falls back to DPM.
     const activeSortColumn = $derived(sortConfigs[sortColumn] ? sortColumn : 'dpm');
@@ -1455,7 +1458,7 @@
                 >
                     <span class="header-label-wrap">
                         {#if column.metricKey}
-                            <MetricTooltip text={getMetricDefinition(column.metricKey)}>
+                            <MetricTooltip text={column.metricKey === 'market_rating' ? describeMarket(marketAsOf) : getMetricDefinition(column.metricKey)}>
                                 <span>{column.label}</span>
                             </MetricTooltip>
                         {:else}
@@ -2394,6 +2397,11 @@
 
     .leaderboard-cell--dpm {
         font-weight: var(--figure-weight-strong);
+    }
+
+    /* Experimental, so it reads quieter than DARKO's own ratings. */
+    .leaderboard-cell--market-rating {
+        color: var(--text-secondary);
     }
 
     th.num {

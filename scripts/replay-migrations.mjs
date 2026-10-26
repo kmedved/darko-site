@@ -106,7 +106,8 @@ const REPLACED_TABLE_STUBS = [
         wins_pg double precision, warp double precision, sal_poolshare double precision,
         sal_vetfloor double precision, sal_market double precision,
         sal_market_fixed double precision, actual_salary double precision,
-        surplus_value double precision);
+        surplus_value double precision, market_rating double precision,
+        market_playoff_rating double precision, market_as_of date);
     ALTER TABLE public.player_ratings ADD CONSTRAINT pk_player_ratings PRIMARY KEY (nba_id, date);
     CREATE INDEX idx_ratings_date ON public.player_ratings (date DESC);
     CREATE INDEX idx_ratings_season ON public.player_ratings (season);

@@ -1,9 +1,11 @@
 <script>
     import DpmChart from './DpmChart.svelte';
+    import MetricTooltip from './MetricTooltip.svelte';
     import { apiPlayerHistory } from '$lib/api.js';
     import { createRequestSequencer } from '$lib/utils/requestSequencer.js';
     import { formatMinutes, formatSignedMetric, formatPercent, formatFixed } from '$lib/utils/csvPresets.js';
     import { staleRapmDate } from '$lib/utils/latestRapm.js';
+    import { describeMarket } from '$lib/utils/marketRating.js';
     import { formatAsOfDate } from '$lib/utils/timeMachine.js';
     import { snapshotNote } from '$lib/utils/headToHead.js';
 
@@ -14,6 +16,8 @@
     // RAPM older than the card's ratings (it hasn't come with each day's ratings since March)
     // says when it's from.
     const rapmFrom = $derived(staleRapmDate([player]));
+    // The experimental market rating's hint names the day of the fit it comes from.
+    const marketAsOf = $derived(player?.market_as_of ? String(player.market_as_of).slice(0, 10) : null);
 
     let history = $state([]);
     let historyLoading = $state(true);
@@ -130,6 +134,15 @@
             <span class="label">RAPM{#if rapmFrom}{' '}<span class="as-of">{formatAsOfDate(rapmFrom, { short: true })}</span>{/if}</span>
             <span class="value {cls(player.bayes_rapm_total)}">{formatSignedMetric(player.bayes_rapm_total)}</span>
         </div>
+        <!-- Experimental, so in plain ink rather than the signed colours. -->
+        <div class="stat-row">
+            <span class="label">Market <MetricTooltip text={describeMarket(marketAsOf)} label="About the market rating"><span class="info-dot" aria-hidden="true">i</span></MetricTooltip></span>
+            <span class="value market">{formatSignedMetric(player.market_rating)}</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">Market (playoffs) <MetricTooltip text={describeMarket(marketAsOf, 'market_playoff_rating')} label="About the playoff market rating"><span class="info-dot" aria-hidden="true">i</span></MetricTooltip></span>
+            <span class="value market">{formatSignedMetric(player.market_playoff_rating)}</span>
+        </div>
     </div>
 
     <!-- Context -->
@@ -181,6 +194,10 @@
 </div>
 
 <style>
+    .market {
+        color: var(--text-secondary);
+    }
+
     .as-of {
         font-weight: 400;
         color: var(--text-muted);

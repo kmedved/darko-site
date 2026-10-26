@@ -115,6 +115,17 @@ const COLUMN_DEFINITIONS = Object.freeze({
         format: 'signed',
         metricKey: 'on_off_dpm'
     },
+    // Experimental: a rating from closing betting spreads. Its header's hint says which day's fit.
+    market_rating: {
+        key: 'market_rating',
+        label: 'Market',
+        type: 'number',
+        align: 'right',
+        alignClass: 'num',
+        dataType: 'number',
+        format: 'signed',
+        metricKey: 'market_rating'
+    },
     x_minutes: {
         key: 'x_minutes',
         label: 'MPG',
@@ -239,6 +250,7 @@ const STANDARD_LEADERBOARD_METRIC_KEYS = Object.freeze([
     'd_dpm',
     'box_dpm',
     'on_off_dpm',
+    'market_rating',
     'x_minutes',
     'x_pace',
     'x_pts_100',
@@ -308,6 +320,7 @@ const COLUMN_GROUP_BY_KEY = Object.freeze({
     since_dpm: 'impact',
     box_dpm: 'impact',
     on_off_dpm: 'impact',
+    market_rating: 'impact',
     x_minutes: 'role',
     x_pace: 'role',
     x_pts_100: 'per100',
@@ -323,7 +336,7 @@ const COLUMN_GROUP_BY_KEY = Object.freeze({
 /** The column sets the Modern leaderboard can narrow to. Each keeps the player and DPM. */
 export const COLUMN_SETS = Object.freeze([
     { key: 'all', label: 'All stats', columns: null },
-    { key: 'impact', label: 'Impact', columns: ['dpm', 'o_dpm', 'd_dpm', 'box_dpm', 'on_off_dpm', 'x_minutes'] },
+    { key: 'impact', label: 'Impact', columns: ['dpm', 'o_dpm', 'd_dpm', 'box_dpm', 'on_off_dpm', 'market_rating', 'x_minutes'] },
     { key: 'box', label: 'Box score', columns: ['dpm', 'x_minutes', 'x_pace', 'x_pts_100', 'x_ast_100'] },
     { key: 'shooting', label: 'Shooting', columns: ['dpm', 'x_pts_100', 'x_fg_pct', 'x_fg3_pct', 'x_ft_pct'] },
     { key: 'value', label: 'Value', columns: ['dpm', 'x_minutes', 'sal_market_fixed', 'actual_salary', 'surplus_value'] }

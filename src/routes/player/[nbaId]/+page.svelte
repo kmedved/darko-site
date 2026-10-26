@@ -8,6 +8,7 @@
 	import ProjectedBoxScore from '$lib/components/ProjectedBoxScore.svelte';
 	import SeasonBySeason from '$lib/components/SeasonBySeason.svelte';
 	import LongevityCareerLengthChart from '$lib/components/LongevityCareerLengthChart.svelte';
+	import MetricTooltip from '$lib/components/MetricTooltip.svelte';
 	import OffenseDefenseBar from '$lib/components/OffenseDefenseBar.svelte';
 	import OffenseDefenseGlyph from '$lib/components/OffenseDefenseGlyph.svelte';
 	import OffenseDefenseSplit from '$lib/components/OffenseDefenseSplit.svelte';
@@ -22,6 +23,7 @@
 	import { normalizeComps } from '$lib/utils/comps.js';
 	import { AS_OF_PARAM, formatAsOfDate, parseAsOfDate } from '$lib/utils/timeMachine.js';
 	import { isRapmMetric, staleRapmDate } from '$lib/utils/latestRapm.js';
+	import { describeMarket, marketRating } from '$lib/utils/marketRating.js';
 	import { seasonRows, seasonUnderWay } from '$lib/utils/playerSeasons.js';
 	import { projectedBoxScore } from '$lib/utils/boxScore.js';
 	import {
@@ -134,6 +136,10 @@
 		return latest;
 	});
 	const ratingRow = $derived(asOfDate ? asOfRow : playerInfo);
+
+	// The experimental market rating, today's only: the career history the Time Machine reads
+	// doesn't carry it. A player without one shows nothing.
+	const market = $derived(asOfDate ? null : marketRating(playerInfo));
 
 	const playerRating = $derived.by(() => {
 		const dpm = Number.parseFloat(ratingRow?.dpm);
@@ -538,6 +544,12 @@
 									defense={playerRating.defense}
 									labels
 								/>
+								{#if market}
+									<span class="profile-score-market">
+										<span>Market {formatSigned(market.regular, 1)}{#if market.playoff !== null}{' · '}playoffs {formatSigned(market.playoff, 1)}{/if}</span>
+										<MetricTooltip text={describeMarket(market.asOf)} label="About the market rating"><span class="info-dot" aria-hidden="true">i</span></MetricTooltip>
+									</span>
+								{/if}
 								{#if !asOfDate && lastPlayed}
 									<span class="profile-score-date">Last played {formatAsOfDate(lastPlayed, { short: true })}</span>
 								{/if}
@@ -937,6 +949,16 @@
 	.profile-score-date {
 		color: var(--text-muted);
 		font-size: 12px;
+	}
+
+	/* Experimental, so a quiet line under DARKO's own rating. */
+	.profile-score-market {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--text-muted);
+		font-size: 12px;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.profile-score-note {

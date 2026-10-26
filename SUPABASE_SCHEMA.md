@@ -80,23 +80,25 @@ Core fact table. One row per player per game-date.
   `get_season_start_player_ratings` return whole rows (`pr.*`). The direct selects and filters
   in `src/lib/server/supabase.js` (`RATING_COLUMNS`, `TRAJECTORY_RATING_COLUMNS`,
   `PLAYER_PROFILE_RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS`, `SEASON_ROW_COLUMNS`,
-  `FROZEN_RATING_FIELDS` from `src/lib/utils/frozenRatings.js`, and literal selects) name 71 of the
-  76: all but `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`, which no
-  page uses.
+  `FROZEN_RATING_FIELDS` from `src/lib/utils/frozenRatings.js`, and literal selects) name 74 of the
+  79: all but `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`, which no
+  page uses. Until a publish adds the three market columns, the reads that name them
+  (`RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS`) ask again without them (`readMarketColumns`).
 
-Built by `build_supabase_tables()` in `pipeline_scripts/publish/website.py`, which left-joins six
+Built by `build_supabase_tables()` in `pipeline_scripts/publish/website.py`, which left-joins its
 source files on `(nba_id, date)`, each filtered to the base table's keys before it is collected:
 
 | Source parquet | Join type | Columns contributed |
 |---|---|---|
 | `temp/spm_outputs.parq` | base table | nba_id, date, season, team_name, tm_id, opp_id, future_game, active_roster, available, poss, dpm/o_dpm/d_dpm, box_dpm/box_odpm/box_ddpm, on_off_dpm/on_off_odpm/on_off_ddpm |
 | `5_assembled_features.parq` | left join | age, career_game_num, seconds_played, position, position_num, x_position |
-| `bayes_rapm_ratings.parq` | left join | bayes_rapm_off, bayes_rapm_def, bayes_rapm_total, rapm_exposure |
+| `bayes_rapm_ratings.parq` | left join | bayes_rapm_off, bayes_rapm_def, bayes_rapm_total, rapm_exposure. Despite the names, these now come from the daily NPI RAPM: each row carries the latest daily snapshot on or before its date. They used to come from a periodic Bayesian RAPM fit, which stopped in June 2026. |
+| daily market fit | left join | market_rating, market_playoff_rating, market_as_of (from the first daily fit, 2026-10-26; null on earlier rows and for players with no market history) |
 | `talent_game_predictions.parq` | left join | x_minutes, x_pace, x_{stat}_100 columns, x_{pct} columns, tr_minutes, tr_starter, tr_fg3_pct, tr_ft_pct |
 | `temp/nba_survivorship.parq` | left join | projected_years_remaining, projected_years_remaining_cal, x_retirement_age, x_retirement_age_cal, s1–s15 |
 | `dpm_salary.parq` | left join | game_value, wins_pg, warp, sal_poolshare, sal_vetfloor, sal_market, sal_market_fixed, actual_salary, surplus_value (a null in the last three takes the player-season's last row that has all three) |
 
-**All 76 columns, in published order.** The builder casts `nba_id` (bigint), `date` (date),
+**All 79 columns, in published order.** The builder casts `nba_id` (bigint), `date` (date),
 `season`, `tm_id`, `opp_id`, `future_game`, `career_game_num` and `seconds_played` (integer),
 `active_roster` (smallint) and `poss` (real); every other column keeps its source parquet's
 type (Float32 is `real`, Float64 `double precision`, strings and categoricals `text`). These
@@ -131,9 +133,9 @@ the same types.
 | 23 | position | text | bio | Position label |
 | 24 | position_num | double precision | bio | Numeric position (1–5 continuous) |
 | 25 | x_position | text | bio | Model-predicted position |
-| 26 | bayes_rapm_off | real | rapm | Bayesian RAPM offensive (pts/100 poss above avg) |
-| 27 | bayes_rapm_def | real | rapm | Bayesian RAPM defensive |
-| 28 | bayes_rapm_total | real | rapm | Bayesian RAPM total |
+| 26 | bayes_rapm_off | real | rapm | RAPM offensive (pts/100 poss above avg); the daily NPI RAPM's latest snapshot on or before the row's date (a periodic Bayesian fit until June 2026) |
+| 27 | bayes_rapm_def | real | rapm | RAPM defensive; same source |
+| 28 | bayes_rapm_total | real | rapm | RAPM total; same source |
 | 29 | rapm_exposure | real | rapm | Exponentially-weighted accumulated possessions |
 | 30 | x_minutes | real | projections | Projected minutes per game |
 | 31 | x_pace | real | projections | Projected pace |
@@ -182,6 +184,9 @@ the same types.
 | 74 | sal_market_fixed | double precision | salary | Fair market salary estimate (dollars); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
 | 75 | actual_salary | double precision | salary | Actual contract salary (dollars); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
 | 76 | surplus_value | double precision | salary | sal_market_fixed − actual_salary (positive = underpaid); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
+| 77 | market_rating | double precision | market | Regular-season player rating implied by closing betting spreads (jointly fit; experimental), pts/100 poss, positive = helps his team; roughly RAPM's scale. Null before 2026-10-26 and for players with no market history |
+| 78 | market_playoff_rating | double precision | market | The same player's playoff rating: `market_rating` plus a persistent playoff adjustment |
+| 79 | market_as_of | date | market | Date of the daily fit behind the row's market values; the fit uses games before it |
 
 ---
 
@@ -633,7 +638,7 @@ Elo voting remains the only write path. `supabase/migrations/20260617_001_restor
 
 ### RATING_COLUMNS
 
-Comma-joined string of 70 of the 76 `player_ratings` columns, selected by the per-player history reads (`getPlayerHistory()`, and `getFullPlayerHistory()` by default). It leaves out `opp_id` (the player-profile history selects it through `PLAYER_PROFILE_RATING_COLUMNS`) and five salary columns no page displays: `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`. If you add a column to the DB, add it here (or to the narrower lists) or those reads won't fetch it; the whole-row RPCs return it regardless.
+Comma-joined string of 73 of the 79 `player_ratings` columns, selected by the per-player history reads (`getPlayerHistory()`, and `getFullPlayerHistory()` by default). It leaves out `opp_id` (the player-profile history selects it through `PLAYER_PROFILE_RATING_COLUMNS`) and five salary columns no page displays: `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`. If you add a column to the DB, add it here (or to the narrower lists) or those reads won't fetch it; the whole-row RPCs return it regardless.
 
 ### Core data functions
 
