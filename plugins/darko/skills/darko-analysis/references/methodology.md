@@ -16,6 +16,8 @@ DARKO career histories are retrospective pregame estimates, not an archive of ra
 - **Box DPM (box_dpm):** Box-score-only DPM, built from core on-court box-score components.
 - **On/Off DPM (on_off_dpm):** On/off DPM, incorporating team-level impact when a player is on vs. off the court.
 - **RAPM (bayes_rapm_total):** Bayesian RAPM total estimate, in points per 100 possessions above league average.
+- **Market (market_rating):** Player rating implied by closing betting spreads (points per 100 possessions). Experimental.
+- **Market (playoffs) (market_playoff_rating):** Playoff rating implied by closing betting spreads: the market rating plus a persistent playoff adjustment (points per 100 possessions). Experimental.
 - **WOWY RAPM (wowy_rapm):** Daily-grain synthetic RAPM estimate built consistently from the 1956-57 season onward. Historical dates use a modest hindsight refinement to sharpen career arcs.
 - **WOWY O-RAPM (wowy_orapm):** Daily-grain synthetic offensive RAPM estimate with the same historical refinement. Offensive and defensive attribution is less stable than total impact.
 - **WOWY D-RAPM (wowy_drapm):** Daily-grain synthetic defensive RAPM estimate with the same historical refinement, where positive values mean better defense. Offensive and defensive attribution is less stable than total impact.

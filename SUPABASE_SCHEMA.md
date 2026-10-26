@@ -80,23 +80,25 @@ Core fact table. One row per player per game-date.
   `get_season_start_player_ratings` return whole rows (`pr.*`). The direct selects and filters
   in `src/lib/server/supabase.js` (`RATING_COLUMNS`, `TRAJECTORY_RATING_COLUMNS`,
   `PLAYER_PROFILE_RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS`, `SEASON_ROW_COLUMNS`,
-  `FROZEN_RATING_FIELDS` from `src/lib/utils/frozenRatings.js`, and literal selects) name 71 of the
-  76: all but `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`, which no
-  page uses.
+  `FROZEN_RATING_FIELDS` from `src/lib/utils/frozenRatings.js`, and literal selects) name 74 of the
+  79: all but `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`, which no
+  page uses. Until a publish adds the three market columns, the reads that name them
+  (`RATING_COLUMNS`, `PLAYERS_AS_OF_COLUMNS`) ask again without them (`readMarketColumns`).
 
-Built by `build_supabase_tables()` in `pipeline_scripts/publish/website.py`, which left-joins six
+Built by `build_supabase_tables()` in `pipeline_scripts/publish/website.py`, which left-joins its
 source files on `(nba_id, date)`, each filtered to the base table's keys before it is collected:
 
 | Source parquet | Join type | Columns contributed |
 |---|---|---|
 | `temp/spm_outputs.parq` | base table | nba_id, date, season, team_name, tm_id, opp_id, future_game, active_roster, available, poss, dpm/o_dpm/d_dpm, box_dpm/box_odpm/box_ddpm, on_off_dpm/on_off_odpm/on_off_ddpm |
 | `5_assembled_features.parq` | left join | age, career_game_num, seconds_played, position, position_num, x_position |
-| `bayes_rapm_ratings.parq` | left join | bayes_rapm_off, bayes_rapm_def, bayes_rapm_total, rapm_exposure |
+| `candidates/npi_rapm/prod_v1/production_rapm_ratings.parq` | as-of left join (latest snapshot on or before the row's date) | bayes_rapm_off, bayes_rapm_def, bayes_rapm_total, rapm_exposure. Despite the names, these are the daily NPI RAPM since 2026-10-26; they came from a periodic Bayesian RAPM fit (`bayes_rapm_ratings.parq`) that stopped in June 2026. |
+| `market_rapm/ratings_history.parquet` | as-of left join (latest daily fit on or before the row's date) | market_rating, market_playoff_rating, market_as_of (from the first daily fit, 2026-10-26; null on earlier rows and for players with no market history) |
 | `talent_game_predictions.parq` | left join | x_minutes, x_pace, x_{stat}_100 columns, x_{pct} columns, tr_minutes, tr_starter, tr_fg3_pct, tr_ft_pct |
 | `temp/nba_survivorship.parq` | left join | projected_years_remaining, projected_years_remaining_cal, x_retirement_age, x_retirement_age_cal, s1–s15 |
 | `dpm_salary.parq` | left join | game_value, wins_pg, warp, sal_poolshare, sal_vetfloor, sal_market, sal_market_fixed, actual_salary, surplus_value (a null in the last three takes the player-season's last row that has all three) |
 
-**All 76 columns, in published order.** The builder casts `nba_id` (bigint), `date` (date),
+**All 79 columns, in published order.** The builder casts `nba_id` (bigint), `date` (date),
 `season`, `tm_id`, `opp_id`, `future_game`, `career_game_num` and `seconds_played` (integer),
 `active_roster` (smallint) and `poss` (real); every other column keeps its source parquet's
 type (Float32 is `real`, Float64 `double precision`, strings and categoricals `text`). These
@@ -131,57 +133,60 @@ the same types.
 | 23 | position | text | bio | Position label |
 | 24 | position_num | double precision | bio | Numeric position (1–5 continuous) |
 | 25 | x_position | text | bio | Model-predicted position |
-| 26 | bayes_rapm_off | real | rapm | Bayesian RAPM offensive (pts/100 poss above avg) |
-| 27 | bayes_rapm_def | real | rapm | Bayesian RAPM defensive |
-| 28 | bayes_rapm_total | real | rapm | Bayesian RAPM total |
+| 26 | bayes_rapm_off | real | rapm | RAPM offensive (pts/100 poss above avg); the daily NPI RAPM's latest snapshot on or before the row's date (a periodic Bayesian fit until June 2026) |
+| 27 | bayes_rapm_def | real | rapm | RAPM defensive; same source |
+| 28 | bayes_rapm_total | real | rapm | RAPM total; same source |
 | 29 | rapm_exposure | real | rapm | Exponentially-weighted accumulated possessions |
-| 30 | x_minutes | real | projections | Projected minutes per game |
-| 31 | x_pace | real | projections | Projected pace |
-| 32 | x_pts_100 | real | projections | Projected pts/100 poss |
-| 33 | x_ast_100 | real | projections | Projected ast/100 poss |
-| 34 | x_orb_100 | real | projections | Projected orb/100 poss |
-| 35 | x_drb_100 | real | projections | Projected drb/100 poss |
-| 36 | x_stl_100 | real | projections | Projected stl/100 poss |
-| 37 | x_blk_100 | real | projections | Projected blk/100 poss |
-| 38 | x_tov_100 | real | projections | Projected tov/100 poss |
-| 39 | x_fga_100 | real | projections | Projected fga/100 poss |
-| 40 | x_fg3a_100 | real | projections | Projected fg3a/100 poss |
-| 41 | x_fta_100 | real | projections | Projected fta/100 poss |
-| 42 | x_fg_pct | real | projections | Projected FG% |
-| 43 | x_fg3_pct | real | projections | Projected 3P% |
-| 44 | x_ft_pct | real | projections | Projected FT% |
-| 45 | tr_minutes | real | projections | Time-decayed running avg minutes |
-| 46 | tr_starter | real | projections | Time-decayed starter probability |
-| 47 | tr_fg3_pct | real | projections | Time-decayed 3P% |
-| 48 | tr_ft_pct | real | projections | Time-decayed FT% |
-| 49 | projected_years_remaining | real | survivorship | Coherent expected years = sum(S(t)), curve-calibrated |
-| 50 | projected_years_remaining_cal | real | survivorship | Presentation-calibrated expected years (non-coherent, better per age cohort) |
-| 51 | x_retirement_age | double precision | survivorship | age + projected_years_remaining |
-| 52 | x_retirement_age_cal | double precision | survivorship | age + projected_years_remaining_cal |
-| 53 | s1 | real | survivorship | P(plays ≥1 more season) |
-| 54 | s2 | real | survivorship | P(plays ≥2 more seasons) |
-| 55 | s3 | real | survivorship | P(plays ≥3 more seasons) |
-| 56 | s4 | real | survivorship | P(plays ≥4 more seasons) |
-| 57 | s5 | real | survivorship | P(plays ≥5 more seasons) |
-| 58 | s6 | real | survivorship | P(plays ≥6 more seasons) |
-| 59 | s7 | real | survivorship | P(plays ≥7 more seasons) |
-| 60 | s8 | real | survivorship | P(plays ≥8 more seasons) |
-| 61 | s9 | real | survivorship | P(plays ≥9 more seasons) |
-| 62 | s10 | real | survivorship | P(plays ≥10 more seasons) |
-| 63 | s11 | real | survivorship | P(plays ≥11 more seasons) |
-| 64 | s12 | real | survivorship | P(plays ≥12 more seasons) |
-| 65 | s13 | real | survivorship | P(plays ≥13 more seasons) |
-| 66 | s14 | real | survivorship | P(plays ≥14 more seasons) |
-| 67 | s15 | real | survivorship | P(plays ≥15 more seasons) |
-| 68 | game_value | double precision | salary | Per-game dollar value based on DPM and minutes |
-| 69 | wins_pg | double precision | salary | Wins produced per game |
-| 70 | warp | double precision | salary | Wins above replacement player |
-| 71 | sal_poolshare | double precision | salary | Annualized salary from the player's share of his game's positive value (82 games × the per-game cap pool) |
-| 72 | sal_vetfloor | double precision | salary | Veteran minimum plus his positive-value share of the per-game surplus, annualized |
-| 73 | sal_market | double precision | salary | Market salary from his share of the game's total value (negatives allowed), annualized |
-| 74 | sal_market_fixed | double precision | salary | Fair market salary estimate (dollars); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
-| 75 | actual_salary | double precision | salary | Actual contract salary (dollars); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
-| 76 | surplus_value | double precision | salary | sal_market_fixed − actual_salary (positive = underpaid); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
+| 30 | market_rating | double precision | market | Regular-season player rating implied by closing betting spreads (jointly fit; experimental), pts/100 poss, positive = helps his team; roughly RAPM's scale. Null before 2026-10-26 and for players with no market history |
+| 31 | market_playoff_rating | double precision | market | The same player's playoff rating: `market_rating` plus a persistent playoff adjustment |
+| 32 | market_as_of | date | market | Date of the daily fit behind the row's market values; the fit uses games before it |
+| 33 | x_minutes | real | projections | Projected minutes per game |
+| 34 | x_pace | real | projections | Projected pace |
+| 35 | x_pts_100 | real | projections | Projected pts/100 poss |
+| 36 | x_ast_100 | real | projections | Projected ast/100 poss |
+| 37 | x_orb_100 | real | projections | Projected orb/100 poss |
+| 38 | x_drb_100 | real | projections | Projected drb/100 poss |
+| 39 | x_stl_100 | real | projections | Projected stl/100 poss |
+| 40 | x_blk_100 | real | projections | Projected blk/100 poss |
+| 41 | x_tov_100 | real | projections | Projected tov/100 poss |
+| 42 | x_fga_100 | real | projections | Projected fga/100 poss |
+| 43 | x_fg3a_100 | real | projections | Projected fg3a/100 poss |
+| 44 | x_fta_100 | real | projections | Projected fta/100 poss |
+| 45 | x_fg_pct | real | projections | Projected FG% |
+| 46 | x_fg3_pct | real | projections | Projected 3P% |
+| 47 | x_ft_pct | real | projections | Projected FT% |
+| 48 | tr_minutes | real | projections | Time-decayed running avg minutes |
+| 49 | tr_starter | real | projections | Time-decayed starter probability |
+| 50 | tr_fg3_pct | real | projections | Time-decayed 3P% |
+| 51 | tr_ft_pct | real | projections | Time-decayed FT% |
+| 52 | projected_years_remaining | real | survivorship | Coherent expected years = sum(S(t)), curve-calibrated |
+| 53 | projected_years_remaining_cal | real | survivorship | Presentation-calibrated expected years (non-coherent, better per age cohort) |
+| 54 | x_retirement_age | double precision | survivorship | age + projected_years_remaining |
+| 55 | x_retirement_age_cal | double precision | survivorship | age + projected_years_remaining_cal |
+| 56 | s1 | real | survivorship | P(plays ≥1 more season) |
+| 57 | s2 | real | survivorship | P(plays ≥2 more seasons) |
+| 58 | s3 | real | survivorship | P(plays ≥3 more seasons) |
+| 59 | s4 | real | survivorship | P(plays ≥4 more seasons) |
+| 60 | s5 | real | survivorship | P(plays ≥5 more seasons) |
+| 61 | s6 | real | survivorship | P(plays ≥6 more seasons) |
+| 62 | s7 | real | survivorship | P(plays ≥7 more seasons) |
+| 63 | s8 | real | survivorship | P(plays ≥8 more seasons) |
+| 64 | s9 | real | survivorship | P(plays ≥9 more seasons) |
+| 65 | s10 | real | survivorship | P(plays ≥10 more seasons) |
+| 66 | s11 | real | survivorship | P(plays ≥11 more seasons) |
+| 67 | s12 | real | survivorship | P(plays ≥12 more seasons) |
+| 68 | s13 | real | survivorship | P(plays ≥13 more seasons) |
+| 69 | s14 | real | survivorship | P(plays ≥14 more seasons) |
+| 70 | s15 | real | survivorship | P(plays ≥15 more seasons) |
+| 71 | game_value | double precision | salary | Per-game dollar value based on DPM and minutes |
+| 72 | wins_pg | double precision | salary | Wins produced per game |
+| 73 | warp | double precision | salary | Wins above replacement player |
+| 74 | sal_poolshare | double precision | salary | Annualized salary from the player's share of his game's positive value (82 games × the per-game cap pool) |
+| 75 | sal_vetfloor | double precision | salary | Veteran minimum plus his positive-value share of the per-game surplus, annualized |
+| 76 | sal_market | double precision | salary | Market salary from his share of the game's total value (negatives allowed), annualized |
+| 77 | sal_market_fixed | double precision | salary | Fair market salary estimate (dollars); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
+| 78 | actual_salary | double precision | salary | Actual contract salary (dollars); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
+| 79 | surplus_value | double precision | salary | sal_market_fixed − actual_salary (positive = underpaid); a null takes the value from the player-season's last row that has all three of `sal_market_fixed`, `actual_salary` and `surplus_value` |
 
 ---
 
@@ -633,7 +638,7 @@ Elo voting remains the only write path. `supabase/migrations/20260617_001_restor
 
 ### RATING_COLUMNS
 
-Comma-joined string of 70 of the 76 `player_ratings` columns, selected by the per-player history reads (`getPlayerHistory()`, and `getFullPlayerHistory()` by default). It leaves out `opp_id` (the player-profile history selects it through `PLAYER_PROFILE_RATING_COLUMNS`) and five salary columns no page displays: `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`. If you add a column to the DB, add it here (or to the narrower lists) or those reads won't fetch it; the whole-row RPCs return it regardless.
+Comma-joined string of 73 of the 79 `player_ratings` columns, selected by the per-player history reads (`getPlayerHistory()`, and `getFullPlayerHistory()` by default). It leaves out `opp_id` (the player-profile history selects it through `PLAYER_PROFILE_RATING_COLUMNS`) and five salary columns no page displays: `game_value`, `wins_pg`, `sal_poolshare`, `sal_vetfloor` and `sal_market`. If you add a column to the DB, add it here (or to the narrower lists) or those reads won't fetch it; the whole-row RPCs return it regardless.
 
 ### Core data functions
 

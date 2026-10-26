@@ -114,7 +114,7 @@ test('column sets keep the player and DPM, and group headings span their columns
 	const cells = columnGroupCells(leaderboardTableColumns({ set: 'impact' }));
 	assert.deepEqual(
 		cells.map((cell) => `${cell.label || '-'}:${cell.span}:${cell.alignClass}`),
-		['-:1:rank', '-:1:name', '-:1:team', 'Impact:5:group', 'Role:1:group']
+		['-:1:rank', '-:1:name', '-:1:team', 'Impact:6:group', 'Role:1:group']
 	);
 	const all = columnGroupCells(leaderboardTableColumns());
 	assert.deepEqual(all.filter((cell) => cell.label).map((cell) => cell.label), ['Impact', 'Role', 'Per 100', 'Shooting', 'Value']);

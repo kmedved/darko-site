@@ -69,6 +69,9 @@ const PLAYER_VIEW_FIELDS = Object.freeze({
         'd_dpm',
         'box_dpm',
         'on_off_dpm',
+        // Experimental, and its fit's date for the column's hint and the export.
+        'market_rating',
+        'market_as_of',
         'x_minutes',
         'x_pace',
         'x_pts_100',

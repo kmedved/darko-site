@@ -166,6 +166,9 @@ const RATING_COLUMNS = [
     'bayes_rapm_def',
     'bayes_rapm_total',
     'rapm_exposure',
+    'market_rating',
+    'market_playoff_rating',
+    'market_as_of',
     'x_minutes',
     'x_pace',
     'x_pts_100',
@@ -209,6 +212,20 @@ const RATING_COLUMNS = [
     'actual_salary',
     'warp'
 ].join(', ');
+
+const UNDEFINED_COLUMN = '42703';
+// The market rating's columns are new in the nightly publish (its first daily fit is 2026-10-26).
+// Until the live table carries them, a read that names them asks again without, and its rows
+// have no market rating, as reads of opp_id did.
+const MARKET_COLUMNS = Object.freeze(['market_rating', 'market_playoff_rating', 'market_as_of']);
+
+/** `read(columns)`'s { data, error }, asked again without the market columns while the table lacks them. */
+async function readMarketColumns(read, columns) {
+    const result = await read(columns);
+    if (result.error?.code !== UNDEFINED_COLUMN) return result;
+    const without = columns.split(', ').filter((column) => !MARKET_COLUMNS.includes(column)).join(', ');
+    return without === columns ? result : read(without);
+}
 
 // The Trajectories page needs complete careers but only its selectable metrics.
 // Keeping this projection narrow avoids shipping the production table's modeling fields.
@@ -1259,6 +1276,8 @@ const PLAYERS_AS_OF_COLUMNS = [
     'd_dpm',
     'box_dpm',
     'on_off_dpm',
+    'market_rating',
+    'market_as_of',
     'x_minutes',
     'x_pace',
     'x_pts_100',
@@ -1420,11 +1439,10 @@ export async function getPlayersAsOf(asOf, calendar = null) {
         }
         const [chunks, playersMap] = await Promise.all([
             mapWithConcurrency(requests, PLAYERS_AS_OF_CONCURRENCY, async ({ date, ids }) => {
-                const { data, error } = await supabase
-                    .from('player_ratings')
-                    .select(PLAYERS_AS_OF_COLUMNS)
-                    .eq('date', date)
-                    .in('nba_id', ids);
+                const { data, error } = await readMarketColumns(
+                    (columns) => supabase.from('player_ratings').select(columns).eq('date', date).in('nba_id', ids),
+                    PLAYERS_AS_OF_COLUMNS
+                );
                 if (error) throw error;
                 return data ?? [];
             }),
@@ -1445,12 +1463,16 @@ export async function getPlayersAsOf(asOf, calendar = null) {
 export async function getPlayerHistory(nbaId, limit = 500) {
     const key = cacheKey('playerHistory', `${nbaId}:${limit}`);
     return runCached(key, CACHE_MS.playerHistory, async () => {
-        const { data, error } = await supabase
-            .from('player_ratings')
-            .select(RATING_COLUMNS)
-            .eq('nba_id', nbaId)
-            .order('date', { ascending: false })
-            .limit(limit + 1);
+        const { data, error } = await readMarketColumns(
+            (columns) =>
+                supabase
+                    .from('player_ratings')
+                    .select(columns)
+                    .eq('nba_id', nbaId)
+                    .order('date', { ascending: false })
+                    .limit(limit + 1),
+            RATING_COLUMNS
+        );
 
         if (error) throw error;
         const playersMap = await getPlayersMapByIds([nbaId]);
@@ -1535,12 +1557,16 @@ export async function getFullPlayerHistory(nbaId, options = {}) {
         let lastPageSize = 0;
 
         while (allData.length < maxRows) {
-            const { data, error } = await supabase
-                .from('player_ratings')
-                .select(columns)
-                .eq('nba_id', nbaId)
-                .order('date', { ascending: true })
-                .range(page * pageSize, (page + 1) * pageSize - 1);
+            const { data, error } = await readMarketColumns(
+                (select) =>
+                    supabase
+                        .from('player_ratings')
+                        .select(select)
+                        .eq('nba_id', nbaId)
+                        .order('date', { ascending: true })
+                        .range(page * pageSize, (page + 1) * pageSize - 1),
+                columns
+            );
 
             if (error) throw error;
             const rows = data || [];
@@ -1605,7 +1631,6 @@ export async function getFullPlayerTrajectoryHistory(nbaId, options = {}) {
     };
 }
 
-const UNDEFINED_COLUMN = '42703';
 const PLAYER_PROFILE_COLUMNS_WITHOUT_OPPONENT = PLAYER_PROFILE_RATING_COLUMNS
     .split(', ')
     .filter((column) => column !== 'opp_id')

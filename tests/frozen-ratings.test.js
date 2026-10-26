@@ -46,7 +46,7 @@ test('the snapshot, histories and season lines all freeze at the last game', asy
 	assert.match(loader, /\.from\('player_seasons'\)\s*\.select\('nba_id, date'\)\s*\.eq\('season', season\)/);
 	// Player histories (profile, Compare, Career Trajectories, the API) and the latest rows.
 	assert.match(loader, /allData = freezeHistory\(allData\);/);
-	assert.match(loader, /\.limit\(limit \+ 1\);/);
+	assert.match(loader, /\.limit\(limit \+ 1\)/);
 	assert.match(loader, /return freezeHistory\(\(data \|\| \[\]\)\.slice\(\)\.reverse\(\)\)\s*\.slice\(-limit\)/);
 	// The leaderboard's season lines stop at the last game day.
 	assert.match(loader, /if \(isOffseasonRow\(row\)\) continue;/);
