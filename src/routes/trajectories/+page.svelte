@@ -143,6 +143,7 @@
 		'bayes_rapm_total',
 		'bayes_rapm_off',
 		'bayes_rapm_def',
+		'market_rating',
 		'wowy_rapm',
 		'wowy_orapm',
 		'wowy_drapm'
@@ -160,6 +161,7 @@
 		{ key: 'box_ddpm', label: 'Box defense' },
 		{ key: 'on_off_dpm', label: 'On/Off DPM' },
 		{ key: 'bayes_rapm_total', label: 'RAPM' },
+		{ key: 'market_rating', label: 'Market' },
 		{ key: 'wowy_rapm', label: 'WOWY RAPM' },
 		{ key: 'wowy_orapm', label: 'WOWY O-RAPM' },
 		{ key: 'wowy_drapm', label: 'WOWY D-RAPM' },
