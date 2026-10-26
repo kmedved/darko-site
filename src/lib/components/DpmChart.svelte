@@ -34,6 +34,8 @@
         { key: 'box_ddpm', label: getMetricDisplayLabel('box_ddpm') },
         { key: 'on_off_dpm', label: getMetricDisplayLabel('on_off_dpm') },
         { key: 'bayes_rapm_total', label: getMetricDisplayLabel('bayes_rapm_total') },
+        // Experimental; daily fits from 1997-98 on (each the fit as of that game's date).
+        { key: 'market_rating', label: getMetricDisplayLabel('market_rating') },
         { key: 'x_pts_100', label: getMetricDisplayLabel('x_pts_100') },
         { key: 'x_ast_100', label: getMetricDisplayLabel('x_ast_100') },
         { key: 'sal_market_fixed', label: getMetricDisplayLabel('sal_market_fixed') }
@@ -61,7 +63,8 @@
             activeStat === 'on_off_ddpm' ||
             activeStat === 'bayes_rapm_total' ||
             activeStat === 'bayes_rapm_off' ||
-            activeStat === 'bayes_rapm_def'
+            activeStat === 'bayes_rapm_def' ||
+            activeStat === 'market_rating'
         ) {
             return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`;
         }
