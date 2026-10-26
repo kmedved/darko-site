@@ -278,6 +278,7 @@ const PLAYER_PROFILE_RATING_COLUMNS = [
     'on_off_dpm',
     'age',
     'bayes_rapm_total',
+    'market_rating',
     'x_minutes',
     'x_pace',
     'x_pts_100',

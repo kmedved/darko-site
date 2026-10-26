@@ -45,6 +45,7 @@
 		{ value: 'box_ddpm', label: 'Box defense' },
 		{ value: 'on_off_dpm', label: 'On/Off DPM' },
 		{ value: 'bayes_rapm_total', label: 'RAPM' },
+		{ value: 'market_rating', label: 'Market' },
 		{ value: 'x_pts_100', label: 'Pts per 100' },
 		{ value: 'x_ast_100', label: 'Ast per 100' },
 		{ value: 'x_minutes', label: 'MPG' },

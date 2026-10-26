@@ -47,7 +47,8 @@
 		'on_off_ddpm',
 		'bayes_rapm_total',
 		'bayes_rapm_off',
-		'bayes_rapm_def'
+		'bayes_rapm_def',
+		'market_rating'
 	]);
 
 	function getY(row) {
