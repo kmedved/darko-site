@@ -4,9 +4,11 @@ import fs from 'node:fs/promises';
 
 import {
     AS_OF_PARAM,
+    asOfAnchorDate,
     asOfWindowStart,
     frameIndexAtOrBefore,
     isDateAwarePath,
+    isPastRegularSeason,
     isTimeMachineFolded,
     locateDate,
     parseAsOfDate,
@@ -61,6 +63,7 @@ test('the Time Machine rides along in the query string', () => {
     assert.equal(isDateAwarePath('/'), true);
     assert.equal(isDateAwarePath('/player/203999'), true);
     assert.equal(isDateAwarePath('/lab'), true);
+    assert.equal(isDateAwarePath('/projections'), true);
     assert.equal(isDateAwarePath('/rewind'), true);
     assert.equal(isDateAwarePath('/standings'), false);
 });
@@ -80,6 +83,47 @@ test('snapshots look back four weeks, past every team finale once one team is do
     // The 2019-20 teams left out of the bubble last played March 10.
     assert.equal(asOfWindowStart('2020-08-05', CALENDAR[1]), '2020-02-12');
     assert.equal(asOfWindowStart('2019-01-15', null), '2018-12-19');
+});
+
+test('a date reads its season up to the last game, or the last regular-season day for fantasy', () => {
+    const regularSeasonOnly = { regularSeasonOnly: true };
+    assert.equal(asOfAnchorDate('2019-01-15', CALENDAR[0]), '2019-01-15');
+    assert.equal(asOfAnchorDate('2019-01-15', CALENDAR[0], regularSeasonOnly), '2019-01-15');
+    assert.equal(asOfAnchorDate('2019-05-01', CALENDAR[0]), '2019-05-01');
+    assert.equal(asOfAnchorDate('2019-05-01', CALENDAR[0], regularSeasonOnly), '2019-04-10');
+    assert.equal(asOfAnchorDate('2019-07-20', CALENDAR[0]), '2019-06-13');
+    assert.equal(asOfAnchorDate('2019-07-20', CALENDAR[0], regularSeasonOnly), '2019-04-10');
+    // The 2019-20 bubble's seeding games are regular season; its playoffs are not.
+    assert.equal(asOfAnchorDate('2020-08-05', CALENDAR[1], regularSeasonOnly), '2020-08-05');
+    assert.equal(asOfAnchorDate('2020-09-01', CALENDAR[1], regularSeasonOnly), '2020-08-14');
+});
+
+test('a date is past the regular season only once a season has gone beyond it', () => {
+    assert.equal(isPastRegularSeason('2019-01-15', CALENDAR[0]), false);
+    assert.equal(isPastRegularSeason('2019-05-01', CALENDAR[0]), true);
+    assert.equal(isPastRegularSeason('2019-07-20', CALENDAR[0]), true);
+    assert.equal(isPastRegularSeason('2019-05-01', null), false);
+    // The latest season's calendar ends its regular season at the last game played.
+    const current = { season: 2027, first_game: '2026-10-20', earliest_team_finale: '2026-10-25', regular_season_end: '2026-10-25', last_game: '2026-10-25' };
+    assert.equal(isPastRegularSeason('2026-10-26', current), false);
+});
+
+test('Fantasy Lab reads the Time Machine date with its own projection columns', async () => {
+    const [loader, page, supabase] = await Promise.all([
+        fs.readFile('src/routes/projections/+page.server.js', 'utf8'),
+        fs.readFile('src/routes/projections/+page.svelte', 'utf8'),
+        fs.readFile('src/lib/server/supabase.js', 'utf8')
+    ]);
+    assert.match(loader, /parseAsOfDate\(url\.searchParams\.get\(AS_OF_PARAM\)\)/);
+    assert.match(loader, /getFantasyPlayersOnDate\(asOfDate\)/);
+    assert.match(loader, /AS_OF_EDGE_CACHE/);
+    assert.match(supabase, /const FANTASY_AS_OF_COLUMNS = \[[^\]]*'x_fta_100'/);
+    assert.match(supabase, /columns: FANTASY_AS_OF_COLUMNS,\s*regularSeasonOnly: true/);
+    assert.match(supabase, /if \(!result\.pastRegularSeason\) return result;/);
+    assert.match(supabase, /x_minutes: minutes\.get\(row\.nba_id\)/);
+    assert.match(page, /median projection over their team's last \{SMOOTHED_MINUTES_GAMES\} regular-season games/);
+    assert.match(page, /history\.season === 1997/);
+    assert.match(page, /\/player\/\$\{row\.nba_id\}\?asof=\$\{history\.date\}/);
 });
 
 test('frames are found on or before a date', () => {

@@ -1,9 +1,9 @@
 /**
  * Time Machine: one site-wide "as of" date, carried in the URL as ?asof=YYYY-MM-DD.
  *
- * Date-aware pages (the leaderboard, player pages, Roster Lab and Rewind) show DARKO as it
- * stood on that date. Every other page shows today's data and says so. The date sticks
- * across in-app navigation until the reader returns to today.
+ * Date-aware pages (the leaderboard, player pages, Roster Lab, Fantasy Lab and Rewind) show
+ * DARKO as it stood on that date. Every other page shows today's data and says so. The date
+ * sticks across in-app navigation until the reader returns to today.
  */
 
 export const AS_OF_PARAM = 'asof';
@@ -14,6 +14,7 @@ const DATE_AWARE_PATHS = [
 	(path) => path === '/',
 	(path) => path.startsWith('/player/'),
 	(path) => path === '/lab',
+	(path) => path === '/projections',
 	(path) => path === '/rewind',
 	(path) => path === '/daily'
 ];
@@ -106,6 +107,27 @@ export function locateDate(calendar, date) {
 	const next = seasons.find((row) => row.season === current.season + 1);
 	const nearNext = next && daysBetween(date, next.first_game) <= 21;
 	return { season: current.season, phase: nearNext ? 'preseason' : 'offseason', row: current };
+}
+
+/**
+ * The last day whose rows describe `date` in its season (calendarRow, from locateDate): the date
+ * itself, or the season's last game once it is over. With `regularSeasonOnly` a playoff or later
+ * date reads the last regular-season day: the box-score projections stop updating there, while the
+ * minutes go on to project playoff games.
+ */
+export function asOfAnchorDate(date, calendarRow, { regularSeasonOnly = false } = {}) {
+	const last = regularSeasonOnly ? calendarRow.regular_season_end : calendarRow.last_game;
+	return date < last ? date : last;
+}
+
+/**
+ * Whether `date` is past its season's regular season (calendarRow, from locateDate). Until the
+ * latest season's playoffs begin, its calendar ends the regular season at the last game played,
+ * so a later date there is still the regular season.
+ */
+export function isPastRegularSeason(date, calendarRow) {
+	if (!calendarRow) return false;
+	return date > calendarRow.regular_season_end && calendarRow.last_game > calendarRow.regular_season_end;
 }
 
 /**

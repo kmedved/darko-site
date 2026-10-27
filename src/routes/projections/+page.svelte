@@ -9,13 +9,16 @@
 	import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
 	import { getPositionCategory } from '$lib/utils/positionCategories.js';
 	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
+	import { formatAsOfDate, seasonLabelFromEndYear } from '$lib/utils/timeMachine.js';
 	import {
 		CATEGORY_POOL_SIZE,
 		DEFAULT_CUSTOM_WEIGHTS,
 		FANTASY_POINT_STATS,
 		FANTASY_PRESETS,
 		MIN_PROJECTED_MINUTES,
-		buildFantasyBoard
+		SMOOTHED_MINUTES_GAMES,
+		buildFantasyBoard,
+		hasCompleteProjection
 	} from '$lib/utils/fantasyScoring.js';
 
 	let { data } = $props();
@@ -90,6 +93,11 @@
 	const totalPages = $derived(Math.max(1, Math.ceil(sortedRows.length / pageSize)));
 	const pageRows = $derived(sortedRows.slice((page - 1) * pageSize, page * pageSize));
 	const asOfLabel = $derived(formatDate(data.asOf));
+	// Set on a Time Machine date: { date, season, pastRegularSeason }. Past the regular season the
+	// board reads its last day (getFantasyPlayersAsOf).
+	const history = $derived(data.history ?? null);
+	const historySeason = $derived(history?.season ? seasonLabelFromEndYear(history.season) : '');
+	const incompleteCount = $derived((data.players ?? []).filter((player) => !hasCompleteProjection(player)).length);
 
 	onMount(() => {
 		try {
@@ -172,7 +180,7 @@
 		exportCsvRows({
 			rows: sortedRows,
 			columns: getFantasyCsvColumns(isCategories, FANTASY_PRESETS[preset].csvHeader),
-			filename: `darko-fantasy-${FANTASY_PRESETS[preset].file ?? preset}.csv`
+			filename: `darko-fantasy-${FANTASY_PRESETS[preset].file ?? preset}${history ? `-${history.date}` : ''}.csv`
 		});
 	}
 
@@ -230,10 +238,40 @@
 			DARKO projects every box-score stat per 100 possessions. Pick your league's scoring and this page turns those
 			projections into per-game fantasy values. Your scoring settings stay in this browser.
 		</p>
-		<p class="page-note">
-			Per-game stats use DARKO's projected minutes and pace{asOfLabel ? ` as of ${asOfLabel}` : ''}. Players projected
-			for fewer than {MIN_PROJECTED_MINUTES} minutes are left out.
-		</p>
+		{#if history}
+			<p class="page-lede page-asof">
+				Projections as of {formatAsOfDate(history.date)}{historySeason ? ` · ${historySeason} season` : ''}.
+				{#if history.pastRegularSeason}
+					Each player's projection at the end of the regular season; the playoffs aren't scored. Minutes are
+					each player's median projection over their team's last {SMOOTHED_MINUTES_GAMES} regular-season games,
+					because teams rest players in the final games.
+				{:else}
+					Each player's projection for their team's last game on or before that date.
+				{/if}
+			</p>
+			<p class="page-note">
+				Retrospective: these come from DARKO's current models run back over history, which learned from later
+				seasons too, not from the projections DARKO published at the time. Players projected for fewer than
+				{MIN_PROJECTED_MINUTES} minutes are left out.
+			</p>
+			{#if history.season === 1997}
+				<p class="page-note">
+					1996–97 is the first season in DARKO's history, so its projections start with no earlier seasons to learn
+					from and take the first few weeks of the season to settle.
+				</p>
+			{/if}
+		{:else}
+			<p class="page-note">
+				Per-game stats use DARKO's projected minutes and pace{asOfLabel ? ` as of ${asOfLabel}` : ''}. Players projected
+				for fewer than {MIN_PROJECTED_MINUTES} minutes are left out.
+			</p>
+		{/if}
+		{#if incompleteCount > 0}
+			<p class="page-note">
+				{incompleteCount}
+				{incompleteCount === 1 ? 'player is' : 'players are'} left out for a missing projected stat.
+			</p>
+		{/if}
 	</PageHeader>
 
 	<section class="fantasy-panel" data-shiny-surface="panel" aria-labelledby="fantasy-board-title">
@@ -398,7 +436,7 @@
 									<td class="align-right rank-cell">{row.rank}</td>
 									<td>
 										<span class="player-cell">
-											<a href={`/player/${row.nba_id}`}>{row.player_name}</a>
+											<a href={history ? `/player/${row.nba_id}?asof=${history.date}` : `/player/${row.nba_id}`}>{row.player_name}</a>
 											{#if row.position}<span class="position-tag">{row.position}</span>{/if}
 										</span>
 									</td>
