@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-26",
+  "date": "2026-10-27",
   "players": [
     {
       "nba_id": 1631114,
       "name": "Jalen Williams",
-      "reason": "Stretchered off after lower-leg injury against Clippers"
+      "reason": "Fractured fibula and dislocated ankle require surgery"
     },
     {
-      "nba_id": 1629029,
-      "name": "Luka Doncic",
-      "reason": "52 points and 10 assists in Lakers win"
+      "nba_id": 1641717,
+      "name": "Cason Wallace",
+      "reason": "Torn shoulder labrum requires surgery"
     },
     {
-      "nba_id": 1630595,
-      "name": "Cade Cunningham",
-      "reason": "Scores 26 as Pistons end Sixers unbeaten start"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "Triple-double cannot prevent Heat falling to 0-4"
     },
     {
-      "nba_id": 1630532,
-      "name": "Franz Wagner",
-      "reason": "21 fourth-quarter points send Knicks to 0-3"
+      "nba_id": 1630162,
+      "name": "Anthony Edwards",
+      "reason": "Scores 47 in overtime loss to Cavaliers"
     },
     {
-      "nba_id": 1628983,
-      "name": "Shai Gilgeous-Alexander",
-      "reason": "Scores 34 as Thunder beat Clippers"
+      "nba_id": 1641706,
+      "name": "Brandon Miller",
+      "reason": "Career-high 39 points lead Hornets past Wizards"
     }
   ]
 }
