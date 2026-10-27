@@ -16,6 +16,7 @@
 		FANTASY_POINT_STATS,
 		FANTASY_PRESETS,
 		MIN_PROJECTED_MINUTES,
+		SMOOTHED_MINUTES_GAMES,
 		buildFantasyBoard,
 		hasCompleteProjection
 	} from '$lib/utils/fantasyScoring.js';
@@ -241,7 +242,9 @@
 			<p class="page-lede page-asof">
 				Projections as of {formatAsOfDate(history.date)}{historySeason ? ` · ${historySeason} season` : ''}.
 				{#if history.pastRegularSeason}
-					Each player's projection for their team's last regular-season game; the playoffs aren't scored.
+					Each player's projection at the end of the regular season; the playoffs aren't scored. Minutes are
+					each player's median projection over their team's last {SMOOTHED_MINUTES_GAMES} regular-season games,
+					because teams rest players in the final games.
 				{:else}
 					Each player's projection for their team's last game on or before that date.
 				{/if}

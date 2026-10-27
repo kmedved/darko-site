@@ -8,6 +8,7 @@ import {
     buildFantasyBoard,
     categoryScores,
     hasCompleteProjection,
+    medianRecentMinutes,
     pointsPerGame,
     projectPerGame
 } from '../src/lib/utils/fantasyScoring.js';
@@ -89,6 +90,19 @@ test('the board leaves out a player with a missing projection instead of scoring
     assert.equal(hasCompleteProjection(player({ x_ft_pct: 'NaN' })), false);
     const board = buildFantasyBoard([player({ nba_id: 1 }), missing], { preset: 'espn' });
     assert.deepEqual(board.map((row) => row.nba_id), [1]);
+});
+
+test('past the regular season minutes are the median of each player\'s last ten games', () => {
+    const games = (nbaId, minutes) =>
+        minutes.map((value, index) => ({ nba_id: nbaId, date: `2019-03-${String(index + 10).padStart(2, '0')}`, x_minutes: value }));
+    // Twelve games: the two oldest drop out, the rested finale counts once.
+    const starter = games(1, [5, 5, 36, 37, 35, 36, 38, 36, 35, 37, 36, 20]);
+    // An odd count takes the middle value; a missing projection is skipped.
+    const shortSeason = games(2, [30, null, 10, 20]);
+    const medians = medianRecentMinutes([...starter, ...shortSeason]);
+    assert.equal(medians.get(1), 36);
+    assert.equal(medians.get(2), 20);
+    assert.equal(medianRecentMinutes(games(3, [30, 32, 34, 36]), 2).get(3), 35);
 });
 
 test('custom weights replace the preset weights', () => {

@@ -10,7 +10,8 @@ import {
     normalizeLineupVariant
 } from './lineupRatings.js';
 import { createActivePlayersAccessor } from './activePlayersCache.js';
-import { asOfAnchorDate, asOfWindowStart, isPastRegularSeason, locateDate } from '$lib/utils/timeMachine.js';
+import { addDays, asOfAnchorDate, asOfWindowStart, isPastRegularSeason, locateDate } from '$lib/utils/timeMachine.js';
+import { medianRecentMinutes } from '$lib/utils/fantasyScoring.js';
 import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilterOptions.js';
 import { leagueTeamRatings } from '$lib/utils/teamDna.js';
 import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '$lib/utils/frozenRatings.js';
@@ -1388,15 +1389,62 @@ export async function getPlayersAsOf(asOf, calendar = null) {
 
 /**
  * Every player's fantasy projections as of `asOf`, read as getPlayersAsOf reads ratings, except that a
- * date in the playoffs or after them reads the season's last regular-season day (asOfAnchorDate).
+ * date in the playoffs or after them reads the season's last regular-season day (asOfAnchorDate), with
+ * each player's minutes the median over their team's last games (medianRecentMinutes).
  * Returns { rows, dataDate, season, pastRegularSeason }.
  */
 export async function getFantasyPlayersAsOf(asOf, calendar = null) {
-    return readPlayersAsOf(asOf, calendar, {
+    const result = await readPlayersAsOf(asOf, calendar, {
         key: 'fantasyPlayersAsOf',
         columns: FANTASY_AS_OF_COLUMNS,
         regularSeasonOnly: true
     });
+    if (!result.pastRegularSeason) return result;
+    const minutes = await runCached(cacheKey('fantasyMinutesAsOf', asOf), CACHE_MS.playersAsOf, () =>
+        recentMinutesById(result.rows, result.season)
+    );
+    return {
+        ...result,
+        rows: result.rows.map((row) => (minutes.has(row.nba_id) ? { ...row, x_minutes: minutes.get(row.nba_id) } : row))
+    };
+}
+
+// Six weeks of rows hold every team's last ten games (the 2019-20 bubble teams' eight seeding games are
+// all that fall inside it).
+const RECENT_MINUTES_LOOKBACK_DAYS = 42;
+
+/** Each player's median projected minutes over their team's last games up to their latest row, by nba_id. */
+async function recentMinutesById(rows, season) {
+    const idsByDate = new Map();
+    for (const row of rows) {
+        const date = String(row.date ?? '').slice(0, 10);
+        if (!date) continue;
+        if (!idsByDate.has(date)) idsByDate.set(date, []);
+        idsByDate.get(date).push(row.nba_id);
+    }
+    const requests = [];
+    for (const [date, ids] of idsByDate) {
+        for (let start = 0; start < ids.length; start += PLAYERS_AS_OF_ID_CHUNK) {
+            requests.push({ date, ids: ids.slice(start, start + PLAYERS_AS_OF_ID_CHUNK) });
+        }
+    }
+    const chunks = await mapWithConcurrency(requests, PLAYERS_AS_OF_CONCURRENCY, ({ date, ids }) =>
+        fetchAllPages(
+            (options) =>
+                supabase
+                    .from('player_ratings')
+                    .select('nba_id, date, x_minutes', options)
+                    .eq('season', season)
+                    .in('nba_id', ids)
+                    .gte('date', addDays(date, -(RECENT_MINUTES_LOOKBACK_DAYS - 1)))
+                    .lte('date', date)
+                    .gt('tm_id', 0)
+                    .order('nba_id')
+                    .order('date'),
+            { guessPages: 3 }
+        )
+    );
+    return medianRecentMinutes(chunks.flat());
 }
 
 function readPlayersAsOf(asOf, calendar, { key, columns, regularSeasonOnly = false }) {

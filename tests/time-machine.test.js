@@ -119,6 +119,9 @@ test('Fantasy Lab reads the Time Machine date with its own projection columns', 
     assert.match(loader, /AS_OF_EDGE_CACHE/);
     assert.match(supabase, /const FANTASY_AS_OF_COLUMNS = \[[^\]]*'x_fta_100'/);
     assert.match(supabase, /columns: FANTASY_AS_OF_COLUMNS,\s*regularSeasonOnly: true/);
+    assert.match(supabase, /if \(!result\.pastRegularSeason\) return result;/);
+    assert.match(supabase, /x_minutes: minutes\.get\(row\.nba_id\)/);
+    assert.match(page, /median projection over their team's last \{SMOOTHED_MINUTES_GAMES\} regular-season games/);
     assert.match(page, /history\.season === 1997/);
     assert.match(page, /\/player\/\$\{row\.nba_id\}\?asof=\$\{history\.date\}/);
 });

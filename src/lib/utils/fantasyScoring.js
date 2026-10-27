@@ -86,6 +86,33 @@ function toNumber(value) {
     return Number.isFinite(n) ? n : null;
 }
 
+// Past the regular season a player's minutes are their median projection over this many of their team's
+// last games: the final games' projections reflect rest (2018-19's regulars: median 26.0 minutes on the
+// last day, 33.1 on March 1).
+export const SMOOTHED_MINUTES_GAMES = 10;
+
+/** Each player's median projected minutes over their latest `games` rows ([{ nba_id, date, x_minutes }]), by nba_id. */
+export function medianRecentMinutes(rows, games = SMOOTHED_MINUTES_GAMES) {
+    const byId = new Map();
+    for (const row of rows ?? []) {
+        const minutes = toNumber(row?.x_minutes);
+        if (minutes === null) continue;
+        if (!byId.has(row.nba_id)) byId.set(row.nba_id, []);
+        byId.get(row.nba_id).push({ date: String(row.date), minutes });
+    }
+    const medians = new Map();
+    for (const [nbaId, entries] of byId) {
+        const recent = entries
+            .sort((a, b) => b.date.localeCompare(a.date))
+            .slice(0, games)
+            .map((entry) => entry.minutes)
+            .sort((a, b) => a - b);
+        const middle = recent.length >> 1;
+        medians.set(nbaId, recent.length % 2 ? recent[middle] : (recent[middle - 1] + recent[middle]) / 2);
+    }
+    return medians;
+}
+
 /**
  * Whether a player has every projection the board scores. A missing stat is unknown, not zero, so
  * the board leaves such a player out rather than score them without it.
