@@ -1196,11 +1196,13 @@ export async function getSeasonTrends(ids, season, { through = null } = {}) {
         },
         { guessPages: 3 }
     );
+    const displayDpm = seasonEndYear === 1997 ? (await import('./wowy1997.js')).blendHistoricalDpm : null;
     const trends = {};
     for (const row of rows) {
         // A season's line runs through its game days, not the offseason row after them.
         if (isOffseasonRow(row)) continue;
-        const dpm = Number.parseFloat(row.dpm);
+        const displayRow = displayDpm ? displayDpm(row) : row;
+        const dpm = Number.parseFloat(displayRow.dpm);
         if (Number.isFinite(dpm)) (trends[row.nba_id] ??= []).push(Math.round(dpm * 100) / 100);
     }
     return trends;

@@ -7,6 +7,7 @@ import {
     getPlayerHistory
 } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
+import { isBurnInRow } from '$lib/utils/historyBurnIn.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -42,6 +43,10 @@ export async function GET({ params, url, setHeaders }) {
                 ? getFullPlayerTrajectoryHistory
                 : getFullPlayerHistory;
             const fullHistory = await historyLoader(nbaId, { maxRows: MAX_FULL_HISTORY_ROWS });
+            if (trajectory && fullHistory.rows.some(isBurnInRow)) {
+                const { blendHistoricalRows } = await import('$lib/server/wowy1997.js');
+                return json({ ...fullHistory, rows: blendHistoricalRows(fullHistory.rows) });
+            }
             return json(fullHistory);
         }
 

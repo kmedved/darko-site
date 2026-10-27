@@ -7,6 +7,7 @@ import { packRows } from '$lib/utils/columnar.js';
 import { getActivePlayers, getFullPlayerProfileHistory, MAX_FULL_HISTORY_ROWS } from '$lib/server/supabase.js';
 import { currentPlayerComps } from '$lib/utils/currentPlayerComps.js';
 import { dpmRank } from '$lib/utils/playerProfile.js';
+import { isBurnInRow } from '$lib/utils/historyBurnIn.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -25,7 +26,7 @@ export async function load({ params, setHeaders }) {
     const active = sidePanel('active players', getActivePlayers());
     const comps = sidePanel('comps', getPlayerComps(nbaId));
     const seasons = sidePanel('seasons', getPlayerSeasons(nbaId).then((rows) => rows ?? []));
-    const { historyRows, ...page } = await loadPlayerPageData({
+    const { historyRows: rawHistoryRows, ...page } = await loadPlayerPageData({
         nbaIdParam: params.nbaId,
         setHeaders,
         setCacheHeaders: setEdgeCache,
@@ -34,12 +35,19 @@ export async function load({ params, setHeaders }) {
                 maxRows: MAX_FULL_HISTORY_ROWS
             })
     });
+    let historyRows = rawHistoryRows, displayedPlayer = page.playerInfo;
+    if (historyRows.some(isBurnInRow) || isBurnInRow(page.playerInfo)) {
+        const { blendHistoricalDpm, blendHistoricalRows } = await import('$lib/server/wowy1997.js');
+        historyRows = blendHistoricalRows(historyRows);
+        displayedPlayer = blendHistoricalDpm(page.playerInfo);
+    }
     // The career history ships column by column; the page rebuilds the rows.
     const shareUrl = new URL(`/player/${nbaId}?ids=${nbaId}`, 'https://www.darko.app');
     const social = await careerShareMetadata(shareUrl, { title: `${page.playerInfo.player_name} — DARKO`, description: `Explore ${page.playerInfo.player_name}'s DARKO NBA ratings and career history.` });
     social.url = `https://www.darko.app/player/${nbaId}`;
     return {
         ...page, social,
+        playerInfo: displayedPlayer,
         history: packRows(historyRows),
         comps: await comps,
         seasons: await seasons,

@@ -7,6 +7,7 @@
 	import { getChartTheme } from '$lib/utils/chartTheme.js';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
+	import { BURN_IN_METRICS, BURN_IN_NOTE, isBurnInRow } from '$lib/utils/historyBurnIn.js';
 	import { getContext } from 'svelte';
 
 	let {
@@ -31,6 +32,8 @@
 	const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
 
 	const exportFilenameBase = $derived(`career-trajectories-${talentType}-${timeScale}`);
+
+	const showBurnIn = $derived(BURN_IN_METRICS.has(talentType) && players.some((player) => player.rows?.some((row) => isBurnInRow(row) && getX(row) !== null && getY(row) !== null)));
 
 	const HEIGHT = 500;
 
@@ -187,7 +190,8 @@
 		const baseMargin = chartTheme.margin ?? layout.margin;
 		const margin = {
 			...baseMargin,
-			top: baseMargin.top + Math.max(legendRows.length - 1, 0) * legendRowHeight
+			top: baseMargin.top + Math.max(legendRows.length - 1, 0) * legendRowHeight,
+			bottom: baseMargin.bottom + (showBurnIn ? 15 : 0)
 		};
 		const w = width - margin.left - margin.right;
 		const h = HEIGHT - margin.top - margin.bottom;
@@ -268,7 +272,13 @@
 				.attr('fill', player.color)
 				.attr('opacity', chartTheme.pointOpacity);
 
-			if (rows.length < 2) continue;
+			if (rows.length < 2) {
+				if (BURN_IN_METRICS.has(talentType) && isBurnInRow(rows[0].row)) {
+					g.append('circle').attr('class', 'burn-in-shading').attr('cx', x(rows[0].x))
+						.attr('cy', y(rows[0].y)).attr('r', 5).attr('fill', player.color).attr('opacity', 0.25);
+				}
+				continue;
+			}
 
 			const loessData = smooth ? smoothCareerPoints(rows, displayMode.view, bandwidth).points : rows;
 
@@ -277,6 +287,20 @@
 				.x((d) => x(d.x))
 				.y((d) => y(d.y))
 				.curve(d3.curveMonotoneX);
+
+			// Highlight each player's affected segment instead of shading an entire x-range:
+			// on age/game axes, that range can represent a different season for another player.
+			if (BURN_IN_METRICS.has(talentType)) {
+				const affected = loessData.filter((_, index) => isBurnInRow(rows[index].row));
+				if (affected.length > 1) {
+					g.append('path').datum(affected).attr('class', 'burn-in-shading')
+						.attr('fill', 'none').attr('stroke', player.color).attr('stroke-width', 10)
+						.attr('opacity', 0.25).attr('stroke-linecap', 'round').attr('d', line);
+				} else if (affected.length === 1) {
+					g.append('circle').attr('class', 'burn-in-shading').attr('cx', x(affected[0].x))
+						.attr('cy', y(affected[0].y)).attr('r', 5).attr('fill', player.color).attr('opacity', 0.25);
+				}
+			}
 
 			g.append('path')
 				.datum(loessData)
@@ -378,6 +402,12 @@
 			.style('fill', 'var(--text)')
 			.text(title);
 
+		if (showBurnIn) {
+			svg.append('text').attr('x', width / 2).attr('y', HEIGHT - 4)
+				.attr('text-anchor', 'middle').attr('font-size', '11px').style('fill', 'var(--text-muted)')
+				.text('1996–97 blends WOWY RAPM into DPM');
+		}
+
 		// Legend, a row at a time, each centered on the estimated widths of its names.
 		legendRows.forEach((row, rowIndex) => {
 			const legendG = svg
@@ -472,6 +502,7 @@
 </script>
 
 <div class="chart-download-shell">
+	{#if showBurnIn}<p class="burn-in-note">Highlighted: {BURN_IN_NOTE}</p>{/if}
 	<div class="chart-download-toolbar">
 		{#if assistantHref}<a class="btn btn-sm" href={assistantHref}>Use in an assistant</a>{/if}
 		<ChartDownloadMenu
@@ -510,6 +541,7 @@
 </div>
 
 <style>
+	.burn-in-note { color: var(--text-muted); font-size: 0.85rem; margin: 0.5rem 0; }
 	.trajectory-chart-container {
 		position: relative;
 		width: 100%;

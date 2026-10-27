@@ -61,6 +61,15 @@ export async function load({ url, setHeaders }) {
             snapshot = await getSeasonStartPlayers(selectedSeason);
         }
     }
+    // Blend only the historical display; raw pipeline ratings and other consumers stay intact.
+    if (Number(asOf?.season ?? selectedSeason) === 1997) {
+        const { blendHistoricalRows } = await import('$lib/server/wowy1997.js');
+        snapshot = blendHistoricalRows(snapshot).sort((a, b) => {
+            const left = Number.parseFloat(a?.dpm), right = Number.parseFloat(b?.dpm);
+            if (!Number.isFinite(left)) return Number.isFinite(right) ? 1 : 0;
+            return Number.isFinite(right) ? right - left : -1;
+        });
+    }
     const projected = projectPlayers(snapshot, 'leaderboard');
     const players = today ? withChangeSince(projected, today) : projected;
 

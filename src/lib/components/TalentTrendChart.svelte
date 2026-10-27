@@ -9,6 +9,7 @@
 	import { formatSeasonLabel, getSeasonStartYear } from '$lib/utils/seasonUtils.js';
 	import { getShinyChartPreset } from '$lib/utils/shinyDesign.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
+	import { BURN_IN_METRICS, BURN_IN_NOTE, isBurnInRow } from '$lib/utils/historyBurnIn.js';
 
 	let {
 		rows = [],
@@ -30,6 +31,8 @@
 		const prefix = playerName ? `${playerName}-` : '';
 		return `${prefix}talent-trend-${talentType}`;
 	});
+
+	const showBurnIn = $derived(BURN_IN_METRICS.has(talentType) && rows.some((row) => isBurnInRow(row) && getY(row) !== null));
 
 	const HEIGHT = 400;
 
@@ -153,6 +156,7 @@
 				bottom: 55,
 				left: isMobile ? 52 : 60
 			};
+		if (showBurnIn) margin.bottom += 15;
 		const w = width - margin.left - margin.right;
 		const h = HEIGHT - margin.top - margin.bottom;
 
@@ -223,6 +227,18 @@
 			.range([h, 0]);
 
 		scalesRef = { x, y, margin, w, h };
+
+		if (BURN_IN_METRICS.has(talentType)) {
+			const affected = validRows.filter((entry) => isBurnInRow(entry.row));
+			if (affected.length) {
+				const left = x(affected[0].date);
+				const right = x(affected[affected.length - 1].date);
+				g.append('rect').attr('class', 'burn-in-shading')
+					.attr('x', Math.max(0, left - 2)).attr('y', 0)
+					.attr('width', Math.max(4, Math.min(w, right + 2) - Math.max(0, left - 2)))
+					.attr('height', h).attr('fill', 'var(--text-muted)').attr('opacity', 0.12);
+			}
+		}
 
 		if (isShinyView) {
 			g.append('rect')
@@ -433,6 +449,12 @@
 				.style('fill', 'var(--text)')
 				.text(`${playerName} — ${getMetricDisplayLabel(talentType)} Trend`);
 		}
+		if (showBurnIn) {
+			svg.append('text').attr('x', width / 2).attr('y', HEIGHT - 4)
+				.attr('text-anchor', 'middle').attr('font-size', '11px').style('fill', 'var(--text-muted)')
+				.text('1996–97 blends WOWY RAPM into DPM');
+		}
+
 	}
 
 	function handleMouseMove(e) {
@@ -475,6 +497,7 @@
 </script>
 
 <div class="chart-download-shell">
+	{#if showBurnIn}<p class="burn-in-note">Shaded: {BURN_IN_NOTE}</p>{/if}
 	<div class="chart-download-toolbar">
 		<ChartDownloadMenu
 			{svgEl}
@@ -509,6 +532,7 @@
 </div>
 
 <style>
+	.burn-in-note { color: var(--text-muted); font-size: 0.85rem; margin: 0.5rem 0; }
 	.trend-chart-container {
 		position: relative;
 		width: 100%;

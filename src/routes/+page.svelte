@@ -45,6 +45,7 @@
     import { getMetricDefinition } from '$lib/utils/metricDefinitions.js';
     import { describeMarket, latestMarketAsOf } from '$lib/utils/marketRating.js';
     import { formatSeasonEndYearLabel } from '$lib/utils/seasonUtils.js';
+    import { BURN_IN_NOTE } from '$lib/utils/historyBurnIn.js';
     import { AS_OF_PARAM, formatAsOfDate } from '$lib/utils/timeMachine.js';
     import { unpackRows } from '$lib/utils/columnar.js';
     import { divergingTint, tintLimit } from '$lib/utils/divergingTint.js';
@@ -785,12 +786,17 @@
                     DARKO as of {formatAsOfDate(asOf.date)}{asOf.season ? ` · ${formatSeasonEndYearLabel(asOf.season)} season` : ''}.
                     Each player's latest rating on that date.
                 </p>
+            {:else if data.selectedSeason != null}
+                <p class="page-lede">{formatSeasonEndYearLabel(data.selectedSeason)} season: ratings for each team's opening game, not season averages.</p>
             {:else if data.ratingsThrough}
                 <p class="page-lede">
                     Daily Player Metrics for every NBA player. Ratings through {formatAsOfDate(data.ratingsThrough)}.
                 </p>
             {:else}
                 <p class="page-lede">Daily Player Metrics for every NBA player, updated nightly.</p>
+            {/if}
+            {#if Number(asOf?.season ?? data.selectedSeason) === 1997}
+                <p class="page-lede">{BURN_IN_NOTE}</p>
             {/if}
         </PageHeader>
 
