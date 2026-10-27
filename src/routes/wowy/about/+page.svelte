@@ -12,13 +12,9 @@
 	<section class="wowy-about-content">
 		<p>In the meantime, the WOWY RAPM ratings are available to explore.</p>
 		<p>
-			In a comparison of 1999–2026 seasons, Season-Adjusted WOWY had an exposure-weighted
-			correlation of about <strong>0.80</strong> with play-by-play-based time-decay RAPM at the
-			start of the playoffs, among players with at least 250 regular-season minutes.
-		</p>
-		<p>
-			WOWY includes postseason evidence and is calibrated against modern RAPM. The comparison
-			uses overlapping data and does not directly measure accuracy in earlier eras.
+			In a comparison of 1999–2026 data, Daily WOWY had an exposure-weighted correlation of
+			about <strong>0.86</strong> with play-by-play-based time-decay RAPM. WOWY is calibrated
+			against modern RAPM, so the comparison uses overlapping data.
 		</p>
 		<p><a href="/wowy">Explore WOWY RAPM ratings →</a></p>
 	</section>
