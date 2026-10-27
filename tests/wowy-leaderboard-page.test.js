@@ -118,7 +118,7 @@ test('WOWY leaderboard shows Season-Adjusted ratings by season, all time, and Cu
     assert.match(contents, /label: 'BPM'/);
     assert.match(contents, /publication\.data_through/);
     assert.match(contents, /href="\/wowy\/about"/);
-    assert.match(contents, /Read how WOWY works/);
+    assert.match(contents, /About WOWY RAPM/);
     assert.match(contents, /\/trajectories\?ids=\$\{encodeURIComponent\(player\.nba_id\)\}&metric=wowy_rapm/);
     assert.doesNotMatch(contents, /Final observed/i);
     assert.doesNotMatch(contents, /opening roster/i);

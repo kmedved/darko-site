@@ -1,51 +1,31 @@
 <script>
-	import WowyStoryPage from '$lib/components/WowyStoryPage.svelte';
-	import articleMarkdown from '$lib/content/wowy-season-adjusted.md?raw';
-	import { renderArticleMarkdown } from '$lib/utils/renderArticleMarkdown.js';
-
-	const articleHtml = renderArticleMarkdown(articleMarkdown);
-	const facts = [
-		{ value: '49', label: 'NBA seasons' },
-		{ value: '21,128', label: 'player-seasons' },
-		{ value: '1978–2026', label: 'one scoring procedure' }
-	];
-	const toc = [
-		{ id: 'two-numbers-two-questions', label: 'Average vs. Adjusted' },
-		{ id: 'why-not-just-average-the-daily-ratings', label: 'From daily to season ratings' },
-		{ id: 'how-it-works-briefly', label: 'How the model works' },
-		{ id: 'why-trust-it', label: 'Why trust it' },
-		{ id: 'what-the-box-score-missed', label: 'WOWY vs. BPM' },
-		{ id: 'what-the-model-cannot-know', label: 'What it cannot know' },
-		{ id: 'how-to-read-the-site', label: 'How to read the site' }
-	];
+	import PageHeader from '$lib/components/PageHeader.svelte';
 </script>
 
 <svelte:head>
-	<title>What Did Larry Bird Play Like in 1983? — DARKO DPM</title>
-	<meta
-		name="description"
-		content="How DARKO turned daily WOWY RAPM into season-by-season impact ratings from the 1977-78 NBA season onward."
-	/>
-	<meta property="og:title" content="What Did Larry Bird Play Like in 1983?" />
-	<meta
-		property="og:description"
-		content="Season-by-season NBA impact ratings from 1977-78 onward."
-	/>
-	<meta property="og:type" content="article" />
-	<meta property="og:url" content="https://www.darko.app/wowy/about" />
+	<title>About WOWY RAPM — DARKO</title>
+	<meta name="description" content="A full explanation of WOWY RAPM is coming soon." />
 </svelte:head>
 
-<WowyStoryPage
-	kicker="Introducing Season-Adjusted WOWY"
-	title="What Did Larry Bird Play Like in 1983?"
-	deck="A season-by-season impact rating for every NBA player from 1977-78 onward, built from the daily WOWY model and the evidence of each completed season."
-	published="Published July 17, 2026 · Updated July 24, 2026"
-	{facts}
-	primaryAction={{ href: '/wowy?rating=adjusted', label: 'Explore the ratings' }}
-	{articleHtml}
-	footerLead="Ready to compare eras?"
-	footerLinks={[
-		{ href: '/wowy?rating=adjusted', label: 'Open the Season-Adjusted WOWY leaderboard' }
-	]}
-	{toc}
-/>
+<div class="container wowy-about">
+	<PageHeader title="About WOWY RAPM" lede="A full writeup is coming soon." />
+	<section class="wowy-about-content">
+		<p>In the meantime, the WOWY RAPM ratings are available to explore.</p>
+		<p>
+			In a comparison of 1999–2026 seasons, Season-Adjusted WOWY had an exposure-weighted
+			correlation of about <strong>0.80</strong> with play-by-play-based time-decay RAPM at the
+			start of the playoffs, among players with at least 250 regular-season minutes.
+		</p>
+		<p>
+			WOWY includes postseason evidence and is calibrated against modern RAPM. The comparison
+			uses overlapping data and does not directly measure accuracy in earlier eras.
+		</p>
+		<p><a href="/wowy">Explore WOWY RAPM ratings →</a></p>
+	</section>
+</div>
+
+<style>
+	.wowy-about-content { max-width: 760px; margin: 1.5rem auto; color: var(--text); line-height: 1.7; }
+	p { font-size: 16px; }
+	a { color: var(--accent); }
+</style>

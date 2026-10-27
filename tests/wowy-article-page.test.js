@@ -3,7 +3,8 @@ import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const ARTICLE_PAGE = 'src/routes/wowy/about/+page.svelte';
+const ARTICLE_PAGE = 'src/lib/content/WowySeasonAdjustedArticle.svelte';
+const ARTICLE_ROUTE = 'src/routes/wowy/about/+page.svelte';
 const ARTICLE_MARKDOWN = 'src/lib/content/wowy-season-adjusted.md';
 const TIMING_PAGE = 'src/routes/wowy/timing/+page.svelte';
 const TIMING_MARKDOWN = 'src/lib/content/wowy-timing-repair.md';
@@ -16,7 +17,12 @@ async function read(file) {
 	return fs.readFile(path.resolve(process.cwd(), file), 'utf8');
 }
 
-test('WOWY article publishes the complete season-adjusted story', async () => {
+test('WOWY article source is retained while a placeholder is published', async () => {
+	const placeholder = await read(ARTICLE_ROUTE);
+	assert.match(placeholder, /full writeup is coming soon/i);
+	assert.match(placeholder, /0\.80/);
+	assert.match(placeholder, /overlapping data/);
+	assert.doesNotMatch(placeholder, /What Did Larry Bird Play Like in 1983/);
 	const [page, markdown, story, renderer] = await Promise.all([
 		read(ARTICLE_PAGE),
 		read(ARTICLE_MARKDOWN),

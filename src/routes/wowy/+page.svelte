@@ -1010,7 +1010,7 @@
                     Click a season to open it, or a team to see that team’s season.
                 </p>
                 <div class="wowy-method-links">
-                    <a href="/wowy/about">Read how WOWY works <span aria-hidden="true">→</span></a>
+                    <a href="/wowy/about">About WOWY RAPM <span aria-hidden="true">→</span></a>
                     <a href="/trajectories?metric=wowy_rapm">Explore career trajectories <span aria-hidden="true">→</span></a>
                 </div>
             </aside>
