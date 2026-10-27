@@ -102,10 +102,14 @@ export async function getPlayersOnDate(asOfDate) {
     return getPlayersAsOf(asOfDate, calendar);
 }
 
-/** Every player's fantasy projections on a Time Machine date (getFantasyPlayersAsOf). */
+/**
+ * Every player's fantasy projections on a Time Machine date (getFantasyPlayersAsOf), or null without the
+ * season calendar: only the calendar holds a playoff date to the regular season, so without it the board
+ * would pair playoff minutes with frozen per-100 projections.
+ */
 export async function getFantasyPlayersOnDate(asOfDate) {
     const calendar = await getSeasonCalendar().catch(() => null);
-    return getFantasyPlayersAsOf(asOfDate, calendar);
+    return calendar?.length ? getFantasyPlayersAsOf(asOfDate, calendar) : null;
 }
 
 /**

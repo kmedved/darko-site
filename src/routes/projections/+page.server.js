@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit';
 import { getActivePlayers } from '$lib/server/supabase.js';
 import { getLatestGameDate } from '$lib/server/daily.js';
 import { AS_OF_EDGE_CACHE, getFantasyPlayersOnDate } from '$lib/server/history.js';
@@ -18,6 +19,9 @@ export async function load({ url, setHeaders }) {
 
     if (asOfDate) {
         const result = await getFantasyPlayersOnDate(asOfDate);
+        if (!result) {
+            throw error(503, "Fantasy Lab can't show past dates right now: DARKO's season calendar is unavailable.");
+        }
         return {
             players: projectPlayers(result.rows, 'fantasy'),
             asOf: result.dataDate,

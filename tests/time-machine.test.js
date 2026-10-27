@@ -109,13 +109,17 @@ test('a date is past the regular season only once a season has gone beyond it', 
 });
 
 test('Fantasy Lab reads the Time Machine date with its own projection columns', async () => {
-    const [loader, page, supabase] = await Promise.all([
+    const [loader, page, supabase, history] = await Promise.all([
         fs.readFile('src/routes/projections/+page.server.js', 'utf8'),
         fs.readFile('src/routes/projections/+page.svelte', 'utf8'),
-        fs.readFile('src/lib/server/supabase.js', 'utf8')
+        fs.readFile('src/lib/server/supabase.js', 'utf8'),
+        fs.readFile('src/lib/server/history.js', 'utf8')
     ]);
     assert.match(loader, /parseAsOfDate\(url\.searchParams\.get\(AS_OF_PARAM\)\)/);
     assert.match(loader, /getFantasyPlayersOnDate\(asOfDate\)/);
+    // Without the calendar a playoff date can't be held to the regular season, so the page fails clearly.
+    assert.match(loader, /if \(!result\) \{\s*throw error\(503,/);
+    assert.match(history, /return calendar\?\.length \? getFantasyPlayersAsOf\(asOfDate, calendar\) : null;/);
     assert.match(loader, /AS_OF_EDGE_CACHE/);
     assert.match(supabase, /const FANTASY_AS_OF_COLUMNS = \[[^\]]*'x_fta_100'/);
     assert.match(supabase, /columns: FANTASY_AS_OF_COLUMNS,\s*regularSeasonOnly: true/);
