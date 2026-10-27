@@ -13,6 +13,7 @@ import {
     locateDate,
     parseAsOfDate,
     relativeHref,
+    rowsBehindTeam,
     withAsOf
 } from '../src/lib/utils/timeMachine.js';
 import { firstFrameOfSeason, lastName, reignsThrough, seasonWeek } from '../src/lib/utils/rewind.js';
@@ -109,13 +110,17 @@ test('a date is past the regular season only once a season has gone beyond it', 
 });
 
 test('Fantasy Lab reads the Time Machine date with its own projection columns', async () => {
-    const [loader, page, supabase] = await Promise.all([
+    const [loader, page, supabase, history] = await Promise.all([
         fs.readFile('src/routes/projections/+page.server.js', 'utf8'),
         fs.readFile('src/routes/projections/+page.svelte', 'utf8'),
-        fs.readFile('src/lib/server/supabase.js', 'utf8')
+        fs.readFile('src/lib/server/supabase.js', 'utf8'),
+        fs.readFile('src/lib/server/history.js', 'utf8')
     ]);
     assert.match(loader, /parseAsOfDate\(url\.searchParams\.get\(AS_OF_PARAM\)\)/);
     assert.match(loader, /getFantasyPlayersOnDate\(asOfDate\)/);
+    // Without the calendar a playoff date can't be held to the regular season, so the page fails clearly.
+    assert.match(loader, /if \(!result\) \{\s*throw error\(503,/);
+    assert.match(history, /return calendar\?\.length \? getFantasyPlayersAsOf\(asOfDate, calendar\) : null;/);
     assert.match(loader, /AS_OF_EDGE_CACHE/);
     assert.match(supabase, /const FANTASY_AS_OF_COLUMNS = \[[^\]]*'x_fta_100'/);
     assert.match(supabase, /columns: FANTASY_AS_OF_COLUMNS,\s*regularSeasonOnly: true/);
@@ -123,7 +128,22 @@ test('Fantasy Lab reads the Time Machine date with its own projection columns', 
     assert.match(supabase, /x_minutes: minutes\.get\(row\.nba_id\)/);
     assert.match(page, /median projection over their team's last \{SMOOTHED_MINUTES_GAMES\} regular-season games/);
     assert.match(page, /history\.season === 1997/);
+    assert.match(page, /const behindTeam = \$derived\(history \? rowsBehindTeam\(data\.players\) : new Map\(\)\);/);
     assert.match(page, /\/player\/\$\{row\.nba_id\}\?asof=\$\{history\.date\}/);
+});
+
+test('players with nothing in the two weeks before their team\'s last game are marked', () => {
+    const rows = [
+        // A 2020 bubble team: a starter in the restart, one who sat it out, one twelve days back.
+        { nba_id: 1, tm_id: 10, date: '2020-08-13' },
+        { nba_id: 2, tm_id: 10, date: '2020-03-10' },
+        { nba_id: 3, tm_id: 10, date: '2020-08-01' },
+        // A team left out of the bubble: its season ended in March, so nobody is behind it.
+        { nba_id: 4, tm_id: 20, date: '2020-03-11' },
+        { nba_id: 5, tm_id: 20, date: '2020-03-10' }
+    ];
+    assert.deepEqual([...rowsBehindTeam(rows)], [[2, '2020-03-10']]);
+    assert.equal(rowsBehindTeam([]).size, 0);
 });
 
 test('frames are found on or before a date', () => {

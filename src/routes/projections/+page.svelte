@@ -9,7 +9,7 @@
 	import { getNextSortState, getSortAriaValue, getSortGlyph, getSortedRows } from '$lib/utils/sortableTable.js';
 	import { getPositionCategory } from '$lib/utils/positionCategories.js';
 	import { teamAbbr } from '$lib/utils/teamAbbreviations.js';
-	import { formatAsOfDate, seasonLabelFromEndYear } from '$lib/utils/timeMachine.js';
+	import { formatAsOfDate, rowsBehindTeam, seasonLabelFromEndYear } from '$lib/utils/timeMachine.js';
 	import {
 		CATEGORY_POOL_SIZE,
 		DEFAULT_CUSTOM_WEIGHTS,
@@ -98,6 +98,10 @@
 	const history = $derived(data.history ?? null);
 	const historySeason = $derived(history?.season ? seasonLabelFromEndYear(history.season) : '');
 	const incompleteCount = $derived((data.players ?? []).filter((player) => !hasCompleteProjection(player)).length);
+	// On a past date, players with nothing in the two weeks before their team's last game (the 2020 shutdown):
+	// they sat out or had left the team, which the rows can't tell apart, so the board marks them.
+	const behindTeam = $derived(history ? rowsBehindTeam(data.players) : new Map());
+	const behindOnBoard = $derived(board.filter((row) => behindTeam.has(row.nba_id)).length);
 
 	onMount(() => {
 		try {
@@ -204,6 +208,16 @@
 		return `--z-width: ${((clamped / 3) * 50).toFixed(1)}%`;
 	}
 
+	function behindTitle(iso) {
+		return `Nothing for this player after ${formatAsOfDate(iso)} while their team played on: they sat out or had left the team.`;
+	}
+
+	function formatMonthDay(iso) {
+		return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(
+			new Date(`${iso}T00:00:00Z`)
+		);
+	}
+
 	function formatDate(iso) {
 		if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null;
 		return new Intl.DateTimeFormat('en-US', {
@@ -264,6 +278,13 @@
 			<p class="page-note">
 				Per-game stats use DARKO's projected minutes and pace{asOfLabel ? ` as of ${asOfLabel}` : ''}. Players projected
 				for fewer than {MIN_PROJECTED_MINUTES} minutes are left out.
+			</p>
+		{/if}
+		{#if behindOnBoard > 0}
+			<p class="page-note">
+				{behindOnBoard}
+				{behindOnBoard === 1 ? 'player is' : 'players are'} marked “nothing after” a date: they have no games in the two
+				weeks before their team's last one, because they sat out or had left the team. DARKO's data can't tell which.
 			</p>
 		{/if}
 		{#if incompleteCount > 0}
@@ -448,6 +469,9 @@
 												{/if}
 											</span>
 											{teamAbbr(row.team_name) || '—'}
+											{#if behindTeam.has(row.nba_id)}
+												<span class="behind-tag" title={behindTitle(behindTeam.get(row.nba_id))}>nothing after {formatMonthDay(behindTeam.get(row.nba_id))}</span>
+											{/if}
 										</span>
 									</td>
 									{#each STAT_COLUMNS as column (column.key)}
@@ -788,6 +812,12 @@
 		align-items: center;
 		gap: 6px;
 		color: var(--text-secondary);
+	}
+
+	.behind-tag {
+		color: var(--text-muted);
+		font-size: 11px;
+		white-space: nowrap;
 	}
 
 	.team-mark {
