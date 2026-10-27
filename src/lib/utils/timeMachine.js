@@ -131,6 +131,25 @@ export function isPastRegularSeason(date, calendarRow) {
 }
 
 /**
+ * Players whose latest row is at least `days` before their team's latest row among `rows`, as nba_id -> that
+ * row's date. The as-of window keeps them when it reaches back past every team's finale (the 2020 shutdown);
+ * without dated rosters the rows can't say whether such a player sat out or had left the team.
+ */
+export function rowsBehindTeam(rows, days = 14) {
+	const teamLatest = new Map();
+	for (const row of rows ?? []) {
+		const date = String(row?.date ?? '').slice(0, 10);
+		if (date && (!teamLatest.has(row.tm_id) || date > teamLatest.get(row.tm_id))) teamLatest.set(row.tm_id, date);
+	}
+	const behind = new Map();
+	for (const row of rows ?? []) {
+		const date = String(row?.date ?? '').slice(0, 10);
+		if (date && daysBetween(date, teamLatest.get(row.tm_id)) >= days) behind.set(row.nba_id, date);
+	}
+	return behind;
+}
+
+/**
  * Earliest date whose rows can still describe a player's standing on `anchorDate`: four weeks
  * of play, reaching back past every team's final regular-season game once one has ended its
  * season, so eliminated teams (and the 2019-20 teams left out of the bubble) keep their players.
