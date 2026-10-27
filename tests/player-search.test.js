@@ -47,3 +47,16 @@ test('filterPlayerSearchResults returns empty for queries shorter than the minim
     const result = filterPlayerSearchResults(samplePlayers, 'n', []);
     assert.deepEqual(result, []);
 });
+
+
+test('trajectory search includes WOWY-only careers and keeps the DARKO snapshot for overlapping players', async () => {
+    const { mergeTrajectoryPlayers } = await import('../src/lib/utils/playerSearch.js');
+    const { searchByName } = await import('../src/lib/utils/nameSearch.js');
+    const jordan = { nba_id: 893, player_name: 'Michael Jordan', team_name: 'Washington Wizards', dpm: 1.4 };
+    const bird = { nba_id: 1449, player_name: 'Larry Bird' };
+    const historical = { nba_id: -42, player_name: 'Historical Celtic' };
+    const candidates = mergeTrajectoryPlayers([jordan], [bird, historical, { nba_id: 893, player_name: 'Michael Jordan' }]);
+    assert.deepEqual(searchByName(candidates, 'Larry Bird'), [bird]);
+    assert.deepEqual(searchByName(candidates, 'Historical Celtic'), [historical]);
+    assert.deepEqual(searchByName(candidates, 'Michael Jordan'), [jordan]);
+});

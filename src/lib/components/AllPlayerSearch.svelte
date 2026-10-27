@@ -7,7 +7,7 @@
 		PLAYER_SEARCH_MIN_QUERY_LENGTH
 	} from '$lib/utils/playerSearch.js';
 
-	let { onSelect, exclude = [] } = $props();
+	let { onSelect, exclude = [], trajectories = false } = $props();
 
 	let query = $state('');
 	let rawResults = $state([]);
@@ -37,7 +37,7 @@
 		const currentQuery = trimmedQuery;
 
 		debounceTimer = setTimeout(() => {
-			apiSearchPlayers(currentQuery)
+			apiSearchPlayers(currentQuery, { trajectories })
 				.then((players) => {
 					if (!searchSequencer.isCurrent(reqId)) return;
 					rawResults = Array.isArray(players) ? players : [];

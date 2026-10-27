@@ -15,6 +15,7 @@ import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilte
 import { leagueTeamRatings } from '$lib/utils/teamDna.js';
 import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '$lib/utils/frozenRatings.js';
 import { searchByName } from '$lib/utils/nameSearch.js';
+import { mergeTrajectoryPlayers } from '$lib/utils/playerSearch.js';
 import { mergeWowyPages, namesMatching, wowySearchWord } from '$lib/utils/wowySearch.js';
 import { withGameNumbers } from '$lib/utils/seismograph.js';
 
@@ -46,6 +47,7 @@ const CACHE_MS = {
     seasonStartPlayers: 3_600_000,
     playersAsOf: 3_600_000,
     playersIndex: 300_000,
+    wowyPlayersIndex: 300_000,
     playerHistory: 300_000,
     fullPlayerHistory: 1_800_000,
     wowyPlayerHistory: 1_800_000,
@@ -1436,20 +1438,22 @@ export async function getPlayerHistory(nbaId, limit = 500) {
  * Search all players (including retired/inactive) by name.
  * Returns up to 15 unique matches with most recent data.
  */
-export async function searchAllPlayers(searchTerm) {
+export async function searchAllPlayers(searchTerm, { trajectories = false } = {}) {
     const normalizedTerm = (searchTerm || '').trim().toLowerCase();
     if (normalizedTerm.length < 2) {
         return [];
     }
 
-    const key = cacheKey('searchPlayers', normalizedTerm);
+    const key = cacheKey('searchPlayers', `${trajectories ? 'trajectories' : 'darko'}:${normalizedTerm}`);
     return runCached(key, CACHE_MS.searchPlayers, async () => {
-        // Only players DARKO rated (the index: a season of ratings), matched as every player search
-        // matches (nameSearch.js), so "alex sa" finds Alexandre Sarr: current players first, better
-        // ones first among them.
+        // General search stays limited to DARKO players with profile pages. Trajectories also
+        // accepts WOWY-only careers, whose identities come from their first published game.
         const index = await getPlayersIndex();
+        const candidates = trajectories
+            ? mergeTrajectoryPlayers(index, await getWowyPlayersIndex())
+            : index;
         const validPlayers = searchByName(
-            index.filter((player) => Number.isInteger(player?.nba_id) && player.nba_id > 0),
+            candidates,
             normalizedTerm,
             {
                 rank: (player) => {
@@ -1464,7 +1468,7 @@ export async function searchAllPlayers(searchTerm) {
         // A current player already carries today's snapshot, as the leaderboard shows it (the
         // index merges getActivePlayers, ratings frozen at each player's last game); only the
         // others, without one, take their latest row.
-        const pastIds = validPlayers.filter((player) => player.date == null).map((player) => player.nba_id);
+        const pastIds = validPlayers.filter((player) => player.nba_id > 0 && player.date == null).map((player) => player.nba_id);
         const snapshotById = new Map();
         if (pastIds.length > 0) {
             const { data: snapshots, error: snapshotError } = await supabase.rpc(
@@ -1808,6 +1812,26 @@ export async function getPlayerSeasonRows(nbaId, season) {
         }
         if (error) throw error;
         return data ?? [];
+    });
+}
+
+/** One identity per player with a published WOWY career, including historical project IDs. */
+export async function getWowyPlayersIndex() {
+    return runCached('wowyPlayersIndex:all', CACHE_MS.wowyPlayersIndex, async () => {
+        const players = [];
+        const pageSize = 1_000;
+        for (let page = 0; ; page += 1) {
+            const { data, error } = await supabase
+                .from('wowy_ratings')
+                .select('nba_id, player_name')
+                .eq('career_game_num', 1)
+                .order('nba_id', { ascending: true })
+                .range(page * pageSize, (page + 1) * pageSize - 1);
+            if (error) throw error;
+            players.push(...(data || []));
+            if (!data || data.length < pageSize) break;
+        }
+        return players.filter((player) => Number.isInteger(player.nba_id) && player.nba_id !== 0 && player.player_name);
     });
 }
 

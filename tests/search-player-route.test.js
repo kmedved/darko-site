@@ -7,7 +7,7 @@ const ROUTE_FILE = 'src/routes/api/search-players/+server.js';
 
 test('player search keeps database failures private and uncached', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), ROUTE_FILE), 'utf8');
-    const searchIndex = contents.indexOf('const results = await searchAllPlayers(q)');
+    const searchIndex = contents.indexOf('const results = await searchAllPlayers(q,');
     const cacheIndex = contents.indexOf('setEdgeCache(setHeaders', searchIndex);
     const catchIndex = contents.indexOf('} catch (e)', searchIndex);
 

@@ -127,7 +127,7 @@ test('player profile history projects chart fields instead of full production ro
 
 test('player name search decorates only matched IDs', async () => {
     const contents = await fs.readFile(path.resolve(process.cwd(), SUPABASE_FILE), 'utf8');
-    const start = contents.indexOf('export async function searchAllPlayers(searchTerm)');
+    const start = contents.indexOf('export async function searchAllPlayers(searchTerm,');
     const end = contents.indexOf('/**\n * Get a player\'s complete career history', start);
     const block = contents.slice(start, end);
 
@@ -138,7 +138,7 @@ test('player name search decorates only matched IDs', async () => {
     assert.doesNotMatch(block, /\.ilike\(/);
     // A current player keeps the index's snapshot (today's, frozen at the last game, as the
     // leaderboard shows it); only players without one fetch their latest row.
-    assert.match(block, /const pastIds = validPlayers\.filter\(\(player\) => player\.date == null\)/);
+    assert.match(block, /const pastIds = validPlayers\.filter\(\(player\) => player\.nba_id > 0 && player\.date == null\)/);
     assert.match(block, /\.rpc\(\s*'get_latest_player_search_ratings',\s*\{ p_ids: pastIds \}/);
     assert.match(block, /snapshotById\.has\(player\.nba_id\)\s*\? mergePlayerWithActiveSnapshot\(player, snapshotById\.get\(player\.nba_id\)\)\s*: player/);
     assert.doesNotMatch(block, /getActivePlayers\(/);

@@ -175,9 +175,10 @@ export function apiPlayerLongevity(nbaId) {
     return fetchJson(`/api/player/${id}/longevity`);
 }
 
-export function apiSearchPlayers(query) {
+export function apiSearchPlayers(query, { trajectories = false } = {}) {
     const q = String(query || '').trim();
     const qs = new URLSearchParams({ q });
+    if (trajectories) qs.set('view', 'trajectories');
     return fetchJson(`/api/search-players?${qs}`);
 }
 

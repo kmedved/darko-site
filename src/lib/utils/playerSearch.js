@@ -44,3 +44,12 @@ export function filterPlayerSearchResults(
 
     return filterExcludedPlayers(matchingPlayers, exclude, limit);
 }
+
+/** Merge the ordinary player index with published WOWY-only careers by player ID. */
+export function mergeTrajectoryPlayers(darkoPlayers, wowyPlayers) {
+    const players = new Map((darkoPlayers || []).map((player) => [player.nba_id, player]));
+    for (const player of wowyPlayers || []) {
+        if (!players.has(player.nba_id)) players.set(player.nba_id, player);
+    }
+    return [...players.values()];
+}

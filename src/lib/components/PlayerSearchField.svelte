@@ -81,7 +81,9 @@
                     >
                         <span>
                             {player.player_name}
-                            <span class="meta">{player.team_name} · {player.position || '?'}</span>
+                            {#if player.team_name || player.position}
+                                <span class="meta">{[player.team_name, player.position].filter(Boolean).join(' · ')}</span>
+                            {/if}
                         </span>
                         <span class="dpm-val {dpmClass(player.dpm)}">
                             {formatSignedMetric(player.dpm)}

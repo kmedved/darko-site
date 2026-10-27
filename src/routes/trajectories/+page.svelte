@@ -862,10 +862,13 @@
 							</span>
 						{/each}
 					</div>
-					<AllPlayerSearch
-						onSelect={addPlayer}
-						exclude={excludeIds}
-					/>
+					{#key isWowyMetric}
+						<AllPlayerSearch
+							trajectories={isWowyMetric}
+							onSelect={addPlayer}
+							exclude={excludeIds}
+						/>
+					{/key}
 					{#if selectedPlayers.length === 0}
 						<div class="trajectory-starter-grid" aria-label="Starter players">
 							{#each STARTER_PLAYERS as starter (starter.nbaId)}

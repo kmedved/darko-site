@@ -12,7 +12,7 @@ export async function GET({ url, setHeaders }) {
     if (q.length < 2) return json([]);
 
     try {
-        const results = await searchAllPlayers(q);
+        const results = await searchAllPlayers(q, { trajectories: url.searchParams.get('view') === 'trajectories' });
         setEdgeCache(setHeaders, {
             edgeSMaxAge: 120,
             swr: 3600,
