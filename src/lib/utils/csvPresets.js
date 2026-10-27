@@ -154,6 +154,7 @@ export function getMetricDisplayLabel(metric) {
 export const leaderboardCsvColumns = [
     { header: '#', accessor: 'rank' },
     { header: 'Player', accessor: 'player_name' },
+    { header: 'NBA ID', accessor: 'nba_id' },
     { header: 'Team', accessor: 'team_name' },
     { header: 'Pos', accessor: 'position', format: formatOrDash },
     { header: 'Min (trend)', accessor: 'tr_minutes', format: formatMinutes },

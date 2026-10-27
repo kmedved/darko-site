@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { leaderboardCsvColumns } from '../src/lib/utils/csvPresets.js';
+import { csvText } from '../src/lib/utils/csv.js';
 import { LEADERBOARD_COLUMNS } from '../src/lib/utils/leaderboardColumns.js';
 import { buildLeaderboardCsvRows } from '../src/lib/utils/leaderboardCsv.js';
 
@@ -20,6 +21,20 @@ test('buildLeaderboardCsvRows assigns ranks in sorted display order', () => {
     assert.equal(rows[1].player_name, 'Bob');
     assert.equal(rows[1].rank, 2);
     assert.equal(rows[2].rank, 3);
+});
+
+test('leaderboard CSV includes each player’s NBA ID', () => {
+    const rows = buildLeaderboardCsvRows([
+        { player_name: 'LeBron James', nba_id: 2544 },
+        { player_name: 'Stephen Curry', nba_id: 201939 }
+    ]);
+    const [header, first, second] = csvText({ rows, columns: leaderboardCsvColumns })
+        .replace('\uFEFF', '').split('\r\n');
+    const idIndex = header.split(',').indexOf('NBA ID');
+
+    assert.notEqual(idIndex, -1);
+    assert.equal(first.split(',')[idIndex], '2544');
+    assert.equal(second.split(',')[idIndex], '201939');
 });
 
 test('standard leaderboard money columns are ordered as $ Value, Salary, Surplus', () => {
