@@ -181,9 +181,19 @@
 	}
 
 	function exportFantasyCsv() {
+		const columns = getFantasyCsvColumns(isCategories, FANTASY_PRESETS[preset].csvHeader);
+		if (history) {
+			columns.push({
+				header: 'Projection note',
+				accessor: (row) => {
+					const lastDate = behindTeam.get(row.nba_id);
+					return lastDate ? behindTitle(lastDate) : '';
+				}
+			});
+		}
 		exportCsvRows({
 			rows: sortedRows,
-			columns: getFantasyCsvColumns(isCategories, FANTASY_PRESETS[preset].csvHeader),
+			columns,
 			filename: `darko-fantasy-${FANTASY_PRESETS[preset].file ?? preset}${history ? `-${history.date}` : ''}.csv`
 		});
 	}
