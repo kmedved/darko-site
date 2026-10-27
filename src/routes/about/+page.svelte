@@ -362,9 +362,9 @@
 				<details>
 					<summary>Can I see what DARKO said on a past date?</summary>
 					<p>
-						Yes. The Time Machine, in the menu, sets the leaderboard, the player pages and the Roster
-						Lab to any day since 1996-97, and <a href="/rewind">Rewind</a> replays a season week by
-						week.
+						Yes. The Time Machine, in the menu, sets the leaderboard, the player pages, the Roster Lab
+						and the Fantasy Lab to any day since 1996-97, and <a href="/rewind">Rewind</a> replays a
+						season week by week.
 					</p>
 				</details>
 				<details>

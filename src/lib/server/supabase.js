@@ -10,7 +10,7 @@ import {
     normalizeLineupVariant
 } from './lineupRatings.js';
 import { createActivePlayersAccessor } from './activePlayersCache.js';
-import { asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
+import { asOfAnchorDate, asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
 import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilterOptions.js';
 import { leagueTeamRatings } from '$lib/utils/teamDna.js';
 import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '$lib/utils/frozenRatings.js';
@@ -1241,6 +1241,30 @@ const PLAYERS_AS_OF_COLUMNS = [
     'actual_salary',
     'surplus_value'
 ].join(', ');
+// What Fantasy Lab scores (utils/fantasyScoring.js), as of a date.
+const FANTASY_AS_OF_COLUMNS = [
+    'nba_id',
+    'date',
+    'season',
+    'team_name',
+    'tm_id',
+    'position',
+    'x_minutes',
+    'x_pace',
+    'x_pts_100',
+    'x_ast_100',
+    'x_orb_100',
+    'x_drb_100',
+    'x_stl_100',
+    'x_blk_100',
+    'x_tov_100',
+    'x_fga_100',
+    'x_fg3a_100',
+    'x_fta_100',
+    'x_fg_pct',
+    'x_fg3_pct',
+    'x_ft_pct'
+].join(', ');
 
 async function mapWithConcurrency(items, limit, worker) {
     const results = new Array(items.length);
@@ -1355,22 +1379,39 @@ async function lastGameDayRows(rows, season) {
  * or a day on a roster) in the two weeks of play before the date; once any team's season has
  * ended, the window reaches back past every team's final regular-season game. With the season
  * calendar the season comes straight from the date; without it, or inside a pause in play
- * (the 2020 hiatus), the latest rated date anchors the window. Returns { rows, dataDate, season }.
+ * (the 2020 hiatus), the latest rated date anchors the window.
+ * Returns { rows, dataDate, season, regularSeasonEnd }.
  */
 export async function getPlayersAsOf(asOf, calendar = null) {
-    const key = cacheKey('playersAsOf', asOf);
-    return runCached(key, CACHE_MS.playersAsOf, async () => {
+    return readPlayersAsOf(asOf, calendar, { key: 'playersAsOf', columns: PLAYERS_AS_OF_COLUMNS });
+}
+
+/**
+ * Every player's fantasy projections as of `asOf`, read as getPlayersAsOf reads ratings, except that a
+ * date in the playoffs or after them reads the season's last regular-season day (asOfAnchorDate).
+ * Returns { rows, dataDate, season, regularSeasonEnd }.
+ */
+export async function getFantasyPlayersAsOf(asOf, calendar = null) {
+    return readPlayersAsOf(asOf, calendar, {
+        key: 'fantasyPlayersAsOf',
+        columns: FANTASY_AS_OF_COLUMNS,
+        regularSeasonOnly: true
+    });
+}
+
+function readPlayersAsOf(asOf, calendar, { key, columns, regularSeasonOnly = false }) {
+    return runCached(cacheKey(key, asOf), CACHE_MS.playersAsOf, async () => {
         const located = calendar ? locateDate(calendar, asOf) : null;
         let season = located?.season ?? null;
         let calendarRow = located?.row ?? null;
-        let anchorDate = located ? (asOf < calendarRow.last_game ? asOf : calendarRow.last_game) : null;
+        let anchorDate = located ? asOfAnchorDate(asOf, calendarRow, { regularSeasonOnly }) : null;
         let windowRows = season ? await fetchAsOfWindow(season, anchorDate, calendarRow) : [];
         if (windowRows.length === 0) {
             const anchor = await latestRatingDateOnOrBefore(asOf);
-            if (!anchor) return { rows: [], dataDate: null, season: null };
+            if (!anchor) return { rows: [], dataDate: null, season: null, regularSeasonEnd: null };
             season = anchor.season;
-            anchorDate = anchor.date;
             calendarRow = calendar?.find((row) => row.season === season) ?? null;
+            anchorDate = calendarRow ? asOfAnchorDate(anchor.date, calendarRow, { regularSeasonOnly }) : anchor.date;
             windowRows = await fetchAsOfWindow(season, anchorDate, calendarRow);
         }
 
@@ -1392,8 +1433,8 @@ export async function getPlayersAsOf(asOf, calendar = null) {
         const [chunks, playersMap] = await Promise.all([
             mapWithConcurrency(requests, PLAYERS_AS_OF_CONCURRENCY, async ({ date, ids }) => {
                 const { data, error } = await readMarketColumns(
-                    (columns) => supabase.from('player_ratings').select(columns).eq('date', date).in('nba_id', ids),
-                    PLAYERS_AS_OF_COLUMNS
+                    (selected) => supabase.from('player_ratings').select(selected).eq('date', date).in('nba_id', ids),
+                    columns
                 );
                 if (error) throw error;
                 return data ?? [];
@@ -1404,7 +1445,8 @@ export async function getPlayersAsOf(asOf, calendar = null) {
         return {
             rows: sortByDpmDesc(rows.map((row) => mergeWithPlayerDim(row, playersMap.get(row.nba_id)))),
             dataDate: windowRows[0]?.date ?? anchorDate,
-            season
+            season,
+            regularSeasonEnd: calendarRow?.regular_season_end ?? null
         };
     });
 }

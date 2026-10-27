@@ -1,7 +1,9 @@
 import { getActivePlayers } from '$lib/server/supabase.js';
 import { getLatestGameDate } from '$lib/server/daily.js';
+import { AS_OF_EDGE_CACHE, getFantasyPlayersOnDate } from '$lib/server/history.js';
 import { projectPlayers } from '$lib/server/playerViews.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
+import { AS_OF_PARAM, parseAsOfDate } from '$lib/utils/timeMachine.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -9,12 +11,23 @@ export const config = {
     maxDuration: 60
 };
 
-export async function load({ setHeaders }) {
-    setEdgeCache(setHeaders, {
-        edgeSMaxAge: 3600,
-        swr: 86400,
-        sie: 86400
-    });
+// Today's projections, or every player's as of the Time Machine date (history: null today).
+export async function load({ url, setHeaders }) {
+    const asOfDate = parseAsOfDate(url.searchParams.get(AS_OF_PARAM));
+    setEdgeCache(setHeaders, asOfDate ? AS_OF_EDGE_CACHE : { edgeSMaxAge: 3600, swr: 86400, sie: 86400 });
+
+    if (asOfDate) {
+        const result = await getFantasyPlayersOnDate(asOfDate);
+        return {
+            players: projectPlayers(result.rows, 'fantasy'),
+            asOf: result.dataDate,
+            history: {
+                date: asOfDate,
+                season: result.season,
+                regularSeasonEnd: result.regularSeasonEnd
+            }
+        };
+    }
 
     const [active, latestGame] = await Promise.all([getActivePlayers(), getLatestGameDate().catch(() => null)]);
     const players = projectPlayers(active, 'fantasy');
@@ -27,5 +40,5 @@ export async function load({ setHeaders }) {
             ''
         );
 
-    return { players, asOf: asOf || null };
+    return { players, asOf: asOf || null, history: null };
 }

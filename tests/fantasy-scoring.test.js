@@ -7,6 +7,7 @@ import {
     MIN_PROJECTED_MINUTES,
     buildFantasyBoard,
     categoryScores,
+    hasCompleteProjection,
     pointsPerGame,
     projectPerGame
 } from '../src/lib/utils/fantasyScoring.js';
@@ -78,6 +79,16 @@ test('the board drops players under the minutes floor and ranks by value', () =>
     );
     assert.deepEqual(board.map((row) => row.nba_id), [2, 1]);
     assert.deepEqual(board.map((row) => row.rank), [1, 2]);
+});
+
+test('the board leaves out a player with a missing projection instead of scoring it as zero', () => {
+    const missing = player({ nba_id: 2, player_name: 'No steals projection', x_stl_100: null });
+    assert.equal(hasCompleteProjection(player()), true);
+    assert.equal(hasCompleteProjection(missing), false);
+    assert.equal(hasCompleteProjection(player({ x_fg3_pct: undefined })), false);
+    assert.equal(hasCompleteProjection(player({ x_ft_pct: 'NaN' })), false);
+    const board = buildFantasyBoard([player({ nba_id: 1 }), missing], { preset: 'espn' });
+    assert.deepEqual(board.map((row) => row.nba_id), [1]);
 });
 
 test('custom weights replace the preset weights', () => {

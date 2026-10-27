@@ -62,9 +62,36 @@ export const FANTASY_PRESETS = Object.freeze({
 
 export const DEFAULT_CUSTOM_WEIGHTS = ESPN_WEIGHTS;
 
+// Every projection a per-game line is built from.
+export const PROJECTION_FIELDS = Object.freeze([
+    'x_minutes',
+    'x_pace',
+    'x_pts_100',
+    'x_ast_100',
+    'x_orb_100',
+    'x_drb_100',
+    'x_stl_100',
+    'x_blk_100',
+    'x_tov_100',
+    'x_fga_100',
+    'x_fg3a_100',
+    'x_fta_100',
+    'x_fg_pct',
+    'x_fg3_pct',
+    'x_ft_pct'
+]);
+
 function toNumber(value) {
     const n = typeof value === 'number' ? value : Number.parseFloat(value);
     return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Whether a player has every projection the board scores. A missing stat is unknown, not zero, so
+ * the board leaves such a player out rather than score them without it.
+ */
+export function hasCompleteProjection(player) {
+    return PROJECTION_FIELDS.every((field) => toNumber(player?.[field]) !== null);
 }
 
 /** Per-game line from a player's per-100 projections, or null without minutes and pace. */
@@ -170,7 +197,7 @@ export function categoryScores(lines, { poolSize = CATEGORY_POOL_SIZE, passes = 
 
 /**
  * Ranked fantasy board: per-game lines plus a value (fantasy points per game, or total z for
- * 9-cat) for every player projected for at least `minMinutes`.
+ * 9-cat) for every player with a complete projection for at least `minMinutes`.
  */
 export function buildFantasyBoard(
     players,
@@ -179,6 +206,7 @@ export function buildFantasyBoard(
     const config = FANTASY_PRESETS[preset] ?? FANTASY_PRESETS.espn;
     const entries = [];
     for (const player of players ?? []) {
+        if (!hasCompleteProjection(player)) continue;
         const line = projectPerGame(player);
         if (line && line.minutes >= minMinutes) entries.push({ player, line });
     }

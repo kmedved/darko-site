@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import { getPlayersAsOf, supabase } from './supabase.js';
+import { getFantasyPlayersAsOf, getPlayersAsOf, supabase } from './supabase.js';
 
 /**
  * DARKO's history tables, published by nba_darko's pipeline_scripts/publish/website.py
@@ -100,6 +100,12 @@ export function getRatingFrames() {
 export async function getPlayersOnDate(asOfDate) {
     const calendar = await getSeasonCalendar().catch(() => null);
     return getPlayersAsOf(asOfDate, calendar);
+}
+
+/** Every player's fantasy projections on a Time Machine date (getFantasyPlayersAsOf). */
+export async function getFantasyPlayersOnDate(asOfDate) {
+    const calendar = await getSeasonCalendar().catch(() => null);
+    return getFantasyPlayersAsOf(asOfDate, calendar);
 }
 
 /**
