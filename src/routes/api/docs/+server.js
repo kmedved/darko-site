@@ -85,7 +85,7 @@ export async function GET({ setHeaders }) {
                 path: '/api/player/:id/history',
                 method: 'GET',
                 description:
-                    'Career history for a single player. Returns one row per game date with all rating columns in chronological order (oldest first).',
+                    'Career history for a single player. Returns one row per game date with all rating columns in chronological order (oldest first). In 1996–97 regular-season rows, dpm, o_dpm and d_dpm are the site\'s displayed blend: pregame WOWY RAPM on November 1, 1996, fading linearly to DPM by April 20, 1997.',
                 params: {
                     path: {
                         id: {

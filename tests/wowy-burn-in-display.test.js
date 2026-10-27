@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blendHistoricalDpm, blendHistoricalRows } from '../src/lib/server/wowy1997.js';
 import { isBurnInRow, BURN_IN_NOTE } from '../src/lib/utils/historyBurnIn.js';
+import { displayHistory } from '../src/lib/server/historyDisplay.js';
 
 const jordan = { nba_id: 893, season: 1997, date: '1996-11-01', dpm: -1.56821, o_dpm: -0.653333, d_dpm: -0.914879 };
 const near = (a, b, tolerance = 1e-4) => assert.ok(Math.abs(a - b) < tolerance, `${a} != ${b}`);
@@ -41,4 +42,17 @@ test('frozen rows use their actual rating date; total-only display agrees with f
   assert.ok(!isBurnInRow({ ...jordan, date: '1997-04-20' }));
   assert.match(BURN_IN_NOTE, /WOWY RAPM/);
   assert.equal(blendHistoricalRows([jordan]).length, 1);
+});
+
+test('compare and API payloads get the same blend; other seasons pass through untouched', async () => {
+  const later = { ...jordan, date: '1997-11-01' };
+  const payload = { rows: [jordan, later], truncated: false, maxRows: 5000 };
+  const shown = await displayHistory(payload);
+  near(shown.rows[0].dpm, 7.4755);
+  assert.deepEqual(shown.rows[1], later);
+  assert.equal(shown.truncated, false);
+  assert.equal(payload.rows[0].dpm, jordan.dpm);
+  near((await displayHistory([jordan]))[0].dpm, 7.4755);
+  const untouched = { rows: [later] };
+  assert.equal(await displayHistory(untouched), untouched);
 });

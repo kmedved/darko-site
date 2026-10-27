@@ -7,7 +7,7 @@ import {
     getPlayerHistory
 } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
-import { isBurnInRow } from '$lib/utils/historyBurnIn.js';
+import { displayHistory } from '$lib/server/historyDisplay.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -42,16 +42,11 @@ export async function GET({ params, url, setHeaders }) {
             const historyLoader = trajectory
                 ? getFullPlayerTrajectoryHistory
                 : getFullPlayerHistory;
-            const fullHistory = await historyLoader(nbaId, { maxRows: MAX_FULL_HISTORY_ROWS });
-            if (trajectory && fullHistory.rows.some(isBurnInRow)) {
-                const { blendHistoricalRows } = await import('$lib/server/wowy1997.js');
-                return json({ ...fullHistory, rows: blendHistoricalRows(fullHistory.rows) });
-            }
-            return json(fullHistory);
+            // 1996–97 DPM is the site's displayed blend (docs/wowy-1997-display.md), as on every page.
+            return json(await displayHistory(await historyLoader(nbaId, { maxRows: MAX_FULL_HISTORY_ROWS })));
         }
 
-        const rows = await getPlayerHistory(nbaId, boundedLimit);
-        return json(rows);
+        return json(await displayHistory(await getPlayerHistory(nbaId, boundedLimit)));
     } catch (e) {
         throw error(500, e?.message || 'Failed to load player history');
     }
