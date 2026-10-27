@@ -8,6 +8,7 @@ import {
     asOfWindowStart,
     frameIndexAtOrBefore,
     isDateAwarePath,
+    isPastRegularSeason,
     isTimeMachineFolded,
     locateDate,
     parseAsOfDate,
@@ -95,6 +96,16 @@ test('a date reads its season up to the last game, or the last regular-season da
     // The 2019-20 bubble's seeding games are regular season; its playoffs are not.
     assert.equal(asOfAnchorDate('2020-08-05', CALENDAR[1], regularSeasonOnly), '2020-08-05');
     assert.equal(asOfAnchorDate('2020-09-01', CALENDAR[1], regularSeasonOnly), '2020-08-14');
+});
+
+test('a date is past the regular season only once a season has gone beyond it', () => {
+    assert.equal(isPastRegularSeason('2019-01-15', CALENDAR[0]), false);
+    assert.equal(isPastRegularSeason('2019-05-01', CALENDAR[0]), true);
+    assert.equal(isPastRegularSeason('2019-07-20', CALENDAR[0]), true);
+    assert.equal(isPastRegularSeason('2019-05-01', null), false);
+    // The latest season's calendar ends its regular season at the last game played.
+    const current = { season: 2027, first_game: '2026-10-20', earliest_team_finale: '2026-10-25', regular_season_end: '2026-10-25', last_game: '2026-10-25' };
+    assert.equal(isPastRegularSeason('2026-10-26', current), false);
 });
 
 test('Fantasy Lab reads the Time Machine date with its own projection columns', async () => {

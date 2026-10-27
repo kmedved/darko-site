@@ -24,7 +24,7 @@ export async function load({ url, setHeaders }) {
             history: {
                 date: asOfDate,
                 season: result.season,
-                regularSeasonEnd: result.regularSeasonEnd
+                pastRegularSeason: result.pastRegularSeason
             }
         };
     }

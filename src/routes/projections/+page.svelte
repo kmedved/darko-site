@@ -92,11 +92,10 @@
 	const totalPages = $derived(Math.max(1, Math.ceil(sortedRows.length / pageSize)));
 	const pageRows = $derived(sortedRows.slice((page - 1) * pageSize, page * pageSize));
 	const asOfLabel = $derived(formatDate(data.asOf));
-	// Set on a Time Machine date: { date, season, regularSeasonEnd }.
+	// Set on a Time Machine date: { date, season, pastRegularSeason }. Past the regular season the
+	// board reads its last day (getFantasyPlayersAsOf).
 	const history = $derived(data.history ?? null);
 	const historySeason = $derived(history?.season ? seasonLabelFromEndYear(history.season) : '');
-	// Past the regular season the board reads its last day (getFantasyPlayersAsOf).
-	const afterRegularSeason = $derived(Boolean(history?.regularSeasonEnd && history.date > history.regularSeasonEnd));
 	const incompleteCount = $derived((data.players ?? []).filter((player) => !hasCompleteProjection(player)).length);
 
 	onMount(() => {
@@ -241,7 +240,7 @@
 		{#if history}
 			<p class="page-lede page-asof">
 				Projections as of {formatAsOfDate(history.date)}{historySeason ? ` · ${historySeason} season` : ''}.
-				{#if afterRegularSeason}
+				{#if history.pastRegularSeason}
 					Each player's projection for their team's last regular-season game; the playoffs aren't scored.
 				{:else}
 					Each player's projection for their team's last game on or before that date.

@@ -10,7 +10,7 @@ import {
     normalizeLineupVariant
 } from './lineupRatings.js';
 import { createActivePlayersAccessor } from './activePlayersCache.js';
-import { asOfAnchorDate, asOfWindowStart, locateDate } from '$lib/utils/timeMachine.js';
+import { asOfAnchorDate, asOfWindowStart, isPastRegularSeason, locateDate } from '$lib/utils/timeMachine.js';
 import { heightOptionsFromRows, teamOptionsFromRows } from '$lib/utils/wowyFilterOptions.js';
 import { leagueTeamRatings } from '$lib/utils/teamDna.js';
 import { FROZEN_RATING_FIELDS, freezeHistory, freezeRow, isOffseasonRow } from '$lib/utils/frozenRatings.js';
@@ -1380,7 +1380,7 @@ async function lastGameDayRows(rows, season) {
  * ended, the window reaches back past every team's final regular-season game. With the season
  * calendar the season comes straight from the date; without it, or inside a pause in play
  * (the 2020 hiatus), the latest rated date anchors the window.
- * Returns { rows, dataDate, season, regularSeasonEnd }.
+ * Returns { rows, dataDate, season, pastRegularSeason }.
  */
 export async function getPlayersAsOf(asOf, calendar = null) {
     return readPlayersAsOf(asOf, calendar, { key: 'playersAsOf', columns: PLAYERS_AS_OF_COLUMNS });
@@ -1389,7 +1389,7 @@ export async function getPlayersAsOf(asOf, calendar = null) {
 /**
  * Every player's fantasy projections as of `asOf`, read as getPlayersAsOf reads ratings, except that a
  * date in the playoffs or after them reads the season's last regular-season day (asOfAnchorDate).
- * Returns { rows, dataDate, season, regularSeasonEnd }.
+ * Returns { rows, dataDate, season, pastRegularSeason }.
  */
 export async function getFantasyPlayersAsOf(asOf, calendar = null) {
     return readPlayersAsOf(asOf, calendar, {
@@ -1408,7 +1408,7 @@ function readPlayersAsOf(asOf, calendar, { key, columns, regularSeasonOnly = fal
         let windowRows = season ? await fetchAsOfWindow(season, anchorDate, calendarRow) : [];
         if (windowRows.length === 0) {
             const anchor = await latestRatingDateOnOrBefore(asOf);
-            if (!anchor) return { rows: [], dataDate: null, season: null, regularSeasonEnd: null };
+            if (!anchor) return { rows: [], dataDate: null, season: null, pastRegularSeason: false };
             season = anchor.season;
             calendarRow = calendar?.find((row) => row.season === season) ?? null;
             anchorDate = calendarRow ? asOfAnchorDate(anchor.date, calendarRow, { regularSeasonOnly }) : anchor.date;
@@ -1446,7 +1446,7 @@ function readPlayersAsOf(asOf, calendar, { key, columns, regularSeasonOnly = fal
             rows: sortByDpmDesc(rows.map((row) => mergeWithPlayerDim(row, playersMap.get(row.nba_id)))),
             dataDate: windowRows[0]?.date ?? anchorDate,
             season,
-            regularSeasonEnd: calendarRow?.regular_season_end ?? null
+            pastRegularSeason: isPastRegularSeason(asOf, calendarRow)
         };
     });
 }

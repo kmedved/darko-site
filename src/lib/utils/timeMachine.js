@@ -121,6 +121,16 @@ export function asOfAnchorDate(date, calendarRow, { regularSeasonOnly = false } 
 }
 
 /**
+ * Whether `date` is past its season's regular season (calendarRow, from locateDate). Until the
+ * latest season's playoffs begin, its calendar ends the regular season at the last game played,
+ * so a later date there is still the regular season.
+ */
+export function isPastRegularSeason(date, calendarRow) {
+	if (!calendarRow) return false;
+	return date > calendarRow.regular_season_end && calendarRow.last_game > calendarRow.regular_season_end;
+}
+
+/**
  * Earliest date whose rows can still describe a player's standing on `anchorDate`: four weeks
  * of play, reaching back past every team's final regular-season game once one has ended its
  * season, so eliminated teams (and the 2019-20 teams left out of the bubble) keep their players.
