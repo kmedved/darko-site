@@ -2,6 +2,7 @@ import { extent, scaleLinear, line, curveMonotoneX } from 'd3';
 import { getChartTheme } from '../../utils/chartTheme.js';
 import { formatSeasonLabel } from '../../utils/seasonUtils.js';
 import { careerComparisonTitle } from '../../utils/careerChartTitle.js';
+import { seriesShowBurnIn } from '../../utils/historyBurnIn.js';
 
 // The credit line on the site's own trajectory charts, so shared images carry it too.
 export const CHART_CREDIT = '@kmedved | www.darko.app | @anpatt7';
@@ -122,7 +123,7 @@ export function renderCareerSvg(spec, series, metadata, palette, { layout = 'cha
   out.push(text(w / 2, h + (social ? 50 : 53), axisLabel, social ? 16 : 17));
   out.push(`<text transform="translate(-58,${h / 2}) rotate(-90)" text-anchor="middle" font-size="16" fill="${palette.text}">${escapeXml(METRIC_LABELS[spec.metric])} · points / 100 possessions</text>`);
   out.push('</g>');
-  const hasBlend = ['dpm', 'o_dpm', 'd_dpm'].includes(spec.metric) && series.some((player) => player.points.some((point) => point.date >= '1996-11-01' && point.date < '1997-04-20'));
+  const hasBlend = seriesShowBurnIn(spec.metric, series);
   const dataLine = `${CHART_CREDIT} · Games incorporated through ${metadata.dataset_as_of || 'unavailable'} · Pregame ratings${hasBlend ? ' · 1996–97 blends WOWY and DPM' : ''}`;
   if (social) {
     out.push(text(width / 2, height - 23, dataLine, 13, 'middle', palette.muted), '</svg>');

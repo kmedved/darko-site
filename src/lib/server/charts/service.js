@@ -8,7 +8,7 @@ import { Resvg } from '@resvg/resvg-js';
 import css from '../../../app.css?raw';
 import { getFullPlayerTrajectoryHistory, getWowyPlayerHistory } from '../supabase.js';
 import { getLatestGameDate } from '../daily.js';
-import { BURN_IN_METRICS, isBurnInRow } from '../../utils/historyBurnIn.js';
+import { BURN_IN_METRICS, isBurnInRow, seriesShowBurnIn } from '../../utils/historyBurnIn.js';
 import { canonicalChartSpec } from './schema.js';
 export { chartSpecSchema } from './schema.js';
 import { prepareCareerSeries, summarizeCareerSeries } from '../../utils/careerChartData.js';
@@ -46,7 +46,7 @@ async function loadCareerChart(spec) {
   if (!series.some((player) => player.points.length)) throw new Error('No history matches the requested metric and range.');
   const metadata = {
     dataset_as_of: datasetAsOf, snapshot_timing: 'pregame',
-    publication_time: null, model_vintage: null, history_note: HISTORY_NOTE + ' In 1996–97, displayed DPM blends pregame WOWY into DPM through the regular season.',
+    publication_time: null, model_vintage: null, history_note: HISTORY_NOTE + (seriesShowBurnIn(spec.metric, series) ? ' In 1996–97, displayed DPM blends pregame WOWY into DPM through the regular season.' : ''),
     coverage: series.map(({ points, smoothed, ...coverage }) => ({ ...coverage, smoothing_bandwidth: smoothed?.bandwidth ?? null })),
     limitations: series.flatMap((player) => player.coverage_note ? [player.player_name + ': ' + player.coverage_note] : []),
     comparison: series.map((player, index) => summarizeCareerSeries(player, { ...histories[index], rows: blendHistoricalRows(histories[index].rows) }, spec)),
