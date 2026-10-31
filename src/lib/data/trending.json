@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-30",
+  "date": "2026-10-31",
   "players": [
     {
-      "nba_id": 1643409,
-      "name": "Cameron Boozer",
-      "reason": "First career triple-double keeps Grizzlies unbeaten"
+      "nba_id": 201939,
+      "name": "Stephen Curry",
+      "reason": "Eight threes fuel 25-point comeback against Lakers"
     },
     {
-      "nba_id": 1629630,
-      "name": "Ja Morant",
-      "reason": "Hamstring injury ends first game against former team"
-    },
-    {
-      "nba_id": 1630162,
-      "name": "Anthony Edwards",
-      "reason": "Undergoes right knee arthroscopic procedure"
+      "nba_id": 1631096,
+      "name": "Chet Holmgren",
+      "reason": "Patellar tendon tear sidelines him for 8-10 weeks"
     },
     {
       "nba_id": 1629029,
       "name": "Luka Doncic",
-      "reason": "Off injury report ahead of Warriors Cup matchup"
+      "reason": "Scores 37 in return as Lakers squander big lead"
     },
     {
-      "nba_id": 1630168,
-      "name": "Onyeka Okongwu",
-      "reason": "Scores 29 with 12 rebounds to beat Cavaliers"
+      "nba_id": 202681,
+      "name": "Kyrie Irving",
+      "reason": "Scores 35 to hand Rockets first loss"
+    },
+    {
+      "nba_id": 1642843,
+      "name": "Cooper Flagg",
+      "reason": "Scores 33 with clutch baskets against Rockets"
     }
   ]
 }
