@@ -1,30 +1,30 @@
 {
-  "date": "2026-10-31",
+  "date": "2026-11-01",
   "players": [
     {
-      "nba_id": 201939,
-      "name": "Stephen Curry",
-      "reason": "Eight threes fuel 25-point comeback against Lakers"
+      "nba_id": 1641705,
+      "name": "Victor Wembanyama",
+      "reason": "Scores 43 with six blocks to beat Timberwolves"
     },
     {
-      "nba_id": 1631096,
-      "name": "Chet Holmgren",
-      "reason": "Patellar tendon tear sidelines him for 8-10 weeks"
+      "nba_id": 1643411,
+      "name": "Darius Acuff Jr.",
+      "reason": "Nine threes tie rookie record in 38-point game"
     },
     {
-      "nba_id": 1629029,
-      "name": "Luka Doncic",
-      "reason": "Scores 37 in return as Lakers squander big lead"
+      "nba_id": 1630178,
+      "name": "Tyrese Maxey",
+      "reason": "Scores 38 to rally Sixers without LeBron and Embiid"
     },
     {
-      "nba_id": 202681,
-      "name": "Kyrie Irving",
-      "reason": "Scores 35 to hand Rockets first loss"
+      "nba_id": 1643409,
+      "name": "Cameron Boozer",
+      "reason": "Career-high 27 keeps Grizzlies unbeaten at 6-0"
     },
     {
-      "nba_id": 1642843,
-      "name": "Cooper Flagg",
-      "reason": "Scores 33 with clutch baskets against Rockets"
+      "nba_id": 1630552,
+      "name": "Jalen Johnson",
+      "reason": "Ankle injury forces early exit against Pelicans"
     }
   ]
 }
