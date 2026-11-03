@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-02",
+  "date": "2026-11-03",
   "players": [
     {
       "nba_id": 1629029,
       "name": "Luka Doncic",
-      "reason": "Scores 45 with 15 rebounds to beat Raptors"
+      "reason": "Scores 42 with 13 assists as historic streak continues"
     },
     {
-      "nba_id": 1642865,
-      "name": "Yaxel Lendeborg",
-      "reason": "Career-high 37 powers Warriors without Curry and Green"
+      "nba_id": 203110,
+      "name": "Draymond Green",
+      "reason": "Ejected after altercation with Dillon Brooks"
     },
     {
-      "nba_id": 1628369,
-      "name": "Jayson Tatum",
-      "reason": "Scores 32 as Celtics win fifth straight"
+      "nba_id": 1628983,
+      "name": "Shai Gilgeous-Alexander",
+      "reason": "Season-high 43 and late three lift Thunder past Cavaliers"
     },
     {
-      "nba_id": 1643412,
-      "name": "Kingston Flemings",
-      "reason": "Suspended one game for elbowing Bryce McGowens"
+      "nba_id": 201939,
+      "name": "Stephen Curry",
+      "reason": "Returns with 34 points for fifth straight Warriors win"
     },
     {
-      "nba_id": 1629008,
-      "name": "Michael Porter Jr.",
-      "reason": "Scores 23 to secure Nets first win"
+      "nba_id": 201566,
+      "name": "Russell Westbrook",
+      "reason": "Thunder announce No. 0 jersey retirement for February 7"
     }
   ]
 }
