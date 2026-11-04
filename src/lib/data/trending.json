@@ -1,30 +1,25 @@
 {
-  "date": "2026-11-03",
+  "date": "2026-11-04",
   "players": [
+    {
+      "nba_id": 202695,
+      "name": "Kawhi Leonard",
+      "reason": "Completes knee treatment and begins return-to-play process"
+    },
     {
       "nba_id": 1629029,
       "name": "Luka Doncic",
-      "reason": "Scores 42 with 13 assists as historic streak continues"
+      "reason": "NBA rescinds technical foul amid historic scoring streak"
     },
     {
-      "nba_id": 203110,
-      "name": "Draymond Green",
-      "reason": "Ejected after altercation with Dillon Brooks"
+      "nba_id": 1631207,
+      "name": "Dalen Terry",
+      "reason": "Signs multi-year contract with injury-hit Thunder"
     },
     {
-      "nba_id": 1628983,
-      "name": "Shai Gilgeous-Alexander",
-      "reason": "Season-high 43 and late three lift Thunder past Cavaliers"
-    },
-    {
-      "nba_id": 201939,
-      "name": "Stephen Curry",
-      "reason": "Returns with 34 points for fifth straight Warriors win"
-    },
-    {
-      "nba_id": 201566,
-      "name": "Russell Westbrook",
-      "reason": "Thunder announce No. 0 jersey retirement for February 7"
+      "nba_id": 1642843,
+      "name": "Cooper Flagg",
+      "reason": "Strong sophomore start draws spotlight ahead of Spurs matchup"
     }
   ]
 }
