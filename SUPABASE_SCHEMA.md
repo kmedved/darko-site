@@ -230,7 +230,11 @@ the 1956-57 season onward, including NBA and ABA postseason games and with no ex
 
 Singleton freshness and provenance row for the public WOWY table. `id` is constrained to `1`.
 It records the publication ID, composite/output hashes, data-through date and season, counts, and
-publication timestamp. `season_from`, `season_adjusted_from`, and
+publication timestamp. `display_method` is `final_cut` (a hindsight Final Cut), `causal_daily` (a
+pregame Daily) or, since `20261105_001`, `smoothed_daily` (a Daily whose engines run two-sided, so
+each date's value uses games on both sides of it); `historian_sha256` is null for both Daily
+methods. The `causal_wowy_*` columns of `wowy_ratings` hold the Daily's own values whatever its
+timing. `season_from`, `season_adjusted_from`, and
 `aba_cross_league_identified_from` separately record the Daily/Final Cut floor, the unchanged
 Season-Adjusted floor, and the first identified ABA-to-NBA linkage season. The Trajectories page
 uses `season_through` for its freshness label.

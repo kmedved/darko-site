@@ -58,11 +58,12 @@ live on the DARKO site now.
 
 On the WOWY season leaderboard you will now see a choice: **Average** or **Adjusted**.
 
-WOWY is my attempt to estimate player impact back to 1977-78, including the years before the NBA had
-complete play-by-play data. The public game-by-game rating is a retrospective, smoothed estimate:
-each game's value can draw on the player's games both before and after that date, and the whole
-history is recomputed by the current model. It is not a before-game estimate, and it should not be
-read as a forecast. The two season numbers answer different questions:
+WOWY is my attempt to estimate player impact back to 1956-57, including the decades before the NBA
+had complete play-by-play data; the season ratings below start in 1977-78. The public game-by-game
+rating is a retrospective, smoothed estimate: each game's value can draw on the player's games
+both before and after that date, and the whole history is recomputed by the current model. It is
+not a before-game estimate, and it should not be read as a forecast. The two season numbers answer
+different questions:
 
 - **Average** asks: what is the simple average of the published game-by-game ratings?
 - **Adjusted** asks: with the whole season in front of us, how well does the evidence say he
