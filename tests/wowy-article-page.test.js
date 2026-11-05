@@ -44,11 +44,11 @@ test('WOWY article source is retained while a placeholder is published', async (
 	assert.match(markdown, /## Two numbers, two questions/);
 	assert.match(markdown, /## Why not just average the daily ratings\?/);
 	assert.match(markdown, /## How it works, briefly/);
-	assert.match(markdown, /internal daily baseline uses only information/);
-	assert.match(markdown, /Final Cut retrospectively sharpens/);
-	assert.match(markdown, /Final Cut is\s+intentionally retrospective/);
-	assert.match(markdown, /simple average of the published Final Cut/);
-	assert.match(markdown, /retains the causal pregame values/);
+	assert.match(markdown, /retrospective, smoothed estimate/);
+	assert.match(markdown, /both before and after that date/);
+	assert.match(markdown, /simple average of the published game-by-game ratings/);
+	assert.match(markdown, /built from an earlier\s+daily model/);
+	assert.doesNotMatch(markdown, /pregame|as-of|will follow|using only information then available/);
 	assert.match(markdown, /## Why trust it\?/);
 	assert.match(markdown, /## What the box score missed/);
 	assert.match(markdown, /## What the model cannot know/);

@@ -2,6 +2,9 @@
 
 Usage: python scripts/export-wowy-1997-display.py /absolute/path/composite_rapm.parquet /absolute/path/player_ratings.parq
 Requires DuckDB. Update the documented source hashes when the extract changes.
+The Daily's date column may be an ISO string or a timestamp; both are read as dates. The source
+must be a pregame (causal) Daily: a two-sided, smoothed Daily would put later games into DPM's
+1996-97 display.
 
 WOWY's first state for a player is his debut day, but the published ratings can carry him on earlier no-minute
 rows (on a roster, not yet played). Those rows get his debut-day pregame state. It holds no game of his, so it adds
@@ -25,10 +28,10 @@ def sha256(path):
 source, ratings = (Path(arg).resolve(strict=True) for arg in sys.argv[1:3])
 connection = duckdb.connect(config={'threads': '1', 'memory_limit': '256MB'})
 rows = connection.execute("""
-    SELECT nba_id, date, combo_O, combo_D FROM read_parquet(?)
-    WHERE season = 1997 AND date >= '1996-11-01' AND date < '1997-04-20'
+    SELECT nba_id, CAST(date AS DATE) AS day, combo_O, combo_D FROM read_parquet(?)
+    WHERE season = 1997 AND CAST(date AS DATE) >= DATE '1996-11-01' AND CAST(date AS DATE) < DATE '1997-04-20'
       AND nba_id > 0 AND isfinite(combo_O) AND isfinite(combo_D)
-    ORDER BY nba_id, date
+    ORDER BY nba_id, day
 """, [str(source)]).fetchall()
 start = datetime.date(1996, 11, 1)
 rated = {}
@@ -39,7 +42,7 @@ for nba_id, date, seconds in connection.execute("""
     rated.setdefault(nba_id, []).append(((date - start).days, seconds))
 players = {}
 for nba_id, date, offense, defense in rows:
-    day = (datetime.date.fromisoformat(date) - start).days
+    day = (date - start).days
     players.setdefault(nba_id, []).append([day, round(offense, 4), round(defense, 4)])
 kept, carried, dropped = {}, [], []
 for nba_id, states in players.items():

@@ -59,19 +59,18 @@ live on the DARKO site now.
 On the WOWY season leaderboard you will now see a choice: **Average** or **Adjusted**.
 
 WOWY is my attempt to estimate player impact back to 1977-78, including the years before the NBA had
-complete play-by-play data. Underneath everything is a causal daily model that updates its opinion
-before each game using only information then available. The public career trajectory applies a
-separately tested retrospective pass called **Final Cut**, which uses later games to sharpen that
-line after the fact. The two season numbers answer different questions:
+complete play-by-play data. The public game-by-game rating is a retrospective, smoothed estimate:
+each game's value can draw on the player's games both before and after that date, and the whole
+history is recomputed by the current model. It is not a before-game estimate, and it should not be
+read as a forecast. The two season numbers answer different questions:
 
-- **Average** asks: what is the simple average of the published Final Cut game-by-game ratings?
+- **Average** asks: what is the simple average of the published game-by-game ratings?
 - **Adjusted** asks: with the whole season in front of us, how well does the evidence say he
   actually played?
 
-The adjusted rating is a second layer built on the retained causal daily ratings. It does not
-replace either daily series or change the career trajectories already on the site. Every published
-game row retains the causal pregame values alongside the displayed Final Cut values; Final Cut is
-intentionally retrospective and should not be read as a before-game forecast.
+The adjusted rating is a second layer. The adjusted ratings shown today were built from an earlier
+daily model, one that updated before each game using only the games already played. They do not
+replace the game-by-game series or change the career trajectories on the site.
 
 ## The best season in the table
 
@@ -124,8 +123,8 @@ much.
 
 ## Why not just average the daily ratings?
 
-The daily WOWY line is designed to move carefully. Before every game, it carries forward what it
-has learned from previous games and previous seasons. A great week should not turn an average
+The daily line the adjusted ratings were built from is designed to move carefully. Before every
+game, it carries forward what it has learned from previous games and previous seasons. A great week should not turn an average
 player into an MVP overnight, and a terrible week should not erase a decade of evidence. That
 caution is exactly right when the question is, "How good is this player right now?"
 
@@ -182,10 +181,10 @@ rich season can move meaningfully away from the daily baseline. A six-game seaso
 Adjustments are bounded, and each season remains centered around league average, so a short hot
 streak cannot create a new all-time peak by itself.
 
-The timing of the layers is also deliberate. Each internal daily baseline uses only information
-that was available before that game. Final Cut retrospectively sharpens the public game-by-game
-line, while the season adjustment asks what the completed season tells us as one evidence block.
-That is why **Average** and **Adjusted** can differ without contradicting each other.
+The timing of the layers is also deliberate. The public game-by-game line is smoothed: each value
+can use games on both sides of its date. The season adjustment asks what the completed season tells
+us as one evidence block. That is why **Average** and **Adjusted** can differ without contradicting
+each other.
 
 ## Why trust it?
 
@@ -291,13 +290,12 @@ few tenths should never be read as proof.
 
 ## How to read the site
 
-Use **Average** when you want a season summary of the daily trajectory already shown on DARKO —
-the model's evolving, cautious view of the player's level, with every published game counting
-equally.
+Use **Average** when you want a season summary of the game-by-game trajectory shown on DARKO, with
+every published game counting equally.
 
 Use **Adjusted** when you want the retrospective verdict: the weighted daily baseline plus however
 much season-specific performance the broader evidence actually supports.
 
-Both views are useful. They answer different questions — which is the whole point. What did we
-think of Larry Bird while 1983 was happening, and what do we know now? For the first time, the
-table answers both across the league, back to 1977-78.
+Both views are useful. They answer different questions — which is the whole point. What does the
+game-by-game line say about Larry Bird in 1983, and what does the completed season add? For the
+first time, the table answers both across the league, back to 1977-78.
