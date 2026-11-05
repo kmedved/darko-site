@@ -69,9 +69,8 @@ different questions:
 - **Adjusted** asks: with the whole season in front of us, how well does the evidence say he
   actually played?
 
-The adjusted rating is a second layer. The adjusted ratings shown today were built from an earlier
-daily model, one that updated before each game using only the games already played. They do not
-replace the game-by-game series or change the career trajectories on the site.
+The adjusted rating is a second layer, built from the same smoothed daily line the site shows. It
+does not replace the game-by-game series or change the career trajectories on the site.
 
 ## The best season in the table
 
@@ -124,18 +123,19 @@ much.
 
 ## Why not just average the daily ratings?
 
-The daily line the adjusted ratings were built from is designed to move carefully. Before every
-game, it carries forward what it has learned from previous games and previous seasons. A great week should not turn an average
-player into an MVP overnight, and a terrible week should not erase a decade of evidence. That
-caution is exactly right when the question is, "How good is this player right now?"
+The daily line the adjusted ratings are built from is designed to move carefully. Each game's
+value draws on the player's games on both sides of it, and on the seasons around it. A great week
+should not turn an average player into an MVP, and a terrible week should not erase a decade of
+evidence. That caution is exactly right when the question is, "How good was this player around
+this date?"
 
-But it creates a lag when the question becomes, "How well did he play this season?"
+But it blurs neighboring seasons together when the question becomes, "How well did he play this
+season?"
 
-Imagine a player begins the year rated +3 and then plays at a +5 level. Because the daily model is
-cautious, perhaps he finishes the year at +4, and his average daily rating for the season is only
-+3.5. That +3.5 is not wrong — it is a fair summary of what the model believed while it was still
-learning. But with the full season behind us, we know more. To drag a stubborn daily estimate from
-+3 to +4, the player probably had to perform at something closer to +5.
+Imagine a player who plays at a +3 level for years and then has one +5 season. Because the daily
+line leans on the seasons around it, his average daily rating for that year may land closer to
++4. That +4 is not wrong — it is a fair summary of the whole stretch. But when we treat the
+completed season as one block of evidence, it can say more about that year on its own.
 
 The gap between those two readings shows up in real seasons:
 
@@ -167,8 +167,10 @@ season actually contains. A player in 1983 and a player in 2025
 are judged on the same information. Modern players get no special inputs that older players could
 never have had.
 
-Modern play-by-play supplies the comparison target, not a modern-only input. Recent seasons show
-how full-season performance tends to differ from the cautious daily average. The model learns that
+Modern play-by-play supplies the comparison target, not a modern-only input. The target is
+single-season RAPM, fit separately for each season from 1997-98 through 2024-25 on luck-corrected
+points, with regular-season and playoff possessions counted alike. Those seasons show how
+full-season performance tends to differ from the smoothed daily average. The model learns that
 relationship, then applies it everywhere using only the evidence available in every era. Offense
 and defense are estimated separately and added together exactly; the total is always offense plus
 defense, in points per 100 possessions.

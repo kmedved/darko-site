@@ -312,7 +312,9 @@ data replacement. The model publisher
 (`nba_darko/pipeline_scripts/publish/wowy/publish_unified_1957.py`) updates the
 private season-average activation marker and publication coverage metadata
 atomically with the public tables, so their recorded range and counts cannot lag
-the data.
+the data. A publication that replaces Season-Adjusted (`--publication p11`) also
+replaces `wowy_season_adjusted_ratings` and its `wowy_season_adjusted_publication`
+row in that same transaction; box context is never touched.
 
 ### All-time WOWY season leaderboard
 

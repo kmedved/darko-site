@@ -49,7 +49,11 @@ test('WOWY article source is retained while a placeholder is published', async (
 	assert.match(markdown, /season ratings below start in 1977-78/);
 	assert.match(markdown, /both before and after that date/);
 	assert.match(markdown, /simple average of the published game-by-game ratings/);
-	assert.match(markdown, /built from an earlier\s+daily model/);
+	assert.match(markdown, /built from the same smoothed daily line/);
+	assert.match(markdown, /single-season RAPM, fit separately for each season/);
+	assert.match(markdown, /luck-corrected\s+points/);
+	assert.doesNotMatch(markdown, /built from an earlier\s+daily model/);
+	assert.doesNotMatch(markdown, /Before every\s+game, it carries forward/);
 	assert.doesNotMatch(markdown, /pregame|as-of|will follow|using only information then available/);
 	assert.match(markdown, /## Why trust it\?/);
 	assert.match(markdown, /## What the box score missed/);
