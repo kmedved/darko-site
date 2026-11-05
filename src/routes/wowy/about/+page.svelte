@@ -13,7 +13,7 @@
 		<p>In the meantime, the WOWY RAPM ratings are available to explore.</p>
 		<p>
 			In a comparison of 1999–2026 data, Daily WOWY had an exposure-weighted correlation of
-			about <strong>0.86</strong> with play-by-play-based time-decay RAPM. WOWY is calibrated
+			about <strong>0.87</strong> with play-by-play-based time-decay RAPM. WOWY is calibrated
 			against modern RAPM, so the comparison uses overlapping data.
 		</p>
 		<p><a href="/wowy">Explore WOWY RAPM ratings →</a></p>
