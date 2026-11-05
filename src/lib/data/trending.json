@@ -1,25 +1,30 @@
 {
-  "date": "2026-11-04",
+  "date": "2026-11-05",
   "players": [
     {
-      "nba_id": 202695,
-      "name": "Kawhi Leonard",
-      "reason": "Completes knee treatment and begins return-to-play process"
+      "nba_id": 1641705,
+      "name": "Victor Wembanyama",
+      "reason": "Historic 52 points, 24 rebounds and eight blocks against Dallas"
     },
     {
       "nba_id": 1629029,
       "name": "Luka Doncic",
-      "reason": "NBA rescinds technical foul amid historic scoring streak"
+      "reason": "Third straight 40-point game extends historic scoring streak"
     },
     {
-      "nba_id": 1631207,
-      "name": "Dalen Terry",
-      "reason": "Signs multi-year contract with injury-hit Thunder"
+      "nba_id": 202691,
+      "name": "Klay Thompson",
+      "reason": "Eight threes and overtime winner complete Heat comeback"
     },
     {
-      "nba_id": 1642843,
-      "name": "Cooper Flagg",
-      "reason": "Strong sophomore start draws spotlight ahead of Spurs matchup"
+      "nba_id": 1628983,
+      "name": "Shai Gilgeous-Alexander",
+      "reason": "Scores 42 for second straight 40-point win over Cavaliers"
+    },
+    {
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "First NBA player to reach 16,000 career field goals"
     }
   ]
 }
