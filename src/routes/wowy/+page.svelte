@@ -114,7 +114,7 @@
             key: 'wowy_rapm',
             label: 'WOWY RAPM',
             align: 'right',
-            tooltip: 'Season-average WOWY RAPM after updating the season baseline with season-specific game, quarter, box, and play-by-play-era evidence.'
+            tooltip: 'Season WOWY RAPM: the season baseline from the smoothed daily WOWY line, shifted by what that season’s game, quarter, box-score, and team evidence supports. The shift comes from a model trained against single-season luck-corrected RAPM in modern play-by-play seasons.'
         },
         {
             key: 'wowy_orapm',
@@ -400,7 +400,7 @@
             ? 'Every modeled player-season, loaded 100 at a time.'
             : isCurrentView
                 ? freshnessLabel
-                : 'Each rating starts from the season WOWY baseline and shifts it a bounded amount for how the player performed that season.'
+                : 'Each rating starts from the season baseline of the smoothed daily WOWY line and shifts it a bounded amount for how the player performed that season.'
     );
     let methodOpen = $state(false);
     const viewSubtitle = $derived(
@@ -1001,7 +1001,7 @@
                 <p>{getMetricDefinition('wowy_rapm')}</p>
                 <p>
                     {#if isAllTimeView}
-                        Each row is one modeled player-season, ranked by WOWY RAPM. Each rating starts from the underlying daily WOWY baseline and shifts it for how the player performed in that season. Regular-season and playoff evidence are included. BPM is the ordinary box-score baseline; WOWY adds non-box evidence. Results load 100 at a time, with no default possession cutoff.
+                        Each row is one modeled player-season, ranked by WOWY RAPM. Each rating starts from the season baseline of the smoothed daily WOWY line and shifts it for how the player performed in that season, using a model trained against single-season luck-corrected RAPM from modern play-by-play. Regular-season and playoff evidence are included. BPM is the ordinary box-score baseline; WOWY adds non-box evidence. Results load 100 at a time, with no default possession cutoff.
                     {:else if isCurrentView}
                         Each player row is dated to that player’s most recent observed game; team and position reflect the current DARKO roster.
                     {:else}
