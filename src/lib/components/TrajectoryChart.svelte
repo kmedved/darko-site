@@ -1,9 +1,10 @@
 <script>
 	import * as d3 from 'd3';
-	import { smoothCareerPoints } from '$lib/utils/careerChartData.js';
+	import { formatSeasonEndYearLabel, getSeasonStartYear } from '$lib/utils/seasonUtils.js';
+	import { smoothCareerPoints, splitAtMissingSeasons } from '$lib/utils/careerChartData.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { formatDollarsMillions, getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
-	import { getChartLayout, getSeasonTickStep, getAgeTickCount } from '$lib/utils/chartLayout.js';
+	import { getChartLayout, getSeasonTickStep, getAgeTickCount, getSeasonAgeAxis } from '$lib/utils/chartLayout.js';
 	import { getChartTheme } from '$lib/utils/chartTheme.js';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
@@ -61,6 +62,7 @@
 	const TIME_LABELS = {
 		games: 'Career Game Number',
 		age: 'Age',
+		'season-age': 'Season age',
 		seasons: 'Season'
 	};
 
@@ -68,6 +70,10 @@
 		if (timeScale === 'games') {
 			// Games played, numbered by the page (routes/trajectories).
 			const n = Number.parseFloat(row._gameX);
+			return Number.isFinite(n) ? n : null;
+		}
+		if (timeScale === 'season-age') {
+			const n = Number.parseFloat(row._seasonAgeX);
 			return Number.isFinite(n) ? n : null;
 		}
 		if (timeScale === 'age') {
@@ -218,7 +224,9 @@
 		const yLow = yMin !== null && Number.isFinite(yMin) ? yMin : yExtent[0] - yPad;
 		const yHigh = yMax !== null && Number.isFinite(yMax) ? yMax : yExtent[1] + yPad;
 
-		const x = d3.scaleLinear().domain(xExtent).range([0, w]);
+		// Season age draws whole season columns, so the first and last seasons are not cut off.
+		const seasonAxis = timeScale === 'season-age' ? getSeasonAgeAxis(xExtent[0], xExtent[1], isMobile) : null;
+		const x = d3.scaleLinear().domain(seasonAxis?.domain ?? xExtent).range([0, w]);
 		const y = d3
 			.scaleLinear()
 			.domain([yLow, yHigh])
@@ -280,7 +288,10 @@
 				continue;
 			}
 
-			const loessData = smooth ? smoothCareerPoints(rows, displayMode.view, bandwidth).points : rows;
+			const seasonRuns = timeScale === 'season-age';
+			const loessData = smooth
+				? smoothCareerPoints(rows, displayMode.view, bandwidth, { breakAtMissingSeasons: seasonRuns }).points
+				: rows;
 
 			const line = d3
 				.line()
@@ -302,14 +313,18 @@
 				}
 			}
 
-			g.append('path')
-				.datum(loessData)
-				.attr('fill', 'none')
-				.attr('stroke', player.color)
-				.attr('stroke-width', chartTheme.lineWidth)
-				.attr('stroke-linecap', 'round')
-				.attr('stroke-linejoin', 'round')
-				.attr('d', line);
+			// Season age breaks the line at seasons the player missed.
+			for (const run of seasonRuns ? splitAtMissingSeasons(loessData) : [loessData]) {
+				if (run.length < 2) continue;
+				g.append('path')
+					.datum(run)
+					.attr('fill', 'none')
+					.attr('stroke', player.color)
+					.attr('stroke-width', chartTheme.lineWidth)
+					.attr('stroke-linecap', 'round')
+					.attr('stroke-linejoin', 'round')
+					.attr('d', line);
+			}
 		}
 
 		// X axis
@@ -321,6 +336,8 @@
 			const step = getSeasonTickStep(span, isMobile);
 			const tickVals = d3.range(minYear, maxYear + 1, step);
 			xAxisCall = xAxisCall.tickValues(tickVals).tickFormat((d) => String(d));
+		} else if (seasonAxis) {
+			xAxisCall = xAxisCall.tickValues(seasonAxis.ticks).tickFormat((d) => String(d));
 		} else if (timeScale === 'age') {
 			xAxisCall = xAxisCall.ticks(getAgeTickCount(isMobile)).tickFormat((d) => (Number.isInteger(d) ? d : ''));
 		} else {
@@ -535,6 +552,10 @@
 						>{fmtMetric(getY(tooltipData.row))}</span
 					>
 				<span class="chart-tooltip-date">{tooltipData.row.date}</span>
+				{#if timeScale === 'season-age'}
+					<span class="chart-tooltip-date">{formatSeasonEndYearLabel(tooltipData.row.season || getSeasonStartYear(tooltipData.row.date) + 1)} · age-{tooltipData.row._seasonAge} season</span>
+					<span class="chart-tooltip-date">Age {Number(tooltipData.row.age).toFixed(2)} on game date</span>
+				{/if}
 			</div>
 		{/if}
 	</div>

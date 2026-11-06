@@ -1,5 +1,7 @@
 import { extent, scaleLinear, line, curveMonotoneX } from 'd3';
 import { getChartTheme } from '../../utils/chartTheme.js';
+import { getSeasonAgeAxis } from '../../utils/chartLayout.js';
+import { splitAtMissingSeasons } from '../../utils/careerChartData.js';
 import { formatSeasonLabel } from '../../utils/seasonUtils.js';
 import { careerComparisonTitle } from '../../utils/careerChartTitle.js';
 import { seriesShowBurnIn } from '../../utils/historyBurnIn.js';
@@ -49,6 +51,9 @@ export function renderCareerSvg(spec, series, metadata, palette, { layout = 'cha
   const w = width - margin.left - margin.right, h = height - margin.top - margin.bottom;
   const points = series.flatMap((player) => player.points);
   let [xLow, xHigh] = extent(points, (point) => point.x);
+  // Season age draws whole season columns, so the first and last seasons are not cut off.
+  const seasonAxis = spec.scale === 'season-age' && points.length ? getSeasonAgeAxis(xLow, xHigh) : null;
+  if (seasonAxis) [xLow, xHigh] = seasonAxis.domain;
   if (xLow === xHigh) { xLow -= 0.5; xHigh += 0.5; }
   const yPoints = [...points, ...series.flatMap((player) => player.smoothed?.points || [])];
   const [minY, maxY] = extent(yPoints, (point) => point.y);
@@ -82,7 +87,7 @@ export function renderCareerSvg(spec, series, metadata, palette, { layout = 'cha
   out.push(`<path d="M0,0V${h}H${w}" fill="none" stroke="${axisColor}"/>`);
   if (theme.plotBorder) out.push(`<rect width="${w}" height="${h}" fill="none" stroke="${theme.plotBorderColor}"/>`);
   if (yLow <= 0 && yHigh >= 0) out.push(`<line x2="${w}" y1="${y(0)}" y2="${y(0)}" stroke="${palette.text}" stroke-width="${theme.zeroWidth}" stroke-dasharray="${theme.zeroDash || ''}"/>`);
-  for (const tick of x.ticks(spec.scale === 'age' ? 12 : 8)) {
+  for (const tick of seasonAxis?.ticks ?? x.ticks(spec.scale === 'age' ? 12 : 8)) {
     if (spec.scale !== 'age' && !Number.isInteger(tick)) continue;
     out.push(`<line x1="${x(tick)}" x2="${x(tick)}" y1="${h}" y2="${h + 6}" stroke="${axisColor}"/>`);
     // Season ticks sit at the middle of each season (computeSeasonX spreads a season around its
@@ -93,7 +98,10 @@ export function renderCareerSvg(spec, series, metadata, palette, { layout = 'cha
   for (const player of series) {
     if (spec.points) for (const point of player.points) out.push(`<circle cx="${x(point.x).toFixed(2)}" cy="${y(point.y).toFixed(2)}" r="${theme.pointRadius}" fill="${player.color}" opacity="${theme.pointOpacity}"/>`);
     const curve = player.smoothed?.points || player.points;
-    if (curve.length > 1) out.push(`<path d="${path(curve)}" fill="none" stroke="${player.color}" stroke-width="${theme.lineWidth}" stroke-linecap="round"/>`);
+    // Season age breaks the line at seasons the player missed.
+    for (const run of spec.scale === 'season-age' ? splitAtMissingSeasons(curve) : [curve]) {
+      if (run.length > 1) out.push(`<path d="${path(run)}" fill="none" stroke="${player.color}" stroke-width="${theme.lineWidth}" stroke-linecap="round"/>`);
+    }
   }
   out.push('</g>');
   // Annotation labels occupy their own column; their leaders point to raw observations.
@@ -102,7 +110,7 @@ export function renderCareerSvg(spec, series, metadata, palette, { layout = 'cha
     for (const kind of spec.annotations || []) {
       const point = kind === 'peak' ? summary.peak_in_range : kind === 'smoothed_peak' ? summary.smoothed_peak_in_range : kind === 'latest' ? summary.latest_in_range : summary.selected.observed;
       if (!point || point.value < yLow || point.value > yHigh) continue;
-      const axis = spec.scale === 'age' ? 'age' : spec.scale === 'seasons' ? 'season' : 'game';
+      const axis = spec.scale === 'season-age' ? 'season age' : spec.scale === 'age' ? 'age' : spec.scale === 'seasons' ? 'season' : 'game';
       const requested = spec.at ?? point.x;
       const kindLabel = kind === 'peak' ? 'Raw peak' : kind === 'smoothed_peak' ? 'Smoothed peak' : kind === 'latest' ? 'Last' : 'Near ' + axis + ' ' + Number(requested.toFixed(2));
       labels.push({ point, color: summary.color, label: summary.player_name + ' · ' + kindLabel + ': ' + point.value.toFixed(2), desired: y(point.value) });
@@ -119,7 +127,7 @@ export function renderCareerSvg(spec, series, metadata, palette, { layout = 'cha
   }
   const partial = series.some((player) => player.partial_career === true);
   const unverified = series.some((player) => player.partial_career === null);
-  const axisLabel = spec.scale === 'age' ? 'Age' : spec.scale === 'seasons' ? 'Season' : partial || unverified ? 'Games played in available history (since 1996–97)' : 'Career games played';
+  const axisLabel = spec.scale === 'season-age' ? 'Season age' : spec.scale === 'age' ? 'Age' : spec.scale === 'seasons' ? 'Season' : partial || unverified ? 'Games played in available history (since 1996–97)' : 'Career games played';
   out.push(text(w / 2, h + (social ? 50 : 53), axisLabel, social ? 16 : 17));
   out.push(`<text transform="translate(-58,${h / 2}) rotate(-90)" text-anchor="middle" font-size="16" fill="${palette.text}">${escapeXml(METRIC_LABELS[spec.metric])} · points / 100 possessions</text>`);
   out.push('</g>');

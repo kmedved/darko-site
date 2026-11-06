@@ -268,3 +268,13 @@ test('draft debut estimates match played debuts rather than an earlier opening f
   assert.equal(delayed.initial_estimate.dpm, -2);
   assert.match(data.basis, /matches game 1/);
 });
+
+
+test('career prompt prefers season age but preserves an explicit exact-age axis', async () => {
+  const defaultPrompt = await rpc('prompts/get', { name: 'compare_career_histories', arguments: { players: 'Jordan and LeBron' } });
+  assert.match(defaultPrompt.messages[0].content.text, /by season-age\./);
+  const exactPrompt = await rpc('prompts/get', { name: 'compare_career_histories', arguments: { players: 'Jordan and LeBron', axis: 'age' } });
+  assert.match(exactPrompt.messages[0].content.text, /by age\./);
+  const cohort = await rpc('prompts/get', { name: 'compare_with_darko_comps', arguments: { player: 'LeBron' } });
+  assert.match(cohort.messages[0].content.text, /scale: season-age/);
+});

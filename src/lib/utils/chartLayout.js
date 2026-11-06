@@ -39,3 +39,18 @@ export function getSeasonTickStep(span, isMobile) {
 export function getAgeTickCount(isMobile) {
 	return isMobile ? 6 : 12;
 }
+
+/**
+ * The season-age axis for plotted positions from xMin to xMax: whole season columns (age N spans
+ * N - 0.5 to N + 0.5) and a tick in the middle of each column (every second or fourth when they
+ * would crowd, always on even ages).
+ */
+export function getSeasonAgeAxis(xMin, xMax, isMobile = false) {
+	const first = Math.round(xMin);
+	const last = Math.round(xMax);
+	const span = last - first;
+	const step = span > (isMobile ? 12 : 24) ? 4 : span > (isMobile ? 6 : 12) ? 2 : 1;
+	const ticks = [];
+	for (let age = Math.ceil(first / step) * step; age <= last; age += step) ticks.push(age);
+	return { domain: [first - 0.5, last + 0.5], ticks };
+}

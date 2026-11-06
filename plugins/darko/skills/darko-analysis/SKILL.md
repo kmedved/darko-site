@@ -19,7 +19,11 @@ image. Clients without the widget receive the chart image in the tool result;
 show it with the download and source links, and do not claim a widget appeared. Never add unrelated photos, web thumbnails
 or image cards, or use image search to decorate chart answers. A table or verbal description does not
 fulfill a chart request. Defaults are DPM over games played; “at the same age”
-selects `scale: age`. Metrics are `dpm`, `o_dpm` and `d_dpm`. Up to six players
+selects `scale: season-age`. Use `scale: age` when the user explicitly requests
+exact chronological age. Preserve explicitly selected axes and imported chart settings.
+Metrics are `dpm`, `o_dpm`, `d_dpm`, `bayes_rapm_total` (play-by-play RAPM,
+without a box-score prior), and `market_rating` (experimental rating implied by
+closing betting spreads), all in points per 100 possessions. Up to six players
 can be overlaid together. Use Modern styling by default (`display: modern`) on a white export background.
 Modern uses the site’s current palette and LOESS settings. Shiny is available
 when explicitly requested; preserve the display preset during edits.
@@ -56,7 +60,7 @@ recent risers and fallers, call `get_rating_movers` with window `7`, `30` or
 the last games published, not the past week.
 
 For “compare with similar players,” call `get_comparison_cohort` with the anchor
-NBA ID, then `create_career_chart` using its returned IDs and usually `scale: age`.
+NBA ID, then `create_career_chart` using its returned IDs and usually `scale: season-age`.
 These are published nearest player-season comps at a matching age. Report that
 basis and the comps as-of date; they are not an invented cohort or a forecast.
 When comps are unavailable, say so. Do not substitute arbitrary stars.
@@ -66,6 +70,14 @@ raw peaks and last observations in the displayed range. `at` selects an axis
 value (for example age 23 or game 200); `selected.observed` is the nearest
 observation inside coverage. Report the actual x/date and do not call it an
 exact observation at the requested x when those differ. Null means unavailable.
+For `season-age`, x is a position within a season column, not chronological age.
+Describe raw and smoothed peaks, endpoints and selections using `season_age` and
+`season_label` (for example "age-25 season, 2015-16"), not "age 25.37" from x.
+Use `exact_age` only when reporting age on the rating date. Season age is the
+player's February 1 age rounded to the nearest year, not Basketball-Reference's
+round-down convention. Missing seasons leave empty columns and break the curve;
+each consecutive run is smoothed separately. A season in progress fills its
+share of 82 played games.
 `annotations` can contain up to three of `peak`, `smoothed_peak`, `latest`, `selected`.
 `smoothed_peak` separately labels the maximum of the displayed LOESS samples and
 requires smoothing; it changes with the selected range and bandwidth.
@@ -79,7 +91,8 @@ changes. Keep IDs and their corresponding colors paired when removing or
 reordering players; append a new player without replacing existing colors.
 Crop with `min`/`max` in the selected axis's units; “since 2022” uses
 `from: 2022-01-01`. Seasons use calendar season-start years, not years since
-debut. Do not carry age bounds into a games view unless explicitly requested.
+debut. Season-age bounds select whole age-season columns inclusively (19–25
+includes every game in those season ages). Do not carry age bounds into a games view unless explicitly requested.
 Use the returned `download_url` for the 2x PNG and `source_url` to open the same
 settings on darko.app. Full daily arrays belong on the server, not in the chat.
 

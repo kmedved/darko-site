@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import {
 	getChartLayout,
 	getSeasonTickStep,
-	getAgeTickCount
+	getAgeTickCount,
+	getSeasonAgeAxis
 } from '../src/lib/utils/chartLayout.js';
 
 // --- getChartLayout ---
@@ -99,4 +100,17 @@ test('getAgeTickCount returns 6 for mobile', () => {
 
 test('getAgeTickCount returns 12 for desktop', () => {
 	assert.equal(getAgeTickCount(false), 12);
+});
+
+// --- getSeasonAgeAxis ---
+
+test('season-age axis spans whole columns and ticks their middles', () => {
+	// LeBron's career: first game in the age-19 column, the latest in the age-42 column.
+	const axis = getSeasonAgeAxis(18.506, 41.66);
+	assert.deepEqual(axis.domain, [18.5, 42.5]);
+	assert.deepEqual(axis.ticks, [20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42]);
+	assert.deepEqual(getSeasonAgeAxis(18.506, 41.66, true).ticks, [20, 24, 28, 32, 36, 40]);
+	// A short range labels every season; one season still gets a whole column.
+	assert.deepEqual(getSeasonAgeAxis(24.6, 26.4), { domain: [24.5, 26.5], ticks: [25, 26] });
+	assert.deepEqual(getSeasonAgeAxis(29.75, 30.25).domain, [29.5, 30.5]);
 });

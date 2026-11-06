@@ -85,3 +85,57 @@ function computeSeasonXWithResolver(rows, resolveSeasonStartYear) {
 
 	return result;
 }
+
+
+/** A full regular season: the length a season still being played is drawn against. */
+const FULL_SEASON_GAMES = 82;
+
+/**
+ * The ending year of the NBA season under way on a date. From July through September it is
+ * the coming season, which no one has played yet.
+ */
+export function currentSeasonEndYear(now = new Date()) {
+	return getSeasonStartYear(now.toISOString().slice(0, 10)) + 1;
+}
+
+/**
+ * Spread a player's played games across one column per official season: the player's age on
+ * February 1, rounded to the nearest year (`_seasonAge`), so every player's age-25 season fills
+ * 24.5 to 25.5. A finished season fills its column. The season in progress fills only its share
+ * of 82 games, so seven November games do not reach the column's end. Keep absent seasons and
+ * use the supplied ending year for delayed seasons (including the Bubble). Call before cropping
+ * the history. Exact ages and ratings remain untouched; invalid age/date rows cannot be placed.
+ */
+export function computeSeasonAgeX(rows, { currentSeason = currentSeasonEndYear() } = {}) {
+	const day = 86_400_000;
+	const year = 365.2425;
+	const seasons = new Map();
+	const offsets = [];
+	for (const [index, row] of rows.entries()) {
+		const date = Date.parse(String(row.date || '').slice(0, 10));
+		const age = Number.parseFloat(row.age);
+		const season = Number.parseInt(row.season, 10) || (getSeasonStartYear(row.date) + 1);
+		if (!Number.isFinite(date) || !Number.isFinite(age) || !Number.isInteger(season)) continue;
+		offsets.push(age + (Date.UTC(season, 1, 1) - date) / day / year - season);
+		if (!seasons.has(season)) seasons.set(season, []);
+		seasons.get(season).push({ index, date });
+	}
+	offsets.sort((a, b) => a - b);
+	// One shared offset (age on February 1 minus the season) keeps adjacent seasons exactly one
+	// column apart; rounding it rounds every season's age the same way.
+	const shift = Math.round(offsets[Math.floor(offsets.length / 2)]);
+	const positions = new Map();
+	for (const [season, games] of seasons) {
+		games.sort((a, b) => a.date - b.date || a.index - b.index);
+		const slots = season === currentSeason ? Math.max(games.length, FULL_SEASON_GAMES) : games.length;
+		const column = season + shift;
+		games.forEach((game, index) => {
+			positions.set(game.index, { column, x: column - 0.5 + (index + 0.5) / slots });
+		});
+	}
+	return rows.map((row, index) => ({
+		...row,
+		_seasonAge: positions.get(index)?.column ?? null,
+		_seasonAgeX: positions.get(index)?.x ?? null
+	}));
+}
