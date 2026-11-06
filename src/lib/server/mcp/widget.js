@@ -16,10 +16,10 @@ export function careerWidgetHtml(origin, themeTokens = '') {
 <form id="search-form" class="search-row"><input id="player-query" aria-label="Player name" placeholder="Add a player by name" maxlength="80" minlength="2" required><button type="submit">Add player</button></form><div id="candidates" class="candidates" aria-label="Choose a player"></div>
 <form id="chart-form"><div class="fields">
 <label>Metric<select id="metric"><option value="dpm">DPM</option><option value="o_dpm">Offensive DPM</option><option value="d_dpm">Defensive DPM</option><option value="bayes_rapm_total">RAPM</option><option value="market_rating">Market rating</option></select></label>
-<label>Compare by<select id="scale"><option value="games">Games played</option><option value="age">Age</option><option value="seasons">Season</option></select></label>
+<label>Compare by<select id="scale"><option value="games">Games played</option><option value="age">Age</option><option value="season-age">Season age</option><option value="seasons">Season</option></select></label>
 <label><span id="min-label">From game</span><input id="min" type="number" step="any" placeholder="First"></label>
 <label><span id="max-label">To game</span><input id="max" type="number" step="any" placeholder="Last"></label><button class="btn-primary" type="submit">Update chart</button></div>
-<div class="presets" aria-label="Range presets"><button type="button" data-preset="full">Full career</button><button type="button" data-preset="200">First 200 games</button><button type="button" data-preset="ages">Ages 19–25</button><button type="button" data-preset="recent">Last 3 seasons</button></div>
+<div class="presets" aria-label="Range presets"><button type="button" data-preset="full">Full career</button><button type="button" data-preset="200">First 200 games</button><button type="button" data-preset="ages">Age-19–25 seasons</button><button type="button" data-preset="recent">Last 3 seasons</button></div>
 <details><summary>Title, export, annotations &amp; DARKO comps</summary><div class="options">
 <label class="span-two">Chart title<input id="title" maxlength="100" placeholder="Automatic title"></label>
 <label>Export shape<select id="format"><option value="wide">Wide · 1200 × 650</option><option value="square">Square · 1200 × 1200</option></select></label>
@@ -93,7 +93,7 @@ function careerWidgetClient(allowedOrigin, palettes) {
     request('ui/update-model-context', { content: [{ type: 'text', text: 'DARKO chart edited in the widget. For every conversational edit, call create_career_chart to render a fresh widget using this current specification plus the requested changes. Do not construct chart URLs manually or reply with links alone; that leaves the displayed widget unchanged. Current specification: ' + JSON.stringify(data.specification) + '\nComparison: ' + JSON.stringify(data.comparison) + (cohortContext ? '\nPublished cohort basis: ' + JSON.stringify(cohortContext) : '') }] }).catch(() => {});
   }
   function node(tag, text, className) { const n = document.createElement(tag); if (text != null) n.textContent = text; if (className) n.className = className; return n; }
-  function axisLabels() { const unit = el('scale').value === 'age' ? 'age' : el('scale').value === 'seasons' ? 'season' : 'game'; el('min-label').textContent = 'From ' + unit; el('max-label').textContent = 'To ' + unit; }
+  function axisLabels() { const unit = el('scale').value === 'season-age' ? 'season age' : el('scale').value === 'age' ? 'age' : el('scale').value === 'seasons' ? 'season' : 'game'; el('min-label').textContent = 'From ' + unit; el('max-label').textContent = 'To ' + unit; }
   function render(result) {
     if (result?.isError) { status(result.content?.[0]?.text || 'Chart unavailable.', true); return; }
     const next = result?.structuredContent, image = safeUrl(next?.image_url);
@@ -124,16 +124,18 @@ function careerWidgetClient(allowedOrigin, palettes) {
     for (const player of data.comparison || []) {
       const row = node('li'), name = node('div', null, 'comparison-name'); name.style.setProperty('--player-color', player.color); name.append(node('span', null, 'swatch'), node('span', player.player_name));
       const dl = node('dl');
-      const selected = spec.at == null ? ['Last in range', player.latest_in_range] : ['Near ' + ({ age: 'age', games: 'game', seasons: 'season' }[spec.scale]) + ' ' + spec.at, player.selected.observed];
+      const selected = spec.at == null ? ['Last in range', player.latest_in_range] : ['Near ' + ({ age: 'age', 'season-age': 'season age', games: 'game', seasons: 'season' }[spec.scale]) + ' ' + spec.at, player.selected.observed];
       for (const [label, point] of [['Latest available', player.latest_available], ['Raw peak in range', player.peak_in_range], selected]) {
         const item = node('div'); item.append(node('dt', label));
         const dd = node('dd', point ? (point.value >= 0 ? '+' : '') + point.value.toFixed(2) : 'Unavailable');
-        if (point) dd.append(node('small', point.date + (point.x == null ? '' : ' · ' + Number(point.x.toFixed(2)))));
+        if (point) dd.append(node('small', point.date + (point.season_age != null ? ' · ' + point.season_label + ' · age-' + point.season_age + ' season' : point.x == null ? '' : ' · ' + Number(point.x.toFixed(2)))));
         item.append(dd); dl.append(item);
       }
       if (spec.annotations?.includes('smoothed_peak')) {
         const item = node('div'); item.append(node('dt', 'Smoothed peak in range'));
-        item.append(node('dd', player.smoothed_peak_in_range ? player.smoothed_peak_in_range.value.toFixed(2) : 'Unavailable')); dl.append(item);
+        const peak = player.smoothed_peak_in_range, dd = node('dd', peak ? peak.value.toFixed(2) : 'Unavailable');
+        if (peak?.season_age != null) dd.append(node('small', peak.season_label + ' · age-' + peak.season_age + ' season'));
+        item.append(dd); dl.append(item);
       }
       row.append(name, dl); el('comparison-list').append(row);
     }
@@ -150,7 +152,7 @@ function careerWidgetClient(allowedOrigin, palettes) {
   for (const button of document.querySelectorAll('[data-preset]')) button.addEventListener('click', () => operation(async () => {
     const spec = { ...formSpec(), min: null, max: null, from: null, to: null, at: null }; spec.annotations = spec.annotations.filter((kind) => kind !== 'selected');
     if (button.dataset.preset === '200') { spec.scale = 'games'; spec.max = 200; }
-    if (button.dataset.preset === 'ages') { spec.scale = 'age'; spec.min = 19; spec.max = 25; }
+    if (button.dataset.preset === 'ages') { spec.scale = 'season-age'; spec.min = 19; spec.max = 25; }
     if (button.dataset.preset === 'recent') { const date = data.dataset_as_of; if (!date) throw new Error('The dataset date is unavailable.'); const year = Number(date.slice(0, 4)) - (Number(date.slice(5, 7)) < 7 ? 1 : 0); spec.scale = 'seasons'; spec.min = year - 2; spec.max = year; }
     await update(spec);
   }));
@@ -172,7 +174,7 @@ function careerWidgetClient(allowedOrigin, palettes) {
     const result = await call('get_comparison_cohort', { id: Number(el('anchor').value) }); const cohort = result.structuredContent;
     if (!cohort.available) throw new Error(cohort.limitation);
     cohortContext = cohort;
-    const spec = formSpec(); await update(withPlayers({ ...spec, scale: 'age', min: null, max: null, from: null, to: null, at: null, annotations: spec.annotations.filter((kind) => kind !== 'selected') }, cohort.ids));
+    const spec = formSpec(); await update(withPlayers({ ...spec, scale: 'season-age', min: null, max: null, from: null, to: null, at: null, annotations: spec.annotations.filter((kind) => kind !== 'selected') }, cohort.ids));
     el('cohort-note').textContent = cohort.basis + ' Matched age: ' + (cohort.matched_age?.toFixed(1) ?? 'unavailable') + ' · Comps as of ' + (cohort.as_of || 'unavailable') + '.';
   }));
   el('import-form').addEventListener('submit', (event) => { event.preventDefault(); operation(async () => { const result = await call('import_career_chart', { url: el('import-url').value }); cohortContext = null; render(result); request('ui/update-model-context', { content: [{ type: 'text', text: 'Reopened DARKO chart. For every conversational edit, call create_career_chart with this specification plus the requested changes to render a fresh widget. Do not construct chart URLs manually or reply with links alone. Current specification: ' + JSON.stringify(data.specification) }] }).catch(() => {}); }); });

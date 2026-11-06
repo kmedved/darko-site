@@ -18,9 +18,9 @@ DARKO career histories are retrospective pregame estimates, not an archive of ra
 - **RAPM (bayes_rapm_total):** RAPM (regularized adjusted plus-minus) total, in points per 100 possessions above league average. Play-by-play only, with no box-score prior; updated daily.
 - **Market (market_rating):** Player rating implied by closing betting spreads (points per 100 possessions). Experimental.
 - **Market (playoffs) (market_playoff_rating):** Playoff rating implied by closing betting spreads: the market rating plus a persistent playoff adjustment (points per 100 possessions). Experimental.
-- **WOWY RAPM (wowy_rapm):** Daily-grain synthetic RAPM estimate built consistently from the 1956-57 season onward. Historical dates use a modest hindsight refinement to sharpen career arcs.
-- **WOWY O-RAPM (wowy_orapm):** Daily-grain synthetic offensive RAPM estimate with the same historical refinement. Offensive and defensive attribution is less stable than total impact.
-- **WOWY D-RAPM (wowy_drapm):** Daily-grain synthetic defensive RAPM estimate with the same historical refinement, where positive values mean better defense. Offensive and defensive attribution is less stable than total impact.
+- **WOWY RAPM (wowy_rapm):** Daily-grain synthetic RAPM estimate built consistently from the 1956-57 season onward. A retrospective, smoothed rating: each game's value can use the player's games both before and after that date, and the whole history is recomputed by the current model. It is not a before-game forecast.
+- **WOWY O-RAPM (wowy_orapm):** Daily-grain synthetic offensive RAPM estimate, smoothed the same way as the total. Offensive and defensive attribution is less stable than total impact.
+- **WOWY D-RAPM (wowy_drapm):** Daily-grain synthetic defensive RAPM estimate, smoothed the same way as the total, where positive values mean better defense. Offensive and defensive attribution is less stable than total impact.
 - **wowy_exposure (wowy_exposure):** Model exposure at the latest observed game. It is a sample-support measure, not minutes or possessions.
 - **wowy_sample_games (wowy_sample_games):** Played games in the available WOWY sample, including postseason games. It starts at the player's first published WOWY appearance.
 - **Min (trend) (tr_minutes):** Time-decayed running-average minutes.

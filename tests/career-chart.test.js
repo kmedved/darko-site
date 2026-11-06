@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Resvg } from '@resvg/resvg-js';
 import { careerChartLinks, readCareerQuery, resolveChartColors } from '../src/lib/utils/careerChartSpec.js';
-import { isPlayedGame, prepareCareerSeries, smoothCareerPoints, summarizeCareerSeries } from '../src/lib/utils/careerChartData.js';
+import { isPlayedGame, prepareCareerSeries, smoothCareerPoints, splitAtMissingSeasons, summarizeCareerSeries } from '../src/lib/utils/careerChartData.js';
 import { canonicalChartSpec, chartSpecFromUrl } from '../src/lib/server/charts/schema.js';
 import { CHART_CREDIT, chartPalette, renderCareerSvg } from '../src/lib/server/charts/renderCareerSvg.js';
 import { TITLE_CHARACTER_RANGES, undrawableTitleCharacters } from '../src/lib/server/charts/titleCharacters.js';
@@ -237,4 +237,107 @@ test('the downloadable Claude skill ZIP matches the packaged skill source', () =
     const zipped = execFileSync('unzip', ['-p', 'static/darko-analysis-skill.zip', `darko-analysis/${file}`]);
     assert.equal(zipped.toString('utf8'), readFileSync(`plugins/darko/skills/darko-analysis/${file}`, 'utf8'), file);
   }
+});
+
+
+test('season-age keeps observations and positions through crops, links and exports', () => {
+  const history = { rows: [
+    { date: '2023-10-01', season: 2024, age: 20, dpm: 1, game_num: 1 },
+    { date: '2023-12-01', season: 2024, age: 20.17, dpm: 3, game_num: 2 },
+    { date: '2024-04-01', season: 2024, age: 20.5, dpm: 2, game_num: 3 },
+    { date: '2024-07-01', season: 2025, age: 20.75, dpm: 20, game_num: null },
+    { date: '2024-11-01', season: 2025, age: 21.1, dpm: 4, game_num: 4 },
+    { date: '2025-04-01', season: 2025, age: 21.5, dpm: 3, game_num: 5 }
+  ] };
+  const spec = canonicalChartSpec({ ids: [1], scale: 'season-age' });
+  const series = prepareCareerSeries(history, spec, 0);
+  const age = prepareCareerSeries(history, { ...spec, scale: 'age' }, 0);
+  assert.equal(series.points.length, 5);
+  assert.deepEqual(series.points.map(p => p.y), age.points.map(p => p.y));
+  assert.notDeepEqual(series.points.map(p => p.x), age.points.map(p => p.x));
+  const crop = prepareCareerSeries(history, { ...spec, from: '2023-12-01', min: series.points[1].x }, 0);
+  assert.deepEqual(crop.points, series.points.slice(1));
+  // Range bounds are whole season ages: the age-21 season (2024-25), not half of a column.
+  assert.deepEqual(prepareCareerSeries(history, { ...spec, min: 20.6, max: 21 }, 0).points, series.points.slice(3));
+  for (const url of Object.values(careerChartLinks(spec))) assert.deepEqual(chartSpecFromUrl(url), spec);
+  const svg = renderCareerSvg(spec, [series], { history_note: 'Pregame' }, chartPalette(readFileSync('src/app.css', 'utf8')));
+  assert.match(svg, />Season age</);
+  // Two whole columns (ages 20 and 21), each labelled at its middle.
+  assert.match(svg, />20<\/text>/);
+  assert.match(svg, />21<\/text>/);
+});
+
+test('season-age smooths along its own axis, so one season runs into the next without a cliff', () => {
+  // Four seasons of 40 games from October 25; the rating rises a point per year of age, so each
+  // offseason adds 0.57 that this axis does not draw as time.
+  const birth = Date.UTC(2000, 5, 1), day = 86_400_000;
+  let game = 0;
+  const rows = [2021, 2022, 2023, 2024].flatMap((season) => Array.from({ length: 40 }, (_, index) => {
+    const time = Date.UTC(season - 1, 9, 25) + index * 4 * day;
+    const age = (time - birth) / day / 365.2425;
+    return { date: new Date(time).toISOString().slice(0, 10), season, age, dpm: age - 20, game_num: ++game };
+  }));
+  const { smoothed } = prepareCareerSeries({ rows }, canonicalChartSpec({ ids: [1], scale: 'season-age' }), 0);
+  const steps = smoothed.points.slice(1).map((point, index) => point.y - smoothed.points[index].y);
+  // Smoothing on exact age and drawing on this axis put each offseason's 0.57 into one step.
+  assert.ok(Math.max(...steps) < 0.1, `largest step ${Math.max(...steps)}`);
+  assert.ok(Math.min(...steps) > 0);
+});
+
+test('season-age breaks the line at missed seasons and smooths each run on its own', () => {
+  // Two seasons at 10, two missed, two at 0: a retirement and a comeback.
+  const birth = Date.UTC(2000, 5, 1), day = 86_400_000;
+  let game = 0;
+  const rows = [2021, 2022, 2025, 2026].flatMap((season) => Array.from({ length: 40 }, (_, index) => {
+    const time = Date.UTC(season - 1, 9, 25) + index * 4 * day;
+    return { date: new Date(time).toISOString().slice(0, 10), season, age: (time - birth) / day / 365.2425,
+      dpm: season < 2024 ? 10 : 0, game_num: ++game };
+  }));
+  const spec = canonicalChartSpec({ ids: [1], scale: 'season-age', bandwidth: 0.6 });
+  const series = prepareCareerSeries({ rows }, spec, 0);
+  const runs = splitAtMissingSeasons(series.smoothed.points);
+  assert.deepEqual(runs.map((run) => run.length), [80, 80]);
+  assert.ok(runs[0].every((point) => Math.abs(point.y - 10) < 1e-9));
+  assert.ok(runs[1].every((point) => Math.abs(point.y) < 1e-9));
+  // One fit across the gap would sag the end of the first run toward the comeback's zeros.
+  assert.ok(smoothCareerPoints(series.points, 'modern', 0.6).points[79].y < 9.9);
+  const svg = renderCareerSvg(spec, [series], { history_note: 'Pregame' }, chartPalette(readFileSync('src/app.css', 'utf8')));
+  assert.equal(svg.match(new RegExp(`<path d="[^"]+" fill="none" stroke="${series.color}"`, 'g'))?.length, 2);
+  // Adjacent columns stay together; an empty column splits.
+  assert.deepEqual(splitAtMissingSeasons([19.6, 20.4, 21.2, 23.5, 23.9].map((x) => ({ x }))).map((run) => run.length), [3, 2]);
+});
+
+
+test('season-age summaries describe observed and smoothed points by season, not fractional age', () => {
+  const history = { rows: [
+    { date: '2019-10-22', season: 2020, age: 24.7, dpm: 1, game_num: 1 },
+    { date: '2020-08-01', season: 2020, age: 25.5, dpm: 7, game_num: 2 },
+    { date: '2020-10-11', season: 2020, age: 25.7, dpm: 2, game_num: 3 },
+    { date: '2020-12-22', season: 2021, age: 25.9, dpm: 3, game_num: 4 },
+    { date: '2020-12-24', season: 2021, age: 25.91, dpm: 4, game_num: null }
+  ] };
+  const spec = canonicalChartSpec({ ids: [1], scale: 'season-age', at: 25 });
+  const series = prepareCareerSeries(history, spec, 0);
+  const summary = summarizeCareerSeries(series, history, spec);
+  for (const point of [summary.peak_in_range, summary.selected.observed]) {
+    assert.equal(point.season, 2020);
+    assert.equal(point.season_label, '2019-20');
+    assert.equal(point.season_age, 25);
+    assert.equal(point.exact_age, 25.5);
+  }
+  for (const point of [summary.latest_available, summary.latest_in_range]) {
+    assert.equal(point.season, 2021);
+    assert.equal(point.season_label, '2020-21');
+    assert.equal(point.season_age, 26);
+  }
+  const smooth = summary.smoothed_peak_in_range;
+  const observation = series.points.find(p => p.date === smooth.date);
+  assert.equal(smooth.season, observation.season);
+  assert.equal(smooth.season_age, observation.season_age);
+  assert.equal(smooth.exact_age, observation.exact_age);
+  assert.match(summary.axis_note, /not chronological age/);
+  const exactSpec = { ...spec, scale: 'age' };
+  const exact = summarizeCareerSeries(prepareCareerSeries(history, exactSpec, 0), history, exactSpec);
+  assert.equal(exact.peak_in_range.x, 25.5);
+  assert.equal('season_age' in exact.peak_in_range, false);
 });

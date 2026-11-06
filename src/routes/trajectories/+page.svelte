@@ -12,6 +12,7 @@
 	} from '$lib/api.js';
 	import {
 		computeSeasonX,
+		computeSeasonAgeX,
 		computeSeasonXFromEndYear,
 		getSeasonStartYear,
 		formatSeasonLabel,
@@ -178,6 +179,7 @@
 	const timeScaleOptions = [
 		{ key: 'games', label: 'Games' },
 		{ key: 'age', label: 'Age' },
+		{ key: 'season-age', label: 'Season age' },
 		{ key: 'seasons', label: 'Seasons' }
 	];
 
@@ -214,7 +216,7 @@
 	});
 
 	const rangeLabel = $derived(
-		timeScale === 'seasons' ? 'Season Range' : timeScale === 'age' ? 'Age Range' : 'Games Range'
+		timeScale === 'seasons' ? 'Season Range' : timeScale === 'season-age' ? 'Season Age Range' : timeScale === 'age' ? 'Age Range' : 'Games Range'
 	);
 
 	const showRangeFilter = $derived(
@@ -230,6 +232,8 @@
 			// played games are plotted, so no axis runs past a player's last game. Every WOWY
 			// row is a game played.
 			let rows = isWowyMetric ? rowsForPlayer(p) : rowsForPlayer(p).filter(isPlayedGame);
+			// Position the complete played history so range/date crops do not stretch a season.
+			if (timeScale === 'season-age') rows = computeSeasonAgeX(rows);
 			if (!isWowyMetric && (dateFrom || dateTo)) rows = filterCareerRows(rows, { scale: timeScale, from: dateFrom, to: dateTo });
 			if (rangeFilterMin != null || rangeFilterMax != null) {
 				rows = rows.filter((row) => {
@@ -238,6 +242,9 @@
 						val = isWowyMetric
 							? Number.parseInt(row.season, 10) - 1
 							: getSeasonStartYear(row.date);
+					} else if (timeScale === 'season-age') {
+						// Whole season ages, so a range never splits a season's column.
+						val = row._seasonAge;
 					} else if (timeScale === 'age') {
 						val = Number.parseFloat(row.age);
 					} else {
@@ -294,6 +301,10 @@
 	}
 
 	function xFromRow(row) {
+		if (timeScale === 'season-age') {
+			const value = Number.parseFloat(row?._seasonAgeX);
+			return Number.isFinite(value) ? value : null;
+		}
 		if (timeScale === 'seasons') {
 			const value = Number.parseFloat(row?._seasonX);
 			return Number.isFinite(value) ? value : null;
@@ -691,7 +702,7 @@
 					onclick={() => (chartOptionsOpen = !chartOptionsOpen)}
 				>
 					<span>Chart options</span>
-					<span class="chart-options-summary">{selectedMetricLabel} · by {timeScale === 'seasons' ? 'season' : timeScale === 'age' ? 'age' : 'game'}</span>
+					<span class="chart-options-summary">{selectedMetricLabel} · by {timeScale === 'seasons' ? 'season' : timeScale === 'season-age' ? 'season age' : timeScale === 'age' ? 'age' : 'game'}</span>
 				</button>
 				<div id="trajectory-chart-options" class="chart-options" class:open={chartOptionsOpen}>
 					<fieldset class="control-group">
@@ -709,6 +720,9 @@
 								</label>
 							{/each}
 						</div>
+						{#if timeScale === 'season-age'}
+							<p class="metric-note">Each season fills one column at the player's age on February 1, rounded, so every player's age-25 season lines up. The season in progress fills its share of 82 games; the line breaks at seasons a player missed.</p>
+						{/if}
 					</fieldset>
 
 					<div class="control-group">
