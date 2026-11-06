@@ -123,7 +123,8 @@ test('items stay for 30 days from launch, newest first', () => {
         'rewind'
     ]);
     assert.deepEqual(keys(currentNews(new Date('2026-11-01T00:00:00Z'))), ['daily', 'current-comps', 'assistant-sharing', 'assistant-charts']);
-    assert.deepEqual(currentNews(new Date('2026-11-22T00:00:00Z')), []);
+    assert.deepEqual(keys(currentNews(new Date('2026-11-22T00:00:00Z'))), ['season-age']);
+    assert.deepEqual(currentNews(new Date('2026-12-07T00:00:00Z')), []);
     // The menus count features, not the design note, to match the page's headline.
     assert.equal(newFeatureCount(now), 6);
     assert.equal(newFeatureCount(afternoon), 6);

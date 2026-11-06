@@ -12,6 +12,14 @@ const DAY_MS = 86_400_000;
 
 export const WHATS_NEW = Object.freeze([
 	{
+		key: 'season-age',
+		title: 'Compare careers by season age',
+		launched: '2026-11-06T18:45:33.692Z',
+		text: 'Season age keeps every game observation while closing the offseason gaps. Players share age-season columns, missing seasons break the curve, and tooltips show the season and exact game-date age. Age remains available for chronological comparisons; assistant age comparisons now prefer Season age.',
+		cta: 'Compare Jordan and LeBron',
+		href: '/trajectories?ids=893,2544&metric=wowy_rapm&scale=season-age'
+	},
+	{
 		key: 'current-comps',
 		title: 'Top 10 comps today',
 		launched: '2026-10-16T16:18:36.250Z',
