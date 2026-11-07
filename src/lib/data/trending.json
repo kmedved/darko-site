@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-06",
+  "date": "2026-11-07",
   "players": [
-    {
-      "nba_id": 201939,
-      "name": "Stephen Curry",
-      "reason": "Passes Oscar Robertson as Warriors win sixth straight"
-    },
     {
       "nba_id": 1629029,
       "name": "Luka Doncic",
-      "reason": "Leads first MVP Ladder after historic scoring start"
+      "reason": "Scores 53 as Lakers beat Trail Blazers"
     },
     {
-      "nba_id": 202691,
-      "name": "Klay Thompson",
-      "reason": "Warriors reunion draws spotlight in return with Heat"
+      "nba_id": 204001,
+      "name": "Kristaps Porzingis",
+      "reason": "Steps away from basketball to prioritize health"
     },
     {
       "nba_id": 2544,
       "name": "LeBron James",
-      "reason": "Challenges AI betting ad ahead of Cleveland return"
+      "reason": "Held to eight points in Cleveland return"
     },
     {
-      "nba_id": 1626164,
-      "name": "Devin Booker",
-      "reason": "Scores 30 to snap Suns four-game losing streak"
+      "nba_id": 1628369,
+      "name": "Jayson Tatum",
+      "reason": "34 points power Celtics rout of Hornets"
+    },
+    {
+      "nba_id": 1641705,
+      "name": "Victor Wembanyama",
+      "reason": "30 points and 14 rebounds fuel seventh straight win"
     }
   ]
 }
