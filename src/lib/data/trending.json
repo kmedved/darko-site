@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-08",
+  "date": "2026-11-09",
   "players": [
     {
-      "nba_id": 201939,
-      "name": "Stephen Curry",
-      "reason": "41 points lift Warriors to seventh straight win"
+      "nba_id": 1630559,
+      "name": "Austin Reaves",
+      "reason": "Scores 43 to beat Pistons without Doncic"
     },
     {
-      "nba_id": 203999,
-      "name": "Nikola Jokic",
-      "reason": "Near triple-double headlines Nuggets win in Mexico City"
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "Says family is safe after stalking arrest"
     },
     {
-      "nba_id": 1641705,
-      "name": "Victor Wembanyama",
-      "reason": "Scores 29 as Spurs win eighth straight"
+      "nba_id": 1642843,
+      "name": "Cooper Flagg",
+      "reason": "25 points and career-high 12 assists overwhelm Nets"
     },
     {
-      "nba_id": 1629029,
-      "name": "Luka Doncic",
-      "reason": "Listed questionable for Detroit with low back tightness"
+      "nba_id": 1642851,
+      "name": "Kon Knueppel",
+      "reason": "Hamstring strain prompts reevaluation in four weeks"
     },
     {
-      "nba_id": 1628973,
-      "name": "Jalen Brunson",
-      "reason": "Scores 31 to lead Knicks past Cavaliers"
+      "nba_id": 1642363,
+      "name": "Nique Clifford",
+      "reason": "Traded from Kings to Thunder for two second-round picks"
     }
   ]
 }
