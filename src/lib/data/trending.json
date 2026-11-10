@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-09",
+  "date": "2026-11-10",
   "players": [
     {
-      "nba_id": 1630559,
-      "name": "Austin Reaves",
-      "reason": "Scores 43 to beat Pistons without Doncic"
-    },
-    {
-      "nba_id": 2544,
-      "name": "LeBron James",
-      "reason": "Says family is safe after stalking arrest"
+      "nba_id": 1641705,
+      "name": "Victor Wembanyama",
+      "reason": "40 points and nine blocks power ninth straight win"
     },
     {
       "nba_id": 1642843,
       "name": "Cooper Flagg",
-      "reason": "25 points and career-high 12 assists overwhelm Nets"
+      "reason": "Scores 43 in comeback win over Pacers"
     },
     {
-      "nba_id": 1642851,
-      "name": "Kon Knueppel",
-      "reason": "Hamstring strain prompts reevaluation in four weeks"
+      "nba_id": 1629029,
+      "name": "Luka Doncic",
+      "reason": "Returns with 32 points and 10 assists against Hawks"
     },
     {
-      "nba_id": 1642363,
-      "name": "Nique Clifford",
-      "reason": "Traded from Kings to Thunder for two second-round picks"
+      "nba_id": 201939,
+      "name": "Stephen Curry",
+      "reason": "Scores 25 as Warriors win eighth straight"
+    },
+    {
+      "nba_id": 203076,
+      "name": "Anthony Davis",
+      "reason": "44 points and 13 rebounds in loss to Pistons"
     }
   ]
 }
