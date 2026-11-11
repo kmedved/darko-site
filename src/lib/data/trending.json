@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-10",
+  "date": "2026-11-11",
   "players": [
     {
-      "nba_id": 1641705,
-      "name": "Victor Wembanyama",
-      "reason": "40 points and nine blocks power ninth straight win"
+      "nba_id": 202331,
+      "name": "Paul George",
+      "reason": "Scores 36 against former team in Philadelphia return"
     },
     {
-      "nba_id": 1642843,
-      "name": "Cooper Flagg",
-      "reason": "Scores 43 in comeback win over Pacers"
+      "nba_id": 1627759,
+      "name": "Jaylen Brown",
+      "reason": "Scores 13 in first game against Celtics"
     },
     {
-      "nba_id": 1629029,
-      "name": "Luka Doncic",
-      "reason": "Returns with 32 points and 10 assists against Hawks"
+      "nba_id": 203081,
+      "name": "Damian Lillard",
+      "reason": "Scores 25 as Portland defeats Oklahoma City"
     },
     {
-      "nba_id": 201939,
-      "name": "Stephen Curry",
-      "reason": "Scores 25 as Warriors win eighth straight"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "30 points and 11 rebounds lift Heat over Jazz"
     },
     {
-      "nba_id": 203076,
-      "name": "Anthony Davis",
-      "reason": "44 points and 13 rebounds in loss to Pistons"
+      "nba_id": 1630532,
+      "name": "Franz Wagner",
+      "reason": "Scores 33 to lead Magic past Kings"
     }
   ]
 }
