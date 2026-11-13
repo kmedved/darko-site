@@ -20,7 +20,9 @@ async function read(file) {
 test('WOWY article source is retained while a placeholder is published', async () => {
 	const placeholder = await read(ARTICLE_ROUTE);
 	assert.match(placeholder, /full writeup is coming soon/i);
-	assert.match(placeholder, /0\.87/);
+	assert.match(placeholder, /two-way time-decay RAPM/);
+	assert.match(placeholder, /0\.88/);
+	assert.match(placeholder, /0\.86/);
 	assert.match(placeholder, /overlapping data/);
 	assert.doesNotMatch(placeholder, /What Did Larry Bird Play Like in 1983/);
 	const [page, markdown, story, renderer] = await Promise.all([

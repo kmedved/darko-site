@@ -12,9 +12,15 @@
 	<section class="wowy-about-content">
 		<p>In the meantime, the WOWY RAPM ratings are available to explore.</p>
 		<p>
-			In a comparison of 1999–2026 data, Daily WOWY had an exposure-weighted correlation of
-			about <strong>0.87</strong> with play-by-play-based time-decay RAPM. WOWY is calibrated
-			against modern RAPM, so the comparison uses overlapping data.
+			Daily WOWY is trained to match two-way time-decay RAPM: play-by-play RAPM that weights
+			a player's games on both sides of each date. In 1999–2025 data, the two have an
+			exposure-weighted correlation of about <strong>0.88</strong>. WOWY is calibrated against
+			modern RAPM, so that comparison uses overlapping data; with the seasons being scored held
+			out of the calibration, the figure is about 0.86.
+		</p>
+		<p>
+			Against the one-directional time-decay RAPM shown elsewhere on this site, which uses only
+			games up to each date, the correlation is about 0.84.
 		</p>
 		<p><a href="/wowy">Explore WOWY RAPM ratings →</a></p>
 	</section>
