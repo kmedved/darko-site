@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-12",
+  "date": "2026-11-13",
   "players": [
+    {
+      "nba_id": 1630595,
+      "name": "Cade Cunningham",
+      "reason": "Career-high 52 points and 11 assists in double-overtime win"
+    },
     {
       "nba_id": 201939,
       "name": "Stephen Curry",
-      "reason": "Leaves Rockets game with right abdominal soreness"
-    },
-    {
-      "nba_id": 1629029,
-      "name": "Luka Doncic",
-      "reason": "Scores 32 before late ankle scare against Bucks"
+      "reason": "Oblique tear sidelines him at least two weeks"
     },
     {
       "nba_id": 203935,
       "name": "Marcus Smart",
-      "reason": "Ejected after throwing punch at Charles Bassey"
+      "reason": "Suspended three games for punching Charles Bassey"
     },
     {
-      "nba_id": 1630559,
-      "name": "Austin Reaves",
-      "reason": "Heel injury prompts further testing after Bucks win"
+      "nba_id": 1629029,
+      "name": "Luka Doncic",
+      "reason": "Reportedly pain-free after ankle injury scare"
     },
     {
-      "nba_id": 1641705,
-      "name": "Victor Wembanyama",
-      "reason": "32 points fuel comeback and tenth straight Spurs win"
+      "nba_id": 1626164,
+      "name": "Devin Booker",
+      "reason": "Scores 30 as Suns hold off Hornets"
     }
   ]
 }
