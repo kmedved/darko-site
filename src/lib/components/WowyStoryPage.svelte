@@ -6,7 +6,8 @@
 		published,
 		facts,
 		primaryAction,
-		articleHtml,
+		articleHtml = '',
+		body,
 		footerLead,
 		footerLinks,
 		toc
@@ -40,7 +41,11 @@
 	<div class="container story-layout">
 		<article class="story-article">
 			<div class="story-body">
-				{@html articleHtml}
+				{#if body}
+					{@render body()}
+				{:else}
+					{@html articleHtml}
+				{/if}
 			</div>
 
 			<footer class="story-footer">

@@ -1,77 +1,74 @@
-## Stabilization Rates
+> **Updated November 17, 2026.** I reran this study with every season from 2000-01 through 2025-26 and added a section on teams. The 2020 numbers hold up: rerun the original way, 24 of the 27 player stats land within 5% of what I published then. The tables now cover all 26 seasons, pad toward each season's own league average (threes have changed too much for one average to fit every year), and let you plug in your own numbers. The original post was published August 6, 2020.
 
-One of the most common issues NBA fans and analysts grapple with in analyzing players is when does a certain level of new performance become ‘real’, *e.g.*, “Marcus Smart is shooting 54% from three after 4 games: has he had a breakout, or this just noise?” Enter the concept of ‘stabilization rates’, which is the idea that a player needs some number of shooting attempts or possessions before they ‘own’ a skill (alternatively you can use [DARKO](/)).
+## When is a hot start real?
 
-Stabilization rates are a concept which were originally popularized by [Russell Carleton (AKA Pizza Cutter) writing about baseball](https://www.baseballprospectus.com/news/article/17659/baseball-therapy-its-a-small-sample-size-after-all/), but have come to [basketball as well from Darryl Blackport](https://fansided.com/2014/08/29/long-take-three-point-shooting-stabilize/), [Krishna Narsu](https://fansided.com/2017/12/21/nylon-calculus-team-stats-noise-stabilization-thunder/), [Nathan Walker](https://www.patreon.com/posts/31415520), [myself](https://twitter.com/kmedved/status/1063456469511737344) (and [again](https://twitter.com/kmedved/status/1257287058185388033)), and others. In short, the idea is that at some point in a season, the skill aspect of a player’s performance starts to outweigh in the inherent randomness in player performance, and stabilization rates are an attempt to figure out when that point is.
+One of the most common questions about a player is when new performance becomes real. Marcus Smart is shooting 54% from three after four games. Has he broken out, or is it noise?
 
-There are a lot of different ways to calculate stabilization rates – Carleton and Blackport used something called a “Kuder-Richardson 21 reliability score”, which involves grouping plate appearances/shooting attempts into buckets, and looking for the relationship in those buckets. Narsu simply looked for the point in the season at which a team’s current performance has more than 0.5 R^2 with their final statistics in a given metric. I prefer a predictive approach, via the ‘padding method’, which I first read about from [Justin Kubatko](http://statitudes.com/blog/2013/11/12/home-win-probability-using-srs/), but is commonly employed by [Tangotiger](http://tangotiger.com/index.php) as well, and I presume has some long storied history I’m ignorant of.
+"Stabilization rates" try to answer that: how many shots or possessions a player needs before he "owns" a skill. (Or you can just check [DARKO](/).)
 
-## The Padding Method
+The idea was popularized by [Russell Carleton (aka Pizza Cutter) in baseball](https://www.baseballprospectus.com/news/article/17659/baseball-therapy-its-a-small-sample-size-after-all/) and came to basketball through [Darryl Blackport](https://fansided.com/2014/08/29/long-take-three-point-shooting-stabilize/), [Krishna Narsu](https://fansided.com/2017/12/21/nylon-calculus-team-stats-noise-stabilization-thunder/), [Nathan Walker](https://www.patreon.com/posts/31415520), [me](https://twitter.com/kmedved/status/1063456469511737344) ([twice](https://twitter.com/kmedved/status/1257287058185388033)) and others. At some point in a season, skill starts to outweigh randomness. Stabilization rates try to find that point.
 
-Under the ‘padding method’, at any given point in the season, you ‘pad’ a player’s performance with some sample of league-average performance, and that’s your projection of a player’s talent going forward the rest of the season. To take three point attempts as an example, Duncan Robinson opened the 2019-2020 season by shooting 17 of 34 from three (50%). There’s presumably some randomness in that performance, so we ‘pad’ both the numerator and the denominator there with some amount of league average performance (call this number X), to get a projection in the form of:
+There are many ways to measure it. Carleton and Blackport used a reliability score called KR-21, which splits attempts into buckets and checks how well the buckets agree. Narsu looked for the point where a team's numbers so far explain half the variation in its final numbers. I prefer a predictive approach, the padding method. I first read about it from [Justin Kubatko](http://statitudes.com/blog/2013/11/12/home-win-probability-using-srs/), [Tangotiger](http://tangotiger.com/index.php) uses it often, and I assume it has a long history I don't know.
 
-**`expected_fg3_pct = (17 + X * league_average_fg3_pct) / (34 + X)`**
+## The padding method
 
-If the padding number for threes is 240 (more on how to calculate this later), and the league average three-point-percentage is .355, then our projection becomes:
+At any point in the season, add a fixed amount of league-average performance to a player's numbers. The result is your projection for the rest of his season.
 
-**`expected_fg3_pct = (17 + 240 * .355) / (34 + 240) = .373`**
+Take threes. Duncan Robinson opened 2019-20 by making 17 of 34 (50%). Some of that is luck, so pad both the makes and the attempts with X attempts of league-average shooting:
 
-So Robinson’s 34 attempts from three have raised our estimate of his three-point shooting talent from .355 (league average) to .373 (good, not great shooter). I think that roughly aligns with our intuitions as well – 34 attempts just isn’t very many, so we can’t go too wild, but it’s a nice sign all the same.
+**`projected 3P% = (17 + X × league 3P%) / (34 + X)`**
 
-The beauty and elegance of the padding method is that **the amount of padding remains constant throughout the season**. You don’t need to use different coefficients depending how much of the season has elapsed. At all times – you just add 240 attempts of league average performance to a player’s shooting to get their future projection. Early on, the 240 ‘padding’ attempts totally dominate a player’s projection. But eventually, as the sample size grows, the player’s actual performance has a bigger and bigger impact.
+With 240 attempts of padding and a league average of .355:
 
-Applying that to Robinson, you get the chart below, showing the progression of his projected shooting in red, and his actual YTD performance in blue. The cadence is the same, but the projection is naturally more conservative.
+**`projected 3P% = (17 + 240 × .355) / (34 + 240) = .373`**
 
-![Duncan Robinson's 2019-2020 three-point percentage, actual and padding projection](/research-figures/stabilization-rates-and-the-padding-approach/duncan-robinson-three-point-padding.png)
+So his 34 attempts move Robinson from league average (.355) to .373: a good shooter, not yet a great one. That fits intuition. Thirty-four attempts isn't many, so we can't go wild, but it's a good sign.
 
-*Note even the more conservative projections eventually agree Robinson is an elite shooter.*
+The nice part is that **the padding never changes during the season**. You don't need different weights for different points of the season. You always add 240 attempts at league average. Early on, the padding dominates. As his own sample grows, his shooting takes over.
 
-## Padding Values Are Stabilization Rates
+<!-- interactive:robinson -->
 
-So what does the padding approach have to do with stabilization rates? Well – they’re actually the same thing. Before games on January 3, 2020, Duncan Robinson had taken 237 threes, and made 110 of them. At that point in the season, his projection was:
+## Padding values are stabilization rates
 
-**`expected_fg3_pct = (110 + 240 * .355) / (237 + 240) = .409`**
+Padding and stabilization rates are the same thing. Before games on January 3, 2020, Robinson had made 110 of 237 threes. His projection:
 
-Meaning at that point, roughly half his projection was the 237 attempts he’d actually made, and half was the 240 padding attempts. After that game, the 240 padding attempts made up less and less of his projection, and his projection consisted **mostly** of his own performance. I emphasize ‘mostly’ here to reinforce that there’s nothing magical about the ‘stabilization point’, or about 50%. We still add 240 league average attempts to Robinson’s projection even after this point – they just have less and less relative impact. (I’m not a huge fan of the term ‘stabilization’ for this reason, since it implies after X attempts a player’s performance is “stable”, but I’ve given up fighting on this point).
+**`projected 3P% = (110 + 240 × .355) / (237 + 240) = .409`**
 
-I’m a big fan of the ‘padding approach’ as a way to address the stabilization question for its simplicity and directness. It doesn’t involve somewhat opaque statistical methods such as KR21 rates, and it directly answers the question most people want to know when they’re discussing stabilization: how do we project this player going forward?
+At that point his projection was about half his own 237 attempts and half the 240 padding attempts. After that, it was mostly his own shooting.
 
-With that somewhat lengthy preamble out of the way, here are the padding numbers/stabilization numbers for the main basic and advanced box-score metrics, sorted by most ‘stable’ to least, along with what I suggest ‘padding’ each metric’s performance with.
+"Mostly" is the point. Nothing magical happens at 50%. The 240 padding attempts never go away; they just matter less and less. (That's why I don't love the word "stabilization": it suggests a player's performance is "stable" after some number of attempts. I've given up that fight.)
 
-| Metric | Padding Denominator | Padding Value | League Average |
-|:---|:---|---:|---:|
-| minutes | games | 1.52 | 20.315 |
-| fg3_ar | fga | 3.64 | 0.246 |
-| ast_pct | ast_avail | 17.93 | 0.147 |
-| ft_pct | fta | 24.11 | 0.758 |
-| fg3a_100 | poss | 29.29 | 4.322 |
-| ft_ar | fga | 51.28 | 0.289 |
-| ast_100 | poss | 55.57 | 4.678 |
-| trb_100 | poss | 60.52 | 9.059 |
-| fg2a_100 | poss | 68.39 | 13.256 |
-| usg_pct | poss | 72.41 | 0.2 |
-| fga_100 | poss | 89.62 | 17.578 |
-| orb_pct | poss | 98.55 | 0.051 |
-| orb_100 | poss | 101.46 | 2.364 |
-| blk_pct | on_opp_fg2a | 101.95 | 0.016 |
-| fg_pct | fga | 102.92 | 0.453 |
-| drb_pct | poss | 108.26 | 0.148 |
-| drb_100 | poss | 109 | 6.696 |
-| fg2_pct | fg2a | 127.33 | 0.485 |
-| blk_100 | poss | 151.22 | 1.045 |
-| fta_100 | poss | 197.58 | 5.114 |
-| pf_100 | poss | 218.92 | 4.475 |
-| fg3_pct | fg3a | 242.61 | 0.356 |
-| tov_100 | poss | 425.69 | 2.949 |
-| stl_pct | poss | 631.52 | 0.016 |
-| stl_100 | poss | 632.61 | 1.618 |
-| tov_pct | poss | 654.41 | 0.131 |
-| pm_100 | poss | 1,007.21 | 0 |
+I like padding because it is simple and direct. It needs no opaque reliability scores, and it answers the question people actually care about: what should we expect from this player from here on?
 
-These were calculated the simplest way I know how – trial and error via [differential evolution](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.differential_evolution.html), finding the best ‘padding’ number to add to year-to-date performance for each player, after every game of the season, for every season since 2001, to best predict rest-of-the-year performance (about 750K rows of data).
+## The numbers for players
 
-As you can see, minutes are extremely stable (duh), since they’re almost entirely a coach’s decision and not a question of randomness/noise. On the other side, plus/minus data is extremely noisy, and you should regress a player’s performance by over 1,000 league average possessions going forward.
+Here is how much padding each main box-score stat needs, from most stable to least. To project a player, add that much league-average performance to what he has done so far. The padding is also the point where his own numbers count for half.
 
-Note that three point percentage is relatively noisy at 242 attempts before your performance is mostly ‘real’ rather than noise. But even 242 attempts is a much smaller number than Darryl Blackport had found in his 2014 piece, where he concluded you needed **750** attempts for ‘stabilization’. For context, [only 7 players have ever taken more than 750 three point attempts](https://www.basketball-reference.com/leaders/fg3a_season.html) in an entire season, so this is a pretty big difference.
+<!-- interactive:players -->
 
-Note that there are other ways to do this: you could attempt to predict the next game’s performance instead of the rest of the season’s performance. You could also use career-to-date performance to project rest-of-season performance, or career-to-date performance to project rest-of-career performance. There are pros and cons to all these approaches, although they mostly matter less than you may expect (which is one of the virtues of the padding approach in the first place). I’ll explore the others in upcoming posts however, and also revisit my prior research on team-stabilization-padding rates.
+I found each number by trial and error: for every player after every game of every season since 2000-01, about 637,000 player-games in all, find the one padding amount that best predicts the rest of his season.
+
+Minutes are extremely stable, since they're mostly the coach's call. Plus-minus is the opposite: add about 1,000 possessions of league average before trusting it.
+
+Three-point percentage is fairly noisy. A player needs about 260 attempts before his own shooting outweighs the padding. That is still far fewer than the 750 Blackport found in 2014. Through 2025-26, a player has taken more than 750 threes in a season only 12 times, and only five players have done it.
+
+A few stats have shifted over the last six seasons, judged by how well each padding predicts seasons it wasn't fit on. Field-goal and 2-point percentage now settle much faster, after roughly 65 and 80 attempts instead of 105 and 150, and turnovers per 100 possessions a little faster. Fouls, assists and 3-point attempts per 100 possessions take longer. Most other stats are about where they were.
+
+## The numbers for teams
+
+The same method works for teams: every team after every game since 2000-01, padded toward that season's league average.
+
+<!-- interactive:teams -->
+
+- **Win percentage needs about 13 games of padding, point margin about 10.** Ten games into a season, a team's margin is about half real. That fits [the early-season strength-of-schedule post](/research/early-season-strength-of-schedule), which found about 8 games for SRS. That one adjusts for schedule and covers different seasons, so the two numbers measure slightly different things.
+- **Net rating settles faster than either half of it.** Offensive and defensive rating each need about 28 to 32 games of possessions, net rating about 9. Some of a game's randomness hits both ends at once (both teams shoot hot, or the whistle is tight) and cancels out in the difference.
+- **Three-point defense is mostly luck.** Opponent 3-point percentage needs about 9,000 attempts of padding, roughly three seasons' worth. Opponent free-throw percentage is even noisier: a team has almost no control over it.
+- **Shot profile is set early.** A team's share of shots from three needs less than four games.
+
+Free-throw rates, for and against, now take much longer to settle than they used to. Teams have become more alike in how often they get to the line.
+
+## Other ways to do this
+
+You could predict a player's next game instead of the rest of his season. You could also use career-to-date numbers to project the rest of a season, or the rest of a career. Each has pros and cons, and the choice matters less than you might expect. That is one of the virtues of the padding approach.
+
+*How the numbers are fit: for each stat, the one padding amount that minimizes squared error in predicting each player's or team's rest-of-season rate, weighted by the rest-of-season sample, padding toward that season's league average. Possession-based rates such as usage and rebound rate are padded in possessions, as in 2020.*

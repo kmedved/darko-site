@@ -15,6 +15,6 @@ export const RESEARCH_POSTS = [
 		date: '2020-08-06',
 		dateLabel: 'August 6, 2020',
 		summary:
-			'When does a hot start become real? Padding each stat with a fixed amount of league-average performance projects the rest of the season, and the padding amounts are the stabilization rates.'
+			'When is a hot start real? Pad each stat with a fixed amount of league-average performance. Updated November 17, 2026 with every season through 2025-26, a new section on teams, and a calculator.'
 	}
 ];
