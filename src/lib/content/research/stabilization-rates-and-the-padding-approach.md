@@ -62,7 +62,7 @@ The same method works for teams: every team after every game since 2000-01, padd
 
 - **Win percentage needs about 13 games of padding, point margin about 10.** Ten games into a season, a team's margin is about half real. That fits [the early-season strength-of-schedule post](/research/early-season-strength-of-schedule), which found about 8 games for SRS. That one adjusts for schedule and covers different seasons, so the two numbers measure slightly different things.
 - **Net rating settles faster than either half of it.** Offensive and defensive rating each need about 28 to 32 games of possessions, net rating about 9. Some of a game's randomness hits both ends at once (both teams shoot hot, or the whistle is tight) and cancels out in the difference.
-- **Three-point defense is mostly luck.** Opponent 3-point percentage needs about 9,000 attempts of padding, roughly three seasons' worth. Opponent free-throw percentage is even noisier: a team has almost no control over it.
+- **Opponent 3-point percentage is mostly luck.** It needs about 9,000 attempts of padding, roughly three seasons' worth. Opponent free-throw percentage is noisier still, at roughly nine seasons' worth.
 - **Shot profile is set early.** A team's share of shots from three needs less than four games.
 
 Free-throw rates, for and against, now take much longer to settle than they used to. Teams have become more alike in how often they get to the line.
