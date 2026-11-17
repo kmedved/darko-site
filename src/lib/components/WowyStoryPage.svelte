@@ -280,6 +280,15 @@
 		text-underline-offset: 3px;
 	}
 
+	.story-body :global(img) {
+		display: block;
+		max-width: 100%;
+		height: auto;
+		margin: 28px 0 34px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+	}
+
 	.story-body :global(.story-table-scroll) {
 		width: 100%;
 		margin: 28px 0 34px;

@@ -43,7 +43,8 @@
 		{ href: '/wowy', label: 'WOWY RAPM', match: (path) => path.startsWith('/wowy') },
 		{ href: '/lineups', label: 'Lineups', match: (path) => path === '/lineups' },
 		{ href: '/lab', label: 'Roster Lab', match: (path) => path === '/lab' },
-		{ href: '/projections', label: 'Fantasy Lab', match: (path) => path === '/projections' }
+		{ href: '/projections', label: 'Fantasy Lab', match: (path) => path === '/projections' },
+		{ href: '/research', label: 'Research', match: (path) => path.startsWith('/research') }
 	];
 	const MORE_NAV_ITEMS = [
 		{ href: '/rewind', label: 'Rewind', match: (path) => path === '/rewind' },
