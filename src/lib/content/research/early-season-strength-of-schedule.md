@@ -117,4 +117,4 @@ Two things stay open. Five of seven seasons came in under what their own schedul
 
 I chose the ten-game cutoff and the season groupings after looking at the data. Single seasons are very noisy, and 32 seasons is not many. The replays assume every team has one true strength all year, so anything that breaks that lands in "unexplained." The 2020-21 and 2025-26 explanations were fitted after the fact.
 
-*For the technically inclined: the "value of a schedule point" is the ratio b/a from predicting each team's rest-of-season SRS as a × margin + b × SOS at its tenth game, weighted by games remaining. Code and a longer write-up exist. Ask if you want them.*
+*For the technically inclined: the "value of a schedule point" is the ratio b/a from predicting each team's rest-of-season SRS as a × margin + b × SOS at its tenth game, weighted by games remaining.*

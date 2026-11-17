@@ -38,7 +38,7 @@
 	kicker="Research"
 	{title}
 	{deck}
-	published="Published November 17, 2026 · This season's numbers through November 16"
+	published="November 17, 2026 · This season's numbers through November 16"
 	{facts}
 	primaryAction={{ href: '#what-to-do-about-it', label: 'Skip to what to do about it' }}
 	{articleHtml}
