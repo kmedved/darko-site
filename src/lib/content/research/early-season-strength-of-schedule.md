@@ -1,4 +1,4 @@
-If you've looked at Basketball-Reference's SRS numbers lately, you may have noticed something odd, e.g., fourteen games into the season, Boston is outscoring its opponents by 11.5 points a game, but its SRS is only +7.5. On the other side, Utah is being outscored by 10.9 a game, and its SRS is -5.8. In other words, the schedule adjustment is taking four points away from one team and handing five to the other. For context, the gap between point differential and SRS across the league is bigger at this stage than in any season since 1994-95.
+If you've looked at SRS lately, you may have noticed something odd, e.g., fourteen games into the season, Boston is outscoring its opponents by 11.5 points a game, but its SRS is only +7.5. On the other side, Utah is being outscored by 10.9 a game, and its SRS is -5.8. In other words, the schedule adjustment is taking four points away from one team and handing five to the other. For context, the gap between point differential and SRS across the league is bigger at this stage than in any season since 1994-95.
 
 A big part of that is simple. East and West teams have met only 47 times so far, the West has won 33 of those games by an average of 7.3 points, and SRS has no choice but to apply that gap to every team in both conferences. That split accounts for about 40 percent of the spread in schedule strength this year, against about 10 percent in a normal season. (Vegas had the conferences about even in October, and the gap is already fading: a week ago SRS had the West 12.4 points better than the East, and now it's 6.4.)
 
@@ -30,7 +30,9 @@ A simpler way to see the same thing is a straight head-to-head, with nothing pad
 
 *Seasons (from 1994-95) in which SRS predicted the rest of the season better than plain point differential, by games played. In parentheses is how much smaller SRS's typical miss on a team's rest-of-season rating was, in points, averaged over those seasons (negative means SRS did worse). The 41-game row has 24 earlier seasons because the lockout-shortened 1998-99 season is too short for it.*
 
-So at the ten-game mark, SRS used to beat plain point differential about three years in four, and since 2019-20 it has done it twice in seven. By game 15 it's mostly back, and by game 20 it's all the way back.
+So at the ten-game mark, SRS used to beat plain point differential about three years in four, and since 2019-20 it has done it twice in seven. By game 15 or 20 it's ahead again.
+
+Note that this compares the two ratings exactly as they stand. If we shrink both of them first (by an amount fit only on earlier seasons, which is what the padding further down does), all of these gaps get much smaller, and since 2019-20 SRS doesn't get back in front until about game 25.
 
 One thing didn't change. A team's own point differential is exactly as predictive as it used to be: a point of early margin was worth 0.54 points over the rest of the season before 2020, and 0.55 since. It's only the opponent half of SRS that stopped working.
 
@@ -62,7 +64,7 @@ So the raw value isn't really a fair grade, since a season with a stacked schedu
 
 To grade each season fairly, I replayed its real schedule 4,000 times, with every team held at one steady strength and ordinary game-to-game randomness. The average of those replays is the value the adjustment 'should' have had that year, given who played whom. (It's the blue line in the first chart.)
 
-Before 2020, the real value averaged 0.64, a touch above the 0.55 the replays predicted. Since 2020 it has averaged -0.14, against a predicted 0.42.
+Before 2020, the real value averaged 0.64 (this is the average of the season-by-season values, so it's a little different from the 0.7 above, which pools all those seasons together), a touch above the 0.55 the replays predicted. Since 2020 it has averaged -0.14, against a predicted 0.42.
 
 | Season | Actual | Predicted | Gap |
 |---|---|---|---|
