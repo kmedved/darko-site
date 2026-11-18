@@ -35,12 +35,13 @@ test('research data and chart code stay free of Elo and em-dashes', async () => 
 	assert.doesNotMatch(charts, /—/);
 });
 
-test('the research table of contents points at real headings', async () => {
+test('the research table of contents and skip links point at real headings', async () => {
 	const { renderArticleMarkdown } = await import('../src/lib/utils/renderArticleMarkdown.js');
 	for (const post of RESEARCH_POSTS) {
 		const page = await read(`src/routes/research/${post.slug}/+page.svelte`);
 		const html = renderArticleMarkdown(await read(`src/lib/content/research/${post.slug}.md`));
-		for (const [, id] of page.matchAll(/\{ id: '([^']+)'/g)) {
+		const ids = [...page.matchAll(/\{ id: '([^']+)'/g), ...page.matchAll(/href: '#([^']+)'/g)];
+		for (const [, id] of ids) {
 			assert.match(html, new RegExp(`id="${id}"`), id);
 		}
 	}
