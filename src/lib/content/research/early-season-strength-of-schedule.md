@@ -20,15 +20,15 @@ As you can see, through 2018-19 the answer was about 0.7, and it went negative o
 
 A simpler way to see the same thing is a straight head-to-head, with nothing padded or regressed. At a given point in the season, which of SRS and plain point differential did the better job of predicting the rest of each team's season?
 
-| Games played | 1994-95 to 2018-19 | 2019-20 to 2025-26 |
+| Games | Through 2018-19 | Since 2019-20 |
 |---|---|---|
-| 10 | SRS better in 19 of 25 seasons, by 0.21 points | 2 of 7, worse by 0.10 |
-| 15 | 20 of 25, by 0.14 | 5 of 7, by 0.07 |
-| 20 | 19 of 25, by 0.13 | 5 of 7, by 0.16 |
-| 30 | 17 of 25, by 0.08 | 5 of 7, by 0.12 |
-| 41 | 19 of 24, by 0.06 | 5 of 7, by 0.09 |
+| 10 | 19 of 25 (+0.21) | 2 of 7 (-0.10) |
+| 15 | 20 of 25 (+0.14) | 5 of 7 (+0.07) |
+| 20 | 19 of 25 (+0.13) | 5 of 7 (+0.16) |
+| 30 | 17 of 25 (+0.08) | 5 of 7 (+0.12) |
+| 41 | 19 of 24 (+0.06) | 5 of 7 (+0.09) |
 
-*The points are how much smaller SRS's typical miss on a team's rest-of-season rating was than plain point differential's, averaged over those seasons. The 41-game row has 24 earlier seasons because the lockout-shortened 1998-99 season is too short for it.*
+*Seasons (from 1994-95) in which SRS predicted the rest of the season better than plain point differential, by games played. In parentheses is how much smaller SRS's typical miss on a team's rest-of-season rating was, in points, averaged over those seasons (negative means SRS did worse). The 41-game row has 24 earlier seasons because the lockout-shortened 1998-99 season is too short for it.*
 
 So at the ten-game mark, SRS used to beat plain point differential about three years in four, and since 2019-20 it has done it twice in seven. By game 15 it's mostly back, and by game 20 it's all the way back.
 
@@ -64,7 +64,7 @@ To grade each season fairly, I replayed its real schedule 4,000 times, with ever
 
 Before 2020, the real value averaged 0.64, a touch above the 0.55 the replays predicted. Since 2020 it has averaged -0.14, against a predicted 0.42.
 
-| Season | What happened | What its schedule predicted | Difference |
+| Season | Actual | Predicted | Gap |
 |---|---|---|---|
 | 2019-20 | +0.26 | +0.93 | -0.67 |
 | 2020-21 | -0.17 | +0.96 | -1.13 |
