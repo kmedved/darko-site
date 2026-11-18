@@ -141,7 +141,7 @@ function jumpers(svg, W, { data, a, tip }) {
 	const ih = H - M.t - M.b;
 	const J = data.jumpers;
 	const X = lin(77, 91, M.l, M.l + iw);
-	const Y = lin(85, 20, M.t, M.t + ih);
+	const Y = lin(85, 15, M.t, M.t + ih);
 	[20, 30, 40, 50, 60, 70, 80].forEach((v) => {
 		gridLine(svg, M.l, M.l + iw, Y(v), v === 50);
 		h('text', { x: M.l - 8, y: Y(v) + 4, 'text-anchor': 'end', class: 't-axis' }, svg, `${v}%`);
@@ -151,16 +151,23 @@ function jumpers(svg, W, { data, a, tip }) {
 	);
 	h('text', { x: M.l + iw / 2, y: H - 6, 'text-anchor': 'middle', class: 't-axis' }, svg, 'listed height');
 	h('text', { x: M.l + 6, y: Y(50) - 6, class: 't-axis' }, svg, 'coin flip');
-	const R = (n) => 2.2 + Math.sqrt(n) * 0.2;
+	const R = (n) => (narrow ? 1.6 + Math.sqrt(n) * 0.15 : 2.2 + Math.sqrt(n) * 0.2);
+	// what height alone predicts against an average-height jumper
+	const curve = data.heightCurve.filter((d) => d.ht >= 77 && d.ht <= 91);
+	h('polyline', { points: curve.map((d) => `${X(d.ht).toFixed(1)},${Y(d.exp).toFixed(1)}`).join(' '), fill: 'none', stroke: 'var(--text-muted)', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }, svg);
+	h('line', { x1: M.l + 6, x2: M.l + 28, y1: Y(82), y2: Y(82), stroke: 'var(--text-muted)', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }, svg);
+	h('text', { x: M.l + 34, y: Y(82) + 4, class: 't-axis' }, svg, 'what height alone predicts');
 	const all = {
 		'Victor Wembanyama': 'Wembanyama',
 		'Andre Drummond': 'Drummond',
 		"Shaquille O'Neal": 'Shaq',
-		'Domantas Sabonis': 'Sabonis',
+		'Arvydas Sabonis': 'A. Sabonis',
+		'Domantas Sabonis': 'D. Sabonis',
 		'Nikola Jokić': 'Jokić',
 		'Yao Ming': 'Yao Ming',
 		'Shawn Bradley': 'Shawn Bradley',
-		'Ben Wallace': 'Ben Wallace'
+		'Ben Wallace': 'Ben Wallace',
+		'Luis Scola': 'Scola'
 	};
 	const few = ['Victor Wembanyama', 'Andre Drummond', 'Domantas Sabonis', 'Yao Ming', 'Nikola Jokić'];
 	const named = Object.fromEntries(Object.entries(all).filter(([k]) => !narrow || few.includes(k)));
@@ -168,18 +175,20 @@ function jumpers(svg, W, { data, a, tip }) {
 		.sort((p, q) => q.n - p.n)
 		.forEach((d) => {
 			const on = named[d.name];
-			h('circle', { cx: X(d.ht), cy: Y(d.rate), r: R(d.n), fill: a, 'fill-opacity': on ? 1 : 0.45, stroke: 'var(--bg-surface)', 'stroke-width': 1.5 }, svg);
+			h('circle', { cx: X(d.ht), cy: Y(d.pad), r: R(d.n), fill: a, 'fill-opacity': on ? 1 : 0.4, stroke: 'var(--bg-surface)', 'stroke-width': 1 }, svg);
 		});
 	J.forEach((d) => {
-		const hit = h('circle', { cx: X(d.ht), cy: Y(d.rate), r: Math.max(8, R(d.n)), class: 'hit' }, svg);
-		tip(hit, `<b>${d.name}</b><br>${feetInches(d.ht)} · ${d.n.toLocaleString('en-US')} jumps<br>won ${f1(d.rate)}% (${seasonLabel(d.s0)} to ${seasonLabel(d.s1)})`);
+		const hit = h('circle', { cx: X(d.ht), cy: Y(d.pad), r: Math.max(6, R(d.n)), class: 'hit' }, svg);
+		tip(hit, `<b>${d.name}</b><br>${feetInches(d.ht)} · ${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}<br>won ${f1(d.rate)}% of ${d.n.toLocaleString('en-US')} jumps<br>padded: ${f1(d.pad)}%<br>height alone predicts ${f1(d.exp)}%`);
 	});
 	J.forEach((d) => {
 		const label = named[d.name];
 		if (!label) return;
 		const left = X(d.ht) > M.l + iw - 90;
 		const above = d.name === 'Ben Wallace' || d.name === 'Domantas Sabonis';
-		h('text', { x: X(d.ht) + (left ? -R(d.n) - 5 : R(d.n) + 5), y: Y(d.rate) + (above ? -2 : 4), 'text-anchor': left ? 'end' : 'start', class: 't-ann' }, svg, `${label} ${f1(d.rate, 0)}%`);
+		// on a phone the top two labels collide, so the top one sits above its dot
+		const lift = narrow && d.name === 'Victor Wembanyama' ? -R(d.n) - 8 : 0;
+		h('text', { x: X(d.ht) + (lift ? R(d.n) : left ? -R(d.n) - 5 : R(d.n) + 5), y: Y(d.pad) + (lift || (above ? -2 : 4)), 'text-anchor': left ? 'end' : 'start', class: 't-ann', stroke: 'var(--bg-surface)', 'stroke-width': 3, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, svg, `${label} ${f1(d.pad, 0)}%`);
 	});
 	return H;
 }

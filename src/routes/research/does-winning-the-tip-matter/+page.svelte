@@ -31,10 +31,10 @@
 				"Actual jump-ball participants from the league's play-by-play, 1997-98 to 2025-26. Four or more inches of height buys roughly a 63/37 edge."
 		},
 		jumpers: {
-			title: 'Tip rate and height for every regular jumper',
-			sub: 'Opening-tip win rate against height, players with 150 or more career opening jumps',
+			title: 'Padded tip rate and height',
+			sub: 'Opening-tip win rate, padded with 16 jumps at 50%, against height. Players with 20 or more career opening jumps',
 			caption:
-				'137 players. Dot area shows how many opening jumps each took. Height matters, but it explains little of who is good at this (the correlation is roughly 0.2 to 0.3).'
+				'369 players. Dot area shows how many opening jumps each took. The dashed line is what height alone predicts against a jumper of average height.'
 		},
 		scatter: {
 			title: 'Tip rate and win rate by team-season',

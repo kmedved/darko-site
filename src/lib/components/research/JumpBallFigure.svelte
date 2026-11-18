@@ -76,11 +76,19 @@
 				};
 			case 'jumpers':
 				return {
-					head: ['Player', 'Height', 'Opening jumps', 'Won', 'Seasons'],
+					head: ['Player', 'Height', 'Opening jumps', 'Won', 'Padded', 'Height alone predicts', 'Seasons'],
 					rows: data.jumpers
 						.slice()
-						.sort((p, q) => q.rate - p.rate)
-						.map((d) => [d.name, feetInches(d.ht), d.n.toLocaleString('en-US'), `${f1(d.rate)}%`, `${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}`])
+						.sort((p, q) => q.pad - p.pad)
+						.map((d) => [
+							d.name,
+							feetInches(d.ht),
+							d.n.toLocaleString('en-US'),
+							`${f1(d.rate)}%`,
+							`${f1(d.pad)}%`,
+							`${f1(d.exp)}%`,
+							`${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}`
+						])
 				};
 			case 'scatter':
 				return {

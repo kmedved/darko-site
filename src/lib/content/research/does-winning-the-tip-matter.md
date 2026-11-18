@@ -30,21 +30,39 @@ The skill belongs to one player, not the roster. About seven in eight opening ju
 
 <!-- interactive:height -->
 
-But height is only part of it. Timing and leaping matter too, and individual jumpers are consistent from year to year (a correlation of 0.74 between one season and the next). The most stunning case is Yao Ming. He stood 7'6", seven inches taller than the average jumper, and he won only **41%** of his opening tips. He lost more jumps than he won. (Shawn Bradley, also 7'6", won nearly two-thirds of his.) Ben Wallace, at 6'9", won 61%. Nikola Jokić, maybe the best center of his generation, is a coin flip at 51.5%.
+But height is only part of it. Timing and leaping matter too, and jumpers are very consistent, e.g., a jumper's tip rate in one season has a correlation of 0.74 with his rate the next. Put in the terms of the [padding post](/research/stabilization-rates-and-the-padding-approach), tip rate needs only about 16 jumps of padding, meaning that after 16 opening tips a jumper's own record already counts for half of our estimate of him. (For comparison, three-point percentage needs about 260 attempts.)
+
+Padding also means we don't need a minimum number of jumps to keep the guy who is 3-for-3 off the top of the list. Add 16 jumps at 50% to every player's record, and these are the best and worst jumpers since 1997-98:
+
+| Best jumpers | Tips won | Padded |
+| :--- | ---: | ---: |
+| Victor Wembanyama | 147 of 192 | 74.5% |
+| Andre Drummond | 513 of 702 | 72.6% |
+| Arvydas Sabonis | 190 of 260 | 71.7% |
+| Shaquille O'Neal | 727 of 1,021 | 70.9% |
+| Steven Adams | 479 of 679 | 70.1% |
+
+| Worst jumpers | Tips won | Padded |
+| :--- | ---: | ---: |
+| Jeremiah Robinson-Earl | 3 of 40 | 19.6% |
+| Olivier-Maxence Prosper | 0 of 24 | 20.0% |
+| Luis Scola | 24 of 141 | 20.4% |
+| Derrick Coleman | 5 of 41 | 22.8% |
+| David Lee | 24 of 123 | 23.0% |
+
+*Opening jump balls, 1997-98 through 2025-26, from the league's play-by-play record of who actually jumped. "Padded" is the share won after adding 16 jumps at 50% to each player's record.*
+
+Victor Wembanyama has taken only 192 opening tips, but he has won 77% of them, and even after padding he comes out narrowly ahead of Andre Drummond (it's close, and Drummond has done it over 702 jumps). The worst list is all forwards, e.g., Luis Scola, who jumped for those Rockets teams while Yao was hurt. Among regulars, the worst is Domantas Sabonis, who has won 29% of his 327 jumps, the lowest rate of anyone with 300 or more. His father, Arvydas, is third on the best list. (Apparently this is not hereditary.)
 
 <!-- interactive:jumpers -->
 
-| Best jumpers | Won | Worst jumpers | Won |
-| :--- | ---: | :--- | ---: |
-| Andre Drummond | 73.1% | Domantas Sabonis | 29.4% |
-| Shaquille O'Neal | 71.2% | Tristan Thompson | 31.8% |
-| Steven Adams | 70.5% | Myles Turner | 33.3% |
-| Žydrūnas Ilgauskas | 69.9% | Nikola Vučević | 35.3% |
-| Jarrett Allen | 69.5% | Rasheed Wallace | 35.6% |
+The most stunning name in the data, though, is Yao Ming. Yao was 7'6", and on average he was almost seven inches taller than the man jumping against him. The other players 7'3" or taller in the data won 69% of their opening tips between them. Yao won 41%, i.e., he lost more tips than he won, and about 100 more than his height alone would predict. In 2003-04 Yao started all 82 games, but he took the opening tip in only 16 of them. In 61, Houston sent out 6'11" Kelvin Cato instead (Cato won 54% of those). The year before, 6'9" Eddie Griffin took the tip in 29 of Yao's 72 starts. I don't know why, but the obvious guess is that the Rockets had noticed the same thing.
 
-*Share of opening jump balls won, from the league's play-by-play record of who actually jumped. Minimum 300 career opening jumps (77 players qualify). Victor Wembanyama had 192 through 2025-26, too few for the list.*
+On the other end, Ben Wallace won 61% of his tips at 6'9", and Andre Drummond has won about 23 points more of his than his height predicts, the biggest gap of anyone after padding. Nikola Jokić, maybe the best center of his generation, is a coin flip at 51.5%.
 
-That's the key point for everything that follows: being good at tips and being good at basketball are different skills, but they tend to show up in the same kinds of players.
+The skill does pay off in one visible way, which is who scores first. The tip winner scores the game's first points 65% of the time, which is almost exactly what you'd expect from simply going first (about 46% of opening possessions score, so the other team gets its turn a little over half the time). Because the tip is fairly predictable, so is this, e.g., when one jumper came into a game with a padded tip rate at least 20 points better than the other's, his team scored first 60% of the time, and Wembanyama's Spurs have scored first in 59% of the games where he took the tip. Sportsbooks take bets on who scores first. I haven't checked what those bets pay, so this isn't a betting system, but if that's the bet you're making, the tip matters quite a bit.
+
+The key point for everything that follows is that being good at tips and being good at basketball are different skills, but they tend to show up in the same kinds of players.
 
 ## Good teams win more tips
 
@@ -140,6 +158,6 @@ What it doesn't:
 - "Usual jumper" is defined after the fact, as whoever jumped most for a team that season. Defining it from earlier games only, as a bettor would have had to, moves the final estimate from 0.45 to about 0.65.
 - It isn't a betting strategy. It says nothing about prices available after the tip.
 
-*How it was measured: possession-level data covers 36,765 regular-season and playoff games, 1997-98 through 2025-26 (about 7 million possessions). Game winners come from official NBA results. Quarter-by-quarter points come from play-by-play, which differs from the official score, almost always by two points or fewer, in about 15% of games. "Winning the tip" means gaining the game's first possession, which matches the officially recorded jump-ball result in 99.98% of games. Jumpers are the actual jump-ball participants recorded in the league's play-by-play, available for 99.9% of games. "Team strength" is a rating updated after every game and built only from earlier results. Adjusted comparisons use regular-season games since 1999-2000. "Regular season" includes play-in games. Quarter-opening rules are in [NBA Rule 6](https://official.nba.com/rule-no-6-putting-ball-in-play-live-dead-ball/).*
+*How it was measured: possession-level data covers 36,765 regular-season and playoff games, 1997-98 through 2025-26 (about 7 million possessions). Game winners come from official NBA results. Quarter-by-quarter points come from play-by-play, which differs from the official score, almost always by two points or fewer, in about 15% of games. "Winning the tip" means gaining the game's first possession, which matches the officially recorded jump-ball result in 99.98% of games. Jumpers are the actual jump-ball participants recorded in the league's play-by-play, available for 99.9% of games. Padded tip rates add 16 jumps at 50% to each player's record. Sixteen is the amount that best predicts the rest of a jumper's season, fit the same way as in the padding post; predicting the rest of a career takes more (about 44), and at that amount Drummond and Wembanyama are level. "What height alone predicts" comes from a model of who wins a jump given the height gap between the two jumpers and which of them is at home. "Team strength" is a rating updated after every game and built only from earlier results. Adjusted comparisons use regular-season games since 1999-2000. "Regular season" includes play-in games. Quarter-opening rules are in [NBA Rule 6](https://official.nba.com/rule-no-6-putting-ball-in-play-live-dead-ball/).*
 
 *The betting-line test uses the closing point spread for 32,394 regular-season games from 1999-2000 to 2025-26 (43 games from those seasons have no line), joined on the official game id. The spread enters the model as the market's expected margin for the home team. Moneylines (my record of them starts in 2006-07) have the bookmaker's margin removed by scaling the two implied probabilities to sum to one; a few games with implausible prices were set aside. Effects are average changes in home win probability from a logistic model.*
