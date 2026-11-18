@@ -73,7 +73,7 @@
 		}
 	};
 
-	const title = 'The Jump Ball Illusion';
+	const title = 'Does winning the tip matter?';
 	const deck =
 		'Teams that win the opening tip win 52.8% of their games. Most of that is who is playing. Once you account for the closing point spread, about half a point is left, too small to tell apart from zero.';
 	const facts = [
@@ -82,7 +82,7 @@
 		{ value: '55.7%', label: 'of games won by the overtime tip winner' }
 	];
 	const toc = [
-		{ id: 'does-winning-the-tip-matter', label: 'Does the tip matter?' },
+		{ id: 'the-five-point-gap', label: 'The five-point gap' },
 		{ id: 'what-the-tip-actually-wins', label: 'What the tip wins' },
 		{ id: 'winning-tips-is-a-skill', label: 'Winning tips is a skill' },
 		{ id: 'good-teams-win-more-tips', label: 'Good teams win more tips' },

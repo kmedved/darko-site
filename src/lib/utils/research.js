@@ -3,7 +3,7 @@
 export const RESEARCH_POSTS = [
 	{
 		slug: 'the-jump-ball-illusion',
-		title: 'The Jump Ball Illusion',
+		title: 'Does winning the tip matter?',
 		date: '2026-11-17',
 		dateLabel: 'November 17, 2026',
 		summary:

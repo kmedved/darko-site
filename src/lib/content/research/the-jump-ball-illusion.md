@@ -1,4 +1,4 @@
-## Does winning the tip matter?
+## The five-point gap
 
 Every so often someone notices that the team that wins the opening tip tends to win the game, and asks whether the tip matters. It's a fair question. Across 29 seasons of possession-by-possession data, 1997-98 through 2025-26, the team that wins the opening tip goes on to win **52.8%** of its games. Put it in terms of the home team, and the gap looks even bigger: when the home team wins the tip it wins **61.4%** of its games, and when it loses the tip that falls to **56.3%**. That's a five-point swing on a two-second toss between two centers.
 
