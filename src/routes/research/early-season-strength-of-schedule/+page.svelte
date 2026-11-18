@@ -14,8 +14,8 @@
 	];
 	const toc = [
 		{ id: 'the-test', label: 'The test' },
-		{ id: 'not-noise-and-not-just-luck', label: 'Not noise, not just luck' },
-		{ id: 'what-i-had-missed-the-schedule-can-make-the-adjustment-wrong', label: 'Stacked schedules' },
+		{ id: 'noise-and-luck', label: 'Noise and luck' },
+		{ id: 'when-the-schedule-makes-the-adjustment-wrong', label: 'Stacked schedules' },
 		{ id: 'grading-each-season-against-its-own-schedule', label: 'Grading each season' },
 		{ id: '2020-21-the-schedule-number-measured-nothing', label: '2020-21' },
 		{ id: '2025-26-a-stacked-schedule-then-early-shooting', label: '2025-26' },
