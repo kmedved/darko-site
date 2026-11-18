@@ -7,13 +7,11 @@
 	import { exportCsvRows } from '$lib/utils/csvPresets.js';
 	import {
 		HEIGHT_LABELS,
-		HEADLINE_RATE,
 		JUMP_BALL_CHARTS,
 		LEDGER_PARTS,
 		f1,
 		feetInches,
 		ledgerRows,
-		seasonBand,
 		seasonLabel,
 		signed
 	} from '$lib/utils/jumpBallCharts.js';
@@ -63,13 +61,8 @@
 		switch (kind) {
 			case 'seasons':
 				return {
-					head: ['Season', 'Games', 'Tip winner win rate', 'Outside the chance band'],
-					rows: data.seasons.map((d) => [
-						seasonLabel(d.s),
-						d.n.toLocaleString('en-US'),
-						`${f1(d.v)}%`,
-						Math.abs(d.v - HEADLINE_RATE) > seasonBand(d.n) ? 'yes' : ''
-					])
+					head: ['Season', 'Games', 'Tip winner win rate'],
+					rows: data.seasons.map((d) => [seasonLabel(d.s), d.n.toLocaleString('en-US'), `${f1(d.v)}%`])
 				};
 			case 'quarters':
 				return {
@@ -83,11 +76,19 @@
 				};
 			case 'jumpers':
 				return {
-					head: ['Player', 'Height', 'Opening jumps', 'Won', 'Seasons'],
+					head: ['Player', 'Height', 'Opening jumps', 'Won', 'Padded', 'Height alone predicts', 'Seasons'],
 					rows: data.jumpers
 						.slice()
-						.sort((p, q) => q.rate - p.rate)
-						.map((d) => [d.name, feetInches(d.ht), d.n.toLocaleString('en-US'), `${f1(d.rate)}%`, `${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}`])
+						.sort((p, q) => q.pad - p.pad)
+						.map((d) => [
+							d.name,
+							feetInches(d.ht),
+							d.n.toLocaleString('en-US'),
+							`${f1(d.rate)}%`,
+							`${f1(d.pad)}%`,
+							`${f1(d.exp)}%`,
+							`${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}`
+						])
 				};
 			case 'scatter':
 				return {
@@ -101,19 +102,18 @@
 				};
 			case 'ladder':
 				return {
-					head: ['Comparison', 'Edge (points)', '95% range'],
-					rows: data.ladder.map((r) => [r.label, signed(r.est, 2), `${signed(r.lo, 2)} to ${signed(r.hi, 2)}`])
+					head: ['Comparison', 'Edge (points)'],
+					rows: data.ladder.map((r) => [r.label, signed(r.est, 2)])
 				};
 			case 'priced': {
 				const P = data.priced;
-				const half = 1.96 * P.left_se;
 				return {
 					head: ['Measure', 'Value'],
 					rows: [
 						['Games', P.n.toLocaleString('en-US')],
 						["Tip winners' actual win rate", `${f1(P.actual, 2)}%`],
 						["Market's pregame price for the same teams", `${f1(P.market, 2)}%`],
-						['Left over (points)', `${signed(P.left)} (${signed(P.left - half)} to ${signed(P.left + half)})`]
+						['Left over (points)', signed(P.left)]
 					]
 				};
 			}

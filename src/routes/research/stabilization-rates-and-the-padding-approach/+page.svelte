@@ -22,12 +22,12 @@
 		{ value: '10', label: 'games of padding for team margin' }
 	];
 	const toc = [
-		{ id: 'when-is-a-hot-start-real', label: 'When is a hot start real?' },
-		{ id: 'the-padding-method', label: 'The padding method' },
-		{ id: 'padding-values-are-stabilization-rates', label: 'Padding values are stabilization rates' },
-		{ id: 'the-numbers-for-players', label: 'The numbers for players' },
-		{ id: 'the-numbers-for-teams', label: 'The numbers for teams' },
-		{ id: 'other-ways-to-do-this', label: 'Other ways to do this' }
+		{ id: 'stabilization-rates', label: 'Stabilization Rates' },
+		{ id: 'the-padding-method', label: 'The Padding Method' },
+		{ id: 'padding-values-are-stabilization-rates', label: 'Padding Values Are Stabilization Rates' },
+		{ id: 'the-numbers-for-players', label: 'The Numbers for Players' },
+		{ id: 'the-numbers-for-teams', label: 'The Numbers for Teams' },
+		{ id: 'other-ways-to-do-this', label: 'Other Ways to Do This' }
 	];
 	const robinsonPresets = [
 		{ value: 0, label: 'No padding' },
@@ -67,8 +67,8 @@
 			{:else if section.component === 'robinson'}
 				<PaddingProjectionChart
 					games={paddingData.robinson.games}
-					leagueAvg={0.355}
-					defaultPadding={240}
+					leagueAvg={0.358}
+					defaultPadding={260}
 					presets={robinsonPresets}
 				/>
 			{:else if section.component === 'players'}
