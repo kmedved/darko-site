@@ -16,7 +16,7 @@
 			title: 'Tip winners’ win rate by season',
 			sub: 'Share of games won by the opening-tip winner, by season',
 			caption:
-				'The shaded band is where a season should land 95% of the time if the true edge were 52.8% every year. Five of 29 seasons fall outside it, where chance would give one or two, so the edge isn’t the same every year. Two seasons (2016-17 and 2024-25) dipped below a coin flip.'
+				'The dashed line is the average across all 29 seasons, 52.8%. Two seasons (2016-17 and 2024-25) dipped below a coin flip.'
 		},
 		quarters: {
 			title: 'What the tip winner gains, quarter by quarter',
@@ -50,15 +50,15 @@
 		},
 		ladder: {
 			title: 'The tip winner’s edge as controls are added',
-			sub: "Home team's win rate after winning the tip minus after losing it, in points. Dot = estimate, line = 95% range",
+			sub: "Home team's win rate after winning the tip minus after losing it, in points",
 			caption:
-				'All six rows use the same 32,394 regular-season games, 1999-2000 to 2025-26. Hollow dots have a range that includes zero, so the leftover edge can’t be told apart from no edge at all. It doesn’t rule out an edge of up to about a point and a half.'
+				'All six rows use the same 32,394 regular-season games, 1999-2000 to 2025-26.'
 		},
 		priced: {
 			title: 'Tip winners against the betting market',
 			sub: "Tip winners' win probability, 23,778 games with moneylines, 2006-07 to 2025-26",
 			caption:
-				'The market priced in 2.4 of the 2.8 points that tip winners won above a coin flip. The leftover 0.4 of a point has a 95% range of −0.2 to +1.0.'
+				'The market priced in 2.4 of the 2.8 points that tip winners won above a coin flip, leaving 0.4 of a point.'
 		},
 		iou: {
 			title: 'The tip winner’s possession edge through the game',
@@ -75,7 +75,7 @@
 
 	const title = 'Does winning the tip matter?';
 	const deck =
-		'Teams that win the opening tip win 52.8% of their games. Most of that is who is playing. Once you account for the closing point spread, about half a point is left, too small to tell apart from zero.';
+		'Teams that win the opening tip win 52.8% of their games. Most of that is who is playing. Once you account for the closing point spread, about half a point is left.';
 	const facts = [
 		{ value: '<0.01', label: 'possessions the tip winner nets per game' },
 		{ value: '0.65', label: 'points left of a 4.9-point gap after the closing spread' },

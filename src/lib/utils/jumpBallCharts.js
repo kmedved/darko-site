@@ -39,7 +39,6 @@ const gridLine = (svg, x1, x2, y, strong) =>
 	h('line', { x1, x2, y1: y, y2: y, stroke: strong ? 'var(--text-muted)' : 'var(--border-subtle)', 'stroke-width': strong ? 1.2 : 1 }, svg);
 
 export const HEADLINE_RATE = 52.81;
-export const seasonBand = (n, p = HEADLINE_RATE) => 196 * Math.sqrt(((p / 100) * (1 - p / 100)) / n);
 
 function seasons(svg, W, { data, a, tip }) {
 	const narrow = W < 520;
@@ -55,18 +54,14 @@ function seasons(svg, W, { data, a, tip }) {
 		gridLine(svg, M.l, M.l + iw, Y(v), v === 50);
 		h('text', { x: M.l - 8, y: Y(v) + 4, 'text-anchor': 'end', class: 't-axis' }, svg, `${v}%`);
 	});
-	const top = S.map((d) => `${X(d.s).toFixed(1)},${Y(p + seasonBand(d.n)).toFixed(1)}`);
-	const bottom = S.slice().reverse().map((d) => `${X(d.s).toFixed(1)},${Y(p - seasonBand(d.n)).toFixed(1)}`);
-	h('polygon', { points: top.concat(bottom).join(' '), fill: a, 'fill-opacity': 0.14 }, svg);
 	h('line', { x1: M.l, x2: M.l + iw, y1: Y(p), y2: Y(p), stroke: a, 'stroke-width': 1, 'stroke-dasharray': '4 4' }, svg);
 	h('text', { x: M.l + iw + 8, y: Y(50) + 4, class: 't-axis' }, svg, narrow ? '50%' : 'coin flip');
 	h('text', { x: M.l + iw + 8, y: Y(p) + 4, class: 't-axis' }, svg, narrow ? '52.8' : 'avg 52.8%');
 	h('polyline', { points: S.map((d) => `${X(d.s).toFixed(1)},${Y(d.v).toFixed(1)}`).join(' '), fill: 'none', stroke: a, 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
 	S.forEach((d) => {
-		const outside = Math.abs(d.v - p) > seasonBand(d.n);
-		h('circle', { cx: X(d.s), cy: Y(d.v), r: outside ? 5 : 3, fill: outside ? a : 'var(--bg-surface)', stroke: a, 'stroke-width': 2 }, svg);
+		h('circle', { cx: X(d.s), cy: Y(d.v), r: 4, fill: a, stroke: 'var(--bg-surface)', 'stroke-width': 2 }, svg);
 		const hit = h('circle', { cx: X(d.s), cy: Y(d.v), r: 11, class: 'hit' }, svg);
-		tip(hit, `<b>${seasonLabel(d.s)}</b><br>tip winners won ${f1(d.v)}%<br>${d.n.toLocaleString('en-US')} games${outside ? '<br>outside the chance band' : ''}`);
+		tip(hit, `<b>${seasonLabel(d.s)}</b><br>tip winners won ${f1(d.v)}%<br>${d.n.toLocaleString('en-US')} games`);
 	});
 	(narrow ? [1998, 2008, 2018, 2026] : [1998, 2003, 2008, 2013, 2018, 2023, 2026]).forEach((s) => {
 		h('text', { x: X(s), y: M.t + ih + 20, 'text-anchor': s === 2026 ? 'end' : s === 1998 ? 'start' : 'middle', class: 't-axis' }, svg, seasonLabel(s));
@@ -264,11 +259,11 @@ function ladder(svg, W, { data, a, tip }) {
 	const M = { l: 6, r: 10 };
 	const top = 8;
 	const iw = W - M.l - M.r;
-	const X = lin(-2, 8, M.l, M.l + iw);
+	const X = lin(0, 6, M.l + 4, M.l + iw - 4);
 	const H = top + rows.length * rowH + 30;
-	const ticks = [-2, 0, 2, 4, 6, 8];
+	const ticks = [0, 2, 4, 6];
 	ticks.forEach((v) => {
-		h('text', { x: X(v), y: H - 8, 'text-anchor': v === -2 ? 'start' : v === 8 ? 'end' : 'middle', class: 't-axis' }, svg, v === 0 ? 'no edge' : signed(v, 0));
+		h('text', { x: X(v), y: H - 8, 'text-anchor': v === 0 ? 'start' : v === 6 ? 'end' : 'middle', class: 't-axis' }, svg, v === 0 ? 'no edge' : signed(v, 0));
 	});
 	rows.forEach((row, i) => {
 		const y = top + i * rowH;
@@ -279,15 +274,14 @@ function ladder(svg, W, { data, a, tip }) {
 			h('line', { x1: X(v), x2: X(v), y1: y + (narrow ? 26 : 29), y2: y + (narrow ? 52 : rowH - 8), stroke: v === 0 ? 'var(--text)' : 'var(--border)', 'stroke-width': v === 0 ? 1.5 : 1 }, svg);
 		});
 		const cy = y + (narrow ? 38 : 46);
-		const zeroIn = row.lo <= 0 && row.hi >= 0;
 		h('text', { x: M.l + 2, y: y + 19, class: 't-lbl' }, svg, row.label);
-		const range = `${signed(row.est, 2)}   (${signed(row.lo)} to ${signed(row.hi)})`;
+		const range = `${signed(row.est, 2)} pts`;
 		if (narrow) h('text', { x: M.l + 2, y: y + 70, class: 't-val' }, svg, range);
 		else h('text', { x: W - M.r - 2, y: y + 19, 'text-anchor': 'end', class: 't-val' }, svg, range);
-		h('line', { x1: X(row.lo), x2: X(row.hi), y1: cy, y2: cy, stroke: a, 'stroke-width': 3, 'stroke-linecap': 'round' }, svg);
-		h('circle', { cx: X(row.est), cy, r: 7, fill: zeroIn ? 'var(--bg-surface)' : a, stroke: a, 'stroke-width': 3 }, svg);
+		h('line', { x1: X(0), x2: X(row.est), y1: cy, y2: cy, stroke: a, 'stroke-width': 3, 'stroke-linecap': 'round' }, svg);
+		h('circle', { cx: X(row.est), cy, r: 7, fill: a, stroke: 'var(--bg-surface)', 'stroke-width': 2 }, svg);
 		const hit = h('rect', { x: 0, y, width: W, height: rowH, class: 'hit' }, svg);
-		tip(hit, `<b>${row.label}</b><br>${row.note}<br>${signed(row.est, 2)} pts (${signed(row.lo)} to ${signed(row.hi)})${zeroIn ? '<br>range includes zero' : ''}`);
+		tip(hit, `<b>${row.label}</b><br>${row.note}<br>${signed(row.est, 2)} pts`);
 	});
 	return H;
 }
@@ -298,15 +292,11 @@ function priced(svg, W, { data, a, b, tip }) {
 	const X = lin(50, 54, M.l, W - M.r);
 	const barY = 46;
 	const barH = 18;
-	const half = 1.96 * P.left_se;
 	h('rect', { x: X(50), y: barY, width: X(54) - X(50), height: barH, rx: 4, fill: 'var(--border-subtle)' }, svg);
 	const market = h('rect', { x: X(50), y: barY, width: X(P.market) - X(50) - 1, height: barH, rx: 4, fill: a }, svg);
 	const left = h('rect', { x: X(P.market) + 1, y: barY, width: X(P.actual) - X(P.market) - 1, height: barH, rx: 2, fill: b }, svg);
 	tip(market, `<b>Priced in by the market</b><br>${signed(P.market - 50)} points above a coin flip`);
-	tip(left, `<b>Left over</b><br>${signed(P.left)} points (95% range ${signed(P.left - half)} to ${signed(P.left + half)})`);
-	const wy = barY + barH + 12;
-	h('line', { x1: X(P.actual - half), x2: X(P.actual + half), y1: wy, y2: wy, stroke: 'var(--text)', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg);
-	h('circle', { cx: X(P.actual), cy: wy, r: 4, fill: 'var(--text)' }, svg);
+	tip(left, `<b>Left over</b><br>${signed(P.left)} points`);
 	h('line', { x1: X(P.actual), x2: X(P.actual), y1: 18, y2: barY + barH, stroke: 'var(--text)', 'stroke-width': 1 }, svg);
 	const flip = X(P.actual) + 110 > W;
 	const ax = X(P.actual) + (flip ? -6 : 6);
@@ -326,7 +316,7 @@ function priced(svg, W, { data, a, b, tip }) {
 	const legendX = W < 520 ? M.l : M.l + 250;
 	const legendY = W < 520 ? ly + 20 : ly;
 	h('rect', { x: legendX, y: legendY - 9, width: 12, height: 10, rx: 2, fill: b }, svg);
-	h('text', { x: legendX + 18, y: legendY, class: 't-lbl-s' }, svg, `left over (${signed(P.left)}), line = 95% range`);
+	h('text', { x: legendX + 18, y: legendY, class: 't-lbl-s' }, svg, `left over (${signed(P.left)})`);
 	return legendY + 10;
 }
 
