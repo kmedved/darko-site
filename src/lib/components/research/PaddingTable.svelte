@@ -38,7 +38,6 @@
 	const sortConfigs = {
 		label: { type: 'text' },
 		pad: { type: 'number' },
-		pad2020: { type: 'number' },
 		games: { type: 'number' }
 	};
 	const sortedRows = $derived(getSortedRows(tableRows, { sortColumn, sortDirection, sortConfigs }));
@@ -64,7 +63,6 @@
 	);
 	const weight = $derived(ownWeight(sampleInput, current.pad));
 	const hasGames = $derived(tableRows.some((row) => row.games !== null));
-	const has2020 = $derived(tableRows.some((row) => row.pad2020 !== undefined));
 
 	function downloadCsv() {
 		exportCsvRows({
@@ -75,7 +73,6 @@
 				{ header: 'Padding', accessor: (row) => row.pad.toFixed(2) },
 				{ header: 'Padding unit', accessor: 'unit' },
 				...(hasGames ? [{ header: 'About this many games', accessor: (row) => row.games?.toFixed(1) }] : []),
-				...(has2020 ? [{ header: '2020 post', accessor: (row) => row.pad2020 }] : []),
 				{ header: 'League average 2025-26', accessor: 'lg' }
 			]
 		});
@@ -125,11 +122,6 @@
 							<button type="button" onclick={() => sortBy('games')}>Games {getSortGlyph(sortColumn, sortDirection, 'games')}</button>
 						</th>
 					{/if}
-					{#if has2020}
-						<th scope="col" aria-sort={getSortAriaValue(sortColumn, sortDirection, 'pad2020')}>
-							<button type="button" onclick={() => sortBy('pad2020')}>2020 post {getSortGlyph(sortColumn, sortDirection, 'pad2020')}</button>
-						</th>
-					{/if}
 					<th scope="col">League avg<br />2025-26</th>
 				</tr>
 			</thead>
@@ -144,7 +136,6 @@
 						</th>
 						<td><span class="strong">{formatPadding(row.pad)}</span><small>{row.unit}</small></td>
 						{#if hasGames}<td>{row.games === null ? '' : formatPadding(row.games)}</td>{/if}
-						{#if has2020}<td class="muted">{formatPadding(row.pad2020)}</td>{/if}
 						<td>{formatStatValue(row.lg, row.format)}</td>
 					</tr>
 				{/each}
@@ -316,10 +307,6 @@
 	.strong {
 		font-family: var(--font-mono);
 		font-weight: var(--figure-weight-strong);
-	}
-
-	.muted {
-		color: var(--text-muted);
 	}
 
 	figcaption {

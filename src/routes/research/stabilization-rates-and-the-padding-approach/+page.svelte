@@ -31,8 +31,7 @@
 	];
 	const robinsonPresets = [
 		{ value: 0, label: 'No padding' },
-		{ value: 240, label: '240 (2020 post)' },
-		{ value: 260, label: '260 (updated)' },
+		{ value: 260, label: '260' },
 		{ value: 1000, label: '1,000' }
 	];
 </script>
@@ -79,7 +78,7 @@
 					defaultStat="fg3_pct"
 					defaultValue={50}
 					defaultSample={34}
-					caption="Seasons 2000-01 through 2025-26. The 2020 column is the original post's value."
+					caption="Seasons 2000-01 through 2025-26."
 					csvName="player-padding"
 				/>
 			{:else if section.component === 'teams'}

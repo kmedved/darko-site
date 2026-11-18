@@ -1,4 +1,4 @@
-> **Updated November 17, 2026.** I reran this study with every season from 2000-01 through 2025-26 and added a section on teams. The 2020 numbers hold up: rerun the original way, 24 of the 27 player stats land within 5% of what I published then. The tables now cover all 26 seasons, pad toward each season’s own league average (threes have changed too much for one average to fit every year), and let you plug in your own numbers. The original post was published August 6, 2020.
+> **Updated November 17, 2026.** I reran this study with every season from 2000-01 through 2025-26 and added a section on teams. The tables now cover all 26 seasons, pad toward each season’s own league average (threes have changed too much for one average to fit every year), and let you plug in your own numbers. The original post was published August 6, 2020.
 
 ## Stabilization Rates
 
@@ -70,4 +70,4 @@ Note that free-throw rates, for and against, now take much longer to settle than
 
 Note that there are other ways to do this: you could attempt to predict the next game’s performance instead of the rest of the season’s performance. You could also use career-to-date performance to project rest-of-season performance, or career-to-date performance to project rest-of-career performance. There are pros and cons to all these approaches, although they mostly matter less than you may expect (which is one of the virtues of the padding approach in the first place). I’ll explore the others in upcoming posts however.
 
-*How the numbers are fit: for each stat, the one padding amount that minimizes squared error in predicting each player’s or team’s rest-of-season rate, weighted by the rest-of-season sample, padding toward that season’s league average. Possession-based rates such as usage and rebound rate are padded in possessions, as in 2020.*
+*How the numbers are fit: for each stat, the one padding amount that minimizes squared error in predicting each player’s or team’s rest-of-season rate, weighted by the rest-of-season sample, padding toward that season’s league average. Possession-based rates such as usage and rebound rate are padded in possessions.*
