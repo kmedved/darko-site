@@ -129,9 +129,8 @@
 	</p>
 
 	<figcaption>
-		Duncan Robinson, 2019-20 regular season, one point per game, padded toward .355, the long-run league average used in the example above. The season paused from March to late July. Even the more
-		conservative projection eventually agrees he is an elite shooter. Drag the slider: at zero the
-		projection is just his percentage so far.
+		Duncan Robinson, 2019-20 regular season, one point per game, padded toward .355, the long-run league average used in the example above. The season paused from March to late July. Drag the slider: at zero the projection is just his
+		percentage so far.
 	</figcaption>
 </figure>
 
