@@ -86,11 +86,7 @@ To put that in plainer terms: in the games with moneylines, the teams that won t
 
 The line even knows about the tip. Bookmakers don't price the jump ball, yet the spread predicts which team wins it, and once you have the spread, the strength rating adds nothing. To me that's the clearest sign that the tip is picking up things the market already knew: lineups, health and who is likely to jump. The usual-jumper split from the last section shrinks too. With the spread in, games where both usual jumpers took the tip show 0.1 points, and games with at least one missing show 1.3, both within the noise.
 
-That isn't proof the tip is worth nothing, though. Three caveats:
-
-- **Indistinguishable from zero isn't zero.** The 95% range runs to about 1.6 points, and a test of this size would reliably catch an effect only if it were larger than about 1.4. A small real effect is possible.
-- **The line did clearly more than the strength rating.** On the same games, swapping the rating for the spread lowers the estimate by about 1.3 points (1.0 to 1.5 when I resample the games), even though the two ranges overlap.
-- **The leftover isn't the same in every era.** Split into three stretches, it's about zero in 1999-2000 to 2009-10 (−0.1) and 2018-19 to 2025-26 (+0.3), and about 2 points in 2010-11 to 2017-18 (+0.1 to +3.7). One of three stretches landing near 2 is weak evidence on its own, but it's why the same test run on 2011-12 to 2021-22 alone finds about 1 point.
+The line also clearly beats the strength rating. On the same games, swapping the rating for the spread lowers the estimate by about 1.3 points.
 
 None of this is a betting system. Knowing the tip winner before the line closed would have been worth about 0.4 of a point of win probability, give or take 0.6, against an average bookmaker margin of about 3%. And nobody knows the tip winner before the tip.
 
