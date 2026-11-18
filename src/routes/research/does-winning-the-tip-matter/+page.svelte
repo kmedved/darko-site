@@ -1,7 +1,7 @@
 <script>
 	import WowyStoryPage from '$lib/components/WowyStoryPage.svelte';
 	import JumpBallFigure from '$lib/components/research/JumpBallFigure.svelte';
-	import articleMarkdown from '$lib/content/research/the-jump-ball-illusion.md?raw';
+	import articleMarkdown from '$lib/content/research/does-winning-the-tip-matter.md?raw';
 	import jumpBallData from '$lib/content/research/jump-ball-data.json';
 	import { renderArticleMarkdown } from '$lib/utils/renderArticleMarkdown.js';
 
@@ -99,7 +99,7 @@
 	<meta property="og:title" content={title} />
 	<meta property="og:description" content={deck} />
 	<meta property="og:type" content="article" />
-	<meta property="og:url" content="https://www.darko.app/research/the-jump-ball-illusion" />
+	<meta property="og:url" content="https://www.darko.app/research/does-winning-the-tip-matter" />
 </svelte:head>
 
 <WowyStoryPage
