@@ -10,7 +10,7 @@ If the tip really caused that, it would be a big deal. I don't think it does. Th
 
 Start with what the tip buys you, because the answer is almost nothing.
 
-The NBA's rules even out the jump ball. The team that loses the tip gets the first possession of the second *and* third quarters, and the tip winner opens the first and fourth. (In these 36,765 games that alternation held 99.9% of the time.) Add it up, and on average the tip winner finishes a game with **no extra possessions**: the gap is under one hundredth of a possession, smaller than the noise. In 37% of games the counts come out exactly even, and in virtually every game they are within two.
+The NBA's rules even out the jump ball. The team that loses the tip gets the first possession of the second *and* third quarters, and the tip winner opens the first and fourth. Add it up, and on average the tip winner finishes a game with **no extra possessions**: the gap is under one hundredth of a possession, smaller than the noise. In 37% of games the counts come out exactly even, and in virtually every game they are within two.
 
 You can see that accounting quarter by quarter. The tip winner gets about half an extra possession in the first quarter and half an extra in the fourth, and gives back half in each of the second and third. The scoreboard follows: tip winners outscore their opponents in the first and fourth quarters and get outscored in the second and third. That's just the rulebook, not momentum or effort.
 
