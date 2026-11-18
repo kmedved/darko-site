@@ -32,7 +32,7 @@
 	const robinsonPresets = [
 		{ value: 0, label: 'No padding' },
 		{ value: 240, label: '240 (2020 post)' },
-		{ value: 263, label: '263 (updated)' },
+		{ value: 260, label: '260 (updated)' },
 		{ value: 1000, label: '1,000' }
 	];
 </script>
@@ -67,8 +67,8 @@
 			{:else if section.component === 'robinson'}
 				<PaddingProjectionChart
 					games={paddingData.robinson.games}
-					leagueAvg={0.355}
-					defaultPadding={240}
+					leagueAvg={0.358}
+					defaultPadding={260}
 					presets={robinsonPresets}
 				/>
 			{:else if section.component === 'players'}

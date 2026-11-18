@@ -6,7 +6,7 @@
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 
-	let { games, leagueAvg = 0.355, defaultPadding = 240, presets = [] } = $props();
+	let { games, leagueAvg = 0.358, defaultPadding = 260, presets = [] } = $props();
 
 	const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
 	const actualColor = $derived(getSeriesColor(0, displayMode.view));
@@ -129,7 +129,7 @@
 	</p>
 
 	<figcaption>
-		Duncan Robinson, 2019-20 regular season, one point per game, padded toward .355, the long-run league average used in the example above. The season paused from March to late July. Drag the slider: at zero the projection is just his
+		Duncan Robinson, 2019-20 regular season, one point per game, padded toward .358, the 2019-20 league average used in the example above. The season paused from March to late July. Drag the slider: at zero the projection is just his
 		percentage so far.
 	</figcaption>
 </figure>

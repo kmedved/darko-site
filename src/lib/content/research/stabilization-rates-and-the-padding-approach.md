@@ -14,13 +14,13 @@ Under the ‘padding method’, at any given point in the season, you ‘pad’ 
 
 **`expected_fg3_pct = (17 + X * league_average_fg3_pct) / (34 + X)`**
 
-If the padding number for threes is 240 (more on how to calculate this later), and the league average three-point-percentage is .355, then our projection becomes:
+If the padding number for threes is 260 (more on how to calculate this later), and the league average three-point-percentage is .358, then our projection becomes:
 
-**`expected_fg3_pct = (17 + 240 * .355) / (34 + 240) = .373`**
+**`expected_fg3_pct = (17 + 260 * .358) / (34 + 260) = .374`**
 
-So Robinson’s 34 attempts from three have raised our estimate of his three-point shooting talent from .355 (league average) to .373 (good, not great shooter). I think that roughly aligns with our intuitions as well – 34 attempts just isn’t very many, so we can’t go too wild, but it’s a nice sign all the same.
+So Robinson’s 34 attempts from three have raised our estimate of his three-point shooting talent from .358 (league average) to .374 (good, not great shooter). I think that roughly aligns with our intuitions as well – 34 attempts just isn’t very many, so we can’t go too wild, but it’s a nice sign all the same.
 
-The beauty and elegance of the padding method is that **the amount of padding remains constant throughout the season**. You don’t need to use different coefficients depending on how much of the season has elapsed. At all times – you just add 240 attempts of league average performance to a player’s shooting to get their future projection. Early on, the 240 ‘padding’ attempts totally dominate a player’s projection. But eventually, as the sample size grows, the player’s actual performance has a bigger and bigger impact.
+The beauty and elegance of the padding method is that **the amount of padding remains constant throughout the season**. You don’t need to use different coefficients depending on how much of the season has elapsed. At all times – you just add 260 attempts of league average performance to a player’s shooting to get their future projection. Early on, the 260 ‘padding’ attempts totally dominate a player’s projection. But eventually, as the sample size grows, the player’s actual performance has a bigger and bigger impact.
 
 Applying that to Robinson, you get the chart below, showing the progression of his projected shooting, and his actual YTD performance. The cadence is the same, but the projection is naturally more conservative.
 
@@ -30,11 +30,11 @@ Applying that to Robinson, you get the chart below, showing the progression of h
 
 ## Padding Values Are Stabilization Rates
 
-So what does the padding approach have to do with stabilization rates? Well – they’re actually the same thing. Before games on January 3, 2020, Duncan Robinson had taken 237 threes, and made 110 of them. At that point in the season, his projection was:
+So what does the padding approach have to do with stabilization rates? Well – they’re actually the same thing. Before games on January 8, 2020, Duncan Robinson had taken 259 threes, and made 115 of them. At that point in the season, his projection was:
 
-**`expected_fg3_pct = (110 + 240 * .355) / (237 + 240) = .409`**
+**`expected_fg3_pct = (115 + 260 * .358) / (259 + 260) = .401`**
 
-Meaning at that point, roughly half his projection was the 237 attempts he’d actually taken, and half was the 240 padding attempts. After that game, the 240 padding attempts made up less and less of his projection, and his projection consisted **mostly** of his own performance. I emphasize ‘mostly’ here to reinforce that there’s nothing magical about the ‘stabilization point’, or about 50%. We still add 240 league average attempts to Robinson’s projection even after this point – they just have less and less relative impact. (I’m not a huge fan of the term ‘stabilization’ for this reason, since it implies after X attempts a player’s performance is “stable”, but I’ve given up fighting on this point).
+Meaning at that point, roughly half his projection was the 259 attempts he’d actually taken, and half was the 260 padding attempts. After that game, the 260 padding attempts made up less and less of his projection, and his projection consisted **mostly** of his own performance. I emphasize ‘mostly’ here to reinforce that there’s nothing magical about the ‘stabilization point’, or about 50%. We still add 260 league average attempts to Robinson’s projection even after this point – they just have less and less relative impact. (I’m not a huge fan of the term ‘stabilization’ for this reason, since it implies after X attempts a player’s performance is “stable”, but I’ve given up fighting on this point).
 
 I’m a big fan of the ‘padding approach’ as a way to address the stabilization question for its simplicity and directness. It doesn’t involve somewhat opaque statistical methods such as KR21 rates, and it directly answers the question most people want to know when they’re discussing stabilization: how do we project this player going forward?
 
