@@ -1,6 +1,6 @@
 <script>
 	// One figure in the jump-ball post: a chart from jumpBallCharts.js, a hover tooltip, a data table
-	// and a CSV download. The ladder figure also switches between its two sets of games.
+	// and a CSV download.
 	import { getContext } from 'svelte';
 	import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
@@ -12,14 +12,13 @@
 		LEDGER_PARTS,
 		f1,
 		feetInches,
-		ladderRows,
 		ledgerRows,
 		seasonBand,
 		seasonLabel,
 		signed
 	} from '$lib/utils/jumpBallCharts.js';
 
-	let { kind, data, title, sub = '', caption = '', captions = null, label = title } = $props();
+	let { kind, data, title, sub = '', caption = '', label = title } = $props();
 
 	const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
 	const colors = $derived({
@@ -32,7 +31,6 @@
 	let figureEl = $state();
 	let svgEl = $state();
 	let tooltip = $state(null);
-	let ladderSet = $state('long');
 
 	function tip(target, html) {
 		const place = (event) => {
@@ -50,7 +48,7 @@
 
 	$effect(() => {
 		const W = Math.floor(width);
-		const ctx = { data, ...colors, tip, ladderSet };
+		const ctx = { data, ...colors, tip };
 		if (!W || !svgEl) return;
 		svgEl.replaceChildren();
 		tooltip = null;
@@ -104,7 +102,7 @@
 			case 'ladder':
 				return {
 					head: ['Comparison', 'Edge (points)', '95% range'],
-					rows: ladderRows(data, ladderSet).map((r) => [r.label, signed(r.est, 2), `${signed(r.lo, 2)} to ${signed(r.hi, 2)}`])
+					rows: data.ladder.map((r) => [r.label, signed(r.est, 2), `${signed(r.lo, 2)} to ${signed(r.hi, 2)}`])
 				};
 			case 'priced': {
 				const P = data.priced;
@@ -137,37 +135,16 @@
 	function downloadCsv() {
 		exportCsvRows({
 			rows: table.rows,
-			filename: `jump-ball-${kind}${kind === 'ladder' ? `-${ladderSet}` : ''}`,
+			filename: `jump-ball-${kind}`,
 			columns: table.head.map((header, i) => ({ header, accessor: (row) => row[i] }))
 		});
 	}
 
-	const ladderOptions = [
-		{ key: 'long', label: 'All regular-season games since 1999-2000', detail: '32,437 games, no betting lines' },
-		{ key: 'odds', label: 'Games with betting lines, 2011-12 to 2021-22', detail: '12,937 games' }
-	];
-	const captionText = $derived(captions ? captions[ladderSet] : caption);
 </script>
 
 <figure class="jb-figure" bind:this={figureEl}>
 	<h3 class="jb-title">{title}</h3>
 	{#if sub}<p class="jb-sub">{sub}</p>{/if}
-
-	{#if kind === 'ladder'}
-		<div class="jb-toggle" role="radiogroup" aria-label="Which games to show">
-			{#each ladderOptions as option (option.key)}
-				<button
-					type="button"
-					role="radio"
-					aria-checked={ladderSet === option.key}
-					class:active={ladderSet === option.key}
-					onclick={() => (ladderSet = option.key)}
-				>
-					{option.label}<small>{option.detail}</small>
-				</button>
-			{/each}
-		</div>
-	{/if}
 
 	<div class="jb-plot" bind:clientWidth={width}>
 		<svg bind:this={svgEl} role="img" aria-label={label}></svg>
@@ -178,7 +155,7 @@
 		</div>
 	{/if}
 
-	{#if captionText}<figcaption>{captionText}</figcaption>{/if}
+	{#if caption}<figcaption>{caption}</figcaption>{/if}
 
 	<details class="jb-data">
 		<summary>See the data</summary>
@@ -305,40 +282,6 @@
 		color: var(--text);
 	}
 
-	.jb-toggle {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 8px;
-		margin-bottom: 14px;
-	}
-
-	.jb-toggle button {
-		padding: 8px 10px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		background: var(--bg);
-		color: var(--text-secondary);
-		font-family: var(--font-sans);
-		font-size: 13px;
-		font-weight: 700;
-		line-height: 1.35;
-		text-align: left;
-		cursor: pointer;
-	}
-
-	.jb-toggle button small {
-		display: block;
-		color: var(--text-muted);
-		font-size: 11px;
-		font-weight: 500;
-	}
-
-	.jb-toggle button.active,
-	.jb-toggle button:hover {
-		border-color: var(--accent);
-		color: var(--text);
-	}
-
 	figcaption {
 		margin-top: 10px;
 		color: var(--text-muted);
@@ -399,10 +342,6 @@
 	@media (max-width: 640px) {
 		.jb-figure {
 			padding: 14px;
-		}
-
-		.jb-toggle {
-			grid-template-columns: minmax(0, 1fr);
 		}
 	}
 </style>

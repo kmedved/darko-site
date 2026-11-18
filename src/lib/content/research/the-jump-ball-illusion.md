@@ -2,7 +2,7 @@
 >
 > - **The prize is worthless.** The rules hand the tip loser the next two quarter-openers. Over a game, the tip winner ends up level on possessions.
 > - **Tips are a personal skill.** Andre Drummond wins 73% of his jumps. Domantas Sabonis wins 29%.
-> - **The tip reads quality.** Compare equal teams and three of the five points vanish. Add the betting line and about one is left.
+> - **The tip reads quality.** Compare equal teams and three of the five points vanish. Add the betting line and about half a point is left.
 > - **One tip matters.** The overtime jump ball is worth a real half-possession, and nobody gives it back.
 
 ## Two seconds, five points
@@ -83,25 +83,25 @@ One more thing the tip knows is where the game is. Home teams win **51.4%** of o
 
 A strength rating only knows results. Bookmakers know more. By tip-off their price folds in injuries, rest, back-to-backs and how a matchup is likely to go. If the leftover edge is hidden team quality, the betting line should soak it up.
 
-So we matched **12,937** regular-season games from 2011-12 through 2021-22 to [archived pregame moneylines](https://github.com/flancast90/sportsbookreview-scraper), stripped out the bookmaker's margin, and ran the same comparison on exactly the same games. Two rows of the ladder are new: the betting line on its own, and the betting line plus the usual-jumper flags. Switch the toggle to see both sets of games.
+So we took the closing point spread for **32,394** regular-season games, every one since 1999-2000 that has a line on record, and ran the same comparison on exactly the same games. Two rows of the ladder are new: the spread on its own, and the spread plus the usual-jumper flags.
 
 <!-- interactive:ladder -->
 
-The line does what the strength rating could not. On these games the raw gap is **5.8 points**. The strength rating takes it to 2.4, the rating plus the jumper flags to 1.8, and the betting line to **1.1**. Add the jumper flags to the line and it is **0.9**. Those last two estimates have 95% ranges that include zero (−0.5 to +2.7, and −0.7 to +2.5). The result held when we let the link between price and winning bend, added season effects, removed the margin a different way, grouped the uncertainty by season, or kept the few unusual price pairs. Every variant landed between 1.09 and 1.11.
+The line does what the strength rating could not. The raw gap is **4.9 points**. The strength rating takes it to 1.9, the rating plus the jumper flags to 1.4, and the closing spread to **0.65**. Add the jumper flags to the spread and it is **0.45**. Both of those have 95% ranges that include zero (−0.3 to +1.6, and −0.5 to +1.4). The answer barely moved when we let the link between spread and winning bend and added season effects, kept the strength rating in alongside the spread, grouped the uncertainty by season, or built the jumper flags from earlier games only. Every variant landed between 0.59 and 0.67. Moneylines, which exist from 2006-07 on, tell the same story: 0.74 on 23,778 games.
 
 <!-- interactive:priced -->
 
-Put it in everyday terms. In these games the teams that won the tip won 53.1% of the time. Before anyone touched the ball, the betting market had already rated those same teams at 52.6%. The market priced in about five-sixths of the edge, and what was left was half a point, give or take 0.8.
+Put it in everyday terms. In the games with moneylines, the teams that won the tip won 52.8% of the time. Before anyone touched the ball, the betting market had already rated those same teams at 52.4%. The market priced in almost nine-tenths of the edge, and what was left was 0.4 of a point, give or take 0.6.
 
-The line even knows about the tip. Bookmakers never price the jump ball, yet their price predicts which team wins it, and once you have the price, the strength rating adds nothing. That is the clearest sign that the tip is reading things the market already knew: lineups, health and who is likely to jump.
+The line even knows about the tip. Bookmakers never price the jump ball, yet the spread predicts which team wins it, and once you have the spread, the strength rating adds nothing. That is the clearest sign that the tip is reading things the market already knew: lineups, health and who is likely to jump. The roll-call split from the last section shrinks too. With the spread in, games where both usual jumpers took the tip show 0.1 points, and games with at least one missing show 1.3, both within the noise.
 
 That is not proof the tip is worth nothing. Three cautions:
 
-- **Indistinguishable from zero is not zero.** The 95% range runs to about 2.7 points, and a test of this size would reliably catch an effect only if it were larger than about 2. A small real effect is possible.
-- **The line did clearly more than the strength rating.** On the same games, swapping the rating for the line lowers the estimate by about 1.3 points, and that drop is solid in its own right. The two estimates come from the same games, so their overlapping ranges understate it.
-- **The prices have limits.** The source labels them closing lines but puts no timestamp on each quote, so we call them pregame lines. The archive stops after 2021-22. A broader archive of 15,466 games from 2007 to 2020 gives +0.92 for the line plus jumper flags, but it comes from the same source, so it is corroboration and not an independent replication.
+- **Indistinguishable from zero is not zero.** The 95% range runs to about 1.6 points, and a test of this size would reliably catch an effect only if it were larger than about 1.4. A small real effect is possible.
+- **The line did clearly more than the strength rating.** On the same games, swapping the rating for the spread lowers the estimate by about 1.3 points (1.0 to 1.5 when we resample the games), even though the two ranges overlap.
+- **The leftover is not the same in every era.** Split into three stretches, it is about zero in 1999-2000 to 2009-10 (−0.1) and 2018-19 to 2025-26 (+0.3), and about 2 points in 2010-11 to 2017-18 (+0.1 to +3.7). One of three stretches landing near 2 is weak evidence on its own, but it is why the same test run on 2011-12 to 2021-22 alone finds about 1 point.
 
-None of this is a betting system. On these games, knowing the tip winner before the line closed would have been worth about half a point of win probability, give or take 0.8, against an average bookmaker margin of 3.8%. And nobody knows the tip winner before the tip.
+None of this is a betting system. Knowing the tip winner before the line closed would have been worth about 0.4 of a point of win probability, give or take 0.6, against an average bookmaker margin of about 3%. And nobody knows the tip winner before the tip.
 
 ## The IOU, and the one jump ball worth winning
 
@@ -131,8 +131,8 @@ Here is the whole accounting, built by adding one control at a time. The order m
 
 - **Who you are.** Good teams have good centers, and good centers win tips. Team strength removes about 3 of the 5 points.
 - **Who is on the floor.** The tip is a roll call for your starting center. Counting who took the tip removes about half a point more.
-- **What the market knew.** On games with betting lines, the pregame price removes most of what the strength rating left behind.
-- **What is left.** About a point, with a range that includes zero. The possession itself adds nothing, because the rules refund it.
+- **What the market knew.** The closing spread removes about two-thirds of what the strength rating and the jumper flags left behind.
+- **What is left.** Under half a point, with a range that includes zero. The possession itself adds nothing, because the rules refund it.
 
 Home court is held fixed in this accounting, because the comparison is home teams that won the tip against home teams that lost it. In the 52.8% headline, home court is worth about a quarter of a point.
 
@@ -146,17 +146,17 @@ The one exception comes later, if the game is still tied after 48 minutes. Nobod
 
 What it shows:
 
-- The tip nets no possessions over a game, and the gap in win rate shrinks from five points to about one as the controls get stricter.
+- The tip nets no possessions over a game, and the gap in win rate shrinks from five points to under one as the controls get stricter.
 - Winning tips is a persistent individual skill, and the usual jumper being absent is a real signal.
 - The overtime tip is worth roughly half a possession.
 
 What it does not:
 
 - It is not an experiment. Every adjusted number is an association, and a small causal effect of one or two points is still possible.
-- The betting lines end in 2021-22 and carry no per-quote timestamps, so they may not be the true closing price.
-- "Usual jumper" is defined after the fact, as whoever jumped most for a team that season. Defining it from earlier games only, as a bettor would have had to, moves the final estimate from 0.9 to about 1.1.
+- The lines are archived closing lines from several sources, and most carry no per-quote timestamp, so some may not be the final price.
+- "Usual jumper" is defined after the fact, as whoever jumped most for a team that season. Defining it from earlier games only, as a bettor would have had to, moves the final estimate from 0.45 to about 0.65.
 - It is not a betting strategy. It says nothing about prices available after the tip.
 
 *How it was measured. Possession-level data covers 36,765 regular-season and playoff games, 1997-98 through 2025-26 (about 7 million possessions). Game winners come from official NBA results. Quarter-by-quarter points come from play-by-play, which differs from the official score, almost always by two points or fewer, in about 15% of games. "Winning the tip" means gaining the game's first possession, which matches the officially recorded jump-ball result in 99.98% of games. Jumpers are the actual jump-ball participants recorded in the league's play-by-play, available for 99.9% of games. "Team strength" is a rating updated after every game and built only from earlier results. Adjusted comparisons use regular-season games since 1999-2000 and carry a margin of about ±1 point. "Regular season" includes play-in games. Quarter-opening rules are in [NBA Rule 6](https://official.nba.com/rule-no-6-putting-ball-in-play-live-dead-ball/).*
 
-*The betting-line test uses 12,937 regular-season games from 2011-12 to 2021-22, each matched to the official date, both teams and both final scores. A few games with implausible prices were set aside. The bookmaker's margin is removed by scaling the two implied probabilities to sum to one. Effects are average changes in home win probability from a logistic model, with 95% ranges robust to unequal variance. A second archive covering 11,221 of the same games had identical prices in 11,205.*
+*The betting-line test uses the closing point spread for 32,394 regular-season games from 1999-2000 to 2025-26 (43 earlier games have none), joined on the official game id. The spread enters the model as the market's expected margin for the home team. Moneylines, from 2006-07 on, have the bookmaker's margin removed by scaling the two implied probabilities to sum to one; a few games with implausible prices were set aside. Effects are average changes in home win probability from a logistic model, with 95% ranges robust to unequal variance.*

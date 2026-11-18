@@ -257,10 +257,8 @@ function placebo(svg, W, { data, a, b, tip }) {
 	return ay + 54;
 }
 
-export const ladderRows = (data, set) => (set === 'odds' ? data.ladderOdds : data.ladderLong);
-
-function ladder(svg, W, { data, a, tip, ladderSet }) {
-	const rows = ladderRows(data, ladderSet);
+function ladder(svg, W, { data, a, tip }) {
+	const rows = data.ladder;
 	const narrow = W < 560;
 	const rowH = narrow ? 82 : 62;
 	const M = { l: 6, r: 10 };
@@ -274,7 +272,7 @@ function ladder(svg, W, { data, a, tip, ladderSet }) {
 	});
 	rows.forEach((row, i) => {
 		const y = top + i * rowH;
-		if (ladderSet === 'odds' && row.key.startsWith('market')) {
+		if (row.key.startsWith('spread')) {
 			h('rect', { x: 0, y: y + 2, width: W, height: rowH - 4, rx: 6, fill: a, 'fill-opacity': 0.1 }, svg);
 		}
 		ticks.forEach((v) => {
@@ -283,13 +281,13 @@ function ladder(svg, W, { data, a, tip, ladderSet }) {
 		const cy = y + (narrow ? 38 : 46);
 		const zeroIn = row.lo <= 0 && row.hi >= 0;
 		h('text', { x: M.l + 2, y: y + 19, class: 't-lbl' }, svg, row.label);
-		const range = `${signed(row.est)}   (${signed(row.lo)} to ${signed(row.hi)})`;
+		const range = `${signed(row.est, 2)}   (${signed(row.lo)} to ${signed(row.hi)})`;
 		if (narrow) h('text', { x: M.l + 2, y: y + 70, class: 't-val' }, svg, range);
 		else h('text', { x: W - M.r - 2, y: y + 19, 'text-anchor': 'end', class: 't-val' }, svg, range);
 		h('line', { x1: X(row.lo), x2: X(row.hi), y1: cy, y2: cy, stroke: a, 'stroke-width': 3, 'stroke-linecap': 'round' }, svg);
 		h('circle', { cx: X(row.est), cy, r: 7, fill: zeroIn ? 'var(--bg-surface)' : a, stroke: a, 'stroke-width': 3 }, svg);
 		const hit = h('rect', { x: 0, y, width: W, height: rowH, class: 'hit' }, svg);
-		tip(hit, `<b>${row.label}</b><br>${row.note}<br>${signed(row.est)} pts (${signed(row.lo)} to ${signed(row.hi)})${zeroIn ? '<br>range includes zero' : ''}`);
+		tip(hit, `<b>${row.label}</b><br>${row.note}<br>${signed(row.est, 2)} pts (${signed(row.lo)} to ${signed(row.hi)})${zeroIn ? '<br>range includes zero' : ''}`);
 	});
 	return H;
 }
@@ -363,26 +361,14 @@ function iou(svg, W, { data, a, b, tip }) {
 	return H;
 }
 
-// How much of the raw gap each added control removes, for both sets of games.
+// How much of the raw gap each added control removes, on the games with a closing spread.
 export function ledgerRows(data) {
-	const est = (rows, key) => rows.find((row) => row.key === key).est;
-	const L = data.ladderLong;
-	const O = data.ladderOdds;
+	const est = (key) => data.ladder.find((row) => row.key === key).est;
 	return [
 		{
-			label: 'All regular-season games since 1999-2000',
-			raw: est(L, 'raw'),
-			parts: [est(L, 'raw') - est(L, 'strength'), est(L, 'strength') - est(L, 'flags'), 0, est(L, 'flags')]
-		},
-		{
-			label: 'Games with betting lines, 2011-12 to 2021-22',
-			raw: est(O, 'raw'),
-			parts: [
-				est(O, 'raw') - est(O, 'strength'),
-				est(O, 'strength') - est(O, 'strength_flags'),
-				est(O, 'strength_flags') - est(O, 'market_flags'),
-				est(O, 'market_flags')
-			]
+			label: 'Regular season, 1999-2000 to 2025-26',
+			raw: est('raw'),
+			parts: [est('raw') - est('strength'), est('strength') - est('strength_flags'), est('strength_flags') - est('spread_flags'), est('spread_flags')]
 		}
 	];
 }
@@ -406,7 +392,7 @@ function ledger(svg, W, { data, a, b, c, tip }) {
 			if (!part) return;
 			const w = X(part);
 			const seg = h('rect', { x: x + (k ? 1 : 0), y: y + 26, width: Math.max(0, w - (k ? 2 : 1)), height: 18, rx: 3, fill: colors[k] }, svg);
-			if (w > 30) h('text', { x: x + w / 2, y: y + 60, 'text-anchor': 'middle', class: 't-val' }, svg, f1(part));
+			if (w > 34) h('text', { x: x + w / 2, y: y + 60, 'text-anchor': 'middle', class: 't-val' }, svg, f1(part, 2));
 			tip(seg, `<b>${LEDGER_PARTS[k]}</b><br>${f1(part, 2)} of ${f1(row.raw, 2)} points`);
 			x += w;
 		});

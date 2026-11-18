@@ -7,7 +7,7 @@ export const RESEARCH_POSTS = [
 		date: '2026-11-17',
 		dateLabel: 'November 17, 2026',
 		summary:
-			'Teams that win the opening tip win 52.8% of their games. The rules refund the possession, the tip mostly measures who is playing, and the betting line leaves about one point. The one jump ball worth winning comes in overtime.'
+			'Teams that win the opening tip win 52.8% of their games. The rules refund the possession, the tip mostly measures who is playing, and the closing spread leaves about half a point. The one jump ball worth winning comes in overtime.'
 	},
 	{
 		slug: 'early-season-strength-of-schedule',

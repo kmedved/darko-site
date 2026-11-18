@@ -51,16 +51,14 @@
 		ladder: {
 			title: 'The incredible shrinking edge',
 			sub: "Home team's win rate after winning the tip minus after losing it, in points. Dot = estimate, line = 95% range",
-			captions: {
-				long: 'Each row adds a stricter way of accounting for who is playing. What is left, about a point and a half give or take a point, is small but real in this sample, and it is the part the betting line goes after.',
-				odds: 'All five rows use the same 12,937 games. Hollow dots have a range that includes zero, so the leftover edge cannot be told apart from no edge at all. It does not rule out an edge of up to about two and a half points.'
-			}
+			caption:
+				'All six rows use the same 32,394 regular-season games, 1999-2000 to 2025-26. Hollow dots have a range that includes zero, so the leftover edge cannot be told apart from no edge at all. It does not rule out an edge of up to about a point and a half.'
 		},
 		priced: {
 			title: 'What the market already knew',
-			sub: "Tip winners' win probability, 12,937 games with betting lines",
+			sub: "Tip winners' win probability, 23,778 games with moneylines, 2006-07 to 2025-26",
 			caption:
-				'The market priced in 2.6 of the 3.1 points that tip winners won above a coin flip. The leftover half point has a 95% range of −0.3 to +1.3. In the home-team framing used above, the same gap reads as about 1 point.'
+				'The market priced in 2.4 of the 2.8 points that tip winners won above a coin flip. The leftover 0.4 of a point has a 95% range of −0.2 to +1.0.'
 		},
 		iou: {
 			title: 'The IOU',
@@ -77,10 +75,10 @@
 
 	const title = 'The Jump Ball Illusion';
 	const deck =
-		'Teams that win the opening tip win 52.8% of their games. Almost all of that is who is playing. Count the pregame betting line and what is left is about one point, too small to tell apart from zero.';
+		'Teams that win the opening tip win 52.8% of their games. Almost all of that is who is playing. Count the closing point spread and what is left is about half a point, too small to tell apart from zero.';
 	const facts = [
 		{ value: '<0.01', label: 'possessions the tip winner nets per game' },
-		{ value: '1.1', label: 'points left of a 5.8-point gap after the betting line' },
+		{ value: '0.65', label: 'points left of a 4.9-point gap after the closing spread' },
 		{ value: '55.7%', label: 'of games won by the overtime tip winner' }
 	];
 	const toc = [
