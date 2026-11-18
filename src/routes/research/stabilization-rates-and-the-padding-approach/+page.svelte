@@ -32,7 +32,7 @@
 	const robinsonPresets = [
 		{ value: 0, label: 'No padding' },
 		{ value: 240, label: '240 (2020 post)' },
-		{ value: 260, label: '260 (updated)' },
+		{ value: 263, label: '263 (updated)' },
 		{ value: 1000, label: '1,000' }
 	];
 </script>

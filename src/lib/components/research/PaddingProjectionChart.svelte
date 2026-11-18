@@ -74,7 +74,7 @@
 	<div class="pad-controls">
 		<label>
 			<span>Padding</span>
-			<input type="range" min="0" max="1000" step="10" bind:value={padding} aria-valuetext="{padding} attempts" />
+			<input type="range" min="0" max="1000" step="1" bind:value={padding} aria-valuetext="{padding} attempts" />
 			<strong>{padding} attempts</strong>
 		</label>
 		{#if presets.length}
