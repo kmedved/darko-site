@@ -4,8 +4,6 @@ Every so often someone notices that the team that wins the opening tip tends to 
 
 If the tip really caused that, it would be a big deal. I don't think it does. The short answer is that the possession you win is given right back by the rules, and the 52.8% is mostly about who is playing. Good teams tend to have good centers, and good centers tend to win tips. Once you account for the closing point spread, about half a point is left, which is too small to tell apart from zero. The one jump ball that does seem to matter is the one at the start of overtime.
 
-The edge also isn't the same every year, which is the first hint that it isn't a fixed prize for winning the tip.
-
 <!-- interactive:seasons -->
 
 ## What the tip actually wins
