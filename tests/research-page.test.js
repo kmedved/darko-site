@@ -20,6 +20,21 @@ test('every research post has a route, Markdown and existing figures', async () 
 	}
 });
 
+test('research data and chart code stay free of Elo and em-dashes', async () => {
+	const dirs = ['src/lib/content/research', 'src/lib/components/research'];
+	for (const dir of dirs) {
+		for (const name of await fs.readdir(path.resolve(process.cwd(), dir))) {
+			if (!/\.(json|svelte)$/.test(name)) continue;
+			const text = await read(`${dir}/${name}`);
+			assert.doesNotMatch(text, /\bElo\b/, name);
+			assert.doesNotMatch(text, /—/, name);
+		}
+	}
+	const charts = await read('src/lib/utils/jumpBallCharts.js');
+	assert.doesNotMatch(charts, /\bElo\b/);
+	assert.doesNotMatch(charts, /—/);
+});
+
 test('the research table of contents points at real headings', async () => {
 	const { renderArticleMarkdown } = await import('../src/lib/utils/renderArticleMarkdown.js');
 	for (const post of RESEARCH_POSTS) {

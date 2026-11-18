@@ -2,6 +2,14 @@
 // src/routes/research/<slug>/ and its Markdown in src/lib/content/research/<slug>.md.
 export const RESEARCH_POSTS = [
 	{
+		slug: 'the-jump-ball-illusion',
+		title: 'The Jump Ball Illusion',
+		date: '2026-11-17',
+		dateLabel: 'November 17, 2026',
+		summary:
+			'Teams that win the opening tip win 52.8% of their games. The rules refund the possession, the tip mostly measures who is playing, and the closing spread leaves about half a point. The one jump ball worth winning comes in overtime.'
+	},
+	{
 		slug: 'early-season-strength-of-schedule',
 		title: 'In November, strength of schedule has stopped helping',
 		date: '2026-11-17',
