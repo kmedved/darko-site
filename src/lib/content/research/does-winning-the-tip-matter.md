@@ -1,38 +1,38 @@
 ## The five-point gap
 
-Every so often someone notices that the team that wins the opening tip tends to win the game, and asks whether the tip matters. It's a fair question. Across 29 seasons of possession-by-possession data, 1997-98 through 2025-26, the team that wins the opening tip goes on to win **52.8%** of its games. Put it in terms of the home team, and the gap looks even bigger: when the home team wins the tip it wins **61.4%** of its games, and when it loses the tip that falls to **56.3%**. That's a five-point swing on a two-second toss between two centers.
+One of the things NBA fans and analysts notice every so often is that the team that wins the opening tip seems to win the game more often than not, e.g., "tip winners have won 52.8% of their games since 1997-98: is the tip actually 'worth' something, or is this just noise?" (That 52.8% is from 29 seasons of possession-by-possession data, 1997-98 through 2025-26.) Note that it looks even better if you split it by the home team. When the home team wins the tip it goes on to win 61.4% of its games, and when it loses the tip that falls to 56.3%, i.e., a five-point swing from a two-second toss between two centers, which (if real) would make the jump ball one of the most valuable plays in basketball.
 
-If the tip really caused that, it would be a big deal. I don't think it does. The short answer is that the possession you win is given right back by the rules, and the 52.8% is mostly about who is playing. Good teams tend to have good centers, and good centers tend to win tips. Once you account for the closing point spread, about half a point is left. The one jump ball that does seem to matter is the one at the start of overtime.
+I don't think it's real. In short, the possession you win is handed right back by the rules, and the 52.8% is mostly telling us who is playing: good teams tend to have good centers, and good centers tend to win tips. Once we account for the closing point spread, about half a point is left. The one jump ball that does seem to matter is the one at the start of overtime (more on that below).
 
 <!-- interactive:seasons -->
 
 ## What the tip actually wins
 
-Start with what the tip buys you, because the answer is almost nothing.
+Let's start with what the tip actually buys you, because the answer is almost nothing.
 
-The NBA's rules even out the jump ball. The team that loses the tip gets the first possession of the second *and* third quarters, and the tip winner opens the first and fourth. Add it up, and on average the tip winner finishes a game with **no extra possessions**: the gap is under one hundredth of a possession. In 37% of games the counts come out exactly even, and in virtually every game they are within two.
+The NBA's rules more or less cancel the jump ball out. The team that loses the opening tip gets the first possession of the second *and* third quarters, while the tip winner gets the ball to open the first and fourth. Add that up, and on average the tip winner finishes a game with no extra possessions at all (the gap is under one hundredth of a possession). In 37% of games the two teams end up with exactly the same number of possessions, and in virtually every game they are within two.
 
-You can see that accounting quarter by quarter. The tip winner gets about half an extra possession in the first quarter and half an extra in the fourth, and gives back half in each of the second and third. The scoreboard follows: tip winners outscore their opponents in the first and fourth quarters and get outscored in the second and third. That's just the rulebook, not momentum or effort.
+You can see this accounting quarter by quarter. The tip winner gets about half an extra possession in the first quarter and another half in the fourth, and gives back half in each of the second and third. The scoreboard follows along, i.e., tip winners outscore their opponents in the first and fourth quarters and get outscored in the second and third. Note that this is just the rulebook at work, and has nothing to do with 'momentum' or effort.
 
 <!-- interactive:quarters -->
 
-The possession itself isn't much of a prize either. The opening possession of the game scores **0.97 points** on average, against **1.08** for all possessions. Every quarter-opening possession is below average (about 0.99), probably because the defense is set and there's no transition to run, and the game's first possession is the weakest of the four. So the tip winner gets a below-average possession, and has to give one back by halftime.
+The possession itself isn't much of a prize either. The opening possession of a game is worth 0.97 points on average, against 1.08 for all possessions. For context, every quarter-opening possession is below average (about 0.99), presumably because the defense is set and there's no transition to run, and the game's very first possession is the weakest of the four. So the tip winner gets a below-average possession, and then has to give one back by halftime.
 
-So the tip itself is worth roughly nothing. Then why do tip winners win 52.8% of the time?
+So the tip itself is worth roughly nothing. Why, then, do tip winners win 52.8% of the time?
 
 ## Winning tips is a skill
 
 The first clue is that winning tips isn't a coin flip.
 
-If jump balls were pure luck, almost every team's season-long tip rate would land between 39% and 61%. The actual range runs from **17% to 84%**. The 2002-03 and 2003-04 Cavaliers, jumping 7'3" Žydrūnas Ilgauskas, won 84% of their tips two years running. The 2009-10 and 2010-11 Rockets, with Yao Ming hurt, mostly sent 6'9" power forward Luis Scola out to jump and won 17% two years running. Split any season into alternating games and the two halves' tip rates track each other (a correlation of 0.64, against 0.80 for win rates). The 2001-02 Heat, with Alonzo Mourning jumping nearly every night, once won **26 tips in a row**, and Shaq's 2000-01 Lakers ran off 23 straight.
+If jump balls were pure luck, almost every team's season-long tip rate would land somewhere between 39% and 61%. The actual range runs from 17% to 84%. The 2002-03 and 2003-04 Cavaliers, with 7'3" Žydrūnas Ilgauskas jumping, won 84% of their tips two years running. On the other side, the 2009-10 and 2010-11 Rockets, with Yao Ming hurt, mostly sent 6'9" power forward Luis Scola out to jump, and won 17% two years running. If you split any season into alternating games, the two halves' tip rates track each other closely (a correlation of 0.64, against 0.80 for win rates). The 2001-02 Heat, with Alonzo Mourning jumping nearly every night, once won 26 tips in a row, and Shaq's 2000-01 Lakers ran off 23 straight.
 
-The skill belongs to one player, not the roster. About seven in eight opening jumps are taken by a center or a center/forward, and the average jumper stands a shade over 6'11". Unsurprisingly, height helps.
+Note that this skill belongs to one player and not the roster. About seven in eight opening jumps are taken by a center or a center/forward, and the average jumper stands a shade over 6'11". As you'd expect, height helps.
 
 <!-- interactive:height -->
 
-But height is only part of it. Timing and leaping matter too, and jumpers are very consistent, e.g., a jumper's tip rate in one season has a correlation of 0.74 with his rate the next. Put in the terms of the [padding post](/research/stabilization-rates-and-the-padding-approach), tip rate needs only about 16 jumps of padding, meaning that after 16 opening tips a jumper's own record already counts for half of our estimate of him. (For comparison, three-point percentage needs about 260 attempts.)
+But height is only part of it. Timing and leaping matter too, and jumpers are very consistent, e.g., a jumper's tip rate in one season has a correlation of 0.74 with his rate the next. Put in the terms of the [padding post](/research/stabilization-rates-and-the-padding-approach), tip rate needs only about 16 jumps of padding, meaning that after 16 opening tips a jumper's own record already counts for half of our estimate of him. (For context, three-point percentage needs about 260 attempts.)
 
-Padding also means we don't need a minimum number of jumps to keep the guy who is 3-for-3 off the top of the list. Add 16 jumps at 50% to every player's record, and these are the best and worst jumpers since 1997-98:
+Padding also means we don't need a minimum number of jumps to keep the guy who is 3-for-3 off the top of the list. If we add 16 jumps at 50% to every player's record, these are the best and worst jumpers since 1997-98:
 
 | Best jumpers | Tips won | Padded |
 | :--- | ---: | ---: |
@@ -52,73 +52,73 @@ Padding also means we don't need a minimum number of jumps to keep the guy who i
 
 *Opening jump balls, 1997-98 through 2025-26, from the league's play-by-play record of who actually jumped. "Padded" is the share won after adding 16 jumps at 50% to each player's record.*
 
-Victor Wembanyama has taken only 192 opening tips, but he has won 77% of them, and even after padding he comes out narrowly ahead of Andre Drummond (it's close, and Drummond has done it over 702 jumps). The worst list is all forwards, e.g., Luis Scola, who jumped for those Rockets teams while Yao was hurt. Among regulars, the worst is Domantas Sabonis, who has won 29% of his 327 jumps, the lowest rate of anyone with 300 or more. His father, Arvydas, is third on the best list. (Apparently this is not hereditary.)
+Victor Wembanyama has only taken 192 opening tips, but he has won 77% of them, and even after padding he comes out narrowly ahead of Andre Drummond (it's close, and Drummond has done it over 702 jumps). The worst list is all forwards, e.g., Luis Scola, who jumped for those Rockets teams while Yao was hurt. Among regulars, the worst is Domantas Sabonis, who has won 29% of his 327 jumps, the lowest rate of anyone with 300 or more. His father, Arvydas, is third on the best list. (Apparently this is not hereditary.)
 
 <!-- interactive:jumpers -->
 
 The most stunning name in the data, though, is Yao Ming. Yao was 7'6", and on average he was almost seven inches taller than the man jumping against him. The other players 7'3" or taller in the data won 69% of their opening tips between them. Yao won 41%, i.e., he lost more tips than he won, and about 100 more than his height alone would predict. In 2003-04 Yao started all 82 games, and in the 67 where 6'11" Kelvin Cato started next to him, it was Cato who took the opening tip 61 times (he won 54% of them). The year before, Yao and Eddie Griffin started together 56 times, and Griffin took the tip in 29 of those. I don't know why, but the obvious guess is that the Rockets had noticed the same thing.
 
-On the other end, Ben Wallace won 61% of his tips at 6'9", and Andre Drummond has won about 23 points more of his than his height predicts, the biggest gap of anyone after padding. Nikola Jokić, maybe the best center of his generation, is a coin flip at 51.5%.
+On the other side, Ben Wallace won 61% of his tips at 6'9", and Andre Drummond has won about 23 points more of his than his height predicts, which is the biggest gap of anyone after padding. Nikola Jokić, maybe the best center of his generation, is a coin flip at 51.5%.
 
-The skill does pay off in one visible way, which is who scores first. The tip winner scores the game's first points (free throws included) 65% of the time, which is almost exactly what you'd expect from simply going first (about 46% of opening possessions score, so the other team gets its turn a little over half the time). Because the tip is fairly predictable, so is this, e.g., when one jumper came into a game with a padded tip rate at least 20 points better than the other's, his team scored first 60% of the time, and Wembanyama's Spurs have scored first in 59% of the games where he took the tip. Sportsbooks take bets on who scores first. I haven't checked what those bets pay, so this isn't a betting system, but if that's the bet you're making, the tip matters quite a bit.
+Note that this skill does pay off in one visible way, which is who scores first. The tip winner scores the game's first points (free throws included) 65% of the time, which is almost exactly what you'd expect from simply going first (about 46% of opening possessions score, so the other team gets its turn a little over half the time). Because the tip is fairly predictable, so is this, e.g., when one jumper came into a game with a padded tip rate at least 20 points better than the other's, his team scored first 60% of the time, and Wembanyama's Spurs have scored first in 59% of the games where he took the tip. Sportsbooks take bets on who scores first. I haven't checked what those bets pay, so this isn't a betting system, but if that's the bet you're making, the tip matters quite a bit.
 
 The key point for everything that follows is that being good at tips and being good at basketball are different skills, but they tend to show up in the same kinds of players.
 
 ## Good teams win more tips
 
-Better teams do win more tips. Across 863 team-seasons the relationship between tip rate and win rate is clear but loose, because good teams tend to have good centers, and good centers tend to be big and athletic. An extra 10 points of tip rate goes with about 3 extra wins per 82 games. That's a correlation, not a cause, and the exceptions make that pretty obvious.
+Better teams do win more tips. Across 863 team-seasons, the relationship between tip rate and win rate is clear but fairly loose, since good teams tend to have good centers, and good centers tend to be big and athletic. An extra 10 points of tip rate goes with about 3 extra wins per 82 games. That's a correlation and nothing more, which the exceptions make pretty obvious.
 
 <!-- interactive:scatter -->
 
-A cleaner check is to look at a jump ball from a different game. If the tip helps you win tonight, then tonight's tip should predict tonight's result, and a tip in some *other* game shouldn't. But it does. Regular-season teams that go on to win the tip in their **next** game, a jump ball that hasn't happened yet, win tonight 51.3% of the time, against 48.8% for teams about to lose it.
+A cleaner way to check this is to look at a jump ball from a *different* game. If the tip helps you win tonight, then tonight's tip should predict tonight's result, and a tip from some other game shouldn't. But it does. Regular-season teams that go on to win the tip in their *next* game (i.e., a jump ball that hasn't happened yet) win tonight 51.3% of the time, against 48.8% for teams that are about to lose it.
 
 <!-- interactive:placebo -->
 
-You can also come at it from the other side. Compare only games between the same two teams, in the same building, in the same season, where the tip went one way in some games and the other way in others, and the five-point gap shrinks to about **2.3 points**. Rate every team's strength using only its earlier results, then compare tip winners to tip losers of equal strength, and about **1.9 points** survive. So roughly three of the five points go away once you account for who is playing whom. (The full set of comparisons, including the betting line, is further down.)
+You can also come at this from the other direction. If we only compare games between the same two teams, in the same building, in the same season, where the tip went one way in some games and the other way in others, the five-point gap shrinks to about 2.3 points. And if we rate every team's strength using only its earlier results, and then compare tip winners to tip losers of equal strength, about 1.9 points survive. So roughly three of the five points go away once we account for who is playing whom. (The full set of comparisons, including the betting line, is further down.)
 
 ## Who takes the tip
 
-Is the last couple of points the tip's real effect? Mostly not, because the tip also tells you something a season-long rating can't: **who actually takes the tip tonight**.
+So is the last couple of points the 'real' effect of the tip? Mostly not, because the tip also tells us something a season-long rating can't, which is who actually took the tip tonight.
 
-The opening tip is usually taken by the starting center, who is usually one of the team's best players. When he doesn't take it (hurt, resting, traded, or swapped out for the matchup), two things happen at once: the team's tip rate falls, and the team gets worse. Take the 573 team-seasons where a team's usual jumper took at least 20 opening tips and didn't take at least 10 others. In the games he didn't jump, the team won **7.4 points fewer tips** and **4.0 points fewer games**. So winning the tip is partly a sign that your best big man is on the floor.
+The opening tip is usually taken by the starting center, who is usually one of the team's best players. When he doesn't take it (because he's hurt, resting, traded, or swapped out for the matchup), two things happen at once: the team's tip rate falls, and the team gets worse. To take the 573 team-seasons where a team's usual jumper took at least 20 opening tips and didn't take at least 10 others, in the games he didn't jump the team won 7.4 points fewer tips and 4.0 points fewer games. In other words, winning the tip is partly just a sign that your best big man is on the floor.
 
-Add that one fact, whether the usual jumper took the tip, to the strength-adjusted comparison, and the leftover edge drops from 1.9 points to about **1.4**. It's a crude flag. It knows nothing about the other four starters, minute limits or back-to-backs, which all tend to go along with center absences. A sharper cut makes the point. In games where both teams' usual jumpers took the tip, the leftover edge is about **1 point**. In games where at least one usual jumper was missing, it's about **3 points**. (Both figures adjust for team strength.)
+If we add that one fact (whether the usual jumper took the tip) to the strength-adjusted comparison, the leftover edge drops from 1.9 points to about 1.4. Note that this is a pretty crude flag. It knows nothing about the other four starters, minute limits or back-to-backs, all of which tend to go along with a center sitting out. A sharper cut makes the same point: in games where both teams' usual jumpers took the tip, the leftover edge is about 1 point, and in games where at least one of them was missing, it's about 3 points. (Both figures adjust for team strength.)
 
-The playoffs point the same way. In the postseason, when everyone who can play does, tip winners win 51.8%, a bit less than in the regular season.
+The playoffs point the same way. In the postseason, when everyone who can play does, tip winners win 51.8% of the time, a bit less than in the regular season.
 
-Home court shows up too. Home teams win **51.4%** of opening tips, and it isn't about personnel, because the *same jumper* wins about 3 points more of his jumps at home than on the road. Whatever home court is made of (sleep, familiarity, crowd), some of it shows up even here. It's a small piece, worth about a quarter of a point of the headline number.
+Home court shows up here too. Home teams win 51.4% of opening tips, and this isn't about personnel, since the *same jumper* wins about 3 points more of his jumps at home than on the road. Whatever home court advantage is made of (sleep, familiarity, the crowd), some of it apparently shows up even here. It's a small piece though, worth about a quarter of a point of the headline number.
 
 ## Controlling for the betting line
 
-A strength rating only knows results. Bookmakers know more: by tip-off their price reflects injuries, rest, back-to-backs and how a matchup is likely to go. If the leftover edge is hidden team quality, the betting line should absorb it.
+A strength rating only knows results. Bookmakers know a lot more than that, i.e., by tip-off their price reflects injuries, rest, back-to-backs and how a matchup is likely to go. So if the leftover edge is really just hidden team quality, the betting line should soak it up.
 
-So I took the closing point spread for **32,394** regular-season games, every one since 1999-2000 that has a line on record, and ran the same comparison on exactly the same games. The last two rows of the chart are new: the spread on its own, and the spread plus the usual-jumper flags.
+To check this, I took the closing point spread for 32,394 regular-season games (every one since 1999-2000 that has a line on record), and ran the same comparison on exactly the same games. The last two rows of the chart below are the new ones: the spread on its own, and the spread plus the usual-jumper flags.
 
 <!-- interactive:ladder -->
 
-The line does what the strength rating couldn't. The raw gap is **4.9 points**. The strength rating takes it to 1.9, the rating plus the jumper flags to 1.4, and the closing spread to **0.65**. Add the jumper flags to the spread and it's **0.45**. The answer barely moved when I let the link between spread and winning bend and added season effects, kept the strength rating in alongside the spread, or built the jumper flags from earlier games only. Every variant landed between 0.59 and 0.67. Moneylines tell the same story: 0.74 on 23,778 games. (I only have moneylines from 2006-07 on.)
+As you can see, the line does what the strength rating couldn't. The raw gap is 4.9 points. The strength rating takes it down to 1.9, the rating plus the jumper flags to 1.4, and the closing spread to 0.65. Add the jumper flags to the spread and we're at 0.45. Note that the answer barely moved when I let the link between the spread and winning bend and added season effects, kept the strength rating in alongside the spread, or built the jumper flags from earlier games only (every variant landed between 0.59 and 0.67). Moneylines tell the same story, at 0.74 on 23,778 games. (I only have moneylines from 2006-07 on.)
 
 <!-- interactive:priced -->
 
-To put that in plainer terms: in the games with moneylines, the teams that won the tip won 52.8% of the time. Before the game, the betting market had already rated those same teams at 52.4%. So the market had priced in almost nine-tenths of the edge, and what was left was 0.4 of a point.
+To put this in plainer terms: in the games with moneylines, the teams that won the tip went on to win 52.8% of the time. Before the game, the betting market had already rated those same teams at 52.4%. Meaning the market had already priced in almost nine-tenths of the edge, and what was left was 0.4 of a point.
 
-The line even knows about the tip. Bookmakers don't price the jump ball, yet the spread predicts which team wins it, and once you have the spread, the strength rating adds nothing. To me that's the clearest sign that the tip is picking up things the market already knew: lineups, health and who is likely to jump. The usual-jumper split from the last section shrinks too. With the spread in, games where both usual jumpers took the tip show 0.1 points, and games with at least one missing show 1.3.
+Interestingly, the line even 'knows' about the tip. Bookmakers don't price the jump ball, and yet the spread predicts which team wins it, and once you have the spread, the strength rating adds nothing. To me that's the clearest sign that the tip is picking up things the market already knew about, e.g., lineups, health and who is likely to jump. The usual-jumper split from the last section shrinks too: with the spread in, games where both usual jumpers took the tip show 0.1 points, and games with at least one missing show 1.3.
 
 The line also clearly beats the strength rating. On the same games, swapping the rating for the spread lowers the estimate by about 1.3 points.
 
-None of this is a betting system. Knowing the tip winner before the line closed would have been worth about 0.4 of a point of win probability, against an average bookmaker margin of about 3%. And nobody knows the tip winner before the tip.
+To be clear, none of this is a betting system. Knowing the tip winner before the line closed would have been worth about 0.4 of a point of win probability, against an average bookmaker margin of about 3%. And of course nobody knows the tip winner before the tip.
 
 ## Close games and overtime
 
-There is one place where the tip looks like it matters. In games that are close entering the fourth quarter (within three points, about a fifth of all games), the team that won the opening tip wins **54.1%** of the time. The obvious explanation is that the tip winner gets the first possession of the fourth quarter, right when games are decided.
+There is one place where the tip looks like it matters. In games that are close entering the fourth quarter (within three points, which is about a fifth of all games), the team that won the opening tip wins 54.1% of the time. The obvious explanation is that the tip winner gets the first possession of the fourth quarter, right when games are being decided.
 
-But that's not what's happening. By the end of the third quarter the tip winner has had half a possession *fewer* than its opponent, since it has opened one quarter and its opponent has opened two. Half a possession is worth about half a point (opening a period is worth about +0.46 points). So a game that's tied after three quarters isn't really even: the tip winner has kept pace while short half a possession, and the fourth-quarter possession just evens it out.
+But that's not actually what's going on. By the end of the third quarter the tip winner has had half a possession *fewer* than its opponent, since it has opened one quarter and its opponent has opened two. Half a possession is worth about half a point (opening a period is worth about +0.46 points). So a game that's tied after three quarters isn't really even, i.e., the tip winner has kept pace while being short half a possession, and the fourth-quarter possession just evens things out.
 
 <!-- interactive:iou -->
 
-Over the full 48 minutes the possessions balance to within a hundredth, which is why none of this adds anything to the 52.8%. It does make for some decent trivia, though. If the score is tied heading into the fourth, the team that won the opening tip is effectively about half a point ahead. In the roughly 1,200 games that were dead even after three quarters, it went on to win 51.5%, which is too few games to say much more.
+Over the full 48 minutes the possessions balance to within a hundredth, which is why none of this adds anything to the 52.8%. It does make for some decent trivia though: if the score is tied heading into the fourth, the team that won the opening tip is effectively about half a point ahead. In the roughly 1,200 games that were dead even after three quarters, it went on to win 51.5% (which isn't enough games to say much more than that).
 
-Overtime is different, because it starts with a *new* jump ball, and this time nobody gets the possession back. The period just ends. The team that wins the overtime tip ends up with about half a possession more than its opponent (**0.48** on average) in what starts as a tied game, and wins **55.7%** of the time (56.9% when there's only one overtime). Half a point is a lot in a period usually decided by four or five. By itself it's worth three or four points of win probability, so between half and two-thirds of that edge is real, mechanical value. A sliver of the rest is the same story as the opening tip, since the favorite wins the overtime tip 53% of the time.
+Overtime is different, because it starts with a *new* jump ball, and this time nobody gets the possession back. The period just ends. The team that wins the overtime tip ends up with about half a possession more than its opponent (0.48 on average) in what starts as a tied game, and wins 55.7% of the time (56.9% when there's only one overtime). For context, half a point is a lot in a period that's usually decided by four or five. By itself it's worth three or four points of win probability, so somewhere between half and two-thirds of that edge is real, mechanical value. A sliver of the rest is the same story as the opening tip, since the favorite wins the overtime tip 53% of the time.
 
 | | Opening tip | Overtime tip |
 | :--- | ---: | ---: |
@@ -126,37 +126,25 @@ Overtime is different, because it starts with a *new* jump ball, and this time n
 | Won by the tip winner | 52.8% | 55.7% |
 | Possessions gained | about 0, given back by rule | +0.48, never given back |
 
-This is a different jump ball. The team that won the opening tip wins the overtime tip only 54% of the time, and only 6% of games get that far, so overtime explains essentially none of the opening-tip gap (a few hundredths of a percentage point). It's the one jump ball all night that is worth winning.
+Note that this is a different jump ball from the opening one. The team that won the opening tip wins the overtime tip only 54% of the time, and only 6% of games get that far, so overtime explains essentially none of the opening-tip gap (a few hundredths of a percentage point). It is, however, the one jump ball all night that's actually worth winning.
 
 ## Where the five points go
 
-Here is the whole accounting, built by adding one control at a time. The order matters, so these bars aren't shares of causes. They show how much of the gap each added control removes.
+With all of that out of the way, here is the whole accounting, built by adding one control at a time. Note that the order matters here, so these bars aren't shares of 'causes'. They just show how much of the gap each added control removes.
 
 <!-- interactive:ledger -->
 
-- **Who you are.** Good teams have good centers, and good centers win tips. Team strength removes about 3 of the 5 points.
-- **Who is on the floor.** The tip is usually taken by your starting center. Counting who took the tip removes about half a point more.
-- **What the market knew.** The closing spread removes about two-thirds of what the strength rating and the jumper flags left behind.
-- **What is left.** Under half a point. The possession itself adds nothing, because the rules give it back.
+About 3 of the 5 points are simply who you are: good teams have good centers, and good centers win tips, so controlling for team strength removes them. About half a point more is who is on the floor, since the tip is usually taken by your starting center, and counting who actually took it removes that. The closing spread then removes about two-thirds of what the strength rating and the jumper flags left behind. What's left is under half a point, and the possession itself adds nothing, because the rules give it back.
 
-Home court is held fixed in this accounting, because the comparison is home teams that won the tip against home teams that lost it. In the 52.8% headline, home court is worth about a quarter of a point.
+(Home court is held fixed in this accounting, since the comparison is between home teams that won the tip and home teams that lost it. In the 52.8% headline, home court is worth about a quarter of a point.)
 
-So I wouldn't read "tip winners win 52.8%" as "the tip is worth 2.8 points of win probability." The tip tells you about the roster, the center's health and home court, and as far as I can tell from the possession math, it adds nothing measurable to the next 48 minutes. Teams that win tips were mostly going to win anyway. The one exception is the tip at the start of overtime.
+So I wouldn't read "tip winners win 52.8% of the time" as "the tip is worth 2.8 points of win probability". The tip tells us about the roster, the center's health and home court, and as far as I can tell from the possession math, it adds nothing measurable to the next 48 minutes. Teams that win tips were mostly going to win anyway. The one exception is the tip at the start of overtime.
 
 ## What this does and does not show
 
-What it shows:
+In short: the tip nets no possessions over a game, the gap in win rate shrinks from five points to under one as the controls get stricter, winning tips is a persistent individual skill (and the usual jumper being absent is a real signal), and the overtime tip is worth roughly half a possession.
 
-- The tip nets no possessions over a game, and the gap in win rate shrinks from five points to under one as the controls get stricter.
-- Winning tips is a persistent individual skill, and the usual jumper being absent is a real signal.
-- The overtime tip is worth roughly half a possession.
-
-What it doesn't:
-
-- It isn't an experiment. Every adjusted number is an association, and a small causal effect of one or two points is still possible.
-- The lines are archived closing lines from several sources, and most carry no per-quote timestamp, so some may not be the final price.
-- "Usual jumper" is defined after the fact, as whoever jumped most for a team that season. Defining it from earlier games only, as a bettor would have had to, moves the final estimate from 0.45 to about 0.65.
-- It isn't a betting strategy. It says nothing about prices available after the tip.
+There are of course limits to this analysis. Most notably, it isn't an experiment. Every adjusted number here is an association, and a small causal effect of one or two points is still possible. The betting lines are archived closing lines from several sources, and most carry no per-quote timestamp, so some of them may not be the final price. "Usual jumper" is defined after the fact, as whoever jumped most for a team that season, and defining it from earlier games only (as a bettor would have had to) moves the final estimate from 0.45 to about 0.65. And again, this isn't a betting strategy. It says nothing about prices available after the tip.
 
 *How it was measured: possession-level data covers 36,765 regular-season and playoff games, 1997-98 through 2025-26 (about 7 million possessions). Game winners come from official NBA results. Quarter-by-quarter points come from play-by-play, which differs from the official score, almost always by two points or fewer, in about 15% of games. "Winning the tip" means gaining the game's first possession, which matches the officially recorded jump-ball result in 99.98% of games. Jumpers are the actual jump-ball participants recorded in the league's play-by-play, available for 99.9% of games. Padded tip rates add 16 jumps at 50% to each player's record. Sixteen is the amount that best predicts the rest of a jumper's season, fit the same way as in the padding post; predicting the rest of a career takes more (about 44), and at that amount Drummond and Wembanyama are level. "What height alone predicts" comes from a model of who wins a jump given the height gap between the two jumpers and which of them is at home. "Team strength" is a rating updated after every game and built only from earlier results. Adjusted comparisons use regular-season games since 1999-2000. "Regular season" includes play-in games. Quarter-opening rules are in [NBA Rule 6](https://official.nba.com/rule-no-6-putting-ball-in-play-live-dead-ball/).*
 
