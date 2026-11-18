@@ -30,7 +30,7 @@ The skill belongs to one player, not the roster. About seven in eight opening ju
 
 <!-- interactive:height -->
 
-But height is only part of it. Timing and leaping matter too, and individual jumpers are consistent from year to year (a correlation of 0.74 between one season and the next). Shawn Bradley and Yao Ming both stood 7'6", but Bradley won nearly two-thirds of his jumps and Yao won 41%. Ben Wallace, at 6'9", won 61%. Nikola Jokić, maybe the best center of his generation, is a coin flip at 51.5%.
+But height is only part of it. Timing and leaping matter too, and individual jumpers are consistent from year to year (a correlation of 0.74 between one season and the next). The most stunning case is Yao Ming. He stood 7'6", seven inches taller than the average jumper, and he won only **41%** of his opening tips. He lost more jumps than he won. (Shawn Bradley, also 7'6", won nearly two-thirds of his.) Ben Wallace, at 6'9", won 61%. Nikola Jokić, maybe the best center of his generation, is a coin flip at 51.5%.
 
 <!-- interactive:jumpers -->
 
