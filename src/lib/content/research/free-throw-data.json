@@ -1,0 +1,311 @@
+{
+	"warmup": {
+		"baseline": 71.4,
+		"secondShotBump": 4.6,
+		"buckets": [
+			{
+				"bucket": "0-1",
+				"gap": 4.2,
+				"n": 22453,
+				"pct": 76.2
+			},
+			{
+				"bucket": "2-4",
+				"gap": 3.2,
+				"n": 48385,
+				"pct": 75.7
+			},
+			{
+				"bucket": "5-9",
+				"gap": 2.5,
+				"n": 59957,
+				"pct": 75.1
+			},
+			{
+				"bucket": "10-19",
+				"gap": 1.7,
+				"n": 59985,
+				"pct": 74.7
+			},
+			{
+				"bucket": "20-39",
+				"gap": 1.2,
+				"n": 84785,
+				"pct": 74.3
+			},
+			{
+				"bucket": "40+",
+				"gap": 0.6,
+				"n": 112805,
+				"pct": 73.2
+			}
+		]
+	},
+	"lakers": [
+		{
+			"name": "Steve Nash",
+			"practiceMade": 1240,
+			"practiceAtt": 1278,
+			"practice": 97.0,
+			"game": 88.7,
+			"div3": 91.6,
+			"gameMade": 57,
+			"gameAtt": 62,
+			"ratio": 4.2
+		},
+		{
+			"name": "Jodie Meeks",
+			"practiceMade": 1298,
+			"practiceAtt": 1340,
+			"practice": 96.9,
+			"game": 88.7,
+			"div3": 91.2,
+			"gameMade": 51,
+			"gameAtt": 55,
+			"ratio": 3.9
+		},
+		{
+			"name": "Steve Blake",
+			"practiceMade": 1303,
+			"practiceAtt": 1400,
+			"practice": 93.1,
+			"game": 76.6,
+			"div3": 81.7,
+			"gameMade": 6,
+			"gameAtt": 11,
+			"ratio": 4.1
+		},
+		{
+			"name": "Kobe Bryant",
+			"practiceMade": 954,
+			"practiceAtt": 1047,
+			"practice": 91.1,
+			"game": 83.0,
+			"div3": 77.4,
+			"gameMade": 330,
+			"gameAtt": 390,
+			"ratio": 2.1
+		},
+		{
+			"name": "Earl Clark",
+			"practiceMade": 1258,
+			"practiceAtt": 1401,
+			"practice": 89.8,
+			"game": 68.5,
+			"div3": 74.6,
+			"gameMade": 25,
+			"gameAtt": 37,
+			"ratio": 4.0
+		},
+		{
+			"name": "Metta World Peace",
+			"practiceMade": 1096,
+			"practiceAtt": 1222,
+			"practice": 89.7,
+			"game": 71.3,
+			"div3": 74.4,
+			"gameMade": 97,
+			"gameAtt": 131,
+			"ratio": 3.5
+		},
+		{
+			"name": "Chris Duhon",
+			"practiceMade": 1316,
+			"practiceAtt": 1482,
+			"practice": 88.8,
+			"game": 66.3,
+			"div3": 72.5,
+			"gameMade": 6,
+			"gameAtt": 13,
+			"ratio": 4.0
+		},
+		{
+			"name": "Antawn Jamison",
+			"practiceMade": 1300,
+			"practiceAtt": 1464,
+			"practice": 88.8,
+			"game": 70.5,
+			"div3": 72.5,
+			"gameMade": 51,
+			"gameAtt": 74,
+			"ratio": 3.3
+		},
+		{
+			"name": "Jordan Hill",
+			"practiceMade": 620,
+			"practiceAtt": 700,
+			"practice": 88.6,
+			"game": 67.0,
+			"div3": 72.1,
+			"gameMade": 40,
+			"gameAtt": 61,
+			"ratio": 3.8
+		},
+		{
+			"name": "Robert Sacre",
+			"practiceMade": 1294,
+			"practiceAtt": 1494,
+			"practice": 86.6,
+			"game": 69.3,
+			"div3": 68.3,
+			"gameMade": 7,
+			"gameAtt": 11,
+			"ratio": 2.9
+		},
+		{
+			"name": "Devin Ebanks",
+			"practiceMade": 1218,
+			"practiceAtt": 1414,
+			"practice": 86.1,
+			"game": 72.4,
+			"div3": 67.4,
+			"gameMade": 11,
+			"gameAtt": 14,
+			"ratio": 2.4
+		},
+		{
+			"name": "Darius Morris",
+			"practiceMade": 1240,
+			"practiceAtt": 1488,
+			"practice": 83.3,
+			"game": 68.4,
+			"div3": 62.5,
+			"gameMade": 23,
+			"gameAtt": 36,
+			"ratio": 2.3
+		},
+		{
+			"name": "Pau Gasol",
+			"practiceMade": 1138,
+			"practiceAtt": 1382,
+			"practice": 82.3,
+			"game": 72.9,
+			"div3": 60.9,
+			"gameMade": 101,
+			"gameAtt": 143,
+			"ratio": 1.7
+		},
+		{
+			"name": "Dwight Howard",
+			"practiceMade": 1252,
+			"practiceAtt": 1532,
+			"practice": 81.7,
+			"game": 49.2,
+			"div3": 59.8,
+			"gameMade": 213,
+			"gameAtt": 430,
+			"ratio": 4.6
+		}
+	],
+	"rhythm": {
+		"seasons": "1996-97 to 2024-25",
+		"positions": [
+			{
+				"position": "2nd",
+				"gap": 4.6,
+				"n": 745262
+			},
+			{
+				"position": "3rd",
+				"gap": 4.3,
+				"n": 42593
+			},
+			{
+				"position": "4th",
+				"gap": 5.3,
+				"n": 20148
+			},
+			{
+				"position": "5th",
+				"gap": 4.5,
+				"n": 2323
+			},
+			{
+				"position": "6th+",
+				"gap": 5.8,
+				"n": 2184
+			}
+		]
+	},
+	"summary": {
+		"league": 75.8,
+		"practice": 14.6,
+		"rows": [
+			{
+				"label": "Third or later in a row",
+				"effect": 4.1,
+				"share": 3.66
+			},
+			{
+				"label": "Second in a row",
+				"effect": 3.8,
+				"share": 43.5
+			},
+			{
+				"label": "Second night of a back-to-back",
+				"effect": 0.3,
+				"share": 20.93
+			},
+			{
+				"label": "Fouled in transition",
+				"effect": -0.2,
+				"share": 21.39
+			},
+			{
+				"label": "On the road",
+				"effect": -0.3,
+				"share": 49.01
+			},
+			{
+				"label": "Overtime",
+				"effect": -0.3,
+				"share": 1.0
+			},
+			{
+				"label": "30+ minutes played",
+				"effect": -0.5,
+				"share": 20.71
+			},
+			{
+				"label": "Games 2-15 of the season",
+				"effect": -0.7,
+				"share": 20.6
+			},
+			{
+				"label": "Playoffs",
+				"effect": -0.9,
+				"share": 6.67
+			},
+			{
+				"label": "Last 5 minutes, within 5",
+				"effect": -1.0,
+				"share": 5.63
+			},
+			{
+				"label": "Checked in under 2 minutes ago",
+				"effect": -1.2,
+				"share": 23.29
+			},
+			{
+				"label": "First free throw of the game",
+				"effect": -1.9,
+				"share": 24.74
+			},
+			{
+				"label": "10+ days since last game",
+				"effect": -2.3,
+				"share": 1.22
+			},
+			{
+				"label": "Last 30 seconds, within 3",
+				"effect": -2.5,
+				"share": 1.6
+			},
+			{
+				"label": "First game of the season",
+				"effect": -2.9,
+				"share": 1.52
+			}
+		]
+	}
+}
