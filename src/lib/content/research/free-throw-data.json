@@ -307,5 +307,25 @@
 				"share": 1.52
 			}
 		]
+	},
+	"gleague": {
+		"players": 193,
+		"rows": [
+			{
+				"label": "First of two, 2018-19",
+				"pct": 70.3,
+				"n": 5290
+			},
+			{
+				"label": "Second of two, 2018-19",
+				"pct": 76.4,
+				"n": 5289
+			},
+			{
+				"label": "Single free throw, 2019-20",
+				"pct": 70.9,
+				"n": 6142
+			}
+		]
 	}
 }

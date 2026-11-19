@@ -108,6 +108,8 @@ Before the rule, the G League looked just like the NBA, with players 5.2 points 
 
 The same holds player by player. The 193 players with free throws in both seasons made their single free throws in 2019-20 about as often as their own first shots the year before (0.3 points worse), and 6.3 points less often than their second shots. And within a season, players make their single free throws about as often as the first of two in the last two minutes (0.3 points better), and 3.7 points less often than the second.
 
+<!-- interactive:gleague -->
+
 Note that these single free throws are worth more, which you might think makes them harder. It doesn't seem to. Players make the two-point version about as often as the one-point version (0.3 points worse), and the three-point version about 1 point less often, although there are only about 3,200 of those.
 
 One other thing from this data, which I didn't expect. Plenty of players shoot free throws in both leagues in the same season, and before the rule change (so shot for shot, the same thing in both places) they were 4.7 points better on first shots in the G League than in the NBA, and 2.5 points better on second shots. Some of that is probably how they're used (in the NBA these are mostly end-of-bench players coming in cold for a few minutes), but it's one of the larger gaps in this post.

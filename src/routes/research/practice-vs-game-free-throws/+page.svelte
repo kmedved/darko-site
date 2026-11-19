@@ -1,6 +1,7 @@
 <script>
 	import WowyStoryPage from '$lib/components/WowyStoryPage.svelte';
 	import FreeThrowBarChart from '$lib/components/research/FreeThrowBarChart.svelte';
+	import FreeThrowDotChart from '$lib/components/research/FreeThrowDotChart.svelte';
 	import FreeThrowLakersChart from '$lib/components/research/FreeThrowLakersChart.svelte';
 	import FreeThrowSummaryChart from '$lib/components/research/FreeThrowSummaryChart.svelte';
 	import articleMarkdown from '$lib/content/research/practice-vs-game-free-throws.md?raw';
@@ -23,7 +24,7 @@
 		{ value: '+4.6', label: 'points on the second of two free throws, against the first' },
 		{ value: '-3.7', label: 'points in the last 10 seconds of a one-point game' }
 	];
-	const { warmup, rhythm, summary } = freeThrowData;
+	const { warmup, rhythm, summary, gleague } = freeThrowData;
 	const minutes = (bucket) => `${bucket} ${bucket === '0-1' ? 'minute' : 'minutes'}`;
 	const warmupBars = warmup.buckets.map((d) => ({
 		...d,
@@ -125,6 +126,18 @@
 						{count(d.n)} free throws
 					{/snippet}
 				</FreeThrowBarChart>
+			{:else if section.figure === 'gleague'}
+				<FreeThrowDotChart
+					rows={gleague.rows}
+					emphasis="Single free throw, 2019-20"
+					domain={[66, 80]}
+					axisTitle="Percent of free throws made"
+					title="The single free throw goes in like a first shot"
+					caption="G League free throws by the {gleague.players} players who shot them in both 2018-19 and 2019-20, the first season of the one-free-throw rule. Technical free throws and the last two minutes of the fourth quarter and overtime are left out. These are the raw percentages. Comparing each player with themselves, the single free throw is 0.3 points below the first of two and 6.3 below the second."
+					ariaLabel="Dot chart of G League free throws by the {gleague.players} players who shot them in both 2018-19 and 2019-20: {gleague.rows
+						.map((d) => `${d.label}, ${d.pct.toFixed(1)}% made on ${count(d.n)} free throws`)
+						.join('; ')}."
+				/>
 			{:else if section.figure === 'summary'}
 				<FreeThrowSummaryChart
 					rows={summary.rows}
