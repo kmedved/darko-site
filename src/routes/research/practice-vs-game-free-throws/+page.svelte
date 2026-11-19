@@ -17,11 +17,11 @@
 
 	const title = 'Why are NBA players so much worse at free throws in games?';
 	const deck =
-		'The odds of a make in practice are about three times the odds in a game. Which of the usual explanations actually show up in the data?';
+		'The 2013 Lakers made 89% of their free throws in practice and 69% in games. I went through about 1.76 million game free throws to see what explains the gap, e.g., fatigue, pressure, the crowd, or rhythm.';
 	const facts = [
-		{ value: '3x', label: 'practice odds against game odds' },
-		{ value: '4.6', label: 'points better on the second of two free throws' },
-		{ value: '79.5%', label: 'the best in-game conditions, against about 90% in practice' }
+		{ value: '89% vs. 69%', label: 'the 2013 Lakers in practice and in games' },
+		{ value: '+4.6', label: 'points on the second of two free throws, against the first' },
+		{ value: '-3.7', label: 'points in the last 10 seconds of a one-point game' }
 	];
 	const { warmup, rhythm, summary } = freeThrowData;
 	const minutes = (bucket) => `${bucket} ${bucket === '0-1' ? 'minute' : 'minutes'}`;
@@ -52,10 +52,10 @@
 		{ id: 'what-could-explain-it', label: 'What could explain it?' },
 		{ id: 'rhythm', label: 'Rhythm' },
 		{ id: 'everything-else', label: 'Everything else' },
-		{ id: 'icing-and-the-free-chicken', label: 'Icing and the free chicken' },
+		{ id: 'icing-and-the-free-chicken', label: 'Icing and free chicken' },
 		{ id: 'the-g-league', label: 'The G League' },
 		{ id: 'adding-it-up', label: 'Adding it up' },
-		{ id: 'is-any-of-this-a-skill', label: 'Is any of this a skill?' }
+		{ id: 'is-any-of-this-a-skill', label: 'Is it a skill?' }
 	];
 </script>
 
@@ -74,7 +74,7 @@
 	{deck}
 	published="November 20, 2026"
 	{facts}
-	primaryAction={{ href: '#rhythm', label: 'Skip to rhythm' }}
+	primaryAction={{ href: '#adding-it-up', label: 'Skip to adding it up' }}
 	footerLead="More from DARKO"
 	footerLinks={[
 		{ href: '/research', label: 'All research' },

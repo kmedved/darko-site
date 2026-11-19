@@ -7,7 +7,7 @@ export const RESEARCH_POSTS = [
 		date: '2026-11-20',
 		dateLabel: 'November 20, 2026',
 		summary:
-			'The odds of a make in practice are about three times the odds in a game. Which of the usual explanations actually show up in the data?'
+			'The 2013 Lakers made 89% of their free throws in practice and 69% in games. I went through about 1.76 million game free throws to see what explains the gap, e.g., fatigue, pressure, the crowd, or rhythm.'
 	},
 	{
 		slug: 'does-winning-the-tip-matter',
