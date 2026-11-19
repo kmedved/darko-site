@@ -102,7 +102,15 @@ The second is the one LeBron brought up in the clip, which is fans winning free 
 
 ## The G League
 
-[PENDING: the G League's single free throw for all the points, as a natural test of rhythm.]
+The G League gives us a cleaner test of rhythm than anything in the NBA data. Since 2019-20, a foul there gets you one free throw worth all the points, i.e., a single shot worth two on a normal shooting foul, or three if you were fouled on a three. (Ordinary free throws come back for the last two minutes of the fourth quarter and overtime.) So nearly every G League free throw is now a 'first shot', and there's no second one coming.
+
+Before the rule, the G League looked just like the NBA, with players 5.2 points better on the second of two than on the first. If that's about rhythm, then the single free throw should go in like a first shot, and not like the average of the two. That's what happened. Counting only first shots, the 2018-19 G League would have shot 72.5% instead of 74.6%, and in 2019-20, the first year of the rule, the league shot 72.2%.
+
+The same holds player by player. The 193 players with free throws in both seasons made their single free throws in 2019-20 about as often as their own first shots the year before (0.3 points worse), and 6.3 points less often than their second shots. And within a season, players make their single free throws about as often as the first of two in the last two minutes (0.3 points better), and 3.7 points less often than the second.
+
+Note that these single free throws are worth more, which you might think makes them harder. It doesn't seem to. Players make the two-point version about as often as the one-point version (0.3 points worse), and the three-point version about 1 point less often, although there are only about 3,200 of those.
+
+One other thing from this data, which I didn't expect. Plenty of players shoot free throws in both leagues in the same season, and before the rule change (so shot for shot, the same thing in both places) they were 4.7 points better on first shots in the G League than in the NBA, and 2.5 points better on second shots. Some of that is probably how they're used (in the NBA these are mostly end-of-bench players coming in cold for a few minutes), but it's one of the larger gaps in this post.
 
 ## Adding It Up
 
@@ -116,4 +124,4 @@ That leaves most of the gap unexplained by anything we can see inside games. I d
 
 One last question, which is whether some players are 'chokers' or slow starters in a way you could act on. For the most part, no. Using the [padding approach](/research/stabilization-rates-and-the-padding-approach), a player's first-shot penalty needs about 2,400 two-shot trips before it's half 'real' (LeBron has about 5,900 in this data), and it barely carries over from one season to the next. A late-game penalty needs about 1,100 clutch free throws, which is more than anyone has taken. So when a player shoots 60% in the clutch one year, the best guess for the next year is their usual percentage, minus the point or two everyone loses.
 
-*How the numbers are calculated: free throws from the NBA's play-by-play for 1996-97 through 2024-25, regular season and playoffs, plus preseason games from 2020-21 on. Each comparison is made within a player's season (and within the same shot of the trip, except where the shot number is the thing being compared) and then averaged across players. Time on the floor is reconstructed from substitutions. The Lakers numbers are read off the practice board photographed in March 2013.*
+*How the numbers are calculated: free throws from the NBA's play-by-play for 1996-97 through 2024-25, regular season and playoffs, plus preseason games from 2020-21 on, and G League play-by-play from 2015-16 on. Each comparison is made within a player's season (and within the same shot of the trip, except where the shot number is the thing being compared) and then averaged across players. Time on the floor is reconstructed from substitutions. The Lakers numbers are read off the practice board photographed in March 2013.*
