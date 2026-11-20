@@ -96,7 +96,7 @@ To check this, I took the closing point spread for 32,394 regular-season games (
 
 <!-- interactive:ladder -->
 
-As you can see, the line does what the strength rating couldn't. The raw gap is 4.9 points. The strength rating takes it down to 1.9, the strength rating plus the jumper ratings to 0.7, and the closing spread to 0.65. Add the jumper ratings to the spread and we're at about 0.2. Note that the spread-only answer barely moved when I let the link between the spread and winning bend and added season effects, or kept the strength rating in alongside the spread (every variant landed between 0.59 and 0.66). Moneylines tell the same story, at 0.74 on 23,778 games, and 0.39 with the jumper ratings added. (I only have moneylines from 2006-07 on.)
+As you can see, the line does what the strength rating couldn't. The raw gap is 4.9 points. The strength rating takes it down to 1.9, the strength rating plus the jumper ratings to 0.7, and the closing spread to 0.65. Add the jumper ratings to the spread and we're at about 0.2. (I'll admit that last step surprised me a little, since it means the jumper ratings tell us something about who wins that the closing spread doesn't. It isn't late news about who is jumping, since it's just as true when both teams send out the same jumper as the game before, and I don't have a good explanation for it.) Note that the spread-only answer barely moved when I let the link between the spread and winning bend and added season effects, or kept the strength rating in alongside the spread (every variant landed between 0.59 and 0.66). Moneylines tell the same story, at 0.74 on 23,778 games, and 0.39 with the jumper ratings added. (I only have moneylines from 2006-07 on.)
 
 <!-- interactive:priced -->
 
