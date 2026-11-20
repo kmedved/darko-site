@@ -54,7 +54,7 @@
 
 	<div class="ft-legend">
 		<span><i class="dot" style:background={practiceColor}></i>In practice</span>
-		<span><i class="dot" style:background={gameColor}></i>In games</span>
+		<span><i class="dot" style:background={gameColor}></i>Game projection</span>
 		<span><i class="tick"></i>Practice odds ÷ 3</span>
 	</div>
 

@@ -22,7 +22,7 @@
 	const facts = [
 		{ value: '89% vs. 69%', label: 'the 2013 Lakers in practice and in games' },
 		{ value: '+4.6', label: 'points on the second of two free throws, against the first' },
-		{ value: '−3.7', label: 'points in the last 10 seconds of a one-point game' }
+		{ value: '−3.1', label: 'points in the last 10 seconds of a one-point game' }
 	];
 	const { warmup, rhythm, summary, gleague } = freeThrowData;
 	const minutes = (bucket) => `${bucket} ${bucket === '0-1' ? 'minute' : 'minutes'}`;
@@ -61,12 +61,13 @@
 </script>
 
 <svelte:head>
-	<title>{title} | DARKO DPM</title>
+	<title>{title} — DARKO DPM</title>
 	<meta name="description" content={deck} />
 	<meta property="og:title" content={title} />
 	<meta property="og:description" content={deck} />
 	<meta property="og:type" content="article" />
 	<meta property="og:url" content="https://www.darko.app/research/practice-vs-game-free-throws" />
+	<meta property="og:image" content="https://www.darko.app/research-figures/practice-vs-game-free-throws/lakers-practice-board.jpg" />
 </svelte:head>
 
 <WowyStoryPage
@@ -84,6 +85,7 @@
 	{toc}
 >
 	{#snippet body()}
+		<div class="ft-body">
 		{#each sections as section, index (index)}
 			{#if section.html !== undefined}
 				{@html section.html}
@@ -147,6 +149,7 @@
 				/>
 			{/if}
 		{/each}
+		</div>
 	{/snippet}
 </WowyStoryPage>
 
@@ -170,5 +173,45 @@
 		color: var(--text-muted);
 		font-size: 13px;
 		line-height: 1.5;
+	}
+	/* This post's one table: let the two text columns wrap so it fits the column. */
+	.ft-body :global(.story-table-scroll table) {
+		width: 100%;
+		white-space: normal;
+	}
+
+	.ft-body :global(.story-table-scroll th:nth-child(1)),
+	.ft-body :global(.story-table-scroll td:nth-child(1)) {
+		min-width: 9em;
+	}
+
+	.ft-body :global(.story-table-scroll th:nth-child(3)),
+	.ft-body :global(.story-table-scroll th:nth-child(4)) {
+		width: 1%;
+	}
+
+	.ft-body :global(.story-table-scroll th:nth-child(3)) {
+		min-width: 140px;
+	}
+
+	.ft-body :global(.story-table-scroll td:nth-child(3)),
+	.ft-body :global(.story-table-scroll td:nth-child(4)) {
+		white-space: nowrap;
+	}
+
+	.ft-body :global(.story-table-scroll tr:first-child td:nth-child(3)) {
+		white-space: normal;
+	}
+
+	/* Phones: four columns cannot fit, so keep column 2 readable and let the table scroll. */
+	@media (max-width: 640px) {
+		.ft-body :global(.story-table-scroll th:nth-child(2)),
+		.ft-body :global(.story-table-scroll td:nth-child(2)) {
+			min-width: 150px;
+		}
+
+		.ft-body :global(.story-table-scroll th:nth-child(3)) {
+			min-width: 110px;
+		}
 	}
 </style>
