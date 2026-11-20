@@ -31,6 +31,10 @@
 			.paddingInner(narrow ? 0.28 : 0.36)
 			.paddingOuter(0.18)
 	);
+	// Cap bar width so a chart with few bars matches the six-bar one; the bar is centered in its band.
+	const MAX_BAR = 86;
+	const barW = $derived(Math.min(x.bandwidth(), MAX_BAR));
+	const barX = (key) => x(key) + (x.bandwidth() - barW) / 2;
 	const y = $derived(scaleLinear().domain([0, yMax]).range([height - margin.bottom, margin.top]));
 
 	function show(d, event) {
@@ -56,7 +60,7 @@
 			<text class="t-axis" x="0" y={margin.top - 10}>Percentage points</text>
 
 			{#each bars as d (d.key)}
-				<path d={vBarPath(x(d.key), x.bandwidth(), y(0), y(d.value))} fill={color} class="bar" class:dim={active && active !== d.key} />
+				<path d={vBarPath(barX(d.key), barW, y(0), y(d.value))} fill={color} class="bar" class:dim={active && active !== d.key} />
 				<text class="t-val" x={x(d.key) + x.bandwidth() / 2} y={y(d.value) - 5} text-anchor="middle">{signed(d.value)}</text>
 				<text class="t-axis" x={x(d.key) + x.bandwidth() / 2} y={height - margin.bottom + 18} text-anchor="middle">{d.label}</text>
 			{/each}

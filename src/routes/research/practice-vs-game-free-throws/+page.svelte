@@ -31,7 +31,7 @@
 		key: d.bucket,
 		label: d.bucket,
 		value: d.gap,
-		aria: `${minutes(d.bucket)}: ${signed(d.gap)} points, ${d.pct.toFixed(1)}% against ${warmup.baseline.toFixed(1)}%, ${count(d.n)} free throws`
+		aria: `${minutes(d.bucket)}: ${signed(d.gap)} points against the first trip of the game, ${count(d.n)} free throws`
 	}));
 	const rhythmBars = rhythm.slots.map((d) => ({
 		...d,
@@ -113,7 +113,7 @@
 				<FreeThrowBarChart
 					bars={warmupBars}
 					title="One free throw warms you up, and it wears off in about half an hour"
-					caption="First shot of a trip, compared with the same player's first trip of the game that season (71.4%), by real minutes since their previous free throw. 1996-97 through 2018-19."
+					caption="First shot of a trip, compared with the same player's first trip of the game that season, by real minutes since their previous free throw. The line is the second-shot bump, which is measured against the first shot of the same trip. 1996-97 through 2018-19."
 					axisTitle="Minutes since the player's last free throw"
 					refLine={{ value: warmup.secondShotBump, label: 'second shot of the same trip' }}
 					ariaLabel="Bar chart. First shot of a trip compared with the player's first trip of the game, by minutes since their previous free throw: {warmupBars
@@ -122,7 +122,7 @@
 				>
 					{#snippet tip(d)}
 						<b>{minutes(d.bucket)}</b> since the last free throw<br />
-						<b>{signed(d.gap)}</b> points: {d.pct.toFixed(1)}% against {warmup.baseline.toFixed(1)}% on the first trip<br />
+						<b>{signed(d.gap)}</b> points against the first trip of the game<br />
 						{count(d.n)} free throws
 					{/snippet}
 				</FreeThrowBarChart>
@@ -133,7 +133,7 @@
 					domain={[66, 80]}
 					axisTitle="Percent of free throws made"
 					title="The single free throw goes in like a first shot"
-					caption="G League free throws by the {gleague.players} players who shot them in both 2018-19 and 2019-20, the first season of the one-free-throw rule. Technical free throws and the last two minutes of the fourth quarter and overtime are left out. The three dots are weighted to the same mix of players, so the gaps between them match the player-by-player comparison in the text."
+					caption="G League free throws by the {gleague.players} players who shot them in both 2018-19 and 2019-20, the first season of the one-free-throw rule. Technical free throws and the last two minutes of the fourth quarter and overtime are left out. The three dots use the same player weights as the player-by-player comparison in the text."
 					ariaLabel="Dot chart of G League free throws by the {gleague.players} players who shot them in both 2018-19 and 2019-20: {gleague.rows
 						.map((d) => `${d.label}, ${d.pct.toFixed(1)}% made on ${count(d.n)} free throws`)
 						.join('; ')}."
