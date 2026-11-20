@@ -2,6 +2,14 @@
 // src/routes/research/<slug>/ and its Markdown in src/lib/content/research/<slug>.md.
 export const RESEARCH_POSTS = [
 	{
+		slug: 'on-descriptive-metrics',
+		title: 'On Descriptive Metrics',
+		date: '2026-11-20',
+		dateLabel: 'November 20, 2026 · Work in progress',
+		summary:
+			'Stray thoughts and ruminations (a work in progress) on why there is no single-season DARKO, and why every attempt to build a purely descriptive MVP stat quietly turns into a predictive model.'
+	},
+	{
 		slug: 'practice-vs-game-free-throws',
 		title: 'Why are NBA players so much worse at free throws in games?',
 		date: '2026-11-20',
