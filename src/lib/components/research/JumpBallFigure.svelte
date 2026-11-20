@@ -29,8 +29,10 @@
 	let figureEl = $state();
 	let svgEl = $state();
 	let tooltip = $state(null);
+	const tipTargets = new WeakSet();
 
 	function tip(target, html) {
+		tipTargets.add(target);
 		const place = (event) => {
 			const rect = figureEl.getBoundingClientRect();
 			const x = event.clientX - rect.left;
@@ -43,6 +45,15 @@
 			if (event.pointerType === 'touch') place(event);
 		});
 	}
+
+	// A tap anywhere but a chart mark closes a tooltip that a touch opened.
+	$effect(() => {
+		const dismiss = (event) => {
+			if (!tipTargets.has(event.target)) tooltip = null;
+		};
+		document.addEventListener('pointerdown', dismiss);
+		return () => document.removeEventListener('pointerdown', dismiss);
+	});
 
 	$effect(() => {
 		const W = Math.floor(width);

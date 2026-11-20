@@ -1,6 +1,6 @@
 // Charts for the jump-ball research post. Each draw function fills an <svg> at a given width and
 // returns the height it used. `ctx` carries the data, two series colours (a, b), a third (c), the
-// tooltip hook tip(target, html) and, for the ladder, which set of games to show.
+// tooltip hook tip(target, html).
 // Text uses theme tokens through the t-* classes styled in JumpBallFigure.svelte.
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -38,7 +38,8 @@ function vbar(svg, x, w, base, y, fill) {
 const gridLine = (svg, x1, x2, y, strong) =>
 	h('line', { x1, x2, y1: y, y2: y, stroke: strong ? 'var(--text-muted)' : 'var(--border-subtle)', 'stroke-width': strong ? 1.2 : 1 }, svg);
 
-export const HEADLINE_RATE = 52.81;
+// The headline rate: tip winners' win rate over every season, weighted by games.
+export const headlineRate = (seasons) => seasons.reduce((sum, d) => sum + d.v * d.n, 0) / seasons.reduce((sum, d) => sum + d.n, 0);
 
 function seasons(svg, W, { data, a, tip }) {
 	const narrow = W < 520;
@@ -47,7 +48,7 @@ function seasons(svg, W, { data, a, tip }) {
 	const iw = W - M.l - M.r;
 	const ih = H - M.t - M.b;
 	const S = data.seasons;
-	const p = HEADLINE_RATE;
+	const p = headlineRate(S);
 	const X = lin(1998, 2026, M.l, M.l + iw);
 	const Y = lin(60, 46, M.t, M.t + ih);
 	[46, 50, 54, 58].forEach((v) => {
@@ -56,7 +57,7 @@ function seasons(svg, W, { data, a, tip }) {
 	});
 	h('line', { x1: M.l, x2: M.l + iw, y1: Y(p), y2: Y(p), stroke: a, 'stroke-width': 1, 'stroke-dasharray': '4 4' }, svg);
 	h('text', { x: M.l + iw + 8, y: Y(50) + 4, class: 't-axis' }, svg, narrow ? '50%' : 'coin flip');
-	h('text', { x: M.l + iw + 8, y: Y(p) + 4, class: 't-axis' }, svg, narrow ? '52.8' : 'avg 52.8%');
+	h('text', { x: M.l + iw + 8, y: Y(p) + 4, class: 't-axis' }, svg, narrow ? f1(p) : `avg ${f1(p)}%`);
 	h('polyline', { points: S.map((d) => `${X(d.s).toFixed(1)},${Y(d.v).toFixed(1)}`).join(' '), fill: 'none', stroke: a, 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
 	S.forEach((d) => {
 		h('circle', { cx: X(d.s), cy: Y(d.v), r: 4, fill: a, stroke: 'var(--bg-surface)', 'stroke-width': 2 }, svg);
@@ -179,7 +180,7 @@ function jumpers(svg, W, { data, a, tip }) {
 		});
 	J.forEach((d) => {
 		const hit = h('circle', { cx: X(d.ht), cy: Y(d.pad), r: Math.max(6, R(d.n)), class: 'hit' }, svg);
-		tip(hit, `<b>${d.name}</b><br>${feetInches(d.ht)} · ${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}<br>won ${f1(d.rate)}% of ${d.n.toLocaleString('en-US')} jumps<br>padded: ${f1(d.pad)}%<br>height alone predicts ${f1(d.exp)}%`);
+		tip(hit, `<b>${d.name}</b><br>${feetInches(d.ht)} · ${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}<br>won ${f1(d.rate)}% of ${d.n.toLocaleString('en-US')} jumps<br>padded: ${f1(d.pad)}%<br>height predicts ${f1(d.exp)}% vs his actual opponents`);
 	});
 	J.forEach((d) => {
 		const label = named[d.name];
@@ -367,11 +368,11 @@ export function ledgerRows(data) {
 		{
 			label: 'Regular season, 1999-2000 to 2025-26',
 			raw: est('raw'),
-			parts: [est('raw') - est('strength'), est('strength') - est('strength_flags'), est('strength_flags') - est('spread_flags'), est('spread_flags')]
+			parts: [est('raw') - est('strength'), est('strength') - est('strength_jumpers'), est('strength_jumpers') - est('spread_jumpers'), est('spread_jumpers')]
 		}
 	];
 }
-export const LEDGER_PARTS = ['Team strength', 'Who took the tip', 'Betting line', 'Left over'];
+export const LEDGER_PARTS = ['Team strength', 'Who is jumping', 'Betting line', 'Left over'];
 
 function ledger(svg, W, { data, a, b, c, tip }) {
 	const colors = [a, b, c, 'var(--text-muted)'];
