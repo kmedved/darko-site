@@ -15,15 +15,15 @@
 	const facts = [
 		{ value: '74.5% vs. 81.7%', label: '2025-26 opponent FT% for SGA vs. Cade Cunningham' },
 		{ value: '81.5 pts', label: 'raw scoreboard swing from those uncontested free throws' },
-		{ value: 'No umpire', label: 'unlike forecasting, descriptive value has no ground truth' }
+		{ value: 'No ground truth', label: 'unlike forecasting, descriptive value has no out-of-sample test' }
 	];
 	const toc = [
-		{ id: 'the-neat-split', label: 'The neat split' },
-		{ id: 'the-baseball-rabbit-hole', label: 'The baseball rabbit hole' },
+		{ id: 'descriptive-vs-predictive', label: 'Descriptive vs. predictive' },
+		{ id: 'the-baseball-example', label: 'The baseball example' },
 		{ id: 'your-descriptive-stat-is-already-predicting', label: 'Already predicting' },
-		{ id: 'the-clutch-and-leverage-trap', label: 'Clutch and leverage' },
-		{ id: 'the-missing-north-star', label: 'The missing north star' },
-		{ id: 'meaning-requires-a-model', label: 'Meaning requires a model' }
+		{ id: 'clutch-and-leverage', label: 'Clutch and leverage' },
+		{ id: 'no-clear-target', label: 'No clear target' },
+		{ id: 'where-does-that-leave-us', label: 'Where does that leave us?' }
 	];
 </script>
 

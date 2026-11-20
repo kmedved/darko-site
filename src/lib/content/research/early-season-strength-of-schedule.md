@@ -46,7 +46,7 @@ What reorganized the whole thing for me is realizing that what a schedule adjust
 
 Suppose the good teams happen to open against weak opponents, and the bad teams against strong ones. Now an easy schedule tells us two things at once. The first is that the team's margin is inflated, which is what SRS corrects for. The second is that the team is probably good, because in this particular year the good teams are the ones who got the easy schedules. Those two pull in opposite directions, and if the second is strong enough, the right weight on schedule is zero or below – even if we knew every opponent's true strength perfectly.
 
-That's what 2025-26 looked like. Oklahoma City's first ten opponents turned out to be four points worse than average, while Brooklyn and Washington opened against brutal slates. Across the league, the better a team turned out to be, the weaker its first ten opponents were, with a correlation of -0.62 – the most 'stacked' opening schedule in my 32 seasons. (The runner-up is 2002-03, which produced the single worst value on the chart.) In a year where good teams happen to draw easy early slates, seeing an easy slate is itself a clue you're looking at a good team, which fights directly against SRS's normal penalty for playing weak opponents.
+That's what 2025-26 looked like. Oklahoma City's first ten opponents turned out to be four points worse than average, while Brooklyn and Washington opened against tough slates. Across the league, the better a team turned out to be, the weaker its first ten opponents were, with a correlation of -0.62 – the most 'stacked' opening schedule in my 32 seasons. (The runner-up is 2002-03, which produced the single worst value on the chart.) In a year where good teams happen to draw easy early slates, seeing an easy slate is itself a clue you're looking at a good team, which fights directly against SRS's normal penalty for playing weak opponents.
 
 ![2025-26: good teams opened against weak ones](/research-figures/early-season-strength-of-schedule/fig_draw_2026.png)
 
@@ -100,7 +100,7 @@ If we move every team's early margins halfway toward expected shooting, the valu
 
 ## What Else I Checked
 
-Given the 2026-27 East-West mess, the obvious question is whether this is all just conference noise. It isn't. The East-West part of the schedule swings wildly from year to year and has made recent seasons look worse, but even with the conference gap taken out, the within-conference part of the schedule also fell from about 0.54 to 0.15.
+Given the 2026-27 East-West split, the obvious question is whether this is all just conference noise. It isn't. The East-West part of the schedule swings a lot from year to year and has made recent seasons look worse, but even with the conference gap taken out, the within-conference part of the schedule also fell from about 0.54 to 0.15.
 
 I also checked injuries and rest, blowouts, home court, pace, late-season changes and the NBA Cup, and none of the versions I tested explains the whole decline. The pattern survives when I predict only each team's next ten games. Removing the Cup games helps a little in 2025-26 (the value goes from -1.80 to -1.14, against -1.46 for removing the same number of games at random), and doesn't help in 2023-24. These checks narrow the possibilities, though they don't prove those factors had no effect.
 

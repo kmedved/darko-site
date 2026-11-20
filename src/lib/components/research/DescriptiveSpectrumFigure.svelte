@@ -33,40 +33,40 @@
 		mlb_wl: {
 			title: 'Pitcher Wins / RBIs / WPA',
 			zone: 'ledger',
-			zoneLabel: 'Pure Ledger',
+			zoneLabel: 'Raw Scoreboard',
 			keeps:
-				'Raw team wins, runners driven in, or exact win-probability swings from what actually happened on the field.',
+				'Raw team wins, runners driven in, or exact win-probability swings from what happened on the field.',
 			hidden: 'None: no counterfactuals, no shrinkage, no model of teammate or opponent quality.',
 			catch:
-				'Credit depends wildly on run support, bullpens, and whether teammates got on base ahead of you.'
+				'Credit depends heavily on run support, bullpens, and whether teammates got on base ahead of you.'
 		},
 		mlb_era: {
 			title: 'Earned Run Average (ERA)',
 			zone: 'vibes',
-			zoneLabel: 'Vibes Frontier',
-			keeps: 'Actual runs scored against the pitcher, stripping out bullpen blowups and team offense.',
+			zoneLabel: 'Context-Adjusted',
+			keeps: 'Actual runs scored against the pitcher, stripping out team offense and the bullpen.',
 			hidden:
-				'Already makes a causal judgment: pretends runs after official fielding errors never happened on the pitcher ledger.',
+				'Already makes a causal judgment: treats runs after official fielding errors as not the pitcher\'s fault.',
 			catch:
-				'Excuses a shortstop error, yet still punishes the pitcher for a slow fielder who never gets a glove on the ball.'
+				'Excuses a shortstop error, yet still penalizes the pitcher for a slow fielder who never gets a glove on the ball.'
 		},
 		mlb_bwar: {
 			title: 'bWAR / Defense-Adjusted RA9',
 			zone: 'vibes',
-			zoneLabel: 'Vibes Frontier',
+			zoneLabel: 'Context-Adjusted',
 			keeps: 'All runs actually allowed, including unearned runs, anchored to realized outcomes.',
 			hidden:
 				'Subtracts a modeled estimate of team fielding value (DRS or OAA) alongside park and opponent adjustments.',
 			catch:
-				'Still leaves the pitcher owning single-season batted-ball luck, and depends heavily on which fielding model you trust.'
+				'Still leaves the pitcher owning single-season batted-ball luck, and depends on which fielding model you trust.'
 		},
 		mlb_fip: {
 			title: 'FIP / xFIP',
 			zone: 'vibes',
-			zoneLabel: 'Vibes Frontier',
+			zoneLabel: 'Context-Adjusted',
 			keeps: 'Actual strikeouts, walks, hit batters, and home runs (or fly balls in xFIP).',
 			hidden:
-				'Replaces balls in play with league-average expected run outcomes, explicitly isolating what repeats out of sample.',
+				'Replaces balls in play with league-average expected run outcomes, isolating what repeats out of sample.',
 			catch:
 				'Once you replace actual batted-ball results with expected run values, your "descriptive" stat has basically become a forecast.'
 		},
@@ -76,14 +76,14 @@
 			zoneLabel: 'Predictive',
 			keeps: 'Velocity, movement, release point, and multi-year history weighted by predictive signal.',
 			hidden:
-				'Not hidden at all: every parameter is openly tuned to minimize out-of-sample forecasting error.',
+				'Not hidden: every parameter is tuned directly to minimize out-of-sample forecasting error.',
 			catch:
-				'Great for knowing who is best tomorrow; does not care if a pitcher happened to strand 90% of baserunners this year.'
+				'Good for knowing who is best tomorrow; does not care if a pitcher happened to strand 90% of baserunners this year.'
 		},
 		nba_pm: {
 			title: 'Raw Plus-Minus',
 			zone: 'ledger',
-			zoneLabel: 'Pure Ledger',
+			zoneLabel: 'Raw Scoreboard',
 			keeps: 'Exact scoreboard margin while a player was on the court ("last night Wemby was +5").',
 			hidden: 'None: pure accounting of points scored and allowed during a player\'s minutes.',
 			catch:
@@ -92,35 +92,35 @@
 		nba_apm: {
 			title: 'Unregularized Single-Season APM',
 			zone: 'vibes',
-			zoneLabel: 'Vibes Frontier',
+			zoneLabel: 'Context-Adjusted',
 			keeps:
 				'Only this season\'s stints, using ordinary least squares to control for the other nine players on the floor.',
 			hidden:
 				'Assumes additive linear player effects across lineups: still a causal model, just without regularization.',
 			catch:
-				'Multicollinearity explodes the estimates: in 2025-26, Oso Ighodaro and Hugo González jump into the top 10 ahead of Nikola Jokić.'
+				'Multicollinearity makes the estimates too noisy to use: in 2025-26, Oso Ighodaro and Hugo González land in the top 10 ahead of Nikola Jokić.'
 		},
 		nba_rapm: {
 			title: 'Single-Season RAPM',
 			zone: 'vibes',
-			zoneLabel: 'Vibes Frontier',
+			zoneLabel: 'Context-Adjusted',
 			keeps:
 				'Only this season\'s stints and scoreboard margins, with no player-specific prior from prior years.',
 			hidden:
 				'Shrinks every player toward 0.0 using a ridge penalty λ chosen by cross-validation to predict held-out stints best.',
 			catch:
-				'Changing λ rewrites the leaderboard on identical games, and a zero prior treats Jokić like a rookie on Opening Night.'
+				'Changing λ moves rankings around on the same games, and a zero prior treats Jokić like a rookie on Opening Night.'
 		},
 		nba_boxrapm: {
 			title: 'Box-Prior Single-Season RAPM (EPM / LEBRON)',
 			zone: 'vibes',
-			zoneLabel: 'Vibes Frontier',
+			zoneLabel: 'Context-Adjusted',
 			keeps:
-				'This season\'s box stats and on-court stints, keeping a "clean slate" for each player\'s own past seasons.',
+				'This season\'s box stats and on-court stints, keeping a clean slate for each player\'s own past seasons.',
 			hidden:
 				'Uses multi-year league history to learn box-score weights, filters garbage time, drops clutch leverage, and often luck-adjusts shooting.',
 			catch:
-				'Draws a purely cultural line: 10 years of league-wide history is fine, but a player\'s own prior-season rating is taboo.'
+				'Ten years of league-wide history is treated as single-season descriptive, while a player\'s own prior-season rating is not.'
 		},
 		nba_darko: {
 			title: 'DARKO',
@@ -128,9 +128,9 @@
 			zoneLabel: 'Predictive',
 			keeps: 'Box scores, tracking, and lineup impact, weighted dynamically across multiple seasons.',
 			hidden:
-				'Explicitly predictive: Kalman filtering, time decay, aging curves, and priors all answer directly to out-of-sample error.',
+				'Explicitly predictive: Kalman filtering, time decay, aging curves, and priors are all tuned to out-of-sample error.',
 			catch:
-				'Has an objective umpire (future games), which is precisely why turning it into a "purely descriptive" MVP stat has no principled recipe.'
+				'Can be tested directly against future games, which is what a single-season descriptive stat lacks.'
 		}
 	};
 
@@ -157,12 +157,12 @@
 
 		<div class="spectrum-zone-headers">
 			<div class="spectrum-zh spectrum-zh-left">
-				<div class="spectrum-zh-kicker">Pure Ledger</div>
+				<div class="spectrum-zh-kicker">Raw Scoreboard</div>
 				<div class="spectrum-zh-sub">What actually happened</div>
 			</div>
 			<div class="spectrum-zh spectrum-zh-mid">
-				<div class="spectrum-zh-kicker">The Vibes Frontier</div>
-				<div class="spectrum-zh-sub">Adjusted for "enough" context; no objective stop sign</div>
+				<div class="spectrum-zh-kicker">Context-Adjusted</div>
+				<div class="spectrum-zh-sub">Adjusted for "enough" context; no clear stopping point</div>
 			</div>
 			<div class="spectrum-zh spectrum-zh-right">
 				<div class="spectrum-zh-kicker">Predictive</div>
@@ -257,21 +257,21 @@
 
 	<div class="spectrum-umpire-bar">
 		<div class="spectrum-ump-card" data-zone="ledger">
-			<div class="spectrum-ump-kicker">Objective Ledger</div>
+			<div class="spectrum-ump-kicker">Raw Results</div>
 			<div class="spectrum-ump-body">
-				<strong>Zero model, zero ambiguity.</strong> Exact record of the scoreboard, but poor at isolating who caused it.
+				<strong>No model.</strong> Exact record of the scoreboard, but poor at separating the player from his context.
 			</div>
 		</div>
 		<div class="spectrum-ump-card" data-zone="vibes">
-			<div class="spectrum-ump-kicker">No Objective Umpire</div>
+			<div class="spectrum-ump-kicker">No Ground Truth</div>
 			<div class="spectrum-ump-body">
-				<strong>No ground truth to score against.</strong> Every stop is a cultural negotiation over how much noise to strip.
+				<strong>No out-of-sample target.</strong> Each stop is a judgment call about how much context to strip out.
 			</div>
 		</div>
 		<div class="spectrum-ump-card" data-zone="predictive">
-			<div class="spectrum-ump-kicker">Objective Umpire</div>
+			<div class="spectrum-ump-kicker">Out-of-Sample Error</div>
 			<div class="spectrum-ump-body">
-				<strong>The future grades every knob.</strong> Decay, priors, and shrinkage stay only if they beat out-of-sample error.
+				<strong>Future games test every choice.</strong> Decay, priors, and shrinkage stay only if they improve prediction.
 			</div>
 		</div>
 	</div>
