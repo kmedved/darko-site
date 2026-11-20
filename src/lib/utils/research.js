@@ -2,6 +2,14 @@
 // src/routes/research/<slug>/ and its Markdown in src/lib/content/research/<slug>.md.
 export const RESEARCH_POSTS = [
 	{
+		slug: 'practice-vs-game-free-throws',
+		title: 'Why are NBA players so much worse at free throws in games?',
+		date: '2026-11-20',
+		dateLabel: 'November 20, 2026',
+		summary:
+			'The 2013 Lakers made 89% of their free throws in practice and 69% in games. I went through about 1.76 million game free throws to see what explains the gap, e.g., fatigue, pressure, the crowd, or rhythm.'
+	},
+	{
 		slug: 'does-winning-the-tip-matter',
 		title: 'Does winning the tip matter?',
 		date: '2026-11-17',
