@@ -46,7 +46,7 @@
 			title: 'A tip from another game predicts tonight',
 			sub: 'Win rate of teams that won or lost the named tip, regular season',
 			caption:
-				'A tip from a different game can’t cause tonight’s result, yet it carries 2.5 points of the 5.8-point gap, about 40% of it. That part of the gap is just who the team is. The rest needs another explanation, which the next sections look for.'
+				'A tip from a different game can’t cause tonight’s result, yet it carries 2.5 points of the 5.8-point gap between all tip winners and tip losers in the regular season (52.9% against 47.1%), about 40% of it. That part of the gap is just who the team is. The rest needs another explanation, which the next sections look for.'
 		},
 		ladder: {
 			title: 'The tip winner’s edge as controls are added',
