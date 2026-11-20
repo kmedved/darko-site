@@ -13,7 +13,7 @@ In sports analytics, we usually draw a tidy line between two kinds of stats:
 - **Descriptive stats** tell you what actually happened in the past. Good for awards, recaps, and historical arguments.
 - **Predictive stats** try to estimate underlying talent to forecast the future. Good for front offices, trades, and betting markets.
 
-In a recent conversation with Ben Falk and Canzhi Ye, Ben put the intuition cleanly: *"Last night Wemby was +5, meaning the Spurs outscored the Clippers by 5 when he was on the court. That is descriptive. It doesn't assign any causal aspect to it – it's just telling you something that did happen."*
+In a recent conversation with some friends, one of them put the intuition cleanly: *"Last night Wemby was +5, meaning the Spurs outscored the Clippers by 5 when he was on the court. That is descriptive. It doesn't assign any causal aspect to it – it's just telling you something that did happen."*
 
 That used to be roughly how I drew the line, too. Description is the ledger; prediction is the model.
 
@@ -110,7 +110,7 @@ A "single-season descriptive MVP stat" has no umpire. There is no ground-truth d
 
 ## Meaning Requires a Model
 
-As Ben put it at the end of our exchange, maybe the broader point is philosophical: raw facts about the past do not interpret themselves. The moment you try to interpret what happened – to assign credit, tell a coherent story, or decide who was "most valuable" – you are making causal assumptions. And causal assumptions live or die by whether they actually predict anything.
+As my friend put it at the end of our exchange, maybe the broader point is philosophical: raw facts about the past do not interpret themselves. The moment you try to interpret what happened – to assign credit, tell a coherent story, or decide who was "most valuable" – you are making causal assumptions. And causal assumptions live or die by whether they actually predict anything.
 
 You can adjust for teammates, adjust for opponents, adjust for shooting luck, shrink your noisy estimates, and pretend you are still purely describing the past, as long as you stop right before the line that feels culturally uncomfortable.
 
