@@ -22,7 +22,8 @@
 	const colors = $derived({
 		a: getSeriesColor(0, displayMode.view),
 		b: getSeriesColor(1, displayMode.view),
-		c: getSeriesColor(2, displayMode.view)
+		c: getSeriesColor(2, displayMode.view),
+		palette: [0, 1, 2, 3, 4, 5].map((i) => getSeriesColor(i, displayMode.view))
 	});
 
 	let width = $state(0);
@@ -87,7 +88,7 @@
 				};
 			case 'jumpers':
 				return {
-					head: ['Player', 'Height', 'Opening jumps', 'Won', 'Padded', 'Height alone predicts', 'Seasons'],
+					head: ['Player', 'Height', 'Opening jumps', 'Won', 'Padded', 'Opp-adjusted', 'Avg opponent', 'Height predicts', 'Seasons'],
 					rows: data.jumpers
 						.slice()
 						.sort((p, q) => q.pad - p.pad)
@@ -97,9 +98,25 @@
 							d.n.toLocaleString('en-US'),
 							`${f1(d.rate)}%`,
 							`${f1(d.pad)}%`,
+							`${f1(d.adj)}%`,
+							`${f1(d.opp)}%`,
 							`${f1(d.exp)}%`,
 							`${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}`
 						])
+				};
+			case 'trajectories':
+				return {
+					head: ['Player', 'Season', 'Jumps', 'Won', 'Opp-adjusted', 'Uncertainty band'],
+					rows: data.trajectories.flatMap((t) =>
+						t.pts.map((p) => [
+							t.name,
+							seasonLabel(p.s),
+							p.n.toLocaleString('en-US'),
+							`${p.w} (${f1((100 * p.w) / p.n)}%)`,
+							`${f1(p.pct)}%`,
+							`${f1(p.lo)}% to ${f1(p.hi)}%`
+						])
+					)
 				};
 			case 'scatter':
 				return {

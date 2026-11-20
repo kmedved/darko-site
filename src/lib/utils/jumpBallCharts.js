@@ -180,7 +180,7 @@ function jumpers(svg, W, { data, a, tip }) {
 		});
 	J.forEach((d) => {
 		const hit = h('circle', { cx: X(d.ht), cy: Y(d.pad), r: Math.max(6, R(d.n)), class: 'hit' }, svg);
-		tip(hit, `<b>${d.name}</b><br>${feetInches(d.ht)} · ${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}<br>won ${f1(d.rate)}% of ${d.n.toLocaleString('en-US')} jumps<br>padded: ${f1(d.pad)}%<br>height predicts ${f1(d.exp)}% vs his actual opponents`);
+		tip(hit, `<b>${d.name}</b><br>${feetInches(d.ht)} · ${seasonLabel(d.s0)} to ${seasonLabel(d.s1)}<br>won ${f1(d.rate)}% of ${d.n.toLocaleString('en-US')} jumps<br>padded: ${f1(d.pad)}% · opp-adjusted: ${f1(d.adj)}%<br>height predicts ${f1(d.exp)}% vs his actual opponents`);
 	});
 	J.forEach((d) => {
 		const label = named[d.name];
@@ -372,7 +372,7 @@ export function ledgerRows(data) {
 		}
 	];
 }
-export const LEDGER_PARTS = ['Team strength', 'Who is jumping', 'Betting line', 'Left over'];
+export const LEDGER_PARTS = ['Team Elo', 'Jumper Elo', 'Betting line', 'Left over'];
 
 function ledger(svg, W, { data, a, b, c, tip }) {
 	const colors = [a, b, c, 'var(--text-muted)'];
@@ -409,4 +409,88 @@ function ledger(svg, W, { data, a, b, c, tip }) {
 	return ly + (narrow ? 30 : 10);
 }
 
-export const JUMP_BALL_CHARTS = { seasons, quarters, height, jumpers, scatter, placebo, ladder, priced, iou, ledger };
+function trajectories(svg, W, { data, palette, tip }) {
+	const narrow = W < 520;
+	const T = data.trajectories;
+	const legendRows = narrow ? 3 : 2;
+	const legTop = 12;
+	const legStep = 18;
+	const M = { l: 40, r: 14, t: legTop + legendRows * legStep + 14, b: 32 };
+	const H = (narrow ? 280 : 320) + legendRows * legStep;
+	const iw = W - M.l - M.r;
+	const ih = H - M.t - M.b;
+	const X = lin(1998, 2026, M.l, M.l + iw);
+	const Y = lin(86, 30, M.t, M.t + ih);
+
+	// Legend at top (2 cols on phone, 3 cols on desktop)
+	const cols = narrow ? 2 : 3;
+	const colW = iw / cols;
+	T.forEach((t, i) => {
+		const c = palette[i % palette.length];
+		const row = Math.floor(i / cols);
+		const col = i % cols;
+		const lx = M.l + col * colW;
+		const ly = legTop + row * legStep;
+		h('line', { x1: lx, x2: lx + 14, y1: ly, y2: ly, stroke: c, 'stroke-width': 2.5, 'stroke-linecap': 'round' }, svg);
+		h('text', { x: lx + 20, y: ly + 4, class: 't-lbl-s' }, svg, narrow ? t.short : t.name);
+	});
+
+	[30, 40, 50, 60, 70, 80].forEach((v) => {
+		gridLine(svg, M.l, M.l + iw, Y(v), v === 50);
+		h('text', { x: M.l - 8, y: Y(v) + 4, 'text-anchor': 'end', class: 't-axis' }, svg, `${v}%`);
+	});
+	h('text', { x: M.l + 4, y: Y(50) - 6, class: 't-axis' }, svg, 'league avg');
+
+	(narrow ? [1998, 2007, 2016, 2026] : [1998, 2004, 2010, 2016, 2021, 2026]).forEach((s) => {
+		h('text', { x: X(s), y: M.t + ih + 20, 'text-anchor': s === 2026 ? 'end' : s === 1998 ? 'start' : 'middle', class: 't-axis' }, svg, seasonLabel(s));
+	});
+
+	// Translucent +/-1 SD uncertainty ribbons
+	T.forEach((t, i) => {
+		const c = palette[i % palette.length];
+		const upper = t.pts.map((p) => `${X(p.s).toFixed(1)},${Y(p.hi).toFixed(1)}`);
+		const lower = t.pts.slice().reverse().map((p) => `${X(p.s).toFixed(1)},${Y(p.lo).toFixed(1)}`);
+		h('polygon', { points: upper.concat(lower).join(' '), fill: c, 'fill-opacity': 0.13 }, svg);
+	});
+
+	// Lines, markers and hit targets
+	T.forEach((t, i) => {
+		const c = palette[i % palette.length];
+		const pts = t.pts.map((p) => `${X(p.s).toFixed(1)},${Y(p.pct).toFixed(1)}`).join(' ');
+		h('polyline', { points: pts, fill: 'none', stroke: c, 'stroke-width': 2.2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+		t.pts.forEach((p) => {
+			h('circle', { cx: X(p.s), cy: Y(p.pct), r: narrow ? 2.6 : 3.2, fill: c, stroke: 'var(--bg-surface)', 'stroke-width': 1.3 }, svg);
+			const hit = h('circle', { cx: X(p.s), cy: Y(p.pct), r: 10, class: 'hit' }, svg);
+			tip(hit, `<b>${t.name} · ${seasonLabel(p.s)}</b><br>won ${p.w} of ${p.n} (${f1((100 * p.w) / p.n)}%)<br>opp-adjusted: ${f1(p.pct)}% (${f1(p.lo)}–${f1(p.hi)}%)`);
+		});
+	});
+
+	// Non-overlapping inline player labels
+	const spots = {
+		"Shaquille O'Neal": { s: 2009, y: 76.6, anchor: 'middle' },
+		'Žydrūnas Ilgauskas': { s: 2003, y: 82.8, anchor: 'middle' },
+		'Yao Ming': { s: 2006.5, y: 33.6, anchor: 'middle' },
+		'Andre Drummond': { s: 2018.8, y: 79.4, anchor: 'middle' },
+		'Nikola Jokić': { s: 2022, y: 59.8, anchor: 'middle' },
+		'Victor Wembanyama': { s: 2026, y: 84.4, anchor: 'end' }
+	};
+	T.forEach((t, i) => {
+		const sp = spots[t.name];
+		if (!sp) return;
+		const c = palette[i % palette.length];
+		h('text', {
+			x: X(sp.s),
+			y: Y(sp.y),
+			'text-anchor': sp.anchor,
+			class: 't-ann',
+			fill: c,
+			stroke: 'var(--bg-surface)',
+			'stroke-width': 3,
+			'paint-order': 'stroke',
+			'stroke-linejoin': 'round'
+		}, svg, t.short);
+	});
+	return H;
+}
+
+export const JUMP_BALL_CHARTS = { seasons, quarters, height, jumpers, trajectories, scatter, placebo, ladder, priced, iou, ledger };

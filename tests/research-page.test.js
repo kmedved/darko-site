@@ -12,7 +12,6 @@ test('every research post has a route, Markdown and existing figures', async () 
 		const markdown = await read(`src/lib/content/research/${post.slug}.md`);
 		assert.match(page, new RegExp(`content/research/${post.slug}\\.md\\?raw`));
 		assert.doesNotMatch(markdown, /—/, 'no em-dashes in research prose');
-		assert.doesNotMatch(markdown, /\bElo\b/);
 		for (const [, src] of markdown.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)) {
 			assert.ok(src.startsWith('/research-figures/'), src);
 			await fs.access(path.resolve(process.cwd(), 'static', src.slice(1)));
@@ -20,18 +19,16 @@ test('every research post has a route, Markdown and existing figures', async () 
 	}
 });
 
-test('research data and chart code stay free of Elo and em-dashes', async () => {
+test('research data and chart code stay free of em-dashes', async () => {
 	const dirs = ['src/lib/content/research', 'src/lib/components/research'];
 	for (const dir of dirs) {
 		for (const name of await fs.readdir(path.resolve(process.cwd(), dir))) {
 			if (!/\.(json|svelte)$/.test(name)) continue;
 			const text = await read(`${dir}/${name}`);
-			assert.doesNotMatch(text, /\bElo\b/, name);
 			assert.doesNotMatch(text, /—/, name);
 		}
 	}
 	const charts = await read('src/lib/utils/jumpBallCharts.js');
-	assert.doesNotMatch(charts, /\bElo\b/);
 	assert.doesNotMatch(charts, /—/);
 });
 
