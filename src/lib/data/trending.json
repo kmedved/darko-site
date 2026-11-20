@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-19",
+  "date": "2026-11-20",
   "players": [
     {
-      "nba_id": 203507,
-      "name": "Giannis Antetokounmpo",
-      "reason": "Nearly triple-doubles in first game against Bucks"
+      "nba_id": 1641705,
+      "name": "Victor Wembanyama",
+      "reason": "Viral shunk finish highlights 32-point win over Clippers"
     },
     {
-      "nba_id": 1629029,
-      "name": "Luka Doncic",
-      "reason": "Takes blame as Jazz end Lakers nine-game winning streak"
+      "nba_id": 203081,
+      "name": "Damian Lillard",
+      "reason": "Season-high 33 points in winning return to Milwaukee"
     },
     {
-      "nba_id": 2544,
-      "name": "LeBron James",
-      "reason": "Scores 22 and delivers late in Sixers comeback"
+      "nba_id": 1626157,
+      "name": "Karl-Anthony Towns",
+      "reason": "22 points and 12 rebounds in win at Minnesota"
     },
     {
-      "nba_id": 1627750,
-      "name": "Jamal Murray",
-      "reason": "Late jumper seals 17-point comeback against Celtics"
+      "nba_id": 1642377,
+      "name": "Jaylen Wells",
+      "reason": "Scores 22 as Grizzlies rout Warriors for fifth straight win"
     },
     {
-      "nba_id": 203954,
-      "name": "Joel Embiid",
-      "reason": "Scores 26 to lead shorthanded Sixers past Magic"
+      "nba_id": 1642264,
+      "name": "Stephon Castle",
+      "reason": "21 points and 12 assists help Spurs beat Clippers"
     }
   ]
 }
