@@ -22,7 +22,7 @@
 	const facts = [
 		{ value: '89% vs. 69%', label: 'the 2013 Lakers in practice and in games' },
 		{ value: '+4.6', label: 'points on the second of two free throws, against the first' },
-		{ value: '-3.7', label: 'points in the last 10 seconds of a one-point game' }
+		{ value: '−3.7', label: 'points in the last 10 seconds of a one-point game' }
 	];
 	const { warmup, rhythm, summary, gleague } = freeThrowData;
 	const minutes = (bucket) => `${bucket} ${bucket === '0-1' ? 'minute' : 'minutes'}`;
@@ -33,12 +33,12 @@
 		value: d.gap,
 		aria: `${minutes(d.bucket)}: ${signed(d.gap)} points, ${d.pct.toFixed(1)}% against ${warmup.baseline.toFixed(1)}%, ${count(d.n)} free throws`
 	}));
-	const rhythmBars = rhythm.positions.map((d) => ({
+	const rhythmBars = rhythm.slots.map((d) => ({
 		...d,
-		key: d.position,
-		label: d.position,
+		key: d.slot,
+		label: d.slot,
 		value: d.gap,
-		aria: `${d.position} free throw in a row: ${signed(d.gap)} points, ${count(d.n)} free throws`
+		aria: `${d.slot}: ${signed(d.gap)} points against the first shot of the trip, ${count(d.n)} free throws`
 	}));
 	const tripled = summary.league + summary.practice;
 	const practiceRow = {
@@ -96,16 +96,16 @@
 			{:else if section.figure === 'rhythm'}
 				<FreeThrowBarChart
 					bars={rhythmBars}
-					title="The second free throw is the jump, and it levels off after that"
-					caption="Free throws taken back to back by the same player, compared with the first one in the run, same player and season. 1996-97 through 2024-25."
-					axisTitle="Free throw in a row"
-					ariaLabel="Bar chart. Each free throw in an unbroken run compared with the first one: {rhythmBars
+					title="The second free throw is the jump, and the third adds a little more"
+					caption="Each shot compared with the first shot of the same trip, same player and season. 1996-97 through 2024-25."
+					axisTitle="Shot of the trip"
+					ariaLabel="Bar chart. Each shot of a trip compared with the first shot of the same trip: {rhythmBars
 						.map((d) => `${d.label}, ${signed(d.value)} points`)
 						.join('; ')}."
 				>
 					{#snippet tip(d)}
-						<b>{d.position} free throw in a row</b><br />
-						<b>{signed(d.gap)}</b> points against the first one<br />
+						<b>{d.slot}</b><br />
+						<b>{signed(d.gap)}</b> points against the first shot of the trip<br />
 						{count(d.n)} free throws
 					{/snippet}
 				</FreeThrowBarChart>
@@ -116,7 +116,7 @@
 					caption="First shot of a trip, compared with the same player's first trip of the game that season (71.4%), by real minutes since their previous free throw. 1996-97 through 2018-19."
 					axisTitle="Minutes since the player's last free throw"
 					refLine={{ value: warmup.secondShotBump, label: 'second shot of the same trip' }}
-					ariaLabel="Bar chart. First shot of a trip compared with the player's first trip of the game, by minutes since his previous free throw: {warmupBars
+					ariaLabel="Bar chart. First shot of a trip compared with the player's first trip of the game, by minutes since their previous free throw: {warmupBars
 						.map((d) => `${minutes(d.bucket)}, ${signed(d.value)} points`)
 						.join('; ')}. The second shot of the same trip is {signed(warmup.secondShotBump)} points."
 				>
@@ -133,7 +133,7 @@
 					domain={[66, 80]}
 					axisTitle="Percent of free throws made"
 					title="The single free throw goes in like a first shot"
-					caption="G League free throws by the {gleague.players} players who shot them in both 2018-19 and 2019-20, the first season of the one-free-throw rule. Technical free throws and the last two minutes of the fourth quarter and overtime are left out. These are the raw percentages. Comparing each player with themselves, the single free throw is 0.3 points below the first of two and 6.3 below the second."
+					caption="G League free throws by the {gleague.players} players who shot them in both 2018-19 and 2019-20, the first season of the one-free-throw rule. Technical free throws and the last two minutes of the fourth quarter and overtime are left out. The three dots are weighted to the same mix of players, so the gaps between them match the player-by-player comparison in the text."
 					ariaLabel="Dot chart of G League free throws by the {gleague.players} players who shot them in both 2018-19 and 2019-20: {gleague.rows
 						.map((d) => `${d.label}, ${d.pct.toFixed(1)}% made on ${count(d.n)} free throws`)
 						.join('; ')}."

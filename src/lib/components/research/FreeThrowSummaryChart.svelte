@@ -19,8 +19,28 @@
 	const labelW = $derived(narrow ? 0 : 214);
 	const gap = 14; // space between the practice row and the rest
 	const margin = $derived({ top: 6, right: 44, bottom: 40, left: labelW + 6 });
-	const all = $derived([{ ...practice, key: 'practice', isPractice: true }, ...rows.map((r) => ({ ...r, key: r.label }))]);
-	const height = $derived(margin.top + all.length * rowH + gap + margin.bottom);
+	const lineH = 13; // extra height for each wrapped label line
+	// Long labels wrap onto a second line (by words, about 6.2 px a character at 12 px) instead of
+	// running off the left edge; a wrapped row is taller by one line.
+	const maxChars = $derived(Math.max(16, Math.floor((narrow ? width : labelW) / 6.2)));
+	function wrap(label) {
+		const lines = [];
+		for (const word of label.split(' ')) {
+			const last = lines.at(-1);
+			if (last !== undefined && `${last} ${word}`.length <= maxChars) lines[lines.length - 1] = `${last} ${word}`;
+			else lines.push(word);
+		}
+		return lines;
+	}
+	const all = $derived(
+		[{ ...practice, key: 'practice', isPractice: true }, ...rows.map((r) => ({ ...r, key: r.label }))].map((d) => ({
+			...d,
+			lines: wrap(d.label)
+		}))
+	);
+	const rowHs = $derived(all.map((d) => rowH + (d.lines.length - 1) * lineH));
+	const tops = $derived(rowHs.reduce((acc, h, i) => [...acc, acc[i] + h], [margin.top]));
+	const height = $derived(tops[all.length] + gap + margin.bottom);
 
 	const lo = $derived(Math.floor(Math.min(0, ...rows.map((r) => r.effect)) / 5) * 5);
 	const hi = $derived(Math.ceil(Math.max(practice.effect, ...rows.map((r) => r.effect)) / 5) * 5);
@@ -28,8 +48,8 @@
 	// Leave room on the left for the most negative value label.
 	const x = $derived(scaleLinear().domain([lo, hi]).range([margin.left + (narrow ? 4 : 0), width - margin.right]));
 
-	const rowTop = (i) => margin.top + i * rowH + (i > 0 ? gap : 0);
-	const barY = (i) => rowTop(i) + (narrow ? rowH - barH - 4 : (rowH - barH) / 2);
+	const rowTop = (i) => tops[i] + (i > 0 ? gap : 0);
+	const barY = (i) => rowTop(i) + (narrow ? rowHs[i] - barH - 4 : (rowHs[i] - barH) / 2);
 	const fill = (d) => (d.isPractice ? 'var(--text)' : d.effect >= 0 ? 'var(--positive)' : 'var(--negative)');
 	const shareText = (s) => `${s < 10 ? s.toFixed(1) : Math.round(s)}%`;
 
@@ -73,9 +93,19 @@
 			{#each all as d, i (d.key)}
 				<g class="row" class:dim={active && active !== d.key}>
 					{#if narrow}
-						<text class="t-name" class:practice={d.isPractice} x="0" y={barY(i) - 5}>{d.label}</text>
+						<text class="t-name" class:practice={d.isPractice} x="0" y={barY(i) - 5 - (d.lines.length - 1) * lineH}>
+							{#each d.lines as line, j (j)}<tspan x="0" dy={j ? lineH : 0}>{line}</tspan>{/each}
+						</text>
 					{:else}
-						<text class="t-name" class:practice={d.isPractice} x={labelW} y={barY(i) + barH / 2} dy="0.32em" text-anchor="end">{d.label}</text>
+						<text
+							class="t-name"
+							class:practice={d.isPractice}
+							x={labelW}
+							y={barY(i) + barH / 2 - ((d.lines.length - 1) * lineH) / 2}
+							text-anchor="end"
+						>
+							{#each d.lines as line, j (j)}<tspan x={labelW} dy={j ? lineH : '0.32em'}>{line}</tspan>{/each}
+						</text>
 					{/if}
 					<path d={hBarPath(barY(i), barH, x(0), x(d.effect))} fill={fill(d)} />
 					<text
@@ -94,7 +124,7 @@
 					x="0"
 					y={rowTop(i)}
 					{width}
-					height={rowH}
+					height={rowHs[i]}
 					role="button"
 					tabindex="0"
 					aria-label={d.isPractice ? d.aria : `${d.label}: ${signed(d.effect)} points, ${shareText(d.share)} of free throws`}

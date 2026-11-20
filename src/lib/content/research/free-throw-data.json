@@ -199,31 +199,21 @@
 	],
 	"rhythm": {
 		"seasons": "1996-97 to 2024-25",
-		"positions": [
+		"slots": [
 			{
-				"position": "2nd",
+				"slot": "2nd of 2",
 				"gap": 4.6,
-				"n": 745262
+				"n": 744161
 			},
 			{
-				"position": "3rd",
-				"gap": 4.3,
-				"n": 42593
+				"slot": "2nd of 3",
+				"gap": 5.0,
+				"n": 14786
 			},
 			{
-				"position": "4th",
-				"gap": 5.3,
-				"n": 20148
-			},
-			{
-				"position": "5th",
-				"gap": 4.5,
-				"n": 2323
-			},
-			{
-				"position": "6th+",
-				"gap": 5.8,
-				"n": 2184
+				"slot": "3rd of 3",
+				"gap": 6.0,
+				"n": 14784
 			}
 		]
 	},
@@ -232,14 +222,19 @@
 		"practice": 14.6,
 		"rows": [
 			{
-				"label": "Third or later in a row",
-				"effect": 4.1,
-				"share": 3.66
+				"label": "Third shot of the trip",
+				"effect": 5.4,
+				"share": 0.87
 			},
 			{
-				"label": "Second in a row",
-				"effect": 3.8,
-				"share": 43.5
+				"label": "Second shot of the trip",
+				"effect": 3.9,
+				"share": 44.7
+			},
+			{
+				"label": "Back at the line within 30 seconds of game time",
+				"effect": 2.3,
+				"share": 1.78
 			},
 			{
 				"label": "Second night of a back-to-back",
@@ -248,7 +243,7 @@
 			},
 			{
 				"label": "Fouled in transition",
-				"effect": -0.2,
+				"effect": -0.1,
 				"share": 21.39
 			},
 			{
@@ -257,19 +252,29 @@
 				"share": 49.01
 			},
 			{
+				"label": "30+ minutes played",
+				"effect": -0.4,
+				"share": 15.56
+			},
+			{
 				"label": "Overtime",
-				"effect": -0.3,
+				"effect": -0.5,
 				"share": 1.0
 			},
 			{
-				"label": "30+ minutes played",
-				"effect": -0.5,
-				"share": 20.71
+				"label": "First 2 minutes of a quarter (stayed on)",
+				"effect": -0.6,
+				"share": 6.51
 			},
 			{
 				"label": "Games 2-15 of the season",
 				"effect": -0.7,
 				"share": 20.6
+			},
+			{
+				"label": "First 2 minutes of the game",
+				"effect": -0.7,
+				"share": 1.78
 			},
 			{
 				"label": "Playoffs",
@@ -282,23 +287,23 @@
 				"share": 5.63
 			},
 			{
-				"label": "Checked in under 2 minutes ago",
-				"effect": -1.2,
-				"share": 23.29
+				"label": "Came off the bench under 2 minutes ago",
+				"effect": -1.6,
+				"share": 15.04
 			},
 			{
 				"label": "First free throw of the game",
-				"effect": -1.9,
+				"effect": -1.8,
 				"share": 24.74
 			},
 			{
 				"label": "10+ days since last game",
-				"effect": -2.3,
+				"effect": -2.2,
 				"share": 1.22
 			},
 			{
 				"label": "Last 30 seconds, within 3",
-				"effect": -2.5,
+				"effect": -2.4,
 				"share": 1.6
 			},
 			{
@@ -313,17 +318,17 @@
 		"rows": [
 			{
 				"label": "First of two, 2018-19",
-				"pct": 70.3,
+				"pct": 70.5,
 				"n": 5290
 			},
 			{
 				"label": "Second of two, 2018-19",
-				"pct": 76.4,
+				"pct": 76.5,
 				"n": 5289
 			},
 			{
 				"label": "Single free throw, 2019-20",
-				"pct": 70.9,
+				"pct": 70.3,
 				"n": 6142
 			}
 		]
