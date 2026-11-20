@@ -15,7 +15,7 @@ export const RESEARCH_POSTS = [
 		date: '2026-11-20',
 		dateLabel: 'November 20, 2026',
 		summary:
-			'The 2013 Lakers made 89% of their free throws in practice and 69% in games. I went through about 1.76 million game free throws to see what explains the gap, e.g., fatigue, pressure, the crowd, or rhythm.'
+			"The 2013 Lakers made 89% of their free throws in practice and 69% in games. I went through about 1.76 million game free throws to see what explains the gap – whether it's fatigue, pressure, the crowd, or rhythm."
 	},
 	{
 		slug: 'does-winning-the-tip-matter',
@@ -23,7 +23,7 @@ export const RESEARCH_POSTS = [
 		date: '2026-11-17',
 		dateLabel: 'November 17, 2026',
 		summary:
-			'Teams that win the opening tip win 52.8% of their games. The rules give the possession back, most of the edge is who is playing, and the closing spread leaves about half a point. The overtime tip is the one that matters.'
+			'Teams that win the opening tip win 52.8% of their games. The rules give the possession back, most of the edge is who is playing, and the closing spread plus who is jumping leaves about a fifth of a point. The overtime tip is the one that matters.'
 	},
 	{
 		slug: 'early-season-strength-of-schedule',

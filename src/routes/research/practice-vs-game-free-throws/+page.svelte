@@ -18,7 +18,7 @@
 
 	const title = 'Why are NBA players so much worse at free throws in games?';
 	const deck =
-		'The 2013 Lakers made 89% of their free throws in practice and 69% in games. I went through about 1.76 million game free throws to see what explains the gap, e.g., fatigue, pressure, the crowd, or rhythm.';
+		"The 2013 Lakers made 89% of their free throws in practice and 69% in games. I went through about 1.76 million game free throws to see what explains the gap – whether it's fatigue, pressure, the crowd, or rhythm.";
 	const facts = [
 		{ value: '89% vs. 69%', label: 'the 2013 Lakers in practice and in games' },
 		{ value: '+4.6', label: 'points on the second of two free throws, against the first' },

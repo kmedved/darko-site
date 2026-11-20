@@ -1,12 +1,12 @@
-## The five-point gap
+## The Five-Point Gap
 
-Every so often someone notices that the team that wins the opening tip seems to win the game more often than not – tip winners have won 52.8% of their games since 1997-98 – and asks whether the tip is actually 'worth' something, or whether this is just noise. (That 52.8% is from 29 seasons of possession-by-possession data, 1997-98 through 2025-26.) It looks even better if you split it by the home team: when the home team wins the tip it goes on to win 61.4% of its games, and when it loses the tip that falls to 56.3%. That's a five-point swing from a two-second toss between two centers, which (if real) would make the jump ball one of the most valuable plays in basketball.
+Every so often someone notices that the team that wins the opening tip seems to win the game more often than not – tip winners have won 52.8% of their games since 1997-98, or 2.8 percentage points above a coin flip – and asks whether the tip is actually 'worth' something, or whether this is just noise. (That 52.8% comes from 29 seasons of possession-by-possession data, 1997-98 through 2025-26.) Split it by the home team and the gap roughly doubles, because now you're comparing winners against losers instead of winners against 50%: when the home team wins the tip it goes on to win 61.4% of its games, and when it loses the tip that falls to 56.3%. That's a five-point swing from a two-second toss between two centers, which (if real) would make the jump ball one of the most valuable plays in basketball.
 
-I don't think it's real. The possession you win is handed right back by the rules, and the 52.8% is mostly telling us who is playing: good teams tend to have good centers, and good centers tend to win tips. Once we account for the closing point spread, about half a point is left. The one jump ball that does seem to matter is the one at the start of overtime (more on that below).
+I don't think it's real. The possession you win is handed right back by the rules, and the gap is mostly telling us who is playing: good teams tend to have good centers, and good centers tend to win tips. Once we account for the closing point spread, that five-point winner-versus-loser gap shrinks to about two-thirds of a point (0.65), and adding who is jumping brings it down to about a fifth of a point (0.2). The one jump ball that does seem to matter is the one at the start of overtime (more on that below).
 
 <!-- interactive:seasons -->
 
-## What the tip actually wins
+## What the Tip Actually Wins
 
 Let's start with what the tip actually buys you, because the answer is almost nothing.
 
@@ -20,7 +20,7 @@ The possession itself isn't much of a prize either. The opening possession of a 
 
 So the tip itself is worth roughly nothing. Why, then, do tip winners win 52.8% of the time?
 
-## Winning tips is a skill
+## Winning Tips Is a Skill
 
 The first clue is that winning tips isn't a coin flip. If jump balls were pure luck, almost every team's season-long tip rate would land somewhere between 39% and 61%. The actual range runs from 17% to 84%. The 2002-03 and 2003-04 Cavaliers, with 7'3" Žydrūnas Ilgauskas jumping, won 84% of their tips two years running. On the other side, the 2009-10 and 2010-11 Rockets, with Yao Ming hurt, mostly sent 6'9" power forward Luis Scola out to jump, and won 17% two years running. If you split any season into alternating games, the two halves' tip rates track each other closely (a correlation of 0.64, against 0.80 for win rates). The 2001-02 Heat, with Alonzo Mourning jumping nearly every night, once won 26 tips in a row, and Shaq's 2000-01 Lakers ran off 23 straight.
 
@@ -62,11 +62,11 @@ This skill does pay off in one visible way, which is who scores first. The tip w
 
 The key point for everything that follows is that being good at tips and being good at basketball are different skills, but they tend to show up in the same kinds of players.
 
-## Adjusting for who you're jumping against
+## Adjusting for Who You're Jumping Against
 
-A padded career win rate treats every opponent the same and treats a player's skill as frozen in amber. Neither is quite right. Jumping night after night in the late-1990s West against Shaq, Arvydas Sabonis, David Robinson and Tim Duncan is a very different assignment from jumping against small-ball fill-ins. On top of that, jump-ball skill actually evolves over a career in a counterintuitive way: there is a steep learning curve. Rookies win roughly 9 percentage points fewer tips than the exact same players three years later, and veterans barely fade in their 30s – which is another sign that jump balls are more about timing and craft than raw bounce.
+A padded career win rate treats every opponent the same and assumes a player's skill never changes over his career. Neither is quite right. Jumping night after night in the late-1990s West against Shaq, Arvydas Sabonis, David Robinson and Tim Duncan is a very different assignment from jumping against small-ball fill-ins. Jump-ball skill also changes over a career in a slightly surprising way: rookies win roughly 9 percentage points fewer tips than the exact same players three years later, and veterans barely fade in their 30s – another sign that jump balls are more about timing than pure leaping ability.
 
-To adjust for opposition, home court and career movement all at once, I fit a dynamic Bradley-Terry model (`dynamic_bt`) across all 36,715 opening tips. It is closely related to Elo – both use the same logistic matchup math, where beating a strong jumper counts for more than beating a weak one and ratings move over time – with three practical differences. Instead of stepping forward one game at a time and never looking back like classical Elo, it solves for every player's full career path simultaneously, so early-career ratings benefit from later evidence about how good both jumpers really were. Rather than updating everyone by a fixed step size (Elo's K-factor), it tracks each player's uncertainty over calendar time, shrinking small samples harder and letting uncertainty widen naturally across injuries and offseasons. And it estimates home court and the rookie learning curve jointly inside the same fit. (Later, when I control for who is jumping in the game-outcome models, I switch back to a strictly forward-only Elo rating built only from earlier tips so no future information leaks in.) Translating each player's smoothed rating into his neutral-court win rate against a league-average jumper shuffles the top of the leaderboard in interesting ways:
+To adjust for opposition, home court and career movement all at once, I fit a dynamic Bradley-Terry model (`dynamic_bt`) across all 36,715 opening tips. It's closely related to Elo (same logistic matchup math, where beating a strong jumper counts for more than beating a weak one), except instead of stepping forward one game at a time with a fixed K-factor, it solves for every player's full career path at once, tracks uncertainty over calendar time, and estimates home court and the rookie learning curve inside the same fit. (Later, when I control for who is jumping in the game-outcome models, I switch back to a strictly forward-only Elo rating built only from earlier tips so no future information leaks in.) Translating each player's smoothed rating into his neutral-court win rate against a league-average jumper shuffles the top five slightly:
 
 | Rank | Best jumpers (opp-adjusted) | Jumps | Padded | Opp-adjusted | Peak (season) | Avg opponent |
 | ---: | :--- | ---: | ---: | ---: | ---: | ---: |
@@ -78,30 +78,11 @@ To adjust for opposition, home court and career movement all at once, I fit a dy
 
 *Career averages of each player's smoothed neutral-court win rate against a league-average jumper, 1997-98 through 2025-26. "Avg opponent" is the average opponent-adjusted strength of the jumpers he faced.*
 
-Victor Wembanyama still finishes #1 overall and already holds the highest smoothed peak in the database – his raw tip rate climbed from 63% as a rookie to 76% in year two to an absurd 68-for-76 (89.5%) in 2025-26. Right behind him, Arvydas Sabonis jumps past both Andre Drummond and Shaq into #2 once you account for his brutal 1998-2001 schedule (51.7% average opponent, behind only Luc Longley at 52.9% and Kendrick Perkins at 52.6% among regulars with 150+ jumps). Meanwhile, tough competition does not rescue Yao Ming: he lands at 41.2% (versus 41.4% padded), still well below average, though comfortably ahead of Dirk Nowitzki (33.3%). And among regulars with 300+ jumps, Domantas Sabonis drops even further to 29.2% – making his father an 87% neutral-court favorite over him.
+The main mover is Arvydas Sabonis, who jumps past Drummond and Shaq into #2 once you account for his 1998-2001 schedule (51.7% average opponent, behind only Luc Longley at 52.9% and Kendrick Perkins at 52.6% among regulars with 150+ jumps). Wembanyama stays #1 and already holds the highest smoothed peak in the database, climbing from 63% as a rookie to 76% in year two to 68-for-76 (89.5%) in 2025-26. Tough competition doesn't rescue Yao Ming either – he lands at 41.2% versus 41.4% padded, ahead of Dirk Nowitzki (33.3%) but still well below average – while Domantas Sabonis lands at 29.2%, making his father an 87% neutral-court favorite over him.
 
 <!-- interactive:trajectories -->
 
-The smoothed paths also make the head-to-head matchups more fun to check against what actually happened. If you ever wondered how Yao Ming fared against Dirk Nowitzki, they actually jumped against each other just once – Yao won 1-0, because Dallas usually sent Erick Dampier out to handle Yao (and Dampier went 16-2 against him). Here are a few of the most notable head-to-head series across the 29 seasons, alongside what the dynamic model expected on those exact game dates:
-
-| Head-to-head matchup | Record | Actual | Model pred |
-| :--- | :---: | ---: | ---: |
-| Yao Ming vs. Dirk Nowitzki | 1-0 | 100.0% | 53.9% |
-| Erick Dampier vs. Yao Ming | 16-2 | 88.9% | 71.9% |
-| Shaquille O'Neal vs. Yao Ming | 9-1 | 90.0% | 79.2% |
-| Arvydas Sabonis vs. Shaquille O'Neal | 19-9 | 67.9% | 53.3% |
-| Shaquille O'Neal vs. David Robinson | 23-10 | 69.7% | 60.4% |
-| Shaquille O'Neal vs. Tim Duncan | 19-5 | 79.2% | 67.7% |
-| Nikola Jokić vs. Rudy Gobert | 25-25 | 50.0% | 46.2% |
-| Brook Lopez vs. Nikola Vučević | 35-8 | 81.4% | 79.7% |
-| Brook Lopez vs. Robin Lopez | 14-4 | 77.8% | 62.1% |
-| Andre Drummond vs. Myles Turner | 20-3 | 87.0% | 85.6% |
-| Victor Wembanyama vs. Chet Holmgren | 9-3 | 75.0% | 73.9% |
-| Victor Wembanyama vs. Nikola Jokić | 3-4 | 42.9% | 67.2% |
-
-A couple of those jump off the page: a 35-year-old Arvydas Sabonis went 19-9 against prime Shaq, even though Shaq dominated almost every other legendary center of his era (`23-10` vs. Robinson, `19-5` vs. Duncan, `25-16` vs. Ben Wallace, `9-1` vs. Yao). Jokić and Gobert are dead even at 25-25 across the most frequent jump-ball rivalry in the database – and Jokić somehow owns a `4-3` edge over Wembanyama. And in the twin-brother series, Brook Lopez has quietly beaten Robin `14-4`.
-
-## Good teams win more tips
+## Good Teams Win More Tips
 
 Across 863 team-seasons, better teams win more tips. The relationship is clear but fairly loose, which roughly aligns with our intuitions, since good teams tend to have good centers, and good centers tend to be big and athletic. An extra 10 points of tip rate goes with about 3 extra wins per 82 games. That's a correlation and nothing more, which the exceptions make pretty obvious.
 
@@ -113,7 +94,7 @@ A cleaner way to check this is to look at a jump ball from a *different* game. I
 
 You can also come at this from the other direction. If we only compare games between the same two teams, in the same building, in the same season, where the tip went one way in some games and the other way in others, the five-point gap shrinks to about 2.2 points. And if we rate every team with a team Elo rating built only from its earlier results, and then compare tip winners to tip losers of equal strength, about 1.9 points survive. So roughly three of the five points go away once we account for who is playing whom. (The full set of comparisons, including the betting line, is further down.)
 
-## Who takes the tip
+## Who Takes the Tip
 
 So is the last couple of points the 'real' effect of the tip? Mostly not, because the tip also tells us something a season-long rating can't, which is who actually took the tip tonight.
 
@@ -125,7 +106,7 @@ The playoffs point the same way. In the postseason, when everyone who can play d
 
 Home court shows up here too. Home teams win 51.4% of opening tips, and this isn't about personnel, since the *same jumper* wins about 3 points more of his jumps at home than on the road. Whatever home court advantage is made of (sleep, familiarity, the crowd), some of it apparently shows up even here. It's a small piece though, worth about a quarter of a point of the headline number.
 
-## Controlling for the betting line
+## Controlling for the Betting Line
 
 A team Elo rating only knows results. Bookmakers know a lot more than that – by tip-off their price reflects injuries, rest, back-to-backs and how a matchup is likely to go. So if the leftover edge is really just hidden team quality, the betting line should soak it up.
 
@@ -133,19 +114,17 @@ To check this, I took the closing point spread for 32,394 regular-season games (
 
 <!-- interactive:ladder -->
 
-As you can see, the line does what team Elo couldn't. The raw gap is 4.9 points. Team Elo takes it down to 1.9, team Elo plus jumper Elo to 0.7, and the closing spread to 0.65. Add jumper Elo to the spread and we're at about 0.2. (That last step means jumper Elo tells us a little about who wins that the spread, as I've used it here, doesn't. I wouldn't read much into that. The ratings don't predict who covers the spread, the effect isn't there in close games or in the playoffs, and it comes from how good a team's jumper is over the whole season and not from who happens to be jumping tonight.) The spread-only answer barely moved when I let the link between the spread and winning bend and added season effects, or kept team Elo in alongside the spread (every variant landed between 0.59 and 0.66). Moneylines tell the same story, at 0.74 on 23,778 games, and 0.39 with jumper Elo added. (I only have moneylines from 2006-07 on.)
+As you can see, the line does what team Elo couldn't. On the home-winner-versus-home-loser scale, the raw gap is 4.9 points. Team Elo takes it down to 1.9, team Elo plus jumper Elo to 0.7, and the closing spread to 0.65 (beating team Elo by about 1.3 points on the same games). Add jumper Elo to the spread and we're at about 0.2. (That last step means jumper Elo tells us a little about who wins that the spread, as I've used it here, doesn't. I wouldn't read much into that. The ratings don't predict who covers the spread, the effect isn't there in close games or in the playoffs, and it comes from how good a team's jumper is over the whole season and not from who happens to be jumping tonight.) The spread-only answer barely moved when I let the link between the spread and winning bend and added season effects, or kept team Elo in alongside the spread (every variant landed between 0.59 and 0.66). Moneylines tell the same story, at 0.74 on 23,778 games, and 0.39 with jumper Elo added. (I only have moneylines from 2006-07 on.)
 
 <!-- interactive:priced -->
 
-To put this in plainer terms: in the games with moneylines, the teams that won the tip went on to win 52.8% of the time. Before the game, the betting market had already rated those same teams at 52.4%. Meaning the market had already priced in almost nine-tenths of the edge, and what was left was 0.4 of a point. (That 0.4 is the tip winner against the market. The chart above compares home teams that won the tip with home teams that lost it, which doubles everything, so this is the same result as the 0.74.)
+Put back on the simpler winner-versus-market scale (half the winner-versus-loser scale above): in the games with moneylines, teams that won the tip went on to win 52.8% of the time, while before the game the betting market had already rated those same teams at 52.4%. Meaning the market had already priced in almost nine-tenths of the edge, leaving 0.4 percentage points (which doubles to the 0.74 winner-versus-loser gap in the chart above).
 
 Interestingly, the line even 'knows' about the tip. Bookmakers don't price the jump ball, and yet the spread predicts which team wins it, and once you have the spread, team Elo adds nothing. To me that's the clearest sign that the tip is picking up things the market already knew about – lineups, health and who is likely to jump.
 
-The line also clearly beats team Elo: on the same games, swapping team Elo for the spread lowers the estimate by about 1.3 points.
+To be clear, none of this is a betting system. Knowing the tip winner before the line closed would have been worth about 0.4 percentage points of win probability, against an average bookmaker margin of about 3%. And of course nobody knows the tip winner before the tip.
 
-To be clear, none of this is a betting system. Knowing the tip winner before the line closed would have been worth about 0.4 of a point of win probability, against an average bookmaker margin of about 3%. And of course nobody knows the tip winner before the tip.
-
-## Close games and overtime
+## Close Games and Overtime
 
 There is one place where the tip looks like it matters. In games that are close entering the fourth quarter (within three points, which is about a fifth of all games), the team that won the opening tip wins 54.1% of the time. The obvious explanation is that the tip winner gets the first possession of the fourth quarter, right when games are being decided.
 
@@ -165,20 +144,37 @@ Overtime is different, because it starts with a *new* jump ball, and this time n
 
 This is a different jump ball from the opening one. The team that won the opening tip wins the overtime tip only 54% of the time, and only 6% of games get that far, so overtime explains essentially none of the opening-tip gap (a few hundredths of a percentage point). It is, however, the one jump ball all night that's actually worth winning.
 
-## Where the five points go
+## Where the Five Points Go
 
-With all of that out of the way, here is the whole accounting, built by adding one control at a time. The order matters here, so these bars aren't shares of 'causes'. They just show how much of the gap each added control removes.
+With all of that out of the way, here is the whole accounting on the five-point home-winner-versus-home-loser scale, built by adding one control at a time. The order matters here, so these bars aren't shares of 'causes'. They just show how much of the gap each added control removes.
 
 <!-- interactive:ledger -->
 
-About 3 of the 5 points are simply who you are: good teams have good centers, and good centers win tips, so controlling for team Elo removes them. About 1.2 points more is the part of the tip you can predict from who is jumping, and jumper Elo removes that. The closing spread then removes about two-thirds of what team Elo and jumper Elo left behind. What's left is about a fifth of a point, and the possession itself adds nothing, because the rules give it back.
+About 3 of the 5 points are simply who you are: good teams have good centers, and good centers win tips, so controlling for team Elo removes them. About 1.2 points more is the part of the tip you can predict from who is jumping, and jumper Elo removes that. The closing spread then removes about two-thirds of what team Elo and jumper Elo left behind, leaving roughly a fifth of a point (0.2), while the possession itself adds nothing because the rules give it back. (Home court is held fixed here, since we're comparing home teams that won the tip against home teams that lost it; in the 52.8% headline, home court is worth about a quarter of a point.)
 
-(Home court is held fixed in this accounting, since the comparison is between home teams that won the tip and home teams that lost it. In the 52.8% headline, home court is worth about a quarter of a point.)
+So I wouldn't read "tip winners win 52.8% of the time" as "the tip is worth 2.8 points of win probability". This isn't a controlled experiment, so a tiny effect is always hard to rule out completely, but the tip mostly tells us about the roster, the center's health and home court. Teams that win tips were mostly going to win anyway – with the one real exception being the tip at the start of overtime.
 
-So I wouldn't read "tip winners win 52.8% of the time" as "the tip is worth 2.8 points of win probability". The tip tells us about the roster, the center's health and home court, and as far as I can tell from the possession math, it adds nothing measurable to the next 48 minutes. Teams that win tips were mostly going to win anyway. The one exception is the tip at the start of overtime.
+## Notable Head-to-Head Matchups
 
-There are of course limits to this analysis. It isn't an experiment – every adjusted number here is an association, and a small causal effect of one or two points is still possible. The betting lines are archived closing lines from several sources, and most carry no per-quote timestamp, so some of them may not be the final price. And none of this says anything about prices available after the tip.
+As a quick bonus from the `dynamic_bt` model above, here are some of the more interesting head-to-head jump-ball series across the 29 seasons alongside what the model expected on those exact game dates. If you ever wondered how Yao Ming fared against Dirk Nowitzki, they actually jumped against each other just once (Yao won 1-0, because Dallas usually sent Erick Dampier out to handle Yao, and Dampier went 16-2 against him):
+
+| Head-to-head matchup | Record | Actual | Model pred |
+| :--- | :---: | ---: | ---: |
+| Yao Ming vs. Dirk Nowitzki | 1-0 | 100.0% | 53.9% |
+| Erick Dampier vs. Yao Ming | 16-2 | 88.9% | 71.9% |
+| Shaquille O'Neal vs. Yao Ming | 9-1 | 90.0% | 79.2% |
+| Arvydas Sabonis vs. Shaquille O'Neal | 19-9 | 67.9% | 53.3% |
+| Shaquille O'Neal vs. David Robinson | 23-10 | 69.7% | 60.4% |
+| Shaquille O'Neal vs. Tim Duncan | 19-5 | 79.2% | 67.7% |
+| Nikola Jokić vs. Rudy Gobert | 25-25 | 50.0% | 46.2% |
+| Brook Lopez vs. Nikola Vučević | 35-8 | 81.4% | 79.7% |
+| Brook Lopez vs. Robin Lopez | 14-4 | 77.8% | 62.1% |
+| Andre Drummond vs. Myles Turner | 20-3 | 87.0% | 85.6% |
+| Victor Wembanyama vs. Chet Holmgren | 9-3 | 75.0% | 73.9% |
+| Victor Wembanyama vs. Nikola Jokić | 3-4 | 42.9% | 67.2% |
+
+A few of those are fun to look at: a 35-year-old Arvydas Sabonis went 19-9 against prime Shaq, even though Shaq dominated almost every other top center of his era (23-10 vs. Robinson, 19-5 vs. Duncan, 25-16 vs. Ben Wallace, 9-1 vs. Yao). Jokić and Gobert are dead even at 25-25 across the most frequent jump-ball rivalry in the database, and Jokić somehow owns a 4-3 edge over Wembanyama. In the twin-brother series, Brook Lopez has quietly beaten Robin 14-4.
 
 *How it was measured: possession-level data covers 36,765 regular-season and playoff games, 1997-98 through 2025-26 (about 7 million possessions). Game winners come from official NBA results. Quarter-by-quarter points come from play-by-play, which differs from the official score, almost always by two points or fewer, in about 15% of games. "Winning the tip" means gaining the game's first possession, which matches the officially recorded jump-ball result in 99.98% of games. Jumpers are the actual jump-ball participants recorded in the league's play-by-play, available for 99.9% of games. Padded tip rates add 16 jumps at 50% to each player's record. Sixteen is the amount that best predicts the rest of a jumper's season, fit the same way as in the padding post; predicting the rest of a career takes more (about 44), and at that amount Drummond and Wembanyama are level. "What height alone predicts" comes from a model of who wins a jump given the height gap between the two jumpers and which of them is at home. Opponent-adjusted career ratings and trajectories come from RatingKit's binary-logistic dynamic Bradley-Terry model (`dynamic_bt`) fit across all 36,715 opening tips with a shared jumper rating, a home-court intercept and first-three-season experience effects; its daily random-walk drift (0.010 per square-root day) and starting standard deviation (0.45) were tuned walk-forward across six future held-out seasons (2006, 2010, 2014, 2018, 2022 and 2026), and smoothed trajectories are season-centered so 50% represents a league-average jumper on a neutral court. "Team Elo" is a rating updated after every game and built only from earlier results. "Jumper Elo" used in the game-outcome controls works the same way: forward-only Elo ratings, one per jumper, updated after every opening tip (playoffs included) and built only from his earlier jumps. A team's "usual jumper" on a given night is whoever had taken the most of its opening tips so far that season. Adjusted comparisons use regular-season games since 1999-2000. "Regular season" includes play-in games. Quarter-opening rules are in [NBA Rule 6](https://official.nba.com/rule-no-6-putting-ball-in-play-live-dead-ball/).*
 
-*The betting-line test uses the closing point spread for 32,394 regular-season games from 1999-2000 to 2025-26 (43 games from those seasons have no line), joined on the official game id. The spread enters the model as the market's expected margin for the home team. Moneylines (my record of them starts in 2006-07) have the bookmaker's margin removed by scaling the two implied probabilities to sum to one; a few games with implausible prices were set aside. Effects are average changes in home win probability from a logistic model.*
+*The betting-line test uses archived closing point spreads from several sources for 32,394 regular-season games from 1999-2000 to 2025-26 (43 games from those seasons have no line), joined on the official game id; most carry no per-quote timestamp, so some may not be the exact final price, and none of this says anything about live prices after the tip. The spread enters the model as the market's expected margin for the home team. Moneylines (my record of them starts in 2006-07) have the bookmaker's margin removed by scaling the two implied probabilities to sum to one; a few games with implausible prices were set aside. Effects are average changes in home win probability from a logistic model.*

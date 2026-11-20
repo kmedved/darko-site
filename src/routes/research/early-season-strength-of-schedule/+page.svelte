@@ -20,8 +20,7 @@
 		{ id: '2020-21-the-schedule-number-measured-nothing', label: '2020-21' },
 		{ id: '2025-26-a-stacked-schedule-then-early-shooting', label: '2025-26' },
 		{ id: 'what-else-i-checked', label: 'What else I checked' },
-		{ id: 'what-to-do-about-it', label: 'What to do about it' },
-		{ id: 'caveats', label: 'Caveats' }
+		{ id: 'what-to-do-about-it', label: 'What to do about it' }
 	];
 </script>
 

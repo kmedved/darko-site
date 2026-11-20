@@ -81,7 +81,7 @@
 
 	const title = 'Does winning the tip matter?';
 	const deck =
-		'Teams that win the opening tip win 52.8% of their games. Most of that is who is playing. Once you account for the closing point spread, about half a point is left.';
+		'Teams that win the opening tip win 52.8% of their games. Most of that is who is playing: once you account for the closing point spread, the five-point gap shrinks to two-thirds of a point, and adding who is jumping leaves a fifth of a point.';
 	const facts = [
 		{ value: '<0.01', label: 'possessions the tip winner nets per game' },
 		{ value: '0.65', label: 'points left of a 4.9-point gap after the closing spread' },
@@ -96,7 +96,8 @@
 		{ id: 'who-takes-the-tip', label: 'Who takes the tip' },
 		{ id: 'controlling-for-the-betting-line', label: 'The betting line' },
 		{ id: 'close-games-and-overtime', label: 'Overtime' },
-		{ id: 'where-the-five-points-go', label: 'Where the gap goes' }
+		{ id: 'where-the-five-points-go', label: 'Where the gap goes' },
+		{ id: 'notable-head-to-head-matchups', label: 'Head-to-head matchups' }
 	];
 </script>
 
