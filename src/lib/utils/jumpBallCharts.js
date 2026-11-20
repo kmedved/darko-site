@@ -367,11 +367,11 @@ export function ledgerRows(data) {
 		{
 			label: 'Regular season, 1999-2000 to 2025-26',
 			raw: est('raw'),
-			parts: [est('raw') - est('strength'), est('strength') - est('strength_flags'), est('strength_flags') - est('spread_flags'), est('spread_flags')]
+			parts: [est('raw') - est('strength'), est('strength') - est('strength_jumpers'), est('strength_jumpers') - est('spread_jumpers'), est('spread_jumpers')]
 		}
 	];
 }
-export const LEDGER_PARTS = ['Team strength', 'Who took the tip', 'Betting line', 'Left over'];
+export const LEDGER_PARTS = ['Team strength', 'Who is jumping', 'Betting line', 'Left over'];
 
 function ledger(svg, W, { data, a, b, c, tip }) {
 	const colors = [a, b, c, 'var(--text-muted)'];
