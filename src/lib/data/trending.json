@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-13",
+  "date": "2026-11-19",
   "players": [
     {
-      "nba_id": 1630595,
-      "name": "Cade Cunningham",
-      "reason": "Career-high 52 points and 11 assists in double-overtime win"
-    },
-    {
-      "nba_id": 201939,
-      "name": "Stephen Curry",
-      "reason": "Oblique tear sidelines him at least two weeks"
-    },
-    {
-      "nba_id": 203935,
-      "name": "Marcus Smart",
-      "reason": "Suspended three games for punching Charles Bassey"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "Nearly triple-doubles in first game against Bucks"
     },
     {
       "nba_id": 1629029,
       "name": "Luka Doncic",
-      "reason": "Reportedly pain-free after ankle injury scare"
+      "reason": "Takes blame as Jazz end Lakers nine-game winning streak"
     },
     {
-      "nba_id": 1626164,
-      "name": "Devin Booker",
-      "reason": "Scores 30 as Suns hold off Hornets"
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "Scores 22 and delivers late in Sixers comeback"
+    },
+    {
+      "nba_id": 1627750,
+      "name": "Jamal Murray",
+      "reason": "Late jumper seals 17-point comeback against Celtics"
+    },
+    {
+      "nba_id": 203954,
+      "name": "Joel Embiid",
+      "reason": "Scores 26 to lead shorthanded Sixers past Magic"
     }
   ]
 }
