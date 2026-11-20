@@ -36,6 +36,12 @@
 			caption:
 				'369 players. Dot area shows how many opening jumps each took. The dashed line is what height alone predicts against a jumper of average height.'
 		},
+		trajectories: {
+			title: 'How a jumper’s opponent-adjusted skill moves over a career',
+			sub: 'Smoothed neutral-court win rate against a league-average jumper, with ±1 SD bands',
+			caption:
+				'Dynamic Bradley-Terry model fit across all 36,715 opening tips with home court and rookie-experience effects. Shaq held above 70% for 14 straight years; Ilgauskas peaked near 80% before fading; Jokić climbed from a 40% rookie to an above-average veteran; Yao never crossed 50%; Wembanyama is off the top of the chart.'
+		},
 		scatter: {
 			title: 'Tip rate and win rate by team-season',
 			sub: '863 team-seasons: share of opening tips won against share of games won',
@@ -85,6 +91,7 @@
 		{ id: 'the-five-point-gap', label: 'The five-point gap' },
 		{ id: 'what-the-tip-actually-wins', label: 'What the tip wins' },
 		{ id: 'winning-tips-is-a-skill', label: 'Winning tips is a skill' },
+		{ id: 'adjusting-for-who-you-re-jumping-against', label: 'Adjusting for opposition' },
 		{ id: 'good-teams-win-more-tips', label: 'Good teams win more tips' },
 		{ id: 'who-takes-the-tip', label: 'Who takes the tip' },
 		{ id: 'controlling-for-the-betting-line', label: 'The betting line' },
