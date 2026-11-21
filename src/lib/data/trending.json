@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-20",
+  "date": "2026-11-21",
   "players": [
     {
-      "nba_id": 1641705,
-      "name": "Victor Wembanyama",
-      "reason": "Viral shunk finish highlights 32-point win over Clippers"
+      "nba_id": 1628983,
+      "name": "Shai Gilgeous-Alexander",
+      "reason": "Scores 40 to lead Thunder comeback against Pelicans"
     },
     {
-      "nba_id": 203081,
-      "name": "Damian Lillard",
-      "reason": "Season-high 33 points in winning return to Milwaukee"
+      "nba_id": 1629029,
+      "name": "Luka Doncic",
+      "reason": "25 points and eight assists help Lakers escape Kings"
     },
     {
-      "nba_id": 1626157,
-      "name": "Karl-Anthony Towns",
-      "reason": "22 points and 12 rebounds in win at Minnesota"
+      "nba_id": 203999,
+      "name": "Nikola Jokic",
+      "reason": "26 points and 11 assists lift Nuggets over Rockets"
     },
     {
-      "nba_id": 1642377,
-      "name": "Jaylen Wells",
-      "reason": "Scores 22 as Grizzlies rout Warriors for fifth straight win"
+      "nba_id": 1630578,
+      "name": "Alperen Sengun",
+      "reason": "28-point triple-double in NBA Cup loss to Denver"
     },
     {
-      "nba_id": 1642264,
-      "name": "Stephon Castle",
-      "reason": "21 points and 12 assists help Spurs beat Clippers"
+      "nba_id": 1630532,
+      "name": "Franz Wagner",
+      "reason": "Scores 35 as Magic edge Nets"
     }
   ]
 }
