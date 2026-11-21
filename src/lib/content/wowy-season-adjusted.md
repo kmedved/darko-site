@@ -2,6 +2,15 @@
 
 *Season-by-season impact ratings from 1977-78 onward, now live on the DARKO site.*
 
+**Update (date to be set at go-live):** The season ratings on the site now come from a
+simpler model than the one this article describes. The Adjusted rating is now trained to match
+the season average of two-way time-decay RAPM, which weights a player's games on both sides of
+each date, instead of single-season RAPM, which swings a good deal from one season to the next.
+The new ratings move less from year to year, their peaks are lower, and Adjusted now sits much
+closer to Average: across the table the two differ by about a quarter of a point on average.
+The numbers and the method sections below are from the original model and no longer match the
+table. Larry Bird's 1983, for example, is now +7.58, still first that season.
+
 **Update, July 24, 2026:** I fixed a boundary bug that treated players who
 were already established before 1977-78 as if the model's sample marked the
 start of their careers. In 1978, it affected 8,623 player-game context rows
