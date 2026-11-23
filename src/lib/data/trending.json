@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-22",
+  "date": "2026-11-23",
   "players": [
     {
-      "nba_id": 1641705,
-      "name": "Victor Wembanyama",
-      "reason": "Scores 50 with five blocks in dominant win over Pelicans"
+      "nba_id": 203999,
+      "name": "Nikola Jokic",
+      "reason": "37-point triple-double powers overtime win against Bulls"
     },
     {
-      "nba_id": 1628969,
-      "name": "Mikal Bridges",
-      "reason": "Buzzer-beating three saves Knicks against Trail Blazers"
+      "nba_id": 1627750,
+      "name": "Jamal Murray",
+      "reason": "Scores 45 as Nuggets win overtime thriller in Chicago"
     },
     {
-      "nba_id": 1629639,
-      "name": "Tyler Herro",
-      "reason": "Career-high 50 points in narrow loss to Sixers"
+      "nba_id": 1630581,
+      "name": "Josh Giddey",
+      "reason": "23 points, 14 rebounds and career-high 22 assists"
     },
     {
-      "nba_id": 2544,
-      "name": "LeBron James",
-      "reason": "13 fourth-quarter points help Sixers hold off Bucks"
+      "nba_id": 1628983,
+      "name": "Shai Gilgeous-Alexander",
+      "reason": "Neck and back injuries force first missed game of season"
     },
     {
-      "nba_id": 203954,
-      "name": "Joel Embiid",
-      "reason": "26 points, 17 rebounds and nine assists in fifth straight win"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "Groin injury sidelines him for Thunder matchup"
     }
   ]
 }
