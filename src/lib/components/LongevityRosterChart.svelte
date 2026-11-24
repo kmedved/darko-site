@@ -79,10 +79,12 @@
         const innerHeight = height - margin.top - margin.bottom;
         svg.attr('viewBox', `0 0 ${width} ${height}`);
 
+        // Half a step in from each end, so the first and last values' labels clear the axes.
         const x = d3
             .scalePoint()
             .domain(data.map((point) => point.season_start))
-            .range([0, innerWidth]);
+            .range([0, innerWidth])
+            .padding(isShinyView ? 0 : 0.5);
 
         const xValues = data.map((_, index) => index);
         const yValues = data.map((point) => point.projected_retirement_age);

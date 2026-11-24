@@ -11,6 +11,7 @@
 	const NET_LINES = [-10, -5, 5, 10];
 	const LABEL_W = 26;
 	const LABEL_H = 12;
+	const NET_LABEL_W = 40;
 
 	let width = $state(0);
 	let active = $state(null);
@@ -63,15 +64,35 @@
 
 	const ticks = $derived(scales ? { x: scales.x.ticks(6), y: scales.y.ticks(6) } : { x: [], y: [] });
 
-	// Each dotted line runs where offense + defense = k, labelled where it enters the plot.
+	// Each dotted line runs where offense + defense = k, labelled where it enters the plot (top or
+	// left edge), or where it leaves (bottom or right edge) when fewer teams and labels sit there:
+	// the weak teams crowd the left edge, where the -5 line comes in.
 	const netLines = $derived.by(() => {
 		if (!scales) return [];
 		const { x, y } = scales;
 		const [x0, x1] = x.domain();
-		const [, yTop] = y.domain();
+		const [yBottom, yTop] = y.domain();
+		const taken = points.flatMap((point) => [
+			{ x0: point.cx - 6, x1: point.cx + 6, y0: point.cy - 6, y1: point.cy + 6 },
+			...(point.labelled ? [point.box] : [])
+		]);
+		const crowding = (box) =>
+			taken.filter((other) => !(box.x0 >= other.x1 || box.x1 <= other.x0 || box.y0 >= other.y1 || box.y1 <= other.y0)).length;
 		return NET_LINES.map((k) => {
-			const labelOffense = Math.min(Math.max(k - yTop, x0), x1);
-			return { k, x1: x(x0), y1: y(k - x0), x2: x(x1), y2: y(k - x1), lx: x(labelOffense) + 4, ly: y(k - labelOffense) + 12 };
+			const inOffense = Math.min(Math.max(k - yTop, x0), x1);
+			const outOffense = Math.min(Math.max(k - yBottom, x0), x1);
+			const enter = { lx: x(inOffense) + 4, ly: y(k - inOffense) + 12, anchor: 'start' };
+			const leave = { lx: x(outOffense) - 4, ly: y(k - outOffense) - 4, anchor: 'end' };
+			// The label's box with 8px to spare, so a label a few pixels off a team still counts.
+			const box = ({ lx, ly, anchor }) => ({
+				x0: (anchor === 'start' ? lx : lx - NET_LABEL_W) - 8,
+				x1: (anchor === 'start' ? lx + NET_LABEL_W : lx) + 8,
+				y0: ly - 18,
+				y1: ly + 10
+			});
+			const inside = ({ lx, ly }) => lx - NET_LABEL_W >= M.left && ly - 10 >= M.top && ly <= height - M.bottom;
+			const spot = inside(leave) && crowding(box(leave)) < crowding(box(enter)) ? leave : enter;
+			return { k, x1: x(x0), y1: y(k - x0), x2: x(x1), y2: y(k - x1), ...spot };
 		});
 	});
 
@@ -97,7 +118,7 @@
 			<g clip-path="url(#quadrant-plot)">
 				{#each netLines as line (line.k)}
 					<line class="net" x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
-					<text class="net-label" x={line.lx} y={line.ly}>{signed(line.k)} net</text>
+					<text class="net-label" x={line.lx} y={line.ly} text-anchor={line.anchor}>{signed(line.k)} net</text>
 				{/each}
 			</g>
 			<text class="axis" x={width - M.right} y={height - 6} text-anchor="end">Offense →</text>

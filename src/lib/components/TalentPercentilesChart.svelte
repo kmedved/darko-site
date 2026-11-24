@@ -9,7 +9,8 @@
 
 	let {
 		playerName = '',
-		position = '',
+		// Who the player is ranked among, like "Among bigs".
+		peers = 'Among all players',
 		date = '',
 		percentiles = [],
 		selectedMetrics = [],
@@ -297,8 +298,6 @@
 			.text(playerName + ' \u2014 Talent Percentiles');
 
 		// Subtitle
-		const posLabel = position ? `${position} Only` : 'All Positions';
-		const dateLabel = date || '';
 		svg.append('text')
 			.attr('x', width / 2)
 			.attr('y', 42)
@@ -306,7 +305,7 @@
 			.attr('font-size', '13px')
 			.attr('font-weight', '600')
 			.style('fill', 'var(--text-secondary)')
-			.text(`${posLabel} (${dateLabel})`);
+			.text([peers, date].filter(Boolean).join(' · '));
 
 		// Attribution
 		const attrY = margin.top + data.length * ROW_HEIGHT + 45 + legendExtra;
@@ -414,7 +413,6 @@
 			.style('fill', 'var(--text)')
 			.text(playerName);
 
-		const posLabel = position ? `${position} Only` : 'All Positions';
 		svg.append('text')
 			.attr('x', width / 2)
 			.attr('y', 47)
@@ -422,7 +420,7 @@
 			.attr('font-size', isMobile ? '12px' : '15px')
 			.attr('font-weight', '400')
 			.style('fill', 'var(--text)')
-			.text(`${posLabel} (${date || ''})`);
+			.text(date ? `${peers} (${date})` : peers);
 
 		svg.append('text')
 			.attr('x', width / 2)

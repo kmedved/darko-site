@@ -178,18 +178,25 @@
             .attr('fill', isShinyView ? 'var(--shiny-chart-line)' : 'var(--accent)');
 
         if (!isMobile && !isShinyView) {
+            // A run of equal values gets one label, at its start, and the last point always has
+            // one: nine "100%"s in a row say no more than the first. The first label starts at its
+            // point rather than centring on it, clear of the axis.
+            const pointLabel = (point) => `${point.value.toFixed(point.value >= 99.95 ? 0 : 1)}%`;
+            const labelled = data.filter(
+                (point, index) => index === 0 || index === data.length - 1 || pointLabel(point) !== pointLabel(data[index - 1])
+            );
             chartGroup
                 .selectAll('.point-label')
-                .data(data)
+                .data(labelled)
                 .join('text')
                 .attr('class', 'point-label')
-                .attr('x', (point) => x(point.horizon))
+                .attr('x', (point) => x(point.horizon) - (point === data[0] ? 2 : 0))
                 .attr('y', (point) => y(point.value) - 10)
-                .attr('text-anchor', 'middle')
+                .attr('text-anchor', (point) => (point === data[0] ? 'start' : 'middle'))
                 .attr('fill', 'var(--text)')
                 .attr('font-size', '11px')
                 .attr('font-weight', '700')
-                .text((point) => `${point.value.toFixed(point.value >= 99.95 ? 0 : 1)}%`);
+                .text(pointLabel);
         }
 
         chartGroup

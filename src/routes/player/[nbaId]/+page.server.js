@@ -1,7 +1,7 @@
 import { careerShareMetadata } from '$lib/server/charts/share.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 import { getPlayerComps } from '$lib/server/comps.js';
-import { getPlayerSeasons } from '$lib/server/daily.js';
+import { getLatestGameDate, getPlayerSeasons } from '$lib/server/daily.js';
 import { loadPlayerPageData, parsePlayerRouteId } from '$lib/server/playerPage.js';
 import { packRows } from '$lib/utils/columnar.js';
 import { getActivePlayers, getFullPlayerProfileHistory, MAX_FULL_HISTORY_ROWS } from '$lib/server/supabase.js';
@@ -26,6 +26,8 @@ export async function load({ params, setHeaders }) {
     const active = sidePanel('active players', getActivePlayers());
     const comps = sidePanel('comps', getPlayerComps(nbaId));
     const seasons = sidePanel('seasons', getPlayerSeasons(nbaId).then((rows) => rows ?? []));
+    // The date the percentiles are stamped with; without it they fall back to the row's own.
+    const ratingsThrough = getLatestGameDate().catch(() => null);
     const { historyRows: rawHistoryRows, ...page } = await loadPlayerPageData({
         nbaIdParam: params.nbaId,
         setHeaders,
@@ -52,6 +54,7 @@ export async function load({ params, setHeaders }) {
         comps: await comps,
         seasons: await seasons,
         currentComps: currentPlayerComps(page.playerInfo, await active),
-        dpmRank: dpmRank(nbaId, await active)
+        dpmRank: dpmRank(nbaId, await active),
+        ratingsThrough: await ratingsThrough
     };
 }

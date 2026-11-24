@@ -147,9 +147,10 @@
 		font-variant-numeric: tabular-nums;
 	}
 
+	/* Six-pixel sides and a narrower split bar keep every column in the panel at 1280px. */
 	.power-table th,
 	.power-table td {
-		padding: 6px 8px;
+		padding: 6px;
 		text-align: right;
 		white-space: nowrap;
 	}
@@ -198,7 +199,7 @@
 	}
 
 	.split {
-		min-width: 96px;
+		min-width: 84px;
 	}
 
 	.team-abbr {
@@ -220,7 +221,8 @@
 		font-weight: 600;
 	}
 
-	@media (max-width: 1100px) {
+	/* One column once the table no longer fits beside the chart (about 1260px). */
+	@media (max-width: 1260px) {
 		.teams-grid {
 			grid-template-columns: minmax(0, 1fr);
 		}
