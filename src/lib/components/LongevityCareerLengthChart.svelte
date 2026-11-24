@@ -261,7 +261,6 @@
             {svgEl}
             captureRootEl={chartRootEl}
             filenameBase={exportFilenameBase}
-            buttonLabel="..."
             buttonAriaLabel="Download roster probability chart"
         />
     </div>

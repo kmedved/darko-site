@@ -402,7 +402,6 @@
                 ? freshnessLabel
                 : 'Each rating starts from the season baseline of the smoothed daily WOWY line and shifts it a bounded amount for how the player performed that season.'
     );
-    let methodOpen = $state(false);
     const viewSubtitle = $derived(
         isAllTimeView
             ? 'Every WOWY RAPM player-season.'
@@ -986,34 +985,28 @@
                 </p>
             </PageHeader>
 
-            <!-- On narrow screens the explainer folds away so the table comes first. -->
-            <button
-                type="button"
-                class="btn wowy-method-toggle"
-                aria-expanded={methodOpen}
-                aria-controls="wowy-method"
-                onclick={() => (methodOpen = !methodOpen)}
-            >
-                How to read this table
-            </button>
-            <aside id="wowy-method" class="wowy-method" class:open={methodOpen} data-shiny-surface="well" aria-label="How to read WOWY RAPM">
-                <p class="wowy-method-label">Reading the table</p>
-                <p>{getMetricDefinition('wowy_rapm')}</p>
-                <p>
-                    {#if isAllTimeView}
-                        Each row is one modeled player-season, ranked by WOWY RAPM. Each rating starts from the season baseline of the smoothed daily WOWY line and shifts it for how the player performed in that season, using a model trained against single-season luck-corrected RAPM from modern play-by-play. Regular-season and playoff evidence are included. BPM is the ordinary box-score baseline; WOWY adds non-box evidence. Results load 100 at a time, with no default possession cutoff.
-                    {:else if isCurrentView}
-                        Each player row is dated to that player’s most recent observed game; team and position reflect the current DARKO roster.
-                    {:else}
-                        Each row is the player’s O-RAPM, D-RAPM, and total RAPM for {activeSeasonLabel}. The table includes every player-season emitted by the model and uses both regular-season and playoff games.
-                    {/if}
-                    Click a season to open it, or a team to see that team’s season.
-                </p>
-                <div class="wowy-method-links">
-                    <a href="/wowy/about">About WOWY RAPM <span aria-hidden="true">→</span></a>
-                    <a href="/trajectories?metric=wowy_rapm">Explore career trajectories <span aria-hidden="true">→</span></a>
+            <!-- The explainer starts folded at every width, so the header is only as tall as the
+                 intro beside it and the table's first rows show above the fold. -->
+            <details class="wowy-method" data-shiny-surface="well">
+                <summary>How to read the table</summary>
+                <div class="wowy-method-body">
+                    <p>{getMetricDefinition('wowy_rapm')}</p>
+                    <p>
+                        {#if isAllTimeView}
+                            Each row is one modeled player-season, ranked by WOWY RAPM. Each rating starts from the season baseline of the smoothed daily WOWY line and shifts it for how the player performed in that season, using a model trained against single-season luck-corrected RAPM from modern play-by-play. Regular-season and playoff evidence are included. BPM is the ordinary box-score baseline; WOWY adds non-box evidence. Results load 100 at a time, with no default possession cutoff.
+                        {:else if isCurrentView}
+                            Each player row is dated to that player’s most recent observed game; team and position reflect the current DARKO roster.
+                        {:else}
+                            Each row is the player’s O-RAPM, D-RAPM, and total RAPM for {activeSeasonLabel}. The table includes every player-season emitted by the model and uses both regular-season and playoff games.
+                        {/if}
+                        Click a season to open it, or a team to see that team’s season.
+                    </p>
+                    <div class="wowy-method-links">
+                        <a href="/wowy/about">About WOWY RAPM <span aria-hidden="true">→</span></a>
+                        <a href="/trajectories?metric=wowy_rapm">Explore career trajectories <span aria-hidden="true">→</span></a>
+                    </div>
                 </div>
-            </aside>
+            </details>
         </div>
 
         <section class="wowy-table-panel" data-shiny-surface="panel" aria-labelledby="wowy-table-title">
@@ -1456,7 +1449,7 @@
         gap: 14px;
     }
 
-    /* The standard page header, with the "Reading the table" panel beside it. */
+    /* The standard page header, with the folded "How to read the table" panel beside it. */
     .wowy-intro {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(320px, 410px);
@@ -1470,14 +1463,6 @@
     }
 
     .wowy-eyebrow,
-    .wowy-method-label {
-        color: var(--text-muted);
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        line-height: 1.2;
-        text-transform: uppercase;
-    }
 
     .wowy-status {
         margin-top: 14px;
@@ -1494,19 +1479,25 @@
         text-transform: uppercase;
     }
 
+    /* Folded, the panel is one summary line at the top of its column; stretching it to the
+       header's height would leave a tall empty box. */
     .wowy-method {
-        align-self: stretch;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        align-self: start;
         min-width: 0;
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius-sm);
         background: color-mix(in srgb, var(--bg-elevated) 72%, var(--bg-surface));
-        padding: 16px 18px;
     }
 
-    .wowy-method > p:not(.wowy-method-label) {
+    .wowy-method-body {
+        padding: 12px 12px 14px;
+    }
+
+    .wowy-method-body > p:first-child {
+        margin-top: 0;
+    }
+
+    .wowy-method-body > p {
         margin-top: 8px;
         color: var(--text-secondary);
         font-size: 13px;
@@ -1658,6 +1649,7 @@
     .wowy-filter-field select:focus,
     .wowy-filter-field input:focus,
     .wowy-advanced-filters summary:focus-visible,
+    .wowy-method summary:focus-visible,
     .wowy-filter-clear:focus-visible,
     .wowy-export-button:focus-visible,
     .wowy-pagination button:focus-visible,
@@ -1674,7 +1666,9 @@
         background: var(--bg);
     }
 
-    .wowy-advanced-filters summary {
+    /* The page's two disclosures, Advanced filters and How to read the table, share one look. */
+    .wowy-advanced-filters summary,
+    .wowy-method summary {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -1688,11 +1682,13 @@
         padding: 0 12px;
     }
 
-    .wowy-advanced-filters summary::-webkit-details-marker {
+    .wowy-advanced-filters summary::-webkit-details-marker,
+    .wowy-method summary::-webkit-details-marker {
         display: none;
     }
 
-    .wowy-advanced-filters summary::after {
+    .wowy-advanced-filters summary::after,
+    .wowy-method summary::after {
         margin-left: auto;
         color: var(--text-muted);
         content: '+';
@@ -1701,12 +1697,14 @@
         font-weight: var(--figure-weight-strong);
     }
 
-    .wowy-advanced-filters[open] summary {
+    .wowy-advanced-filters[open] summary,
+    .wowy-method[open] summary {
         border-bottom: 1px solid var(--border-subtle);
         color: var(--text);
     }
 
-    .wowy-advanced-filters[open] summary::after {
+    .wowy-advanced-filters[open] summary::after,
+    .wowy-method[open] summary::after {
         content: '−';
     }
 
@@ -2162,24 +2160,11 @@
         }
     }
 
-    .wowy-method-toggle {
-        display: none;
-    }
-
     @media (max-width: 900px) {
         .wowy-intro {
             grid-template-columns: 1fr;
             gap: 16px;
             padding-top: 24px;
-        }
-
-        .wowy-method-toggle {
-            display: inline-flex;
-            justify-self: start;
-        }
-
-        .wowy-method:not(.open) {
-            display: none;
         }
     }
 

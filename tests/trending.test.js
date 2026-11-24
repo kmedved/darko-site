@@ -89,7 +89,7 @@ test('Career Trajectories opens on a player in the news while the file is curren
 		page,
 		/if \(ids\) \{[\s\S]*?\} else if \(newsPlayers\.length > 0\) \{[\s\S]*?preloadPlayersById\(newsPlayers\.map\(\(player\) => player\.nbaId\), initialKind\);\s*\} else \{\s*loadRandomPlayer\(initialKind\);/
 	);
-	// Over the chart, why each of them is in the news, beside a dot in their line's color.
+	// Under the chart, why each of them is in the news, beside a dot in their line's color.
 	assert.match(page, /\{#each newsNotes as note \(note\.nba_id\)\}\s*<li style:--player-color=\{note\.color\}><span>\{note\.name\}<\/span> \{note\.detail\}<\/li>/);
 	assert.match(page, /const color = linkedColors\[player\.nba_id\] \|\| getSeriesColor\(index, displayMode\.view\);/);
 });

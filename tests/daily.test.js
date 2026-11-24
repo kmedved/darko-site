@@ -174,3 +174,19 @@ test('the page, the menu, Ask DARKO and the Time Machine all lead to The Daily',
     const player = await read('src/routes/player/[nbaId]/+page.svelte');
     assert.match(player, /<WatchStar nbaId=\{nbaId\}/);
 });
+
+test("single-game updates give the offense/defense bar the row's room, and empty age records say why", async () => {
+    const page = await fs.readFile(path.resolve(process.cwd(), 'src/routes/daily/+page.svelte'), 'utf8');
+
+    // The bar's column scales with the panel, between today's 72px and about 110px.
+    assert.match(page, /\.daily-panel \{[^}]*container-type: inline-size;/);
+    const column = page.match(/\.update \{\s*grid-template-columns: 52px minmax\(0, 1fr\) clamp\((\d+)px, \d+cqi, (\d+)px\) 52px;/);
+    assert.ok(column, 'the update row should size the bar column with clamp() on the panel width');
+    assert.ok(Number(column[1]) >= 72 && Number(column[2]) >= 80 && Number(column[2]) <= 120);
+    // Same colours and scale: the shared bar at max 2.2, hidden on phones as before.
+    assert.match(page, /<span class="update-bar"><OffenseDefenseBar offense=\{row\.o_update\} defense=\{row\.d_update\} max=\{2\.2\} \/><\/span>/);
+    assert.match(page, /@media \(max-width: 560px\) \{[\s\S]*?\.update-bar \{\s*display: none;/);
+
+    assert.match(page, /<p class="empty">No age records yet\. This season's players qualify once they reach 20 regular-season games\.<\/p>/);
+    assert.doesNotMatch(page, /No age records this season\./);
+});

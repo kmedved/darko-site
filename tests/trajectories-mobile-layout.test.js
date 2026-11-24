@@ -68,3 +68,53 @@ test('trajectories mobile layout keeps the chart column stretched to full width'
         'mobile chart area should preserve the min-width guard'
     );
 });
+
+test('trajectories sidebar leads with the player picker and folds the rarely used settings into Advanced', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), TARGET_FILE), 'utf8');
+    const markup = contents.slice(contents.indexOf('</script>'), contents.indexOf('<style>'));
+    const aside = markup.slice(markup.indexOf('<aside class="trajectory-controls"'), markup.indexOf('</aside>'));
+
+    // Picker, then the phone toggle and the options it folds: Talent Type, Time Scale, Advanced.
+    const order = [
+        'Select Players to Compare',
+        'class="btn chart-options-toggle"',
+        '<div id="trajectory-chart-options"',
+        'for="talent-type">Talent Type</label>',
+        '<legend class="control-label">Time Scale</legend>',
+        '<details class="advanced-options">',
+        'Y-Axis Range',
+        'Smoothing Span',
+        '{#if showRangeFilter}',
+        '</details>'
+    ].map((needle) => {
+        const index = aside.indexOf(needle);
+        assert.notEqual(index, -1, `the sidebar should contain ${needle}`);
+        return index;
+    });
+    assert.deepEqual(order, [...order].sort((a, b) => a - b), 'sidebar controls should run in the new order');
+
+    // Advanced starts closed and stays inside the phone fold, so no lone row trails the toggle.
+    assert.doesNotMatch(aside, /<details[^>]*\sopen\b/);
+    assert.doesNotMatch(aside, /bind:open/);
+    assert.match(aside, /<\/details>\s*<\/div>\s*$/);
+    const advanced = aside.slice(aside.indexOf('<details'), aside.indexOf('</details>'));
+    for (const handler of ['handleYMinChange', 'handleYMaxChange', 'handleBandwidthChange', 'handleRangeMinChange', 'handleRangeMaxChange']) {
+        assert.match(advanced, new RegExp(`oninput=\\{${handler}\\}`), `${handler} should stay wired inside Advanced`);
+    }
+    assert.match(advanced, /\{advancedSetCount\} set/);
+
+    // In the news follows the chart rather than pushing it down.
+    const chart = markup.indexOf('<TrajectoryChart');
+    const chartEnd = markup.indexOf('</section>', chart);
+    const news = markup.indexOf('<div class="trajectory-news">');
+    assert.ok(chart !== -1 && chartEnd < news, 'In the news should sit below the chart section');
+    assert.ok(news < markup.indexOf('trajectory-stat-strip'), 'In the news should stay above the summary tiles');
+
+    // On phones the closed toggle ends the card without a trailing gap.
+    const tabletBlock = extractMediaBlocks(contents, TARGET_FILE).find((block) =>
+        /@media\s*\(\s*max-width:\s*980px\s*\)/.test(block)
+    );
+    assert.match(tabletBlock, /\.chart-options:not\(\.open\)\s*\{\s*display:\s*none;/);
+    assert.match(tabletBlock, /\.chart-options\.open\s*\{\s*margin-top:\s*14px;/);
+    assert.doesNotMatch(tabletBlock, /\.chart-options-toggle\s*\{[^}]*margin-bottom/);
+});

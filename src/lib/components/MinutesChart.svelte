@@ -26,6 +26,11 @@
 	const SIDEWAYS_BELOW = 520;
 	const M = { top: 24, right: 12, bottom: 36, left: 40 };
 	const SHARE_TICKS = [0, 0.25, 0.5, 0.75, 1];
+	// A name under a negative bar ends 16px below the bar (baseline 13px down, then descenders),
+	// and the share ticks' digits start 4px under the plot, so the lowest bar keeps this much of
+	// the plot beneath it. A proportional pad alone left 10px in the Lab's 200px chart, and the
+	// lowest name ran into "100%".
+	const NAME_ROOM_BELOW = 14;
 
 	let width = $state(0);
 	let tip = $state(null);
@@ -35,12 +40,18 @@
 	const range = $derived(domain ?? { low: profile.low, high: profile.high });
 	const sideways = $derived(width > 0 && width < SIDEWAYS_BELOW);
 	const ticks = $derived(niceTicks(range.low, range.high, sideways ? 4 : 6));
-	const padded = $derived.by(() => {
-		const pad = (range.high - range.low) * 0.08 || 0.5;
-		return { low: range.low < 0 ? range.low - pad : range.low, high: range.high + pad };
-	});
 	const plotW = $derived(Math.max(width - M.left - M.right, 1));
 	const plotH = $derived(height - M.top - M.bottom);
+	const padded = $derived.by(() => {
+		const pad = (range.high - range.low) * 0.08 || 0.5;
+		const high = range.high + pad;
+		if (range.low >= 0) return { low: range.low, high };
+		// The low pad that leaves NAME_ROOM_BELOW px under the lowest bar, solved from
+		// plotH * lowPad / (high - low + lowPad) = room. Sideways rows put names beside the bars.
+		const room = sideways ? 0 : NAME_ROOM_BELOW;
+		const roomPad = plotH > room ? (room * (high - range.low)) / (plotH - room) : 0;
+		return { low: range.low - Math.max(pad, roomPad), high };
+	});
 	const layout = $derived.by(() => {
 		const bars = profile.bars.map((bar) => {
 			const x0 = M.left + bar.x0 * plotW;

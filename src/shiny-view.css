@@ -1022,6 +1022,12 @@
     padding: 16px 18px;
 }
 
+/* The WOWY explainer is a disclosure whose summary and body carry their own padding, so its
+   well drops the padding every other well gets (this outranks that rule). */
+:root[data-view='shiny'] [data-shiny-page] .wowy-method[data-shiny-surface='well'] {
+    padding: 0;
+}
+
 :root[data-view='shiny'] .wowy-method a {
     margin-top: 12px;
     color: #337ab7;

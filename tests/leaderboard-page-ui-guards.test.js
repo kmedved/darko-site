@@ -122,7 +122,43 @@ test('compact desktop navigation keeps the active indicator near its label befor
 
     assert.match(appCss, /nav \.links a\s*\{[\s\S]*?padding:\s*8px 10px 9px;[\s\S]*?border-bottom:\s*2px solid transparent;/);
     assert.match(appCss, /@media\s*\(max-width:\s*1320px\)\s*\{[\s\S]*?nav \.links a\s*\{[\s\S]*?font-size:\s*12px;[\s\S]*?padding:\s*8px 7px 9px;/);
-    assert.match(layout, /@media\s*\(max-width:\s*1320px\)\s*\{[\s\S]*?\.theme-slider__input\s*\{[\s\S]*?width:\s*58px;/);
+    // The theme control now sits inside the Display menu; the nav's own controls still tighten.
+    assert.match(layout, /@media\s*\(max-width:\s*1320px\)\s*\{[\s\S]*?\.desktop-controls\s*\{[\s\S]*?gap:\s*8px;/);
+});
+
+test('the theme control offers four named choices with swatches, not an icon slider', async () => {
+    const layout = await fs.readFile(path.resolve(process.cwd(), LAYOUT_FILE), 'utf8');
+    const appCss = await fs.readFile(path.resolve(process.cwd(), APP_CSS_FILE), 'utf8');
+    const snippet = layout.match(/\{#snippet themeChoices\(name\)\}([\s\S]*?)\{\/snippet\}/);
+
+    assert.match(layout, /const THEMES = \['black', 'dark', 'light', 'white'\];/);
+    assert.match(layout, /const THEME_LABELS = \['Black', 'Dark', 'Light', 'White'\];/);
+    assert.doesNotMatch(layout, /THEME_ICONS|theme-slider|type="range"/);
+
+    // One radio group, drawn in both menus, each copy under its own name.
+    assert.ok(snippet, 'the theme choices should be one shared snippet');
+    assert.match(snippet[1], /role="radiogroup" aria-label="Theme"/);
+    assert.match(snippet[1], /type="radio"/);
+    assert.match(snippet[1], /\{name\}/);
+    assert.match(snippet[1], /checked=\{theme === option\}/);
+    assert.match(snippet[1], /onchange=\{\(\) => setTheme\(option\)\}/);
+    assert.match(snippet[1], /disabled=\{isShinyView\}/);
+    assert.match(snippet[1], /\{THEME_LABELS\[index\]\}/);
+    assert.match(snippet[1], /class="theme-swatch" style:background="var\(--theme-swatch-\{option\}\)"/);
+    assert.match(layout, /\{@render themeChoices\('theme-desktop'\)\}/);
+    assert.match(layout, /\{@render themeChoices\('theme-mobile'\)\}/);
+    // The Display menu's wrapper is not a <label>, which would pass its clicks to the first radio.
+    assert.match(layout, /<div class="display-control" class:disabled=\{isShinyView\}>\s*<span>Theme<\/span>\s*\{@render themeChoices/);
+
+    // Setting a theme still saves it under the same key.
+    assert.match(layout, /const THEME_KEY = 'darko-theme';/);
+    assert.match(layout, /function setTheme\(nextTheme\)[\s\S]*?localStorage\.setItem\(THEME_KEY, nextTheme\)/);
+
+    // Every theme has a swatch colour, and a ring keeps the black one visible on the black theme.
+    for (const theme of ['black', 'dark', 'light', 'white']) {
+        assert.match(appCss, new RegExp(`--theme-swatch-${theme}:\\s*#[0-9a-f]{6};`));
+    }
+    assert.match(layout, /\.theme-swatch\s*\{[\s\S]*?box-shadow:\s*0 0 0 1px var\(--text-muted\);/);
 });
 
 test('desktop nav labels stay on one line and avoid scroll-container overflow', async () => {

@@ -100,6 +100,12 @@
     --nav-bar-height: 64px;
     --time-machine-height: 36px;
     --nav-sticky-offset: calc(var(--nav-bar-height) + var(--time-machine-height));
+    /* Each theme's page colour (its --bg below), for the theme swatches in the Display menu.
+       They preview the other themes too, so no theme block redefines them. */
+    --theme-swatch-black: #000000;
+    --theme-swatch-dark: #080d14;
+    --theme-swatch-light: #faf0e0;
+    --theme-swatch-white: #ffffff;
 }
 
 /* A folded Time Machine takes no height; app.html restores the choice before first paint. */

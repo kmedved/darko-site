@@ -119,6 +119,35 @@
         }
     }
 
+    // ← votes for the left player, → for the right, S skips (not Space, which presses a focused
+    // button and scrolls). Keys typed into a field, keys with a modifier, held-down repeats and
+    // keys while Ask DARKO is open are left alone, and so is every key while a vote or a new pair
+    // is on its way: a skip keeps the old pair until the new one lands, and a vote then would
+    // count a matchup no longer on screen.
+    function handleVoteKey(event) {
+        if (event.defaultPrevented || event.repeat) return;
+        if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+        if (voting || loading || pair.length !== 2) return;
+        if (document.documentElement.classList.contains('ask-open')) return;
+        const target = event.target;
+        const typing =
+            target instanceof HTMLElement &&
+            (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+        if (typing) return;
+
+        const key = event.key.toLowerCase();
+        if (key === 'arrowleft') {
+            event.preventDefault();
+            vote(pair[0].nba_id);
+        } else if (key === 'arrowright') {
+            event.preventDefault();
+            vote(pair[1].nba_id);
+        } else if (key === 's') {
+            event.preventDefault();
+            skip();
+        }
+    }
+
     function formatElo(value) {
         return value != null ? Math.round(value) : '—';
     }
@@ -132,6 +161,8 @@
 <svelte:head>
     <title>Rate a Player — DARKO DPM</title>
 </svelte:head>
+
+<svelte:window onkeydown={handleVoteKey} />
 
 <div class="container rate-page" data-shiny-page>
     <PageHeader title="Rate a Player" lede="Who is the better player? Click to vote." />
@@ -171,6 +202,7 @@
                 {showLeaderboard ? 'Hide' : 'Show'} Leaderboard
             </button>
         </div>
+        <p class="rate-keys"><kbd>←</kbd> <kbd>→</kbd> to vote · <kbd>S</kbd> to skip</p>
 
         {#if totalVotes > 0}
             <div class="vote-counter">
@@ -296,6 +328,28 @@
     .action-btn--sm {
         font-size: 12px;
         padding: 4px 12px;
+    }
+
+    .rate-keys {
+        margin: -4px 0 12px;
+        text-align: center;
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+
+    .rate-keys kbd {
+        padding: 0 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+    }
+
+    /* No keyboard to speak of on a touch screen, so no keyboard hint. */
+    @media (hover: none) {
+        .rate-keys {
+            display: none;
+        }
     }
 
     .vote-counter {
