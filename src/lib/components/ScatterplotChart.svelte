@@ -5,7 +5,7 @@
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
 	import { formatDollarsMillions, getMetricDisplayLabel } from '$lib/utils/csvPresets.js';
 	import { getChartLayout } from '$lib/utils/chartLayout.js';
-	import { getPositionCategory, getPositionPaletteIndex } from '$lib/utils/positionCategories.js';
+	import { getPositionGroup, getPositionPaletteIndex, POSITION_GROUP_LABELS } from '$lib/utils/positionCategories.js';
 	import { SHINY_COLORS, SHINY_SET1, getShinyChartPreset } from '$lib/utils/shinyDesign.js';
 	import { getSeriesColor } from '$lib/utils/chartTheme.js';
 	import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
@@ -44,24 +44,15 @@
 
 	// Three groups, because on a scatter every pair of colours has to stay distinguishable and a
 	// fourth colour can't (the Shiny view keeps its archived five-group legend).
-	const POSITION_GROUPS = {
-		'G': 'guard',
-		'G-F': 'wing',
-		'F-G': 'wing',
-		'F': 'wing',
-		'F-C': 'big',
-		'C-F': 'big',
-		'C': 'big'
-	};
-	const POSITION_LEGEND_ITEMS = [
-		{ group: 'guard', label: 'Guards', color: getSeriesColor(0) },
-		{ group: 'wing', label: 'Wings & forwards', color: getSeriesColor(1) },
-		{ group: 'big', label: 'Bigs', color: getSeriesColor(2) }
-	];
+	const POSITION_LEGEND_ITEMS = ['guard', 'wing', 'big'].map((group, i) => ({
+		group,
+		label: POSITION_GROUP_LABELS[group],
+		color: getSeriesColor(i)
+	}));
 	const SHINY_POSITION_LEGEND_LABELS = ['Guard', 'Forward', 'Center', 'Wing', 'Big'];
 
 	function getPositionColor(position) {
-		const group = POSITION_GROUPS[getPositionCategory(position)];
+		const group = getPositionGroup(position);
 		return POSITION_LEGEND_ITEMS.find((item) => item.group === group)?.color || '#888';
 	}
 
@@ -83,9 +74,10 @@
 
 	function tickFormat(metric) {
 		if (MONEY_METRICS.has(metric)) return (d) => formatDollarsMillions(d, 0);
-		if (metric === 'surplus_value') return (d) => `${d >= 0 ? '+' : '-'}$${(Math.abs(d) / 1e6).toFixed(0)}M`;
+		// Zero is a plain 0, not +0.0.
+		if (metric === 'surplus_value') return (d) => (d === 0 ? '$0M' : `${d > 0 ? '+' : '-'}$${(Math.abs(d) / 1e6).toFixed(0)}M`);
 		if (PERCENT_METRICS.has(metric)) return (d) => `${(d * 100).toFixed(0)}%`;
-		if (SIGNED_METRICS.has(metric)) return (d) => `${d >= 0 ? '+' : ''}${d.toFixed(1)}`;
+		if (SIGNED_METRICS.has(metric)) return (d) => (d === 0 ? '0' : `${d > 0 ? '+' : ''}${d.toFixed(1)}`);
 		return null;
 	}
 

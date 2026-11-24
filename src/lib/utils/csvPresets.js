@@ -124,6 +124,7 @@ export const metricDisplayLabels = Object.freeze({
     tr_minutes: 'Min (trend)',
     x_minutes: 'MPG',
     x_pace: 'Pace',
+    age: 'Age',
     x_pts_100: 'Pts per 100',
     x_ast_100: 'Ast per 100',
     x_orb_100: 'ORB per 100',

@@ -42,6 +42,21 @@ export function getPositionCategory(position) {
     return 'C';
 }
 
+// Three peer groups, shared by the scatterplot's colours and the player page's percentiles: swing
+// positions join the larger side (G-F the wings, F-C the bigs), so no group is a handful of players.
+const POSITION_GROUPS = Object.freeze({ G: 'guard', 'G-F': 'wing', F: 'wing', 'F-C': 'big', C: 'big' });
+
+export const POSITION_GROUP_LABELS = Object.freeze({
+    guard: 'Guards',
+    wing: 'Wings & forwards',
+    big: 'Bigs'
+});
+
+export function getPositionGroup(position) {
+    const category = getPositionCategory(position);
+    return category ? POSITION_GROUPS[category] : null;
+}
+
 export function getPositionPaletteIndex(position) {
     const category = getPositionCategory(position);
     return category ? POSITION_PALETTE_INDEX[category] : null;

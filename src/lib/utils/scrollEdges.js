@@ -12,7 +12,13 @@ export function trackScrollEdges(host, scroller) {
 
 	const update = () => {
 		frame = 0;
-		const hiddenRight = scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft;
+		// Hidden columns are the content's right edge past the visible box. scrollWidth would also
+		// count invisible overhang, like a sort button's target reaching past the last header,
+		// and fade a table that fits (Fantasy Lab, team pages).
+		const box = scroller.getBoundingClientRect();
+		const visibleRight = box.left + scroller.clientLeft + scroller.clientWidth;
+		const contentRight = Math.max(visibleRight, ...Array.from(scroller.children, (child) => child.getBoundingClientRect().right));
+		const hiddenRight = contentRight - visibleRight;
 		setFlag(host, 'overflowLeft', scroller.scrollLeft > 1);
 		setFlag(host, 'overflowRight', hiddenRight > 1);
 	};

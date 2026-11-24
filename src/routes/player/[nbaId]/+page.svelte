@@ -33,6 +33,7 @@
 		profileSections
 	} from '$lib/utils/playerProfile.js';
 	import { percentileAmong, SKILL_LABELS, SKILL_METRICS, withSkillRates } from '$lib/utils/playerSkills.js';
+	import { getPositionGroup, POSITION_GROUP_LABELS } from '$lib/utils/positionCategories.js';
 
 	let { data } = $props();
 
@@ -189,12 +190,16 @@
 	// The player's row with the two skill rates (true shooting, turnovers per play) added.
 	const skillInfo = $derived(withSkillRates(playerInfo));
 
+	// Peers are the player's group (guards, wings and forwards, or bigs), not his exact position:
+	// a label like C-F holds about ten players, and the best of ten can't rank above the 90th.
+	const peerGroup = $derived(getPositionGroup(skillInfo?.position));
+	const peerLabel = $derived(peerGroup ? `Among ${POSITION_GROUP_LABELS[peerGroup].toLowerCase()}` : 'Among all players');
+
 	const percentiles = $derived.by(() => {
 		if (!skillInfo || allActivePlayers.length === 0) return [];
 
-		const position = skillInfo.position;
 		const positionPlayers = (
-			position ? allActivePlayers.filter((player) => player.position === position) : allActivePlayers
+			peerGroup ? allActivePlayers.filter((player) => getPositionGroup(player.position) === peerGroup) : allActivePlayers
 		).map(withSkillRates);
 
 		if (positionPlayers.length === 0) return [];
@@ -225,6 +230,13 @@
 			? dateOnly
 			: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 	});
+
+	// A current player's percentiles are today's, so they carry the leaderboard's "ratings through"
+	// date (the last game in), not his row's date, which in season is his next game. The bare date
+	// keeps the subtitle on one line on a phone.
+	const percentileDate = $derived(
+		isCurrentPlayer && data.ratingsThrough ? formatAsOfDate(data.ratingsThrough, { short: true }) : currentDate
+	);
 
 	$effect(() => {
 		void playerInfo;
@@ -733,8 +745,8 @@
 						</div>
 						<TalentPercentilesChart
 							playerName={playerInfo.player_name}
-							position={playerInfo.position}
-							date={currentDate}
+							peers={peerLabel}
+							date={percentileDate}
 							{percentiles}
 							selectedMetrics={selectedPercentileMetrics}
 							rawValues={skillInfo}

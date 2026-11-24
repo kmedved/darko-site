@@ -1032,7 +1032,7 @@
                             No players match this season and these filters.
                         {:else}
                             {#if isAllTimeView}
-                                Showing {rangeStart}–{rangeEnd} of {allTimeTotal} matching player-seasons, ranked by WOWY RAPM.
+                                Showing {rangeStart.toLocaleString('en-US')}–{rangeEnd.toLocaleString('en-US')} of {allTimeTotal.toLocaleString('en-US')} matching player-seasons, ranked by WOWY RAPM.
                             {:else if isCurrentView}
                                 Showing {rangeStart}–{rangeEnd} of {sortedPlayers.length} current active players with an observed WOWY rating.
                             {:else}
@@ -1613,12 +1613,13 @@
         opacity: 0.45;
     }
 
+    /* Four controls, four tracks: season, team, position, then search across the rest. */
     .wowy-controls {
         display: grid;
         grid-template-columns:
             minmax(145px, 170px)
             minmax(176px, 205px)
-            repeat(2, minmax(145px, 170px))
+            minmax(145px, 170px)
             minmax(240px, 1fr);
         gap: 10px;
         margin-bottom: 14px;
