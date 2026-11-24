@@ -40,6 +40,25 @@ async function readPages(makeQuery) {
     }
 }
 
+/** Like readPages, but asks for the row count first and reads the remaining pages at once. */
+async function readPagesInParallel(makeQuery) {
+    const first = await makeQuery({ count: true }).range(0, PAGE_SIZE - 1);
+    if (first.error) throw first.error;
+    const rows = [...(first.data ?? [])];
+    const total = first.count ?? rows.length;
+    if (rows.length < PAGE_SIZE || total <= PAGE_SIZE) return rows;
+    const pages = await Promise.all(
+        Array.from({ length: Math.ceil(total / PAGE_SIZE) - 1 }, (_, index) =>
+            makeQuery().range((index + 1) * PAGE_SIZE, (index + 2) * PAGE_SIZE - 1)
+        )
+    );
+    for (const page of pages) {
+        if (page.error) throw page.error;
+        rows.push(...(page.data ?? []));
+    }
+    return rows;
+}
+
 /**
  * The last game day in the published updates: the latest game today's ratings take in. The
  * ratings' own dates can't say this, since in season each player's latest row is the forecast
@@ -68,27 +87,54 @@ export async function getRatingMoves() {
 }
 
 /**
- * The biggest single-game updates after `start` and on or before `end`, largest first, from
- * games of at least `minMinutes`.
+ * Minutes in every game after `start` and on or before `end` ({ nba_id, date, minutes }), for
+ * the movers' minutes a game. About 25,000 rows by a season's end, read in parallel pages.
  */
-export async function getBiggestUpdates(start, end, limit, { minMinutes = 0 } = {}) {
+export async function getGameMinutes(start, end) {
     const local = await readLocalTable('game_updates');
     if (local) {
         return local
+            .filter((row) => row.date > start && row.date <= end)
+            .map(({ nba_id, date, minutes }) => ({ nba_id, date, minutes }));
+    }
+    return missingAsNull(() =>
+        readPagesInParallel(({ count = false } = {}) =>
+            supabase
+                .from('game_updates')
+                .select('nba_id, date, minutes', count ? { count: 'exact' } : undefined)
+                .gt('date', start)
+                .lte('date', end)
+                .order('date')
+                .order('nba_id')
+        )
+    );
+}
+
+/**
+ * The biggest single-game updates after `start` and on or before `end`, largest first, from
+ * games of at least `minMinutes`; with `ids`, only those players' games.
+ */
+export async function getBiggestUpdates(start, end, limit, { minMinutes = 0, ids = null } = {}) {
+    if (ids && !ids.length) return [];
+    const local = await readLocalTable('game_updates');
+    if (local) {
+        const only = ids ? new Set(ids.map(Number)) : null;
+        return local
             .filter((row) => row.dpm_update !== null && row.date > start && row.date <= end && row.minutes >= minMinutes)
+            .filter((row) => !only || only.has(Number(row.nba_id)))
             .sort((a, b) => b.abs_update - a.abs_update)
             .slice(0, limit);
     }
     return missingAsNull(async () => {
-        const { data, error } = await supabase
+        let query = supabase
             .from('game_updates')
             .select(UPDATE_COLUMNS)
             .gt('date', start)
             .lte('date', end)
             .gte('minutes', minMinutes)
-            .not('dpm_update', 'is', null)
-            .order('abs_update', { ascending: false })
-            .limit(limit);
+            .not('dpm_update', 'is', null);
+        if (ids) query = query.in('nba_id', ids);
+        const { data, error } = await query.order('abs_update', { ascending: false }).limit(limit);
         if (error) throw error;
         return data ?? [];
     });

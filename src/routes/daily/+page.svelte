@@ -11,7 +11,10 @@
 	import WatchStar from '$lib/components/WatchStar.svelte';
 	import { timeMachine } from '$lib/timeMachineState.svelte.js';
 	import {
+		DEFAULT_SCOPE,
 		EDITIONS,
+		ROTATION_MINUTES,
+		SCOPES,
 		UPDATE_MIN_MINUTES,
 		WINDOWS,
 		ageRecordText,
@@ -33,7 +36,9 @@
 	let { data } = $props();
 
 	const WINDOW_KEY = 'darko-daily-window';
+	const SCOPE_KEY = 'darko-daily-scope';
 	let requested = $state('7');
+	let scopeChoice = $state(DEFAULT_SCOPE);
 	let fetchedCards = $state(null);
 
 	onMount(() => {
@@ -41,10 +46,21 @@
 		try {
 			const saved = localStorage.getItem(WINDOW_KEY);
 			if (saved) requested = saved;
+			const savedScope = localStorage.getItem(SCOPE_KEY);
+			if (SCOPES.some((option) => option.key === savedScope)) scopeChoice = savedScope;
 		} catch {
-			// No storage: the page starts on the week each time.
+			// No storage: the page starts on the rotation's week each time.
 		}
 	});
+
+	function pickScope(key) {
+		scopeChoice = key;
+		try {
+			localStorage.setItem(SCOPE_KEY, key);
+		} catch {
+			// The choice still holds for this visit.
+		}
+	}
 
 	function pickWindow(key) {
 		requested = key;
@@ -57,11 +73,15 @@
 
 	const latest = $derived(data.mode === 'latest');
 	const ready = $derived(latest && data.available);
-	const choice = $derived(ready ? chooseWindow(data.windows, requested) : { key: 'season', fellBack: false });
+	// The rotation needs the season's minutes; without them the page shows every player.
+	const rotationReady = $derived(ready && Boolean(data.rotationUpdates));
+	const scope = $derived(rotationReady ? scopeChoice : 'all');
+	const rotation = $derived(scope === 'rotation');
+	const choice = $derived(ready ? chooseWindow(data.windows, requested, { scope }) : { key: 'season', fellBack: false });
 	const windowKey = $derived(choice.key);
 	const windowText = $derived(windowFor(windowKey).text);
-	const movers = $derived(ready ? pickMovers(data.windows[windowKey], windowKey) : null);
-	const updates = $derived(ready ? (data.updates[windowKey] ?? []) : []);
+	const movers = $derived(ready ? pickMovers(data.windows[windowKey], windowKey, { scope }) : null);
+	const updates = $derived(ready ? ((rotation ? data.rotationUpdates : data.updates)[windowKey] ?? []) : []);
 	const phase = $derived(ready ? editionPhase(data.updates['7']) : 'offseason');
 	const leader = $derived(data.board?.[0] ?? null);
 	const seasonText = $derived(data.season ? seasonLabel(data.season) : '');
@@ -100,6 +120,7 @@
 					phase,
 					key: windowKey,
 					minGames: movers?.minGames,
+					minMinutes: rotation ? ROTATION_MINUTES : null,
 					nextSeasonLabel: data.season ? seasonLabel(data.season + 1) : 'next season'
 				})
 			: ''
@@ -218,17 +239,33 @@
 						<p class="panel-sub">Change in DPM {windowText}</p>
 					</div>
 					{#if ready}
-						<div class="window-switch" role="group" aria-label="Window">
-							{#each WINDOWS as option (option.key)}
-								<button
-									type="button"
-									class:active={windowKey === option.key}
-									aria-pressed={windowKey === option.key}
-									onclick={() => pickWindow(option.key)}
-								>
-									{option.label}
-								</button>
-							{/each}
+						<div class="movers-controls">
+							{#if rotationReady}
+								<div class="window-switch" role="group" aria-label="Players">
+									{#each SCOPES as option (option.key)}
+										<button
+											type="button"
+											class:active={scope === option.key}
+											aria-pressed={scope === option.key}
+											onclick={() => pickScope(option.key)}
+										>
+											{option.label}
+										</button>
+									{/each}
+								</div>
+							{/if}
+							<div class="window-switch" role="group" aria-label="Window">
+								{#each WINDOWS as option (option.key)}
+									<button
+										type="button"
+										class:active={windowKey === option.key}
+										aria-pressed={windowKey === option.key}
+										onclick={() => pickWindow(option.key)}
+									>
+										{option.label}
+									</button>
+								{/each}
+							</div>
 						</div>
 					{/if}
 				</header>
@@ -238,7 +275,7 @@
 					{#if choice.fellBack}
 						<p class="panel-note">
 							{#if choice.played}
-								Too few players have {choice.minGames}+ games in the last {windowFor(requested).label.toLowerCase()} yet, so
+								Too few {rotation ? 'rotation players' : 'players'} have {choice.minGames}+ games in the last {windowFor(requested).label.toLowerCase()} yet, so
 								this shows the whole season.
 							{:else}
 								No games in the last {windowFor(requested).label.toLowerCase()}, so this shows the whole season.
@@ -253,7 +290,7 @@
 									<a class="mover" href="/player/{row.id}">
 										<span class="mover-who">
 											<b>{row.name}</b>
-											<span>{teamOfId(row.tmId)} · {row.games} games · now {formatSigned(row.to, 1)}</span>
+											<span>{teamOfId(row.tmId)} · {row.games} games{#if row.mpg} · {Math.round(row.mpg)} mpg{/if} · now {formatSigned(row.to, 1)}</span>
 										</span>
 										<Sparkline values={seriesFrom(data.series[row.id], data.starts[windowKey])} width={72} height={24} />
 										{@render deltaText(row.delta)}
@@ -264,7 +301,9 @@
 							</div>
 						{/each}
 					</div>
-					<p class="panel-note">Players with {movers.minGames}+ games in the window.</p>
+					<p class="panel-note">
+						Players with {movers.minGames}+ games{rotation ? ` and ${ROTATION_MINUTES}+ minutes a game` : ''} in the window.
+					</p>
 				{/if}
 			</section>
 
@@ -295,7 +334,8 @@
 						<p class="empty">No games in this window.</p>
 					{/each}
 					<p class="panel-note">
-						Games of {UPDATE_MIN_MINUTES}+ minutes. Open a player to explore their career ratings.
+						Games of {UPDATE_MIN_MINUTES}+ minutes{rotation ? `, by players averaging ${ROTATION_MINUTES}+ in the window` : ''}. Open a
+						player to explore their career ratings.
 					</p>
 				{/if}
 			</section>
@@ -593,6 +633,14 @@
 	}
 
 	/* Movers */
+	/* The players and window switches, side by side until the header runs out of room. */
+	.movers-controls {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		gap: 8px;
+	}
+
 	.window-switch {
 		display: inline-grid;
 		grid-auto-flow: column;
@@ -919,6 +967,10 @@
 
 		.panel-head {
 			flex-direction: column;
+		}
+
+		.movers-controls {
+			justify-content: flex-start;
 		}
 
 		.lead-value {

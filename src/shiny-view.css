@@ -1541,8 +1541,9 @@
 }
 
 /* Shiny's 14px links and its legacy logo take more room than the modern bar: Ask DARKO and the
-   Time Machine show only their icons below 1600px (a rewound date stays), and the legacy lockup
-   steps aside below 1320px, so every page link keeps its place until the menu button takes over. */
+   Time Machine show only their icons below 1600px (a rewound date stays), the legacy lockup
+   steps aside below 1400px, and the links drop to 13px at 1320px and below, so every page link
+   keeps its place until the menu button takes over. */
 @media (max-width: 1600px) {
     :root[data-view='shiny'] .ask-nav-toggle,
     :root[data-view='shiny'] .tm-nav-toggle:not(.rewound) {
@@ -1554,9 +1555,16 @@
     }
 }
 
-@media (max-width: 1320px) {
+@media (max-width: 1400px) {
     :root[data-view='shiny'] .legacy-logo-lockup {
         display: none;
+    }
+}
+
+@media (max-width: 1320px) {
+    :root[data-view='shiny'] .site-nav .links a,
+    :root[data-view='shiny'] .nav-more summary {
+        font-size: 13px;
     }
 }
 

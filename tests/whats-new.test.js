@@ -178,7 +178,9 @@ test('the menus, the page and Ask DARKO all read the same 30-day list', async ()
     assert.match(layout, /onMount\(\(\) => \{\s*whatsNewCount = newFeatureCount\(\);/);
     const page = await read('src/routes/new/+page.svelte');
     assert.match(page, /currentNews\(now, data\.items \?\? \[\]\)/);
-    assert.equal((layout.match(/\{#if whatsNewCount > 0\}/g) ?? []).length, 2);
+    // In the desktop More menu, on its button, and in the phone menu.
+    assert.equal((layout.match(/\{#if whatsNewCount > 0\}/g) ?? []).length, 3);
+    assert.match(layout, /<summary>More\{#if whatsNewCount > 0\}<span class="nav-more-dot" aria-hidden="true"><\/span><span class="sr-only">\s*\(\{whatsNewCount\} new\)/);
 
     const load = await read('src/routes/new/+page.server.js');
     assert.match(load, /currentNews\(new Date\(\)\)/);

@@ -45,6 +45,15 @@ test('the number font is self-hosted and preloaded; optional fonts load on deman
 	}
 	const layout = await fs.readFile(path.resolve(process.cwd(), 'src/routes/+layout.svelte'), 'utf8');
 	assert.match(layout, /loadOptionalFont\(normalizedFont\);/);
+
+	// Four choices, the same in the menu, the before-paint script and the stylesheet; anything
+	// else saved falls back to System.
+	assert.deepEqual(Object.keys(OPTIONAL_FONT_FAMILIES), ['inter', 'jakarta', 'spacegrotesk']);
+	assert.match(layout, /const FONTS = \['system', 'inter', 'jakarta', 'spacegrotesk'\];/);
+	assert.ok(html.includes("var FONTS = ['system', 'inter', 'jakarta', 'spacegrotesk'];"));
+	assert.match(html, /var font = FONTS\.indexOf\(savedFont\) !== -1 \? savedFont : 'system';/);
+	const fontRules = [...css.matchAll(/:root\[data-font='([a-z]+)'\]/g)].map((m) => m[1]).sort();
+	assert.deepEqual(fontRules, ['inter', 'jakarta', 'spacegrotesk', 'system']);
 });
 
 test('an optional font stylesheet is added once, and never for the system font', () => {

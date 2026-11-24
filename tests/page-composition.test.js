@@ -118,7 +118,12 @@ test('the top bar keeps every page link: Ask DARKO and the Time Machine turn to 
 	assert.match(layout, /class="ask-nav-toggle"\s*aria-label="Ask DARKO"/);
 	// Shiny's larger type and legacy logo need the icons sooner, and the lockup steps aside.
 	assert.match(shinyCss, /@media \(max-width: 1600px\) \{\s*:root\[data-view='shiny'\] \.ask-nav-toggle,/);
-	assert.match(shinyCss, /@media \(max-width: 1320px\) \{\s*:root\[data-view='shiny'\] \.legacy-logo-lockup \{\s*display: none;/);
+	assert.match(shinyCss, /@media \(max-width: 1400px\) \{\s*:root\[data-view='shiny'\] \.legacy-logo-lockup \{\s*display: none;/);
+	assert.match(shinyCss, /@media \(max-width: 1320px\) \{\s*:root\[data-view='shiny'\] \.site-nav \.links a,\s*:root\[data-view='shiny'\] \.nav-more summary \{\s*font-size: 13px;/);
+	// Where Ask DARKO and the Time Machine show their labels, the page links tighten until 1600px.
+	const appCss = await read('src/app.css');
+	assert.match(appCss, /@media \(min-width: 1441px\) and \(max-width: 1599px\) \{\s*\.site-nav \.links a \{\s*padding-left: 7px;\s*padding-right: 7px;/);
+	assert.match(layout, /@media \(min-width: 1441px\) and \(max-width: 1599px\) \{\s*\.nav-more summary \{\s*padding-left: 7px;\s*padding-right: 7px;/);
 });
 
 test('The Daily is off the menus between seasons and back on the morning of October 22', async () => {

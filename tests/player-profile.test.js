@@ -76,7 +76,7 @@ test('the jump menu lists only the sections a page shows, in page order', () => 
         profileSections({ 'current-comps': true, career: true, seasons: true, percentiles: true }).map(
             (section) => section.id
         ),
-        ['current-comps', 'career', 'seasons', 'percentiles']
+        ['career', 'percentiles', 'current-comps', 'seasons']
     );
     assert.deepEqual(profileSections({}), []);
 });
@@ -87,6 +87,11 @@ test('the player page wires the jump menu, rank, Lab link, contract panel and co
         read('src/routes/player/[nbaId]/+page.server.js')
     ]);
     assert.match(page, /\{#each sections as section \(section\.id\)\}\s*<a\s+href="#\{section\.id\}"/);
+    // The page follows the jump menu's order: the player's own numbers, then comps, then money.
+    const at = (id) => page.indexOf(`id="${id}"`);
+    const order = ['career', 'percentiles', 'box-score', 'comps', 'current-comps', 'seasons', 'contract'];
+    assert.deepEqual([...order].sort((a, b) => at(a) - at(b)), order);
+    assert.deepEqual(profileSections(Object.fromEntries(order.map((id) => [id, true]))).map((section) => section.id), order);
     // Every section the menu can name has that id on the page.
     for (const id of ['comps', 'current-comps', 'career', 'contract', 'seasons', 'percentiles', 'box-score']) {
         assert.match(page, new RegExp(`id="${id}"`), id);

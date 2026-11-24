@@ -16,6 +16,15 @@ export const UPDATES_SHOWN = 7;
 // Single-game updates count only games of this many minutes, so short stints don't crowd out
 // the rotation.
 export const UPDATE_MIN_MINUTES = 10;
+// The rotation: players averaging this many minutes a game in the window. The least certain
+// ratings move the most, and thin minutes make for the least certain ratings, so without it the
+// movers and the headline fill with rookies and the end of the bench.
+export const ROTATION_MINUTES = 20;
+export const SCOPES = Object.freeze([
+	{ key: 'rotation', label: 'Rotation' },
+	{ key: 'all', label: 'All players' }
+]);
+export const DEFAULT_SCOPE = 'rotation';
 export const EDITIONS = Object.freeze({
 	season: 'Game-day edition',
 	playoffs: 'Playoff edition',
@@ -78,11 +87,58 @@ export function movesByWindow(rows) {
 	return byWindow;
 }
 
-/** Risers and fallers in one window among players with enough games. */
-export function pickMovers(window, key) {
+/**
+ * Each window's minutes a game, onto its movers (`mpg`), from the season's game rows
+ * ({ nba_id, date, minutes }). A window's games are those after its start and on or before `end`,
+ * as for the single-game updates. Players without a game in the window get no `mpg`.
+ */
+export function withWindowMinutes(byWindow, gameRows, starts, end) {
+	const totals = {};
+	for (const key of Object.keys(byWindow)) totals[key] = new Map();
+	for (const row of gameRows ?? []) {
+		const date = String(row.date ?? '').slice(0, 10);
+		const minutes = toNumber(row.minutes);
+		if (!date || date > end || minutes === null) continue;
+		const id = Number(row.nba_id);
+		for (const key of Object.keys(totals)) {
+			if (!starts[key] || date <= starts[key]) continue;
+			const entry = totals[key].get(id) ?? { games: 0, minutes: 0 };
+			entry.games += 1;
+			entry.minutes += minutes;
+			totals[key].set(id, entry);
+		}
+	}
+	const out = {};
+	for (const [key, window] of Object.entries(byWindow)) {
+		out[key] = {
+			...window,
+			rows: window.rows.map((row) => {
+				const entry = totals[key].get(row.id);
+				return entry ? { ...row, mpg: entry.minutes / entry.games } : row;
+			})
+		};
+	}
+	return out;
+}
+
+/** Ids of each window's rotation players: those averaging ROTATION_MINUTES or more. */
+export function rotationIds(byWindow) {
+	return Object.fromEntries(
+		Object.entries(byWindow).map(([key, window]) => [
+			key,
+			window.rows.filter((row) => (row.mpg ?? 0) >= ROTATION_MINUTES).map((row) => row.id)
+		])
+	);
+}
+
+/** Risers and fallers in one window among players with enough games (and, for the rotation, minutes). */
+export function pickMovers(window, key, { scope = 'all' } = {}) {
 	if (!window) return { risers: [], fallers: [], minGames: minGamesFor(key), eligible: 0 };
 	const minGames = minGamesFor(key, window);
-	const eligible = window.rows.filter((row) => row.games >= minGames && row.delta !== null);
+	const rotation = scope === 'rotation';
+	const eligible = window.rows.filter(
+		(row) => row.games >= minGames && row.delta !== null && (!rotation || (row.mpg ?? 0) >= ROTATION_MINUTES)
+	);
 	return {
 		risers: [...eligible].sort((a, b) => b.delta - a.delta).slice(0, MOVERS_SHOWN),
 		fallers: [...eligible].sort((a, b) => a.delta - b.delta).slice(0, MOVERS_SHOWN),
@@ -96,10 +152,10 @@ export function pickMovers(window, key) {
  * says whether the window had games at all: early in a season it does, but few players have
  * played enough of them (`minGames`) to rank.
  */
-export function chooseWindow(byWindow, requested) {
+export function chooseWindow(byWindow, requested, { scope = 'all' } = {}) {
 	const key = WINDOWS.some((entry) => entry.key === requested) ? requested : DEFAULT_WINDOW;
 	if (key === 'season') return { key, fellBack: false };
-	const picked = pickMovers(byWindow[key], key);
+	const picked = pickMovers(byWindow[key], key, { scope });
 	if (picked.eligible >= MOVERS_SHOWN) return { key, fellBack: false };
 	const played = (byWindow[key]?.rows ?? []).some((row) => row.games > 0);
 	return { key: 'season', fellBack: true, played, minGames: picked.minGames };
@@ -140,7 +196,7 @@ export function headline({ leader, riser, phase, key }) {
 }
 
 /** The lede under the headline, in whole sentences. */
-export function lede({ leader, riser, faller, phase, key, minGames, nextSeasonLabel }) {
+export function lede({ leader, riser, faller, phase, key, minGames, minMinutes = null, nextSeasonLabel }) {
 	const text = windowFor(key).text;
 	// In the offseason the ratings include DARKO's offseason update, so they look ahead.
 	const where = phase === 'offseason' ? `heads into ${nextSeasonLabel} atop DARKO` : 'sits atop DARKO';
@@ -148,7 +204,9 @@ export function lede({ leader, riser, faller, phase, key, minGames, nextSeasonLa
 		leader
 			? `${leader.name} ${where} at ${signed(leader.dpm)} per 100 possessions (${signed(leader.offense)} offense, ${signed(leader.defense)} defense).`
 			: '',
-		riser ? `${riser.name} has climbed ${signed(riser.delta)} ${text}, the biggest rise among players with ${minGames}+ games.` : '',
+		riser
+			? `${riser.name} has climbed ${signed(riser.delta)} ${text}, the biggest rise among players with ${minGames}+ games${minMinutes ? ` and ${minMinutes}+ minutes a game` : ''}.`
+			: '',
 		faller ? `${faller.name} has slid ${signed(faller.delta)}.` : ''
 	]
 		.filter(Boolean)
