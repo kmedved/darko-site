@@ -66,8 +66,10 @@ test("The Daily's featured chart has a value scale, months and the latest value"
 test("the Lab keeps the edited team's rating in view while its sliders scroll", async () => {
 	const lab = await read('src/routes/lab/+page.svelte');
 	assert.match(lab, /<p class="lab-live" aria-hidden="true">[\s\S]*?\{formatSigned\(state\.rating\.rating, 1\)\}/);
-	// Where the sides stack, the minutes bar sticks under the site's bar, inside its own side.
-	assert.match(lab, /@media \(max-width: 1100px\) \{[\s\S]*?\.lab-minutes \{\s*position: sticky;\s*top: var\(--nav-sticky-offset\);/);
+	// At every width the minutes bar sticks under the site's bar, inside its own side: side by
+	// side, both teams' bars stay in view while their rosters scroll.
+	assert.match(lab, /\n\t\.lab-minutes \{\s*position: sticky;\s*top: var\(--nav-sticky-offset\);/);
+	assert.doesNotMatch(lab, /@media \(max-width: 1100px\) \{[^}]*\}[^}]*\.lab-minutes \{\s*position: sticky;/);
 	// On a phone the sliders come before the Minutes chart.
 	assert.match(lab, /\.lab-dna \{\s*order: 1;/);
 });

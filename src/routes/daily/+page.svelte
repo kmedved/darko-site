@@ -316,7 +316,7 @@
 							<p><b>{row.player_name}</b> {ageRecordText(row)}</p>
 						</a>
 					{:else}
-						<p class="empty">No age records this season.</p>
+						<p class="empty">No age records yet. This season's players qualify once they reach 20 regular-season games.</p>
 					{/each}
 					<p class="panel-note">Season-end DPM, 20+ regular-season games. Open a player for comps and futures.</p>
 				{/if}
@@ -703,9 +703,10 @@
 		color: var(--negative);
 	}
 
-	/* Single-game updates */
+	/* Single-game updates. The offense/defense bar's column grows with the panel (a size container)
+	   from 72px to 110px, so the split is readable wherever the row has room; phones drop it below. */
 	.update {
-		grid-template-columns: 52px minmax(0, 1fr) 72px 52px;
+		grid-template-columns: 52px minmax(0, 1fr) clamp(72px, 17cqi, 110px) 52px;
 	}
 
 	.update-date {

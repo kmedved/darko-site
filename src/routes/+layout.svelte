@@ -31,7 +31,7 @@
 
 	const THEME_KEY = 'darko-theme';
 	const THEMES = ['black', 'dark', 'light', 'white'];
-	const THEME_ICONS = ['⚫', '🌙', '☀️', '⚪'];
+	const THEME_LABELS = ['Black', 'Dark', 'Light', 'White'];
 	// Players (with Career Trajectories, DARKO's signature view), teams and the stats pages, then
 	// the two labs; the specialist views sit under More.
 	const PRIMARY_NAV_ITEMS = [
@@ -291,13 +291,6 @@
 		setTheme(initialTheme);
 	});
 
-	const themeIndex = $derived(THEMES.indexOf(theme));
-
-	function handleSlider(e) {
-		const idx = Number(e.target.value);
-		setTheme(THEMES[idx]);
-	}
-
 	// ── Font toggle ──────────────────────────────────────
 	const FONT_KEY = 'darko-font';
 	const FONTS = ['inter', 'roboto', 'lato', 'opensans', 'sourcesans', 'nunito', 'worksans', 'raleway', 'outfit', 'jakarta', 'spacegrotesk', 'system'];
@@ -390,6 +383,28 @@
 
 <svelte:window onclick={handleWindowClick} onkeydown={handleWindowKeydown} />
 
+<!-- The theme picker, in the Display menu and the phone menu: four named choices, each with a
+     swatch of its page colour, as native radios so arrow keys move between them. Each copy
+     needs its own name, or the two groups would act as one. -->
+{#snippet themeChoices(name)}
+	<div class="theme-choices" role="radiogroup" aria-label="Theme">
+		{#each THEMES as option, index (option)}
+			<label class="theme-choice" class:active={theme === option}>
+				<input
+					type="radio"
+					{name}
+					value={option}
+					checked={theme === option}
+					onchange={() => setTheme(option)}
+					disabled={isShinyView}
+				/>
+				<span class="theme-swatch" style:background="var(--theme-swatch-{option})" aria-hidden="true"></span>
+				{THEME_LABELS[index]}
+			</label>
+		{/each}
+	</div>
+{/snippet}
+
 <!-- The first stop for the keyboard, past the menu to the page. -->
 <a class="skip-link" href="#main-content">Skip to content</a>
 
@@ -457,25 +472,11 @@
 							</button>
 						</div>
 					</div>
-					<label class="display-control" class:disabled={isShinyView}>
+					<!-- A div, not a label: a label would hand its clicks to the first radio inside. -->
+					<div class="display-control" class:disabled={isShinyView}>
 						<span>Theme</span>
-						<div class="theme-slider" role="group" aria-label="Theme selector">
-							<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[0]}</span>
-							<input
-								type="range"
-								min="0"
-								max="3"
-								step="1"
-								value={themeIndex}
-								oninput={handleSlider}
-								class="theme-slider__input"
-								aria-label="Theme"
-								aria-valuetext={theme}
-								disabled={isShinyView}
-							/>
-							<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
-						</div>
-					</label>
+						{@render themeChoices('theme-desktop')}
+					</div>
 					<label class="display-control" class:disabled={isShinyView}>
 						<span>Font</span>
 						<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font" disabled={isShinyView}>
@@ -572,22 +573,7 @@
 				Shiny
 			</button>
 		</div>
-		<div class="theme-slider" role="group" aria-label="Theme selector">
-			<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[0]}</span>
-			<input
-				type="range"
-				min="0"
-				max="3"
-				step="1"
-				value={themeIndex}
-				oninput={handleSlider}
-				class="theme-slider__input"
-				aria-label="Theme"
-				aria-valuetext={theme}
-				disabled={isShinyView}
-			/>
-			<span class="theme-slider__icon" aria-hidden="true">{THEME_ICONS[3]}</span>
-		</div>
+		{@render themeChoices('theme-mobile')}
 		<select class="font-select" value={font} onchange={handleFontChange} aria-label="Font" disabled={isShinyView}>
 			{#each FONTS as f, i (f)}
 				<option value={f}>{FONT_LABELS[i]}</option>
@@ -828,77 +814,67 @@
 		}
 	}
 
-	.theme-slider {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		height: 42px;
-		margin-right: 0;
+	/* Four named choices in one row, swatch over name, drawn like the View toggle above them. */
+	.theme-choices {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-elevated);
+		overflow: hidden;
 	}
 
-	.theme-slider__icon {
-		font-size: 12px;
+	.theme-choice {
+		position: relative;
+		display: grid;
+		justify-items: center;
+		gap: 5px;
+		padding: 7px 2px 6px;
+		border-right: 1px solid var(--border);
+		color: var(--text-secondary);
+		cursor: pointer;
+		font-family: var(--font-sans);
+		font-size: 11px;
+		font-weight: 700;
 		line-height: 1;
-		user-select: none;
+		transition: background-color 0.15s, color 0.15s;
 	}
 
-	/* The control is 24px tall for a finger; the track drawn inside it stays 6px. */
-	.theme-slider__input {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 72px;
-		height: 24px;
+	.theme-choice:last-child {
+		border-right: 0;
+	}
+
+	.theme-choice:not(.active):has(input:enabled):hover {
+		color: var(--text);
+	}
+
+	/* The radio stays on the page, over its whole choice, for the keyboard and screen readers;
+	   the label draws it. */
+	.theme-choice input {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
 		margin: 0;
-		background: transparent;
-		outline: none;
-		cursor: pointer;
+		opacity: 0;
+		cursor: inherit;
 	}
 
-	.theme-slider__input::-webkit-slider-runnable-track {
-		height: 6px;
-		border-radius: 3px;
-		background: linear-gradient(to right, #000, #0c1622, #faf0e0, #fff);
-	}
-
-	.theme-slider__input::-moz-range-track {
-		height: 6px;
-		border-radius: 3px;
-		background: linear-gradient(to right, #000, #0c1622, #faf0e0, #fff);
-	}
-
-	.theme-slider__input::-webkit-slider-thumb {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 18px;
-		height: 18px;
-		/* Centred on the 6px track. */
-		margin-top: -6px;
-		border-radius: 50%;
-		background: #ffffff;
-		border: 1px solid rgba(0,0,0,0.05);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
-		cursor: pointer;
-		transition: transform 0.15s, box-shadow 0.15s;
-	}
-
-	.theme-slider__input::-webkit-slider-thumb:hover {
-		transform: scale(1.1);
-		box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-	}
-
-	.theme-slider__input::-moz-range-thumb {
-		width: 18px;
-		height: 18px;
-		border-radius: 50%;
-		background: #ffffff;
-		border: 1px solid rgba(0,0,0,0.05);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
-		cursor: pointer;
-	}
-
-	.theme-slider__input:focus-visible {
+	.theme-choice:has(input:focus-visible) {
 		outline: 2px solid var(--accent);
-		outline-offset: 4px;
+		outline-offset: -2px;
+	}
+
+	.theme-choice:has(input:disabled) {
+		cursor: not-allowed;
+	}
+
+	/* A ring in muted ink keeps every swatch visible, the black one on the black theme too. */
+	.theme-swatch {
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		box-shadow: 0 0 0 1px var(--text-muted);
 	}
 
 	.font-select {
@@ -1090,7 +1066,8 @@
 		outline-offset: -2px;
 	}
 
-	.view-mode-toggle button.active {
+	.view-mode-toggle button.active,
+	.theme-choice.active {
 		background: var(--accent);
 		color: #fff;
 	}
@@ -1101,10 +1078,6 @@
 		font-size: 11px;
 		font-weight: 500;
 		line-height: 1.35;
-	}
-
-	.display-control .theme-slider {
-		height: auto;
 	}
 
 	.display-control .font-select {
@@ -1207,8 +1180,9 @@
 		gap: 12px;
 	}
 
-	.mobile-drawer-controls .theme-slider {
-		margin-right: 0;
+	/* The Display menu fades the whole control in the Shiny view; the phone menu has no wrapper. */
+	.mobile-drawer-controls .theme-choices:has(input:disabled) {
+		opacity: 0.48;
 	}
 
 	.mobile-drawer-controls .font-select {
@@ -1232,10 +1206,6 @@
 	@media (max-width: 1320px) {
 		.desktop-controls {
 			gap: 8px;
-		}
-
-		.theme-slider__input {
-			width: 58px;
 		}
 
 		.font-select {
@@ -1284,20 +1254,8 @@
 			flex: 1 1 auto;
 		}
 
-		.theme-slider {
-			margin-right: 10px;
-		}
-
-		.theme-slider__input {
-			width: 56px;
-		}
-
 		.font-select {
 			margin-right: 6px;
-		}
-
-		.mobile-drawer-controls .theme-slider {
-			margin-right: 0;
 		}
 
 		.mobile-drawer-controls .font-select {

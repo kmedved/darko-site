@@ -226,6 +226,11 @@
 			: selectedPlayers.some((p) => rowsForPlayer(p).length > 0))
 	);
 
+	// A shared link can set these while the Advanced fold stays closed, so its summary says how many are on.
+	const advancedSetCount = $derived(
+		[yAxisMin, yAxisMax, bandwidth, rangeFilterMin, rangeFilterMax].filter((value) => value != null).length
+	);
+
 	const chartData = $derived(
 		selectedPlayers.map((p, index) => {
 			// DARKO rows also carry rating states for missed, scheduled and offseason dates; only
@@ -693,170 +698,6 @@
 
 		<div class="trajectory-workspace" data-shiny-layout="sidebar">
 			<aside class="trajectory-controls" data-shiny-surface="well" aria-label="Trajectory controls">
-				<!-- On phones and tablets the chart settings fold away so the chart comes first. -->
-				<button
-					type="button"
-					class="btn chart-options-toggle"
-					aria-expanded={chartOptionsOpen}
-					aria-controls="trajectory-chart-options"
-					onclick={() => (chartOptionsOpen = !chartOptionsOpen)}
-				>
-					<span>Chart options</span>
-					<span class="chart-options-summary">{selectedMetricLabel} · by {timeScale === 'seasons' ? 'season' : timeScale === 'season-age' ? 'season age' : timeScale === 'age' ? 'age' : 'game'}</span>
-				</button>
-				<div id="trajectory-chart-options" class="chart-options" class:open={chartOptionsOpen}>
-					<fieldset class="control-group">
-						<legend class="control-label">Time Scale</legend>
-						<div class="radio-stack">
-							{#each timeScaleOptions as opt (opt.key)}
-								<label class="radio-label">
-									<input
-										type="radio"
-										name="timeScale"
-										value={opt.key}
-										bind:group={timeScale}
-									/>
-									<span>{opt.label}</span>
-								</label>
-							{/each}
-						</div>
-						{#if timeScale === 'season-age'}
-							<p class="metric-note">Each season fills one column at the player's age on February 1, rounded, so every player's age-25 season lines up. The season in progress fills its share of 82 games; the line breaks at seasons a player missed.</p>
-						{/if}
-					</fieldset>
-
-					<div class="control-group">
-						<label class="control-label" for="talent-type">Talent Type</label>
-						<select
-							id="talent-type"
-							class="control-select"
-							bind:value={talentType}
-						>
-							{#each talentTypes as tt (tt.key)}
-								<option value={tt.key}>{tt.label}</option>
-							{/each}
-						</select>
-						{#if isWowyMetric}
-							{#if wowyPublicationLabel}
-								<div class="metric-freshness">{wowyPublicationLabel}</div>
-							{/if}
-							<!-- Daily WOWY reaches back into the ABA, so its linkage is disclosed where it is charted. -->
-							<p class="metric-note">
-								Includes ABA seasons. The ABA-to-NBA level is explicitly unidentified from 1967-68 through
-								1970-71 and identified from 1971-72 through 1975-76.
-							</p>
-						{/if}
-					</div>
-
-					<div class="control-group">
-						<span class="control-label">Y-Axis Range</span>
-						<div class="range-inputs">
-							<label class="range-field">
-								<span>Min</span>
-								<input
-									type="number"
-									step="any"
-									placeholder="Auto"
-									value={yAxisMin ?? ''}
-									oninput={handleYMinChange}
-								/>
-							</label>
-							<label class="range-field">
-								<span>Max</span>
-								<input
-									type="number"
-									step="any"
-									placeholder="Auto"
-									value={yAxisMax ?? ''}
-									oninput={handleYMaxChange}
-								/>
-							</label>
-						</div>
-					</div>
-
-					<div class="control-group">
-						<span class="control-label">Smoothing Span</span>
-						<label class="range-field">
-							<span>Higher values smooth more; leave blank for the preset.</span>
-							<input
-								aria-label="Smoothing span"
-								type="number"
-								min="0.05"
-								max="1"
-								step="0.05"
-								placeholder="Auto"
-								value={bandwidth ?? ''}
-								oninput={handleBandwidthChange}
-							/>
-						</label>
-					</div>
-
-					{#if showRangeFilter}
-						<div class="control-group">
-							<span class="control-label">{rangeLabel}</span>
-							<div class="range-inputs">
-								{#if timeScale === 'seasons'}
-									<label class="range-field">
-										<span>From</span>
-										<select
-											class="control-select"
-											value={rangeFilterMin ?? ''}
-											onchange={(e) => {
-												rangeFilterMin = e.currentTarget.value
-													? Number(e.currentTarget.value)
-													: null;
-											}}
-										>
-											<option value="">Earliest</option>
-											{#each availableSeasons as yr (yr)}
-												<option value={yr}>{formatSeasonLabel(yr)}</option>
-											{/each}
-										</select>
-									</label>
-									<label class="range-field">
-										<span>To</span>
-										<select
-											class="control-select"
-											value={rangeFilterMax ?? ''}
-											onchange={(e) => {
-												rangeFilterMax = e.currentTarget.value
-													? Number(e.currentTarget.value)
-													: null;
-											}}
-										>
-											<option value="">Latest</option>
-											{#each availableSeasons as yr (yr)}
-												<option value={yr}>{formatSeasonLabel(yr)}</option>
-											{/each}
-										</select>
-									</label>
-								{:else}
-									<label class="range-field">
-										<span>Min</span>
-										<input
-											type="number"
-											step={timeScale === 'age' ? 'any' : '1'}
-											placeholder="Auto"
-											value={rangeFilterMin ?? ''}
-											oninput={handleRangeMinChange}
-										/>
-									</label>
-									<label class="range-field">
-										<span>Max</span>
-										<input
-											type="number"
-											step={timeScale === 'age' ? 'any' : '1'}
-											placeholder="Auto"
-											value={rangeFilterMax ?? ''}
-											oninput={handleRangeMaxChange}
-										/>
-									</label>
-								{/if}
-							</div>
-						</div>
-					{/if}
-				</div>
-
 				<div class="control-group player-control-group">
 					<span class="control-label">Select Players to Compare</span>
 					<div class="player-chip-list">
@@ -908,23 +749,185 @@
 						</div>
 					{/if}
 				</div>
+
+				<!-- On phones and tablets the chart settings fold away under the player picker, so the chart follows close behind. -->
+				<button
+					type="button"
+					class="btn chart-options-toggle"
+					aria-expanded={chartOptionsOpen}
+					aria-controls="trajectory-chart-options"
+					onclick={() => (chartOptionsOpen = !chartOptionsOpen)}
+				>
+					<span>Chart options</span>
+					<span class="chart-options-summary">{selectedMetricLabel} · by {timeScale === 'seasons' ? 'season' : timeScale === 'season-age' ? 'season age' : timeScale === 'age' ? 'age' : 'game'}</span>
+				</button>
+				<div id="trajectory-chart-options" class="chart-options" class:open={chartOptionsOpen}>
+					<div class="control-group">
+						<label class="control-label" for="talent-type">Talent Type</label>
+						<select
+							id="talent-type"
+							class="control-select"
+							bind:value={talentType}
+						>
+							{#each talentTypes as tt (tt.key)}
+								<option value={tt.key}>{tt.label}</option>
+							{/each}
+						</select>
+						{#if isWowyMetric}
+							{#if wowyPublicationLabel}
+								<div class="metric-freshness">{wowyPublicationLabel}</div>
+							{/if}
+							<!-- Daily WOWY reaches back into the ABA, so its linkage is disclosed where it is charted. -->
+							<p class="metric-note">
+								Includes ABA seasons. The ABA-to-NBA level is explicitly unidentified from 1967-68 through
+								1970-71 and identified from 1971-72 through 1975-76.
+							</p>
+						{/if}
+					</div>
+
+					<fieldset class="control-group">
+						<legend class="control-label">Time Scale</legend>
+						<div class="radio-stack">
+							{#each timeScaleOptions as opt (opt.key)}
+								<label class="radio-label">
+									<input
+										type="radio"
+										name="timeScale"
+										value={opt.key}
+										bind:group={timeScale}
+									/>
+									<span>{opt.label}</span>
+								</label>
+							{/each}
+						</div>
+						{#if timeScale === 'season-age'}
+							<p class="metric-note">Each season fills one column at the player's age on February 1, rounded, so every player's age-25 season lines up. The season in progress fills its share of 82 games; the line breaks at seasons a player missed.</p>
+						{/if}
+					</fieldset>
+
+					<!-- Settings most readers never touch; they keep their URL state while folded away. -->
+					<details class="advanced-options">
+						<summary class="control-label advanced-summary">
+							<span>Advanced</span>
+							{#if advancedSetCount > 0}
+								<span class="advanced-indicator">{advancedSetCount} set</span>
+							{/if}
+						</summary>
+						<div class="control-group">
+							<span class="control-label">Y-Axis Range</span>
+							<div class="range-inputs">
+								<label class="range-field">
+									<span>Min</span>
+									<input
+										type="number"
+										step="any"
+										placeholder="Auto"
+										value={yAxisMin ?? ''}
+										oninput={handleYMinChange}
+									/>
+								</label>
+								<label class="range-field">
+									<span>Max</span>
+									<input
+										type="number"
+										step="any"
+										placeholder="Auto"
+										value={yAxisMax ?? ''}
+										oninput={handleYMaxChange}
+									/>
+								</label>
+							</div>
+						</div>
+
+						<div class="control-group">
+							<span class="control-label">Smoothing Span</span>
+							<label class="range-field">
+								<span>Higher values smooth more; leave blank for the preset.</span>
+								<input
+									aria-label="Smoothing span"
+									type="number"
+									min="0.05"
+									max="1"
+									step="0.05"
+									placeholder="Auto"
+									value={bandwidth ?? ''}
+									oninput={handleBandwidthChange}
+								/>
+							</label>
+						</div>
+
+						{#if showRangeFilter}
+							<div class="control-group">
+								<span class="control-label">{rangeLabel}</span>
+								<div class="range-inputs">
+									{#if timeScale === 'seasons'}
+										<label class="range-field">
+											<span>From</span>
+											<select
+												class="control-select"
+												value={rangeFilterMin ?? ''}
+												onchange={(e) => {
+													rangeFilterMin = e.currentTarget.value
+														? Number(e.currentTarget.value)
+														: null;
+												}}
+											>
+												<option value="">Earliest</option>
+												{#each availableSeasons as yr (yr)}
+													<option value={yr}>{formatSeasonLabel(yr)}</option>
+												{/each}
+											</select>
+										</label>
+										<label class="range-field">
+											<span>To</span>
+											<select
+												class="control-select"
+												value={rangeFilterMax ?? ''}
+												onchange={(e) => {
+													rangeFilterMax = e.currentTarget.value
+														? Number(e.currentTarget.value)
+														: null;
+												}}
+											>
+												<option value="">Latest</option>
+												{#each availableSeasons as yr (yr)}
+													<option value={yr}>{formatSeasonLabel(yr)}</option>
+												{/each}
+											</select>
+										</label>
+									{:else}
+										<label class="range-field">
+											<span>Min</span>
+											<input
+												type="number"
+												step={timeScale === 'age' ? 'any' : '1'}
+												placeholder="Auto"
+												value={rangeFilterMin ?? ''}
+												oninput={handleRangeMinChange}
+											/>
+										</label>
+										<label class="range-field">
+											<span>Max</span>
+											<input
+												type="number"
+												step={timeScale === 'age' ? 'any' : '1'}
+												placeholder="Auto"
+												value={rangeFilterMax ?? ''}
+												oninput={handleRangeMaxChange}
+											/>
+										</label>
+									{/if}
+								</div>
+							</div>
+						{/if}
+					</details>
+				</div>
 			</aside>
 
 			<main class="trajectory-main">
 				<section class="trajectory-chart-area" data-shiny-surface="plot" aria-label="Career trajectory chart">
 					{#if error}
 						<div class="trajectory-message error-msg">{error}</div>
-					{/if}
-
-					{#if newsNotes.length > 0}
-						<div class="trajectory-news">
-							<strong>In the news</strong>
-							<ul>
-								{#each newsNotes as note (note.nba_id)}
-									<li style:--player-color={note.color}><span>{note.name}</span> {note.detail}</li>
-								{/each}
-							</ul>
-						</div>
 					{/if}
 
 					{#if loading}
@@ -978,6 +981,17 @@
 						</div>
 					{/if}
 				</section>
+
+				{#if newsNotes.length > 0}
+					<div class="trajectory-news">
+						<strong>In the news</strong>
+						<ul>
+							{#each newsNotes as note (note.nba_id)}
+								<li style:--player-color={note.color}><span>{note.name}</span> {note.detail}</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
 
 				{#if selectedPlayers.length > 0 && hasChartRows}
 					<section class="stat-strip trajectory-stat-strip" aria-label="Trajectory summary">
@@ -1064,6 +1078,60 @@
 		color: var(--text-muted);
 		font-size: 12px;
 		line-height: 1.4;
+	}
+
+	/* The Advanced fold sits under a rule, its plus turning to a minus while open. */
+	.advanced-options {
+		border-top: 1px solid var(--border-subtle);
+		padding-top: 8px;
+	}
+
+	.advanced-summary {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-height: 32px;
+		margin-bottom: 0;
+		cursor: pointer;
+		list-style: none;
+	}
+
+	.advanced-summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.advanced-summary::after {
+		margin-left: auto;
+		color: var(--text-muted);
+		content: '+';
+		font-family: var(--font-mono);
+		font-size: 16px;
+		font-weight: var(--figure-weight-strong);
+	}
+
+	.advanced-options[open] > .advanced-summary {
+		margin-bottom: 12px;
+	}
+
+	.advanced-options[open] > .advanced-summary::after {
+		content: '−';
+	}
+
+	.advanced-summary:focus-visible {
+		border-radius: var(--radius-sm);
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.advanced-indicator {
+		padding: 2px 6px;
+		border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+		border-radius: 999px;
+		color: var(--accent);
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: var(--figure-weight-strong);
+		line-height: 1.2;
 	}
 
 	.radio-stack {
@@ -1245,10 +1313,11 @@
 		color: var(--text-secondary);
 	}
 
+	/* Under the chart, so the headlines never push it down the page. */
 	.trajectory-news {
 		display: grid;
 		gap: 6px;
-		margin: 0 0 12px;
+		margin: 14px 0 0;
 		color: var(--text-secondary);
 		font-size: 13px;
 		line-height: 1.35;
@@ -1457,11 +1526,15 @@
 			position: static;
 		}
 
+		/* The toggle closes the card under the player picker, so its gap opens only with the options. */
 		.chart-options-toggle {
 			display: flex;
 			justify-content: space-between;
 			width: 100%;
-			margin-bottom: 14px;
+		}
+
+		.chart-options.open {
+			margin-top: 14px;
 		}
 
 		.chart-options-summary {

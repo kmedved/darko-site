@@ -258,6 +258,27 @@ test('WOWY leaderboard supports sorting, filtering, loaded CSV export, and mobil
     assert.match(contents, /@media \(max-width: 840px\)\s*\{[\s\S]*?\.table-body-scroll\s*\{[\s\S]*?-webkit-overflow-scrolling:\s*touch;/);
 });
 
+test('the WOWY explainer starts folded so the table shows above the fold', async () => {
+    const contents = await read(WOWY_PAGE);
+    const explainer = contents.match(/<details class="wowy-method"[^>]*>([\s\S]*?)<\/details>/);
+
+    // Closed by default at every width: no `open` attribute and no separate phone-only toggle.
+    assert.ok(explainer, 'the explainer should be a <details> disclosure');
+    assert.doesNotMatch(explainer[0], /<details class="wowy-method"[^>]*\bopen\b/);
+    assert.match(explainer[1], /<summary>How to read the table<\/summary>/);
+    assert.doesNotMatch(contents, /wowy-method-toggle|methodOpen/);
+    // Its text and both links stay inside the fold.
+    // The summary names it, so no label repeats "Reading the table" inside.
+    assert.doesNotMatch(explainer[1], /wowy-method-label/);
+    assert.match(explainer[1], /getMetricDefinition\('wowy_rapm'\)/);
+    assert.match(explainer[1], /Click a season to open it, or a team to see that team’s season\./);
+    assert.match(explainer[1], /<a href="\/wowy\/about">About WOWY RAPM/);
+    assert.match(explainer[1], /<a href="\/trajectories\?metric=wowy_rapm">Explore career trajectories/);
+    // Folded, the panel sits at the top of its column instead of stretching to the header's height.
+    assert.match(contents, /\.wowy-method\s*\{[\s\S]*?align-self:\s*start;/);
+    assert.doesNotMatch(contents, /\.wowy-method\s*\{[^}]*align-self:\s*stretch;/);
+});
+
 test('all-time WOWY API forwards complete filters into bounded server pages', async () => {
     const contents = await read(WOWY_ALL_TIME_API);
 

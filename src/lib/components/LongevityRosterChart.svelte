@@ -279,7 +279,6 @@
             {svgEl}
             captureRootEl={chartRootEl}
             filenameBase={exportFilenameBase}
-            buttonLabel="..."
             buttonAriaLabel="Download retirement age chart"
         />
     </div>

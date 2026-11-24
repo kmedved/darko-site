@@ -816,8 +816,65 @@
 		background: var(--negative);
 	}
 
+	/* Each team keeps its rating and minutes in view, just under the site's bar, while its sliders
+	   scroll and until its own section scrolls away: side by side both bars stick, stacked the one
+	   being edited. */
+	.lab-minutes {
+		position: sticky;
+		top: var(--nav-sticky-offset);
+		z-index: 5;
+		gap: 4px;
+		margin: 0 -18px 10px;
+		padding: 6px 18px 8px;
+		background: var(--bg-surface);
+		border-bottom: 1px solid var(--border-subtle);
+	}
+
 	.lab-live {
-		display: none;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 10px;
+		margin: 0;
+		font-size: 13px;
+		color: var(--text-secondary);
+	}
+
+	.lab-live-logo {
+		width: 20px;
+		height: 20px;
+		object-fit: contain;
+	}
+
+	.lab-live b {
+		color: var(--text);
+	}
+
+	.lab-live-rating {
+		font-family: var(--font-display);
+		font-size: 19px;
+		font-weight: 800;
+		font-stretch: 108%;
+		font-variant-numeric: tabular-nums;
+		color: var(--text);
+	}
+
+	.lab-live .up,
+	.lab-live .down {
+		font-family: var(--font-mono);
+		font-weight: var(--figure-weight-strong);
+	}
+
+	.lab-live .up {
+		color: var(--positive);
+	}
+
+	.lab-live .down {
+		color: var(--negative);
+	}
+
+	.lab-live-wins {
+		margin-left: auto;
 	}
 
 	.lab-roster {
@@ -1135,6 +1192,34 @@
 		.lab-side + .lab-side :global(.mc-explain) {
 			display: none;
 		}
+
+		/* Side by side, the rating and the minutes share one line, so the bar costs the rosters
+		   about 11px at rest rather than a row of its own. */
+		.lab-minutes {
+			grid-template-columns: auto minmax(0, 1fr);
+			column-gap: 16px;
+			align-items: center;
+			margin-bottom: 8px;
+			padding: 3px 18px 6px;
+		}
+
+		.lab-meter {
+			grid-column: 1 / -1;
+		}
+
+		.lab-live {
+			gap: 2px 8px;
+		}
+
+		.lab-live-logo {
+			width: 18px;
+			height: 18px;
+		}
+
+		.lab-live-rating {
+			font-size: 16px;
+			line-height: 1.1;
+		}
 	}
 
 	@media (max-width: 1100px) {
@@ -1142,72 +1227,18 @@
 		.lab-bottom {
 			grid-template-columns: 1fr;
 		}
-
-		/* One side at a time on screen: the team being edited keeps its rating and minutes in view,
-		   just under the site's bar, until its own section scrolls away. */
-		.lab-minutes {
-			position: sticky;
-			top: var(--nav-sticky-offset);
-			z-index: 5;
-			gap: 4px;
-			margin: 0 -18px 10px;
-			padding: 6px 18px 8px;
-			background: var(--bg-surface);
-			border-bottom: 1px solid var(--border-subtle);
-		}
-
-		.lab-live {
-			display: flex;
-			flex-wrap: wrap;
-			align-items: center;
-			gap: 4px 10px;
-			margin: 0;
-			font-size: 13px;
-			color: var(--text-secondary);
-		}
-
-		.lab-live-logo {
-			width: 20px;
-			height: 20px;
-			object-fit: contain;
-		}
-
-		.lab-live b {
-			color: var(--text);
-		}
-
-		.lab-live-rating {
-			font-family: var(--font-display);
-			font-size: 19px;
-			font-weight: 800;
-			font-stretch: 108%;
-			font-variant-numeric: tabular-nums;
-			color: var(--text);
-		}
-
-		.lab-live .up,
-		.lab-live .down {
-			font-family: var(--font-mono);
-			font-weight: var(--figure-weight-strong);
-		}
-
-		.lab-live .up {
-			color: var(--positive);
-		}
-
-		.lab-live .down {
-			color: var(--negative);
-		}
-
-		.lab-live-wins {
-			margin-left: auto;
-		}
 	}
 
 	@media (max-width: 560px) {
 		.lab-side,
 		.lab-panel {
 			padding: 14px;
+		}
+
+		/* The bar spans the side's edge to edge at its narrower padding too. */
+		.lab-minutes {
+			margin: 0 -14px 10px;
+			padding: 6px 14px 8px;
 		}
 
 		.lab-row {

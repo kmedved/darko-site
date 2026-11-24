@@ -447,7 +447,12 @@
         />
 
         {#if !loading && !error}
-            <section class="stat-strip" aria-label="Selected player longevity summary">
+            <!-- The tiles are one player's numbers, so they say whose, as the chart titles do. -->
+            <p class="longevity-strip-label" id="longevity-strip-label">
+                <span>Selected player</span>
+                <strong>{activePlayer?.player_name || 'None'}</strong>
+            </p>
+            <section class="stat-strip" aria-labelledby="longevity-strip-label">
                 {#each summaryCards as card (card.label)}
                     <StatTile label={card.label} value={card.value} detail={card.detail} />
                 {/each}
@@ -672,6 +677,28 @@
 
     .longevity-container {
         max-width: 1880px;
+    }
+
+    .longevity-strip-label {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 10px;
+        margin: 0 0 10px;
+    }
+
+    .longevity-strip-label span {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .longevity-strip-label strong {
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 700;
     }
 
     .longevity-loading {
