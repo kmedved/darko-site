@@ -28,3 +28,22 @@ test('standings summary uses the shared tiles and explains the playoff-lock coun
     );
     assert.doesNotMatch(contents, /summary-lock|summary-card/, 'the old summary-card markup should be gone');
 });
+
+test('standings shows win ranges for the toggled conference while the simulation runs', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), STANDINGS_PAGE), 'utf8');
+
+    // Hidden for a finished season and whenever the league set failed its check (null).
+    assert.match(contents, /\{#if !seasonComplete && data\.winDistributions\}/);
+    assert.match(contents, /<WinRangesChart teams=\{standings\} distributions=\{data\.winDistributions\} \/>/);
+});
+
+test('standings cut lines follow the projected order only', async () => {
+    const contents = await fs.readFile(path.resolve(process.cwd(), STANDINGS_PAGE), 'utf8');
+
+    // Sorted by anything else, or searched, rows 6 and 10 are no longer the cutoffs.
+    assert.match(
+        contents,
+        /const showCutLines = \$derived\(!seasonComplete && sortColumn === 'Rk' && sortDirection === 'asc' && !teamSearch\.trim\(\)\);/
+    );
+    assert.match(contents, /<tr class:cut-line=\{showCutLines && \[6, 10\]\.includes\(Number\(team\.Rk\)\)\}>/);
+});
