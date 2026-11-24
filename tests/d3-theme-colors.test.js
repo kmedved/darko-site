@@ -24,3 +24,11 @@ test('D3 components should not hardcode hex color literals', async () => {
         assert.equal(matches, null, `${file} should not include hex color values`);
     }
 });
+
+test('Simulation bar charts use the series colour, not the reserved good/bad colours', async () => {
+    for (const file of ['src/lib/components/WinDistChart.svelte', 'src/lib/components/SeedChart.svelte']) {
+        const contents = await fs.readFile(path.resolve(process.cwd(), file), 'utf8');
+        assert.match(contents, /getSeriesColor\(0, displayMode\.view\)/, `${file} should colour bars with the series colour`);
+        assert.doesNotMatch(contents, /var\(--(?:positive|negative)\)/, `${file} should not use --positive or --negative`);
+    }
+});
