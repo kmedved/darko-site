@@ -287,10 +287,15 @@
 							<div>
 								<p class="movers-head"><span>{label}</span><span>Change</span></p>
 								{#each rows as row (row.id)}
-									<a class="mover" href="/player/{row.id}">
+									<!-- Minutes a game go in the hover title: the line has no room for them. -->
+									<a
+										class="mover"
+										href="/player/{row.id}"
+										title={row.mpg ? `${row.games} games, ${Math.round(row.mpg)} minutes a game ${windowText}` : undefined}
+									>
 										<span class="mover-who">
 											<b>{row.name}</b>
-											<span>{teamOfId(row.tmId)} · {row.games} games{#if row.mpg} · {Math.round(row.mpg)} mpg{/if} · now {formatSigned(row.to, 1)}</span>
+											<span>{teamOfId(row.tmId)} · {row.games} games · now {formatSigned(row.to, 1)}</span>
 										</span>
 										<Sparkline values={seriesFrom(data.series[row.id], data.starts[windowKey])} width={72} height={24} />
 										{@render deltaText(row.delta)}
