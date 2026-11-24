@@ -44,7 +44,8 @@ test('the team page puts its rating and where it comes from before the roster', 
 	assert.ok(at(markup, /id="dna-contrib-title">Where the rating comes from/) < at(markup, /<h2 class="section-title">Players<\/h2>/));
 	assert.ok(at(markup, /<h2 class="section-title">Players<\/h2>/) < at(markup, /<div class="dna-pair">/));
 	assert.match(markup, /<span class="team-score-value">\{formatSigned\(ratingSummary\.rating, 1\)\}<\/span>/);
-	assert.match(markup, /Worth about \{Math\.round\(ratingSummary\.wins\)\} wins over 82 games/);
+	// A pace, so it isn't read as a second projection of the record.
+	assert.match(markup, /A \{Math\.round\(ratingSummary\.wins\)\}-win pace over 82 games/);
 	// One line of season facts replaces the eight tiles.
 	assert.doesNotMatch(view, /StatTile/);
 	assert.match(markup, /\{#each seasonFacts as fact \(fact\)\}<span>\{fact\}<\/span>\{\/each\}/);

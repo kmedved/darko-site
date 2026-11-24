@@ -2212,6 +2212,31 @@ export async function getTeamSimulation(teamName) {
     });
 }
 
+const WIN_DISTRIBUTION_PAGE = 1_000;
+
+/**
+ * Every team's simulated win distribution. Thirty teams of about forty totals each run past one
+ * request's 1,000-row cap, so it reads in pages on a stable order; leagueWinDistributions checks
+ * that each team's shares add up before anything is drawn.
+ */
+export async function getLeagueWinDistribution() {
+    return runCached(cacheKey('leagueWinDistribution'), CACHE_MS.teamWinDistribution, async () => {
+        const page = (index, count = false) =>
+            supabase
+                .from('win_distribution')
+                .select('team_name, wins, prob', count ? { count: 'exact' } : undefined)
+                .order('team_name', { ascending: true })
+                .order('wins', { ascending: true })
+                .range(index * WIN_DISTRIBUTION_PAGE, (index + 1) * WIN_DISTRIBUTION_PAGE - 1);
+        const first = await page(0, true);
+        if (first.error) throw first.error;
+        const pages = Math.ceil((first.count ?? first.data.length) / WIN_DISTRIBUTION_PAGE);
+        const rest = await Promise.all(Array.from({ length: Math.max(0, pages - 1) }, (_, index) => page(index + 1)));
+        for (const result of rest) if (result.error) throw result.error;
+        return [first, ...rest].flatMap((result) => result.data ?? []);
+    });
+}
+
 export async function getTeamWinDistribution(teamName) {
     const normalizedTeam = (teamName || '').trim();
     if (!normalizedTeam) {
