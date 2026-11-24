@@ -215,13 +215,6 @@
         }));
     }
 
-    function currentWins(currentStr) {
-        if (!currentStr) return 0;
-        const parts = currentStr.split('-');
-        const parsed = parseFloat(parts[0]);
-        return Number.isFinite(parsed) ? parsed : 0;
-    }
-
     function exportTeamCsv() {
         exportCsvRows({
             rows: sortedPlayers,
@@ -407,9 +400,9 @@
                         <OffenseDefenseSplit offense={ratingSummary.offense} defense={ratingSummary.defense} labels />
                     </div>
                     <p class="team-score-note">
-                        Worth about {Math.round(ratingSummary.wins)} wins over 82 games
+                        A {Math.round(ratingSummary.wins)}-win pace over 82 games
                         <MetricTooltip
-                            text="The Roster Lab's rule of thumb, not a DARKO output: 41 wins plus 2.7 for each point above the league's average team."
+                            text="The Roster Lab's rule of thumb, not a DARKO output: 41 wins plus 2.7 for each point above the league's average team, over a whole season at today's rating. The projected record differs: it keeps the games already played and simulates the schedule left."
                             label="About the wins"
                         ><span class="info-dot" aria-hidden="true">i</span></MetricTooltip>
                     </p>
@@ -620,7 +613,6 @@
             <WinDistChart
                 data={teamWinDist}
                 meanWins={parseFloat(sim.W)}
-                currentWins={currentWins(sim.Current)}
                 {teamName}
             />
         </div>

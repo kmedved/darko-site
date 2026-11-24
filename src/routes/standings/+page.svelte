@@ -15,6 +15,7 @@
     import { setupWideStickyTable } from '$lib/utils/wideStickyTable.js';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import StatTile from '$lib/components/StatTile.svelte';
+    import WinRangesChart from '$lib/components/WinRangesChart.svelte';
     import { finalStandingsRows, isSeasonComplete, resultCounts, RESULTS } from '$lib/utils/finalStandings.js';
     import { seasonLabelFromEndYear } from '$lib/utils/timeMachine.js';
 
@@ -168,6 +169,10 @@
             return fullName.includes(query) || abbr.includes(query);
         });
     });
+
+    // In projected order, lines mark where the play-in (7th to 10th) and the lottery start. A
+    // finished season's table lists its own seeds and results instead.
+    const showCutLines = $derived(!seasonComplete && sortColumn === 'Rk' && sortDirection === 'asc' && !teamSearch.trim());
 
     const sortedStandings = $derived.by(() =>
         getSortedRows(filteredStandings, {
@@ -590,7 +595,7 @@
                                         </tr>
                                     {:else}
                                         {#each sortedStandings as team (team.team_name)}
-                                            <tr>
+                                            <tr class:cut-line={showCutLines && [6, 10].includes(Number(team.Rk))}>
                                                 {#each visibleStandingsColumns as column (column.key)}
                                                     <td
                                                         class="{getCellClass(column, team?.[column.key])} {standingsHeatScales[column.key] ? 'shiny-heat-cell' : ''}"
@@ -620,7 +625,7 @@
                     <p class="standings-note">
                         {seasonComplete
                             ? `Final regular-season records, seeds and how each season ended.${playInNote}`
-                            : 'Results based on 10,000 season simulations.'}
+                            : `Results based on 10,000 season simulations.${showCutLines ? ' Dashed lines mark the play-in (7th to 10th) and the lottery.' : ''}`}
                     </p>
                 </section>
 
@@ -732,6 +737,17 @@
                     {/if}
                 </aside>
             </div>
+
+            {#if !seasonComplete && data.winDistributions}
+                <section class="insight-card win-ranges-card" data-shiny-surface="panel" aria-labelledby="win-ranges-title">
+                    <div class="insight-card-header">
+                        <h2 id="win-ranges-title">Win Ranges</h2>
+                        <span>{conference.toUpperCase()}ERN</span>
+                    </div>
+                    <p class="win-ranges-note">Final win totals across 10,000 simulated seasons. Open a team for its full distribution.</p>
+                    <WinRangesChart teams={standings} distributions={data.winDistributions} />
+                </section>
+            {/if}
         {/if}
     </div>
 </div>
@@ -948,6 +964,10 @@
         border-bottom: none;
     }
 
+    tbody tr.cut-line td {
+        border-bottom: 2px dashed color-mix(in srgb, var(--text-muted) 60%, transparent);
+    }
+
     tbody tr:hover td {
         background: var(--bg-elevated);
     }
@@ -1058,6 +1078,16 @@
         color: var(--text);
         padding: 18px;
         box-shadow: 0 16px 36px color-mix(in srgb, var(--text) 13%, transparent);
+    }
+
+    .win-ranges-card {
+        margin-top: 18px;
+    }
+
+    .win-ranges-note {
+        margin: -8px 0 14px;
+        color: var(--text-secondary);
+        font-size: 13px;
     }
 
     .insight-card-header {

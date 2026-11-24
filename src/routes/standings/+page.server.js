@@ -1,5 +1,6 @@
-import { getConferenceStandings, getLatestPlayedSeason } from '$lib/server/supabase.js';
+import { getConferenceStandings, getLatestPlayedSeason, getLeagueWinDistribution } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
+import { leagueWinDistributions } from '$lib/utils/winDistribution.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -14,15 +15,19 @@ export async function load({ setHeaders }) {
     });
 
     // The season's label, for when the simulation has nothing left to play (a finished season).
-    const [eastStandings, westStandings, playedSeason] = await Promise.all([
+    // The win ranges are a side panel: a failed or incomplete read leaves them out, not the page.
+    const [eastStandings, westStandings, playedSeason, winRows] = await Promise.all([
         getConferenceStandings('East'),
         getConferenceStandings('West'),
-        getLatestPlayedSeason().catch(() => null)
+        getLatestPlayedSeason().catch(() => null),
+        getLeagueWinDistribution().catch(() => null)
     ]);
+    const teamNames = [...(eastStandings || []), ...(westStandings || [])].map((row) => row.team_name);
 
     return {
         eastStandings,
         westStandings,
-        playedSeason
+        playedSeason,
+        winDistributions: winRows ? leagueWinDistributions(winRows, teamNames) : null
     };
 }
