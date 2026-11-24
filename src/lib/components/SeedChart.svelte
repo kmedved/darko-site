@@ -1,11 +1,15 @@
 <script>
     import * as d3 from 'd3';
+    import { getContext } from 'svelte';
+    import { DISPLAY_VIEW_CONTEXT } from '$lib/displayMode.js';
+    import { getSeriesColor } from '$lib/utils/chartTheme.js';
 	import { withResizeObserver } from '$lib/utils/chartResizeObserver.js';
     import ChartDownloadMenu from '$lib/components/ChartDownloadMenu.svelte';
 
     let { team = {}, teamName = '' } = $props();
     let chartRootEl = $state(null);
     let svgEl = $state(null);
+    const displayMode = getContext(DISPLAY_VIEW_CONTEXT) ?? { view: 'modern' };
     const exportFilenameBase = $derived(teamName ? `${teamName}-seed-probabilities` : 'team-seed-probabilities');
     
 
@@ -65,11 +69,11 @@
 			.attr('width', x.bandwidth())
 			.attr('height', (d) => h - y(d.prob))
 			.attr('rx', 2)
-			.style('fill', (d) => {
-				if (d.prob >= 66) return 'var(--positive)';
-				if (d.prob >= 33) return 'var(--accent)';
-				return 'var(--negative)';
-			});
+			// One series colour, like the win chart above it: bar height carries the odds, and red and
+			// green stay reserved for good and bad.
+			.style('fill', getSeriesColor(0, displayMode.view))
+			.append('title')
+			.text((d) => `#${d.seed} seed: ${d.prob >= 1 ? d.prob.toFixed(0) + '%' : d.prob > 0 ? '<1%' : '0%'}`);
 
         // Labels on bars
 		g.selectAll('.bar-label')
