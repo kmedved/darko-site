@@ -605,54 +605,7 @@
 					</nav>
 				{/if}
 
-				<!-- Comps come from today's ratings, so the Time Machine hides them. -->
-				{#if comps.length > 0 && !asOfDate}
-					<section
-						class="chart-panel comps-panel"
-						id="comps"
-						data-shiny-surface="plot"
-						aria-labelledby="comps-title"
-					>
-						<header class="profile-section-header">
-							<div>
-								<p class="profile-section-kicker" data-shiny-role="editorial-kicker">Historical comps</p>
-								<h2 id="comps-title">Comps &amp; futures</h2>
-								<p class="profile-section-lede">
-									The ten most similar player-seasons since 1996-97 at the same age, and what
-									happened to them next.
-								</p>
-								{#if compsLine}
-									<p class="comps-summary">
-										<strong>{compsLine.dpm} at age {compsLine.age}</strong> in {compsLine.season}{compsLine.inProgress ? ' so far' : ''}
-										ranks <strong>{compsLine.rank} of {compsLine.count}</strong> age-{compsLine.age} seasons since 1996-97.
-										{#if compsLine.closest}
-											Closest match:
-											<a href="/player/{compsLine.closest.id}">{compsLine.closest.name}</a>, {compsLine.closest.season}.
-										{/if}
-									</p>
-								{/if}
-							</div>
-						</header>
-						<CompsFutures {comps} history={historyRows} playerName={playerInfo.player_name} />
-					</section>
-				{/if}
-
-				{#if currentComps.length > 0 && !asOfDate}
-					<section class="chart-panel comps-panel" id="current-comps" data-shiny-surface="panel" aria-labelledby="current-comps-title">
-						<header class="profile-section-header">
-							<div>
-								<p class="profile-section-kicker" data-shiny-role="editorial-kicker">Around the league</p>
-								<h2 id="current-comps-title">Top 10 comps today</h2>
-								<p class="profile-section-lede">
-									Current players closest to {playerInfo.player_name}'s {isCurrentPlayer ? 'current' : 'latest recorded'} profile, by DARKO ratings, age and projected box-score style.
-									{#if !isCurrentPlayer}Reference profile: {currentDate}.{/if}
-								</p>
-							</div>
-						</header>
-						<CurrentPlayerComps comps={currentComps} referenceId={nbaId} />
-					</section>
-				{/if}
-
+				<!-- The player's own numbers first (career, percentiles, box score), then the comparisons, then the money. -->
 				<div class="chart-panel" id="career" data-shiny-surface="plot">
 					<div class="panel-controls">
 						{@render talentTrendControl('talent-trend-select')}
@@ -668,62 +621,6 @@
 						</p>
 					{/if}
 				</div>
-
-				{#if showContract}
-					<section
-						class="chart-panel comps-panel"
-						id="contract"
-						data-shiny-surface="panel"
-						aria-labelledby="contract-title"
-					>
-						<header class="profile-section-header">
-							<div>
-								<p class="profile-section-kicker" data-shiny-role="editorial-kicker">Value</p>
-								<h2 id="contract-title">Contract &amp; longevity</h2>
-								<p class="profile-section-lede">
-									DARKO's fair salary from projected wins against {playerInfo.player_name}'s salary,
-									and the odds of still being on an NBA roster in each coming season.
-								</p>
-							</div>
-						</header>
-						<div class="contract-body" class:contract-body--tiles-only={!showLongevity}>
-							{#if contract.length > 0}
-								<dl class="contract-tiles">
-									{#each contract as tile (tile.key)}
-										<div class="contract-tile">
-											<dt>{tile.label}</dt>
-											<dd class="contract-value contract-value--{tile.tone ?? 'plain'}">{tile.value}</dd>
-											<dd class="contract-note">{tile.note}</dd>
-										</div>
-									{/each}
-								</dl>
-							{/if}
-							{#if showLongevity}
-								<div class="contract-chart">
-									<LongevityCareerLengthChart player={longevityPlayer} />
-								</div>
-							{/if}
-						</div>
-					</section>
-				{/if}
-
-				{#if seasonsTable.length > 0}
-					<section
-						class="chart-panel comps-panel"
-						id="seasons"
-						data-shiny-surface="panel"
-						aria-labelledby="seasons-title"
-					>
-						<header class="profile-section-header">
-							<div>
-								<p class="profile-section-kicker" data-shiny-role="editorial-kicker">Career</p>
-								<h2 id="seasons-title">Season by season</h2>
-								<p class="profile-section-lede">DPM going into each season's last game, since 1996-97.</p>
-							</div>
-						</header>
-						<SeasonBySeason rows={seasonsTable} playerName={playerInfo.player_name} />
-					</section>
-				{/if}
 
 				{#if percentilesLoading}
 					<div class="chart-panel" data-shiny-surface="panel">
@@ -782,6 +679,109 @@
 					</section>
 				{/if}
 
+				<!-- Comps come from today's ratings, so the Time Machine hides them. -->
+				{#if comps.length > 0 && !asOfDate}
+					<section
+						class="chart-panel comps-panel"
+						id="comps"
+						data-shiny-surface="plot"
+						aria-labelledby="comps-title"
+					>
+						<header class="profile-section-header">
+							<div>
+								<p class="profile-section-kicker" data-shiny-role="editorial-kicker">Historical comps</p>
+								<h2 id="comps-title">Comps &amp; futures</h2>
+								<p class="profile-section-lede">
+									The ten most similar player-seasons since 1996-97 at the same age, and what
+									happened to them next.
+								</p>
+								{#if compsLine}
+									<p class="comps-summary">
+										<strong>{compsLine.dpm} at age {compsLine.age}</strong> in {compsLine.season}{compsLine.inProgress ? ' so far' : ''}
+										ranks <strong>{compsLine.rank} of {compsLine.count}</strong> age-{compsLine.age} seasons since 1996-97.
+										{#if compsLine.closest}
+											Closest match:
+											<a href="/player/{compsLine.closest.id}">{compsLine.closest.name}</a>, {compsLine.closest.season}.
+										{/if}
+									</p>
+								{/if}
+							</div>
+						</header>
+						<CompsFutures {comps} history={historyRows} playerName={playerInfo.player_name} />
+					</section>
+				{/if}
+
+				{#if currentComps.length > 0 && !asOfDate}
+					<section class="chart-panel comps-panel" id="current-comps" data-shiny-surface="panel" aria-labelledby="current-comps-title">
+						<header class="profile-section-header">
+							<div>
+								<p class="profile-section-kicker" data-shiny-role="editorial-kicker">Around the league</p>
+								<h2 id="current-comps-title">Top 10 comps today</h2>
+								<p class="profile-section-lede">
+									Current players closest to {playerInfo.player_name}'s {isCurrentPlayer ? 'current' : 'latest recorded'} profile, by DARKO ratings, age and projected box-score style.
+									{#if !isCurrentPlayer}Reference profile: {currentDate}.{/if}
+								</p>
+							</div>
+						</header>
+						<CurrentPlayerComps comps={currentComps} referenceId={nbaId} />
+					</section>
+				{/if}
+
+				{#if seasonsTable.length > 0}
+					<section
+						class="chart-panel comps-panel"
+						id="seasons"
+						data-shiny-surface="panel"
+						aria-labelledby="seasons-title"
+					>
+						<header class="profile-section-header">
+							<div>
+								<p class="profile-section-kicker" data-shiny-role="editorial-kicker">Career</p>
+								<h2 id="seasons-title">Season by season</h2>
+								<p class="profile-section-lede">DPM going into each season's last game, since 1996-97.</p>
+							</div>
+						</header>
+						<SeasonBySeason rows={seasonsTable} playerName={playerInfo.player_name} />
+					</section>
+				{/if}
+
+				{#if showContract}
+					<section
+						class="chart-panel comps-panel"
+						id="contract"
+						data-shiny-surface="panel"
+						aria-labelledby="contract-title"
+					>
+						<header class="profile-section-header">
+							<div>
+								<p class="profile-section-kicker" data-shiny-role="editorial-kicker">Value</p>
+								<h2 id="contract-title">Contract &amp; longevity</h2>
+								<p class="profile-section-lede">
+									DARKO's fair salary from projected wins against {playerInfo.player_name}'s salary,
+									and the odds of still being on an NBA roster in each coming season.
+								</p>
+							</div>
+						</header>
+						<div class="contract-body" class:contract-body--tiles-only={!showLongevity}>
+							{#if contract.length > 0}
+								<dl class="contract-tiles">
+									{#each contract as tile (tile.key)}
+										<div class="contract-tile">
+											<dt>{tile.label}</dt>
+											<dd class="contract-value contract-value--{tile.tone ?? 'plain'}">{tile.value}</dd>
+											<dd class="contract-note">{tile.note}</dd>
+										</div>
+									{/each}
+								</dl>
+							{/if}
+							{#if showLongevity}
+								<div class="contract-chart">
+									<LongevityCareerLengthChart player={longevityPlayer} />
+								</div>
+							{/if}
+						</div>
+					</section>
+				{/if}
 
 			{/if}
 		</div>

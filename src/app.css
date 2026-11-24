@@ -189,14 +189,6 @@
 /* ── Font overrides ──────────────────────────────────── */
 
 :root[data-font='inter'] { --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-:root[data-font='roboto'] { --font-sans: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; }
-:root[data-font='lato'] { --font-sans: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif; }
-:root[data-font='opensans'] { --font-sans: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
-:root[data-font='sourcesans'] { --font-sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif; }
-:root[data-font='nunito'] { --font-sans: 'Nunito Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
-:root[data-font='worksans'] { --font-sans: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
-:root[data-font='raleway'] { --font-sans: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif; }
-:root[data-font='outfit'] { --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif; }
 :root[data-font='jakarta'] { --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
 :root[data-font='spacegrotesk'] { --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif; }
 :root[data-font='system'] { --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
@@ -356,6 +348,15 @@ a:hover { color: var(--accent-hover); }
 	    .site-nav .links a {
         font-size: 12px;
         padding: 8px 7px 9px;
+    }
+}
+
+/* From 1441px Ask DARKO and the Time Machine show their labels; until the container stops
+   growing at 1600px, the links give up some padding so the bar still fits. */
+@media (min-width: 1441px) and (max-width: 1599px) {
+    .site-nav .links a {
+        padding-left: 7px;
+        padding-right: 7px;
     }
 }
 

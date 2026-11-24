@@ -293,8 +293,10 @@
 
 	// ── Font toggle ──────────────────────────────────────
 	const FONT_KEY = 'darko-font';
-	const FONTS = ['inter', 'roboto', 'lato', 'opensans', 'sourcesans', 'nunito', 'worksans', 'raleway', 'outfit', 'jakarta', 'spacegrotesk', 'system'];
-	const FONT_LABELS = ['Inter', 'Roboto', 'Lato', 'Open Sans', 'Source Sans', 'Nunito Sans', 'Work Sans', 'Raleway', 'Outfit', 'Jakarta Sans', 'Space Grotesk', 'System'];
+	// Four that read differently beside Archivo and DM Mono. A saved choice from the old, longer
+	// list falls back to System (app.html rewrites it before paint).
+	const FONTS = ['system', 'inter', 'jakarta', 'spacegrotesk'];
+	const FONT_LABELS = ['System', 'Inter', 'Jakarta Sans', 'Space Grotesk'];
 
 	let font = $state('system');
 
@@ -434,7 +436,11 @@
 				<a href={navHref(item.href)} class:active={isNavItemActive(item, $page.url.pathname)}>{item.label}</a>
 			{/each}
 			<details class="nav-more" class:active={moreMenuActive} bind:this={moreMenu}>
-				<summary>More</summary>
+				<!-- A dot on the button says there's something new, or nobody sees the count until they
+				     open the menu. A dot, not the count, because the bar has no room for a pill. -->
+				<summary>More{#if whatsNewCount > 0}<span class="nav-more-dot" aria-hidden="true"></span><span class="sr-only">
+							({whatsNewCount} new)</span
+						>{/if}</summary>
 				<div class="nav-more-menu">
 					{#if whatsNewCount > 0}
 						<a href="/new" class="nav-new" class:active={$page.url.pathname === '/new'}>
@@ -949,6 +955,22 @@
 		transform: translateY(-2px) rotate(45deg);
 	}
 
+	/* More matches the page links where they tighten (src/app.css). */
+	@media (max-width: 1320px) {
+		.nav-more summary {
+			font-size: 12px;
+			padding-left: 7px;
+			padding-right: 7px;
+		}
+	}
+
+	@media (min-width: 1441px) and (max-width: 1599px) {
+		.nav-more summary {
+			padding-left: 7px;
+			padding-right: 7px;
+		}
+	}
+
 	.nav-more summary:hover,
 	.display-menu summary:hover {
 		color: var(--text-secondary);
@@ -994,6 +1016,14 @@
 	.nav-more-menu a.active {
 		background: var(--bg-elevated);
 		color: var(--text);
+	}
+
+	.nav-more-dot {
+		width: 7px;
+		height: 7px;
+		margin-left: 5px;
+		border-radius: 50%;
+		background: var(--accent);
 	}
 
 	.nav-new-count {

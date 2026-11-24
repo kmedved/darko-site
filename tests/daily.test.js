@@ -19,10 +19,13 @@ import {
     movesByWindow,
     ordinal,
     pickMovers,
+    ROTATION_MINUTES,
+    rotationIds,
     seasonFromStart,
     seriesFrom,
     UPDATE_MIN_MINUTES,
-    watchCards
+    watchCards,
+    withWindowMinutes
 } from '../src/lib/utils/daily.js';
 import { isDateAwarePath } from '../src/lib/utils/timeMachine.js';
 
@@ -78,6 +81,50 @@ test('risers and fallers come from players with enough games, biggest moves firs
     assert.deepEqual(chooseWindow(opening, '7'), { key: 'season', fellBack: true, played: true, minGames: 2 });
 });
 
+test('the rotation is players averaging 20+ minutes a game in the window', () => {
+    assert.equal(ROTATION_MINUTES, 20);
+    const byWindow = movesByWindow([
+        ...Array.from({ length: 8 }, (_, index) => move('7', index + 1, 2, index + 1)),
+        move('7', 9, 2, 9),
+        move('7', 10, 2, -9),
+        ...Array.from({ length: 10 }, (_, index) => move('season', index + 1, 40, index))
+    ]);
+    const starts = { 7: '2026-03-01', season: '2025-10-20' };
+    const end = '2026-03-08';
+    const games = [];
+    for (let id = 1; id <= 8; id += 1) {
+        games.push({ nba_id: id, date: '2026-03-03', minutes: 30 }, { nba_id: id, date: '2026-03-06', minutes: 24 });
+    }
+    // Two deep-bench players with the week's biggest moves.
+    games.push({ nba_id: 9, date: '2026-03-03', minutes: 12 }, { nba_id: 9, date: '2026-03-06', minutes: 9 });
+    games.push({ nba_id: 10, date: '2026-03-04', minutes: 14 }, { nba_id: 10, date: '2026-03-07', minutes: 16 });
+    // Outside the week: on its first day (the window starts after it), after its end, and earlier.
+    games.push({ nba_id: 9, date: '2026-03-01', minutes: 48 }, { nba_id: 9, date: '2026-03-09', minutes: 48 });
+    games.push({ nba_id: 10, date: '2026-01-10', minutes: 40 });
+
+    const withMinutes = withWindowMinutes(byWindow, games, starts, end);
+    const mpg = (key, id) => withMinutes[key].rows.find((row) => row.id === id).mpg;
+    assert.equal(mpg('7', 1), 27);
+    assert.equal(mpg('7', 9), 10.5);
+    assert.equal(mpg('7', 10), 15);
+    assert.equal(mpg('season', 10), (14 + 16 + 40) / 3);
+    // Movers without a game in the window get no minutes, and so never count as rotation.
+    assert.equal(withMinutes.season.rows.find((row) => row.id === 1).mpg, 27);
+    assert.deepEqual(rotationIds(withMinutes)['7'], [1, 2, 3, 4, 5, 6, 7, 8]);
+
+    const all = pickMovers(withMinutes['7'], '7');
+    assert.equal(all.risers[0].id, 9);
+    assert.equal(all.fallers[0].id, 10);
+    const rotation = pickMovers(withMinutes['7'], '7', { scope: 'rotation' });
+    assert.deepEqual(rotation.risers.map((row) => row.id), [8, 7, 6, 5, 4, 3]);
+    assert.equal(rotation.fallers[0].id, 1);
+    assert.equal(rotation.eligible, 8);
+    // Rows without minutes (the season's minutes failed to load) are never rotation players.
+    assert.equal(pickMovers(byWindow['7'], '7', { scope: 'rotation' }).eligible, 0);
+    assert.deepEqual(chooseWindow(withMinutes, '7', { scope: 'rotation' }), { key: '7', fellBack: false });
+    assert.equal(chooseWindow(byWindow, '7', { scope: 'rotation' }).key, 'season');
+});
+
 test('the edition follows this past week\'s games', () => {
     assert.equal(editionPhase([]), 'offseason');
     assert.equal(editionPhase([{ game_type: 2 }]), 'season');
@@ -102,6 +149,10 @@ test('the headline and lede write themselves from the board and the movers', () 
             'Gary Trent Jr. has slid -2.84.'
     );
     assert.match(lede({ leader, phase: 'season', key: '7' }), /^Nikola Jokic sits atop DARKO/);
+    assert.match(
+        lede({ leader, riser, phase: 'season', key: '7', minGames: 2, minMinutes: 20 }),
+        /the biggest rise among players with 2\+ games and 20\+ minutes a game\./
+    );
 });
 
 test('names, ordinals and age records read naturally', () => {
@@ -189,4 +240,18 @@ test("single-game updates give the offense/defense bar the row's room, and empty
 
     assert.match(page, /<p class="empty">No age records yet\. This season's players qualify once they reach 20 regular-season games\.<\/p>/);
     assert.doesNotMatch(page, /No age records this season\./);
+});
+
+test('The Daily defaults to the rotation and falls back to every player without minutes', async () => {
+    const server = await fs.readFile(path.resolve(process.cwd(), 'src/routes/daily/+page.server.js'), 'utf8');
+    assert.match(server, /getGameMinutes\(starts\.season, end\)\.catch\(\(\) => null\)/);
+    assert.match(server, /withWindowMinutes\(moves, gameMinutes, starts, end\)/);
+    assert.match(server, /ids: ids\[key\] \?\? \[\]/);
+    assert.match(server, /rotationUpdates,/);
+    const page = await fs.readFile(path.resolve(process.cwd(), 'src/routes/daily/+page.svelte'), 'utf8');
+    assert.match(page, /let scopeChoice = \$state\(DEFAULT_SCOPE\)/);
+    assert.match(page, /const scope = \$derived\(rotationReady \? scopeChoice : 'all'\)/);
+    assert.match(page, /pickMovers\(data\.windows\[windowKey\], windowKey, \{ scope \}\)/);
+    assert.match(page, /aria-label="Players"/);
+    assert.match(page, /minMinutes: rotation \? ROTATION_MINUTES : null/);
 });

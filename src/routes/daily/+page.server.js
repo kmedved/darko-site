@@ -2,6 +2,7 @@ import { setEdgeCache } from '$lib/server/cacheHeaders.js';
 import {
     getAgeRecords,
     getBiggestUpdates,
+    getGameMinutes,
     getRatingMoves,
     getRatingSeries,
     getSeasonLeaders
@@ -17,8 +18,11 @@ import {
     daysBefore,
     movesByWindow,
     pickMovers,
+    rotationIds,
+    SCOPES,
     seasonFromStart,
-    watchCards
+    watchCards,
+    withWindowMinutes
 } from '$lib/utils/daily.js';
 import { AS_OF_PARAM, parseAsOfDate } from '$lib/utils/timeMachine.js';
 
@@ -63,23 +67,40 @@ async function latest() {
         return { mode: 'latest', available: false, board, windows: {}, updates: {}, records: null, series: {}, suggested: [] };
     }
 
-    const byWindow = movesByWindow(moveRows);
-    const seasonWindow = byWindow.season;
+    const moves = movesByWindow(moveRows);
+    const seasonWindow = moves.season;
     const end = seasonWindow.end;
     const seasonStart = seasonWindow.start;
     const starts = Object.fromEntries(
         WINDOWS.map(({ key, days }) => [key, key === 'season' ? daysBefore(seasonStart, 1) : daysBefore(end, days)])
     );
-    const updateLists = await Promise.all(
-        WINDOWS.map(({ key }) => getBiggestUpdates(starts[key], end, UPDATES_SHOWN, { minMinutes: UPDATE_MIN_MINUTES }))
-    );
+    // The season's minutes give each mover their minutes a game, which picks out the rotation. A
+    // failed read leaves the page as it was: every player, and no Rotation switch.
+    const [gameMinutes, ...updateLists] = await Promise.all([
+        getGameMinutes(starts.season, end).catch(() => null),
+        ...WINDOWS.map(({ key }) => getBiggestUpdates(starts[key], end, UPDATES_SHOWN, { minMinutes: UPDATE_MIN_MINUTES }))
+    ]);
     const updates = Object.fromEntries(WINDOWS.map(({ key }, index) => [key, updateLists[index] ?? []]));
+    const byWindow = gameMinutes ? withWindowMinutes(moves, gameMinutes, starts, end) : moves;
+    let rotationUpdates = null;
+    if (gameMinutes) {
+        const ids = rotationIds(byWindow);
+        const rotationLists = await Promise.all(
+            WINDOWS.map(({ key }) =>
+                getBiggestUpdates(starts[key], end, UPDATES_SHOWN, { minMinutes: UPDATE_MIN_MINUTES, ids: ids[key] ?? [] })
+            )
+        );
+        rotationUpdates = Object.fromEntries(WINDOWS.map(({ key }, index) => [key, rotationLists[index] ?? []]));
+    }
 
-    // Sparklines for everyone the page can show: the board, every window's movers, the rookies.
+    // Sparklines for everyone the page can show: the board, every window's movers in either
+    // scope, the rookies.
     const shown = new Set([...board.map((row) => row.id), ...suggestedIds]);
     for (const { key } of WINDOWS) {
-        const { risers, fallers } = pickMovers(byWindow[key], key);
-        for (const row of [...risers, ...fallers]) shown.add(row.id);
+        for (const { key: scope } of SCOPES) {
+            const { risers, fallers } = pickMovers(byWindow[key], key, { scope });
+            for (const row of [...risers, ...fallers]) shown.add(row.id);
+        }
     }
     const season = seasonFromStart(seasonStart);
     const [series, records] = await Promise.all([getRatingSeries([...shown], seasonStart), getAgeRecords(season)]);
@@ -94,6 +115,7 @@ async function latest() {
         board,
         windows: byWindow,
         updates,
+        rotationUpdates,
         records,
         series,
         suggested: watchCards(suggestedIds, { players, byWindow, series })
