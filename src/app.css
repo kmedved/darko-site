@@ -698,6 +698,14 @@ a:hover { color: var(--accent-hover); }
         linear-gradient(to right, transparent, color-mix(in srgb, var(--bg-surface) 94%, transparent));
 }
 
+/* Team logos on the dark themes get a faint light edge: black-on-transparent marks (Spurs,
+   Heat's wordmark) otherwise vanish into the background. Colourful logos barely change. SVG
+   <image> covers logos drawn inside charts (the Roster Lab's rating strip). */
+:root:is([data-theme='black'], [data-theme='dark'])
+    :is(img[src*='/api/img/logo/'], img[src*='cdn.nba.com/logos/'], image[href*='/api/img/logo/'], image[href*='cdn.nba.com/logos/']) {
+    filter: drop-shadow(0 0 0.5px rgb(255 255 255 / 0.85)) drop-shadow(0 0 1.5px rgb(255 255 255 / 0.3));
+}
+
 /* Zeros and missing values recede so the eye skips them. */
 .num-quiet {
     color: var(--text-muted);

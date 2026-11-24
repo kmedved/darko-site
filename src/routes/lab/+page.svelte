@@ -1129,6 +1129,14 @@
 		outline-offset: 2px;
 	}
 
+	/* Side by side, the second chart's note on how to read it repeats the first's, a few inches
+	   away. Stacked, the charts are a roster apart, so each keeps its own. */
+	@media (min-width: 1101px) {
+		.lab-side + .lab-side :global(.mc-explain) {
+			display: none;
+		}
+	}
+
 	@media (max-width: 1100px) {
 		.lab-sides,
 		.lab-bottom {

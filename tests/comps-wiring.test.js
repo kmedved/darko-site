@@ -30,7 +30,8 @@ test('the player page shows Comps & futures for today only, at #comps', async ()
 
 test('the comps count seasons of 10+ games, which is all a missing DPM says', async () => {
     const chart = await read('src/lib/components/CompsFutures.svelte');
-    assert.match(chart, /text-anchor="end">10\+ games<\/text>/);
+    // The share row's label, which starts at the chart's left edge so it stays on the card.
+    assert.match(chart, /<text class="cf-axis" x="0" y=\{HEIGHT - 12\}>\{tightShares \? '10\+ games, %' : '10\+ games'\}<\/text>/);
     assert.match(chart, /point\.dpm === null \? 'under 10 games'/);
     assert.doesNotMatch(chart, /In NBA|out of the league/);
 });
