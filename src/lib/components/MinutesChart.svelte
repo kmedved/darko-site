@@ -378,7 +378,8 @@
 			</div>
 		{/if}
 
-		<p class="mc-legend">
+		<!-- mc-explain: the Roster Lab hides its second chart's copy where the two sit side by side. -->
+		<p class="mc-legend mc-explain">
 			{sideways ? "A bar's length is DPM and its thickness the share of minutes" : "A bar's height is DPM and its width the share of minutes"},
 			so the signed areas add up to the average minute, the dashed line at {formatSigned(profile.mean, 2)}.
 			Five players are on the floor, so the rating is five times that: {formatSigned(profile.rating, 2)}.

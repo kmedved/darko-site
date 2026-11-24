@@ -128,6 +128,10 @@
 		return `${Math.round(share * 100)}%`;
 	}
 
+	// A season is under 30px wide on a phone, too narrow for "100%": the shares drop the sign and
+	// the row's label carries it.
+	const tightShares = $derived(chart ? chart.x(chart.age0 + 1) - chart.x(chart.age0) < 30 : false);
+
 	function pointerMove(event) {
 		if (!chart) return;
 		const box = event.currentTarget.ownerSVGElement.getBoundingClientRect();
@@ -236,9 +240,12 @@
 						text-anchor="end">{seasonLabel(now.season)} {formatSigned(now.dpm, 2)}</text
 					>
 
-					<text class="cf-axis" x={M.left - 8} y={HEIGHT - 12} text-anchor="end">10+ games</text>
+					<!-- From the chart's left edge: wider than the margin, it would hang off the card. -->
+					<text class="cf-axis" x="0" y={HEIGHT - 12}>{tightShares ? '10+ games, %' : '10+ games'}</text>
 					{#each fan as entry (entry.year)}
-						<text class="cf-axis cf-share" x={chart.x(chart.age0 + entry.year)} y={HEIGHT - 12} text-anchor="middle">{percent(entry.share)}</text>
+						<text class="cf-axis cf-share" x={chart.x(chart.age0 + entry.year)} y={HEIGHT - 12} text-anchor="middle"
+							>{tightShares ? Math.round(entry.share * 100) : percent(entry.share)}</text
+						>
 					{/each}
 
 					{#if hover}

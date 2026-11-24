@@ -177,7 +177,11 @@
         })
     );
 
-    const summaryCards = $derived(seasonComplete ? buildFinalCards(standings) : buildSummaryCards(standings));
+    // The simulation's leaders are league-wide: the strip sits above the conference toggle, so a
+    // "Highest SRS" that followed it read as the league's. A finished season's cards are about one
+    // conference (its champion), so they follow the toggle and name it.
+    const leagueRows = $derived([...(data.eastStandings || []), ...(data.westStandings || [])]);
+    const summaryCards = $derived(seasonComplete ? buildFinalCards(standings, conference) : buildSummaryCards(leagueRows));
     const srsTintLimit = $derived(tintLimit(standings.map((team) => team?.SRS)));
     const playoffDistribution = $derived(
         seasonComplete ? buildResultDistribution(standings) : buildPlayoffDistribution(standings)
@@ -270,7 +274,7 @@
         ];
     }
 
-    function buildFinalCards(rows) {
+    function buildFinalCards(rows, conferenceName) {
         const confChampion = rows.find((row) => row.result === RESULTS.champion || row.result === RESULTS.finals) ?? null;
         const bestRecord = maxBy(rows, 'W');
         const highestSrs = maxBy(rows, 'SRS');
@@ -287,11 +291,11 @@
                 value: confChampion?.Current ?? '—',
                 caption: confChampion ? (confChampion.result === RESULTS.champion ? 'Won the Finals' : 'Lost the Finals') : undefined
             },
-            { title: 'Best Record', team: bestRecord, value: bestRecord?.Current ?? '—' },
-            { title: 'Highest SRS', team: highestSrs, value: formatSigned(numberValue(highestSrs?.SRS), 2) },
-            { title: 'Worst Record', team: worstRecord, value: worstRecord?.Current ?? '—' },
+            { title: `Best Record · ${conferenceName}`, team: bestRecord, value: bestRecord?.Current ?? '—' },
+            { title: `Highest SRS · ${conferenceName}`, team: highestSrs, value: formatSigned(numberValue(highestSrs?.SRS), 2) },
+            { title: `Worst Record · ${conferenceName}`, team: worstRecord, value: worstRecord?.Current ?? '—' },
             {
-                title: 'Playoff Teams',
+                title: `Playoff Teams · ${conferenceName}`,
                 value: String(counts.playoffs),
                 caption: `${counts.throughPlayIn} through the play-in`
             }
