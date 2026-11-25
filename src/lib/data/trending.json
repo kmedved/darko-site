@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-24",
+  "date": "2026-11-25",
   "players": [
     {
-      "nba_id": 1629029,
-      "name": "Luka Doncic",
-      "reason": "28 points and eight assists lead Lakers past Jazz"
+      "nba_id": 1628369,
+      "name": "Jayson Tatum",
+      "reason": "Scores 41 as Celtics snap four-game losing streak"
     },
     {
-      "nba_id": 1629639,
-      "name": "Tyler Herro",
-      "reason": "Scores 32 as Bucks end 13-game losing streak"
+      "nba_id": 1642843,
+      "name": "Cooper Flagg",
+      "reason": "24 points and 12 assists power NBA Cup win in Denver"
     },
     {
-      "nba_id": 1630166,
-      "name": "Deni Avdija",
-      "reason": "31 points snap Sixers five-game winning streak"
+      "nba_id": 1630198,
+      "name": "Isaiah Joe",
+      "reason": "Scores 21 as shorthanded Pistons beat Magic in NBA Cup"
     },
     {
-      "nba_id": 1630183,
-      "name": "Jaden McDaniels",
-      "reason": "34 points, 10 rebounds and six assists in Nets rout"
+      "nba_id": 1641705,
+      "name": "Victor Wembanyama",
+      "reason": "Back issue leaves him questionable for Portland matchup"
     },
     {
-      "nba_id": 201142,
-      "name": "Kevin Durant",
-      "reason": "Scores 32 as Rockets beat Clippers"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "Questionable against Sixers with right groin tendinitis"
     }
   ]
 }
