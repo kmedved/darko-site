@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-25",
+  "date": "2026-11-26",
   "players": [
     {
-      "nba_id": 1628369,
-      "name": "Jayson Tatum",
-      "reason": "Scores 41 as Celtics snap four-game losing streak"
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "First Sixers triple-double leads NBA Cup win over Heat"
     },
     {
-      "nba_id": 1642843,
-      "name": "Cooper Flagg",
-      "reason": "24 points and 12 assists power NBA Cup win in Denver"
-    },
-    {
-      "nba_id": 1630198,
-      "name": "Isaiah Joe",
-      "reason": "Scores 21 as shorthanded Pistons beat Magic in NBA Cup"
+      "nba_id": 201142,
+      "name": "Kevin Durant",
+      "reason": "Becomes fifth NBA player to reach 33,000 career points"
     },
     {
       "nba_id": 1641705,
       "name": "Victor Wembanyama",
-      "reason": "Back issue leaves him questionable for Portland matchup"
+      "reason": "Returns with 44 points and 16 rebounds in Portland loss"
     },
     {
-      "nba_id": 203507,
-      "name": "Giannis Antetokounmpo",
-      "reason": "Questionable against Sixers with right groin tendinitis"
+      "nba_id": 1630166,
+      "name": "Deni Avdija",
+      "reason": "33 points and clutch three lift Blazers past Spurs"
+    },
+    {
+      "nba_id": 1630163,
+      "name": "LaMelo Ball",
+      "reason": "Leaves Thunder win with left ankle injury"
     }
   ]
 }
