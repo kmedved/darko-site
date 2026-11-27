@@ -2,6 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {
+    filterWowyAdjustedSeasons,
+    resolveWowyAdjustedSeasonBounds
+} from '../src/lib/utils/wowySeasons.js';
 
 const WOWY_PAGE = 'src/routes/wowy/+page.svelte';
 const WOWY_PAGE_SERVER = 'src/routes/wowy/+page.server.js';
@@ -19,14 +23,20 @@ test('WOWY leaderboard loader serves Season-Adjusted ratings, Current, and URL-s
     assert.match(contents, /getWowyAdjustedSeasonPlayers/);
     assert.match(contents, /getWowyLeaderboardSeasons/);
     assert.match(contents, /getWowyPublication/);
+    assert.match(contents, /getWowySeasonAdjustedPublication/);
     // The leaderboard no longer offers the unweighted season averages.
     assert.doesNotMatch(contents, /getWowyAllTimePage\b/);
     assert.doesNotMatch(contents, /getWowySeasonPlayers\b/);
     assert.doesNotMatch(contents, /searchParams\.get\('rating'\)/);
     assert.match(contents, /load\(\{ url, setHeaders \}\)/);
-    assert.match(contents, /Promise\.all\(\[\s*getWowyLeaderboardSeasons\(\),\s*getWowyPublication\(\)/s);
-    assert.match(contents, /publication\?\.season_adjusted_from/);
-    assert.match(contents, /const seasons = publishedSeasons\.filter\(\(season\) => season >= seasonAdjustedFrom\);/);
+    assert.match(
+        contents,
+        /Promise\.all\(\[\s*getWowyLeaderboardSeasons\(\),\s*getWowyPublication\(\),\s*getWowySeasonAdjustedPublication\(\)\s*\]\)/s
+    );
+    assert.match(
+        contents,
+        /const seasons = filterWowyAdjustedSeasons\(\s*publishedSeasons,\s*publication,\s*adjustedPublication\s*\);/s
+    );
     assert.match(contents, /url\.searchParams\.get\('season'\)/);
     assert.match(contents, /seasons\.includes\(requestedSeason\)/);
     assert.match(contents, /url\.searchParams\.get\('view'\) === 'current'/);
@@ -292,4 +302,41 @@ test('all-time WOWY API forwards complete filters into bounded server pages', as
     assert.match(contents, /sortDirection: textParam\(url, 'direction'\)/);
     assert.match(contents, /edgeSMaxAge: 300/);
     assert.match(contents, /return json\(\{ error: error\.message \}, \{ status: 400 \}\)/);
+});
+
+test('WOWY season selector caps seasons at wowy_season_adjusted_publication.season_through', () => {
+    const publishedSeasons = [2027, 2026, 2025, 1979, 1978, 1977, 1957];
+    const publication = { season_from: 1957, season_through: 2027, season_adjusted_from: 1978 };
+    const adjustedPublication = { season_from: 1978, season_through: 2026 };
+
+    assert.deepEqual(resolveWowyAdjustedSeasonBounds(publication, adjustedPublication), {
+        seasonFrom: 1978,
+        seasonThrough: 2026
+    });
+    const seasons = filterWowyAdjustedSeasons(publishedSeasons, publication, adjustedPublication);
+    assert.deepEqual(seasons, [2026, 2025, 1979, 1978]);
+    assert.equal(seasons.includes(2027), false);
+
+    // Once Season-Adjusted advances to 2027, the selector includes 2027 automatically.
+    assert.deepEqual(
+        filterWowyAdjustedSeasons(publishedSeasons, publication, {
+            season_from: 1978,
+            season_through: 2027
+        }),
+        [2027, 2026, 2025, 1979, 1978]
+    );
+
+    // Missing or invalid adjustedPublication metadata falls back to the floor without dropping seasons.
+    assert.deepEqual(resolveWowyAdjustedSeasonBounds(publication, null), {
+        seasonFrom: 1978,
+        seasonThrough: null
+    });
+    assert.deepEqual(
+        filterWowyAdjustedSeasons(publishedSeasons, publication, null),
+        [2027, 2026, 2025, 1979, 1978]
+    );
+    assert.deepEqual(
+        resolveWowyAdjustedSeasonBounds({ season_adjusted_from: 1980 }, { season_from: 1978, season_through: 1979 }),
+        { seasonFrom: 1980, seasonThrough: null }
+    );
 });

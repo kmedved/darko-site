@@ -3,9 +3,14 @@ import {
     getWowyAdjustedAllTimePage,
     getWowyAdjustedSeasonPlayers,
     getWowyLeaderboardSeasons,
-    getWowyPublication
+    getWowyPublication,
+    getWowySeasonAdjustedPublication
 } from '$lib/server/supabase.js';
 import { setEdgeCache } from '$lib/server/cacheHeaders.js';
+import {
+    ADJUSTED_SEASON_FLOOR,
+    filterWowyAdjustedSeasons
+} from '$lib/utils/wowySeasons.js';
 
 /** @type {import('@sveltejs/adapter-vercel').Config} */
 export const config = {
@@ -13,23 +18,22 @@ export const config = {
     maxDuration: 60
 };
 
-const ADJUSTED_SEASON_FLOOR = 1978;
-
-// The leaderboard shows Season-Adjusted WOWY only: all time, or one season from the first
-// adjusted season on. Current keeps the latest observed game-level ratings. Links from before
-// (?rating=average, or a season without adjusted ratings) open the all-time table instead.
+// The leaderboard shows Season-Adjusted WOWY only: all time, or one season within the published
+// Season-Adjusted span (season_adjusted_from through wowy_season_adjusted_publication.season_through).
+// Current keeps the latest observed game-level ratings. Links from before (?rating=average, or a
+// season without adjusted ratings) open the all-time table instead.
 export async function load({ url, setHeaders }) {
     prefetchRequestedPlayers(url);
-    const [publishedSeasons, publication] = await Promise.all([
+    const [publishedSeasons, publication, adjustedPublication] = await Promise.all([
         getWowyLeaderboardSeasons(),
-        getWowyPublication()
+        getWowyPublication(),
+        getWowySeasonAdjustedPublication()
     ]);
-    const publishedSeasonAdjustedFrom = Number(publication?.season_adjusted_from);
-    const seasonAdjustedFrom =
-        Number.isInteger(publishedSeasonAdjustedFrom) && publishedSeasonAdjustedFrom >= ADJUSTED_SEASON_FLOOR
-            ? publishedSeasonAdjustedFrom
-            : ADJUSTED_SEASON_FLOOR;
-    const seasons = publishedSeasons.filter((season) => season >= seasonAdjustedFrom);
+    const seasons = filterWowyAdjustedSeasons(
+        publishedSeasons,
+        publication,
+        adjustedPublication
+    );
     const requestedSeasonValue = url.searchParams.get('season');
     const requestedSeason = parseSeasonEndYear(requestedSeasonValue);
     const selectedSeason = seasons.includes(requestedSeason) ? requestedSeason : null;
