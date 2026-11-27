@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-26",
+  "date": "2026-11-27",
   "players": [
     {
-      "nba_id": 2544,
-      "name": "LeBron James",
-      "reason": "First Sixers triple-double leads NBA Cup win over Heat"
-    },
-    {
-      "nba_id": 201142,
-      "name": "Kevin Durant",
-      "reason": "Becomes fifth NBA player to reach 33,000 career points"
+      "nba_id": 1629029,
+      "name": "Luka Doncic",
+      "reason": "MVP frontrunner faces Wembanyama in NBA Cup showdown"
     },
     {
       "nba_id": 1641705,
       "name": "Victor Wembanyama",
-      "reason": "Returns with 44 points and 16 rebounds in Portland loss"
-    },
-    {
-      "nba_id": 1630166,
-      "name": "Deni Avdija",
-      "reason": "33 points and clutch three lift Blazers past Spurs"
+      "reason": "Faces Doncic with NBA Cup and West lead at stake"
     },
     {
       "nba_id": 1630163,
       "name": "LaMelo Ball",
-      "reason": "Leaves Thunder win with left ankle injury"
+      "reason": "Questionable against Grizzlies after left ankle sprain"
+    },
+    {
+      "nba_id": 1630559,
+      "name": "Austin Reaves",
+      "reason": "Heel injury clouds availability for Spurs matchup"
+    },
+    {
+      "nba_id": 1627759,
+      "name": "Jaylen Brown",
+      "reason": "Hamstring injury sidelines him against Pacers"
     }
   ]
 }
