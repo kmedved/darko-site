@@ -755,4 +755,6 @@ test('Season-Adjusted WOWY helpers use separate caches and the shared paged RPC'
     assert.match(pubHelper, /season_from, season_through/);
     assert.match(pubHelper, /\.eq\('id', 1\)/);
     assert.match(pubHelper, /\.maybeSingle\(\)/);
+    assert.match(pubHelper, /try\s*\{\s*return await runCached\(/);
+    assert.match(pubHelper, /catch\s*\(error\)\s*\{[\s\S]*console\.warn\([\s\S]*return null;/);
 });
