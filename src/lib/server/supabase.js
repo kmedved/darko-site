@@ -1800,6 +1800,22 @@ export async function getWowyPublication() {
     });
 }
 
+/** Get the metadata row describing the currently published Season-Adjusted WOWY table. */
+export async function getWowySeasonAdjustedPublication() {
+    return runCached('wowySeasonAdjustedPublication:current', CACHE_MS.wowyPublication, async () => {
+        const { data, error } = await supabase
+            .from('wowy_season_adjusted_publication')
+            .select(
+                'publication_id, source_sha256, output_sha256, season_from, season_through, data_through, row_count, player_count, method_version, application_model, published_at'
+            )
+            .eq('id', 1)
+            .maybeSingle();
+
+        if (error) throw error;
+        return data || null;
+    });
+}
+
 /**
  * Where DARKO started each player of a draft class (the About page): the rating going into his
  * first game, which comes from his age, draft slot and height before he has played. The class is

@@ -743,4 +743,16 @@ test('Season-Adjusted WOWY helpers use separate caches and the shared paged RPC'
     assert.match(seasonHelper, /rowsWithContext/);
     assert.match(seasonHelper, /p_season: seasonEndYear/);
     assert.match(seasonHelper, /sortByWowyRapmDesc/);
+
+    const pubStart = supabaseHelper.indexOf(
+        'export async function getWowySeasonAdjustedPublication()'
+    );
+    const pubEnd = supabaseHelper.indexOf('export async function getRookieStarts', pubStart);
+    assert.ok(pubStart >= 0 && pubEnd > pubStart);
+    const pubHelper = supabaseHelper.slice(pubStart, pubEnd);
+    assert.match(pubHelper, /'wowySeasonAdjustedPublication:current'/);
+    assert.match(pubHelper, /\.from\('wowy_season_adjusted_publication'\)/);
+    assert.match(pubHelper, /season_from, season_through/);
+    assert.match(pubHelper, /\.eq\('id', 1\)/);
+    assert.match(pubHelper, /\.maybeSingle\(\)/);
 });

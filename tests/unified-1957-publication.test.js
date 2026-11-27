@@ -9,6 +9,7 @@ const ACTIVATION_MIGRATION =
     'supabase/migrations/20260814_002_lower_wowy_season_average_activation_floor_to_1957.sql';
 const SERVER = 'src/lib/server/supabase.js';
 const LOADER = 'src/routes/wowy/+page.server.js';
+const SEASONS_HELPER = 'src/lib/utils/wowySeasons.js';
 const LEADERBOARD = 'src/routes/wowy/+page.svelte';
 const TRAJECTORIES = 'src/routes/trajectories/+page.svelte';
 const WOWY_HISTORY_ROUTE = 'src/routes/api/player/[id]/wowy-history/+server.js';
@@ -96,14 +97,18 @@ test('site keeps synthetic IDs inside WOWY-only paths', async () => {
 });
 
 test('the leaderboard offers only Season-Adjusted seasons; trajectories disclose the ABA linkage', async () => {
-    const [loader, leaderboard, trajectories] = await Promise.all([
+    const [loader, helper, leaderboard, trajectories] = await Promise.all([
         readFile(LOADER, 'utf8'),
+        readFile(SEASONS_HELPER, 'utf8'),
         readFile(LEADERBOARD, 'utf8'),
         readFile(TRAJECTORIES, 'utf8')
     ]);
 
-    assert.match(loader, /publication\?\.season_adjusted_from/);
-    assert.match(loader, /publishedSeasons\.filter\(\(season\) => season >= seasonAdjustedFrom\)/);
+    assert.match(loader, /getWowySeasonAdjustedPublication/);
+    assert.match(loader, /filterWowyAdjustedSeasons/);
+    assert.match(helper, /publication\?\.season_adjusted_from/);
+    assert.match(helper, /adjustedPublication\?\.season_through/);
+    assert.match(helper, /season >= seasonFrom &&[\s\S]*season <= seasonThrough/);
     assert.match(leaderboard, /Season ratings begin in 1977-78/);
     // Adjusted ratings start after the merger, so ABA seasons appear only in daily WOWY charts.
     assert.doesNotMatch(leaderboard, /ABA seasons are included/);
