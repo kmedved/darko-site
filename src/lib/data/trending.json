@@ -1,30 +1,30 @@
 {
-  "date": "2026-11-27",
+  "date": "2026-11-28",
   "players": [
     {
       "nba_id": 1629029,
       "name": "Luka Doncic",
-      "reason": "MVP frontrunner faces Wembanyama in NBA Cup showdown"
+      "reason": "Shoved by fan after Lakers NBA Cup elimination"
     },
     {
       "nba_id": 1641705,
       "name": "Victor Wembanyama",
-      "reason": "Faces Doncic with NBA Cup and West lead at stake"
+      "reason": "25 points and 16 rebounds help Spurs rally past Lakers"
     },
     {
-      "nba_id": 1630163,
-      "name": "LaMelo Ball",
-      "reason": "Questionable against Grizzlies after left ankle sprain"
+      "nba_id": 1642843,
+      "name": "Cooper Flagg",
+      "reason": "34-point all-around display fuels comeback win over Suns"
     },
     {
-      "nba_id": 1630559,
-      "name": "Austin Reaves",
-      "reason": "Heel injury clouds availability for Spurs matchup"
+      "nba_id": 203507,
+      "name": "Giannis Antetokounmpo",
+      "reason": "Career-high 23 rebounds help Heat eliminate Knicks"
     },
     {
-      "nba_id": 1627759,
-      "name": "Jaylen Brown",
-      "reason": "Hamstring injury sidelines him against Pacers"
+      "nba_id": 2544,
+      "name": "LeBron James",
+      "reason": "Scores 21 as Sixers reach NBA Cup knockout round"
     }
   ]
 }
